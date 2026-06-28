@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, Link } from '@tanstack/react-router'
-import { ArrowLeft, Save, Play, CheckCircle, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Save, Play, CheckCircle, AlertCircle, Workflow } from 'lucide-react'
 import { useWorkflow, useCreateWorkflow, useUpdateWorkflow } from '@/features/workflows/hooks'
 import { useTriggerExecution } from '@/features/executions/hooks'
 import { useBuilderStore } from '@/features/workflows/builder/store'
@@ -81,31 +81,41 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-gray-50">
+    <div className="flex h-screen flex-col overflow-hidden bg-slate-50">
       {/* ── Header ───────────────────────────────────────────────────── */}
-      <header className="flex h-12 shrink-0 items-center gap-2 border-b bg-white px-3 shadow-sm z-20">
+      <header className="z-20 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-3 shadow-sm">
         <Link to="/workflows">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ArrowLeft size={15} />
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-slate-700">
+            <ArrowLeft size={16} />
           </Button>
         </Link>
 
-        <div className="h-4 w-px bg-gray-200" />
+        <div className="h-5 w-px bg-slate-200" />
 
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="h-7 w-56 border-0 bg-transparent px-1 text-sm font-semibold shadow-none focus-visible:ring-0 focus-visible:bg-gray-50"
-          placeholder="Workflow name…"
-        />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 shadow-sm">
+          <Workflow size={16} className="text-white" />
+        </div>
 
-        {isDirty && <span className="h-1.5 w-1.5 rounded-full bg-amber-400" title="Unsaved changes" />}
+        <div className="flex items-center gap-2">
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-8 w-60 border-0 bg-transparent px-1.5 text-[15px] font-semibold text-slate-800 shadow-none focus-visible:bg-slate-50 focus-visible:ring-0"
+            placeholder="Workflow name…"
+          />
+          {isDirty && (
+            <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-600">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+              Unsaved
+            </span>
+          )}
+        </div>
 
         <div className="flex-1" />
 
         {saveError && (
-          <span className="flex items-center gap-1 text-xs text-red-600">
-            <AlertCircle size={12} />{saveError}
+          <span className="flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-xs text-red-600">
+            <AlertCircle size={13} />{saveError}
           </span>
         )}
 
@@ -113,9 +123,9 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
           <Link
             to="/executions/$executionId"
             params={{ executionId: triggeredId }}
-            className="flex items-center gap-1 text-xs text-green-700 hover:underline"
+            className="flex items-center gap-1.5 rounded-md bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
           >
-            <CheckCircle size={12} />Execution running
+            <CheckCircle size={13} />Execution running
           </Link>
         )}
 
@@ -135,8 +145,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
       {/* ── Main layout ──────────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
         <VariablesPanel />
-        {/* <FlowCanvas /> */}
-        <FlowLayout/>
+        <FlowLayout />
         <NodeConfigPanel />
       </div>
     </div>

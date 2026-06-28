@@ -1,101 +1,194 @@
 import { useMemo } from 'react'
 import { Handle, Position, type NodeProps, useStore } from '@xyflow/react'
-import { Plus } from 'lucide-react'
+import { Plus, GripVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NODE_REGISTRY } from '../node-registry'
-import { useBuilderStore, type FlowNode } from '../store'
+import { useBuilderStore, type FlowNode, type DropPosition } from '../store'
 import { computeExecutionOrder } from '../executionOrder'
+import { DropZone } from './DropZone'
 import type { SetVariableConfig, ConditionConfig } from '../../types'
 
+const DRAG_TRANSFER_KEY = 'application/workflow-node-reorder'
+
 export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
-  const reg = NODE_REGISTRY[data.type]
+  const reg        = NODE_REGISTRY[data.type]
+  const Icon       = reg.icon
   const hasInputs  = data.inputs?.length  > 0
   const hasOutputs = data.outputs?.length > 0
 
-  // Show + button below this node only if it's a leaf (no outgoing edges) and not the exit node
+  // Show + button below this node only if it's a leaf (no outgoing edges) and not exit
   const hasOutgoingEdge = useStore((s) => s.edges.some((e) => e.source === id))
   const showAddButton   = hasOutputs && !hasOutgoingEdge && data.type !== 'exit'
 
-  const openPicker = useBuilderStore((s) => s.openPicker)
+  const openPicker          = useBuilderStore((s) => s.openPicker)
+  const draggingNodeId      = useBuilderStore((s) => s.draggingNodeId)
+  const activeDropTarget    = useBuilderStore((s) => s.activeDropTarget)
+  const setDraggingNode     = useBuilderStore((s) => s.setDraggingNode)
+  const setActiveDropTarget = useBuilderStore((s) => s.setActiveDropTarget)
+  const reorderNode         = useBuilderStore((s) => s.reorderNode)
+  const applyDagreLayout    = useBuilderStore((s) => s.applyDagreLayout)
 
-  // Compute execution order from live store state
-  const nodes = useBuilderStore((s) => s.nodes)
-  const edges = useBuilderStore((s) => s.edges)
+  // Execution order badge
+  const nodes    = useBuilderStore((s) => s.nodes)
+  const edges    = useBuilderStore((s) => s.edges)
   const execInfo = useMemo(() => computeExecutionOrder(nodes, edges), [nodes, edges])
-  const info = execInfo.get(id)
+  const info     = execInfo.get(id)
+
+  const isDraggingThis = draggingNodeId === id
+  const showDropZones  = draggingNodeId !== null && draggingNodeId !== id
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData(DRAG_TRANSFER_KEY, id)
+    e.dataTransfer.effectAllowed = 'move'
+    setDraggingNode(id)
+  }
+
+  const handleDragEnd = () => {
+    setDraggingNode(null)
+    setActiveDropTarget(null)
+  }
+
+  const handleDropZoneOver = (_e: React.DragEvent, position: DropPosition) => {
+    setActiveDropTarget({ nodeId: id, position })
+  }
+
+  const handleDropZoneLeave = () => {
+    setActiveDropTarget(null)
+  }
+
+  const handleDrop = (e: React.DragEvent, position: DropPosition) => {
+    const srcId = e.dataTransfer.getData(DRAG_TRANSFER_KEY)
+    if (!srcId || srcId === id) return
+    reorderNode(srcId, id, position)
+    setDraggingNode(null)
+    setActiveDropTarget(null)
+    setTimeout(() => applyDagreLayout('TB'), 0)
+  }
 
   const handleAddClick = (e: React.MouseEvent, handle: string) => {
     e.stopPropagation()
     openPicker({ kind: 'node', sourceNodeId: id, sourceHandle: handle })
   }
 
+  const dropAt = (pos: DropPosition) =>
+    activeDropTarget?.nodeId === id && activeDropTarget.position === pos
+
   return (
     <div
       className={cn(
-        'min-w-[160px] rounded-xl border-2 transition-all bg-white shadow-md',
-        selected ? 'border-blue-500 shadow-blue-200 shadow-lg' : 'border-gray-200 hover:border-gray-300',
+        'group relative w-[200px] rounded-2xl border bg-white transition-all duration-150',
+        selected
+          ? 'border-blue-400 ring-2 ring-blue-400/30 shadow-lg shadow-blue-500/10'
+          : 'border-slate-200/80 shadow-sm hover:border-slate-300 hover:shadow-md',
+        isDraggingThis ? 'opacity-40 scale-95' : '',
       )}
     >
-      {/* Input handles — top edge for vertical flow */}
+      {/* Drop zones — appear around the node while another node is dragged */}
+      {showDropZones && (
+        <>
+          <DropZone position="before" active={dropAt('before')} onDragOver={handleDropZoneOver} onDrop={handleDrop} onDragLeave={handleDropZoneLeave} />
+          <DropZone position="after"  active={dropAt('after')}  onDragOver={handleDropZoneOver} onDrop={handleDrop} onDragLeave={handleDropZoneLeave} />
+          <DropZone position="left"   active={dropAt('left')}   onDragOver={handleDropZoneOver} onDrop={handleDrop} onDragLeave={handleDropZoneLeave} />
+          <DropZone position="right"  active={dropAt('right')}  onDragOver={handleDropZoneOver} onDrop={handleDrop} onDragLeave={handleDropZoneLeave} />
+        </>
+      )}
+
+      {/* Input handles — top edge */}
       {hasInputs && data.inputs.map((port, i) => (
         <Handle
           key={port.id}
           id={port.id}
           type="target"
           position={Position.Top}
-          style={{ left: `${((i + 1) / (data.inputs.length + 1)) * 100}%`, background: '#6b7280' }}
+          className="!h-2.5 !w-2.5 !border-2 !border-white !bg-slate-400 transition-colors"
+          style={{ left: `${((i + 1) / (data.inputs.length + 1)) * 100}%` }}
         />
       ))}
 
+      {/* Execution position badge — floats above-left of the node */}
+      {info && (
+        <div className="absolute -top-3 -left-3 z-10 flex items-center gap-1">
+          <div className="flex h-6 min-w-6 items-center justify-center rounded-full bg-slate-700 px-1.5 text-[11px] font-bold tabular-nums text-white shadow-md shadow-black/20 ring-2 ring-white">
+            {info.step}
+          </div>
+          {info.wave > 0 && (
+            <div className="flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-500/90 px-1 text-[9px] font-semibold tabular-nums text-white/90 shadow ring-2 ring-white">
+              W{info.wave}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Header */}
-      <div className={cn('flex items-center gap-2 rounded-t-xl px-3 py-2', reg.color)}>
-        <NodeIcon type={data.type} />
-        <span className="text-xs font-semibold text-white truncate flex-1">{data.label}</span>
-        {info && (
-          <span className="ml-auto shrink-0 rounded-full bg-white/25 px-1.5 py-0.5 text-[9px] font-bold text-white tabular-nums leading-none">
-            #{info.step} · W{info.wave}
-          </span>
-        )}
+      <div className={cn('relative flex items-center gap-2 rounded-t-2xl px-2 py-1.5', reg.gradient)}>
+        {/* Drag grip — initiates reorder drag (only this is draggable) */}
+        <div
+          draggable
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          className="flex h-7 w-4 shrink-0 cursor-grab items-center justify-center rounded text-white/40 transition-colors hover:bg-white/15 hover:text-white/80 active:cursor-grabbing nodrag nopan"
+          title="Drag to reorder"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <GripVertical size={14} strokeWidth={2.25} />
+        </div>
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/20 ring-1 ring-white/25">
+          <Icon size={15} strokeWidth={2.25} className="text-white" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13px] font-semibold leading-tight text-white">{data.label}</p>
+          <p className="text-[9px] font-medium uppercase tracking-wider text-white/70 leading-tight">{reg.label}</p>
+        </div>
       </div>
 
       {/* Body */}
-      <div className="px-3 py-2">
+      <div className="px-3 py-2.5">
         <NodeBody data={data} />
       </div>
 
-      {/* Output handles — bottom edge for vertical flow */}
-      {hasOutputs && data.outputs.map((port, i) => (
-        <div key={port.id}>
-          <Handle
-            id={port.id}
-            type="source"
-            position={Position.Bottom}
-            style={{ left: `${((i + 1) / (data.outputs.length + 1)) * 100}%`, background: '#3b82f6' }}
-          />
-          {data.outputs.length > 1 && (
-            <span
-              className="absolute bottom-[-1.1rem] text-[9px] text-gray-400 pointer-events-none select-none"
-              style={{ left: `${((i + 1) / (data.outputs.length + 1)) * 100}%`, transform: 'translateX(-50%)' }}
-            >
-              {port.label}
-            </span>
-          )}
-        </div>
-      ))}
+      {/* Output handles — bottom edge */}
+      {hasOutputs && data.outputs.map((port, i) => {
+        const left = `${((i + 1) / (data.outputs.length + 1)) * 100}%`
+        const isTrue  = port.id === 'true'
+        const isFalse = port.id === 'false'
+        return (
+          <div key={port.id}>
+            <Handle
+              id={port.id}
+              type="source"
+              position={Position.Bottom}
+              className={cn(
+                '!h-2.5 !w-2.5 !border-2 !border-white transition-colors',
+                isTrue ? '!bg-emerald-500' : isFalse ? '!bg-rose-500' : '!bg-blue-500',
+              )}
+              style={{ left }}
+            />
+            {data.outputs.length > 1 && (
+              <span
+                className={cn(
+                  'absolute bottom-[-1.15rem] text-[9px] font-semibold pointer-events-none select-none',
+                  isTrue ? 'text-emerald-600' : isFalse ? 'text-rose-600' : 'text-slate-400',
+                )}
+                style={{ left, transform: 'translateX(-50%)' }}
+              >
+                {port.label}
+              </span>
+            )}
+          </div>
+        )
+      })}
 
-      {/* + button below leaf nodes (no outgoing edge) */}
-      {showAddButton && (
-        <div className="absolute left-1/2 -translate-x-1/2 -bottom-8 flex flex-col items-center gap-0.5 pointer-events-none">
-          {/* Stem line */}
-          <div className="w-px h-3 bg-gray-300" />
-          {/* + circle */}
+      {/* + button below leaf nodes (no outgoing edge, not dragging) */}
+      {showAddButton && !draggingNodeId && (
+        <div className="absolute left-1/2 -translate-x-1/2 -bottom-9 flex flex-col items-center pointer-events-none">
+          <div className="h-3.5 w-px bg-slate-300" />
           <button
-            className="pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full border-2 border-blue-400 bg-white text-blue-500 shadow-sm hover:bg-blue-50 hover:scale-110 transition-transform nodrag nopan"
+            className="pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-md shadow-blue-500/30 ring-4 ring-white hover:bg-blue-600 hover:scale-110 transition-all nodrag nopan"
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => handleAddClick(e, data.outputs[0]?.id ?? 'out')}
             title="Add next node"
           >
-            <Plus size={12} strokeWidth={2.5} />
+            <Plus size={13} strokeWidth={2.75} />
           </button>
         </div>
       )}
@@ -103,50 +196,40 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   )
 }
 
+// ---------------------------------------------------------------------------
+
 function NodeBody({ data }: { data: FlowNode['data'] }) {
   switch (data.type) {
     case 'entry':
-      return <p className="text-[10px] text-gray-400">Workflow starts here</p>
+      return <p className="text-[11px] text-slate-400">Workflow starts here</p>
     case 'exit':
-      return <p className="text-[10px] text-gray-400">Workflow ends here</p>
+      return <p className="text-[11px] text-slate-400">Workflow ends here</p>
     case 'merge':
-      return <p className="text-[10px] text-gray-400">Join branches</p>
+      return <p className="text-[11px] text-slate-400">Joins parallel branches</p>
     case 'set_variable': {
       const cfg = data.configuration as SetVariableConfig
-      if (!cfg?.variable_name) return <p className="text-[10px] text-gray-400 italic">Not configured</p>
+      if (!cfg?.variable_name) return <p className="text-[11px] italic text-slate-400">Not configured</p>
       return (
-        <p className="text-[10px] text-gray-600">
-          <span className="font-semibold">{cfg.variable_name}</span>
-          {' = '}
+        <div className="flex items-center gap-1.5 text-[11px]">
+          <code className="rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-700">{cfg.variable_name}</code>
+          <span className="text-slate-400">=</span>
           {cfg.mode === 'literal'
-            ? <span className="font-mono">{String(cfg.literal_value ?? '')}</span>
-            : <span className="font-mono text-purple-600 italic">{cfg.expression || '…'}</span>
+            ? <code className="truncate font-mono text-slate-600">{String(cfg.literal_value ?? '""')}</code>
+            : <code className="truncate font-mono italic text-violet-600">{cfg.expression || '…'}</code>
           }
-        </p>
+        </div>
       )
     }
     case 'condition': {
       const cfg = data.configuration as ConditionConfig
-      if (!cfg?.expression) return <p className="text-[10px] text-gray-400 italic">No expression</p>
-      return <p className="font-mono text-[10px] text-gray-600 truncate">{cfg.expression}</p>
+      if (!cfg?.expression) return <p className="text-[11px] italic text-slate-400">No expression set</p>
+      return <code className="block truncate rounded bg-slate-100 px-1.5 py-1 font-mono text-[10px] text-slate-700">{cfg.expression}</code>
     }
     case 'subflow': {
       const cfg = data.configuration as { definition_id?: string }
-      return <p className="text-[10px] text-gray-400 italic">{cfg?.definition_id ? `ID: ${cfg.definition_id.slice(0, 8)}…` : 'Not linked'}</p>
+      return <p className="text-[11px] italic text-slate-400">{cfg?.definition_id ? `↳ ${cfg.definition_id.slice(0, 8)}…` : 'Not linked'}</p>
     }
     default:
       return null
   }
-}
-
-function NodeIcon({ type }: { type: string }) {
-  const icons: Record<string, string> = {
-    entry:        '▶',
-    exit:         '⏹',
-    set_variable: '✦',
-    condition:    '◆',
-    subflow:      '⊞',
-    merge:        '⊕',
-  }
-  return <span className="text-white text-xs select-none">{icons[type] ?? '●'}</span>
 }

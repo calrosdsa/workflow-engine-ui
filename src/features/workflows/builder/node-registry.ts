@@ -1,19 +1,62 @@
+import {
+  Play,
+  CircleStop,
+  Variable,
+  GitBranch,
+  Box,
+  GitMerge,
+  type LucideIcon,
+} from 'lucide-react'
 import type { NodeType, Port, SetVariableConfig, ConditionConfig } from '../types'
 
 export interface NodeRegistryEntry {
   label: string
-  color: string          // Tailwind bg class
+  icon: LucideIcon
+  color: string          // Tailwind bg class (solid)
+  gradient: string       // Tailwind gradient classes for node header
+  accent: string         // hex used by minimap / handles
   textColor: string      // Tailwind text class
+  ring: string           // soft tint background (palette / picker icon bg)
   description: string
 }
 
 export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
-  entry:        { label: 'Start',         color: 'bg-emerald-500', textColor: 'text-emerald-700', description: 'Workflow entry point' },
-  exit:         { label: 'End',           color: 'bg-gray-400',    textColor: 'text-gray-600',    description: 'Workflow exit point' },
-  set_variable: { label: 'Set Variable',  color: 'bg-blue-500',    textColor: 'text-blue-700',    description: 'Assign a variable value' },
-  condition:    { label: 'Condition',     color: 'bg-amber-500',   textColor: 'text-amber-700',   description: 'Branch on a boolean expression' },
-  subflow:      { label: 'Subflow',       color: 'bg-purple-500',  textColor: 'text-purple-700',  description: 'Run a nested workflow' },
-  merge:        { label: 'Merge',         color: 'bg-teal-500',    textColor: 'text-teal-700',    description: 'Join parallel branches' },
+  entry: {
+    label: 'Start', icon: Play,
+    color: 'bg-emerald-500', gradient: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+    accent: '#10b981', textColor: 'text-emerald-700', ring: 'bg-emerald-50',
+    description: 'Workflow entry point',
+  },
+  exit: {
+    label: 'End', icon: CircleStop,
+    color: 'bg-slate-500', gradient: 'bg-gradient-to-br from-slate-500 to-slate-600',
+    accent: '#64748b', textColor: 'text-slate-700', ring: 'bg-slate-100',
+    description: 'Workflow exit point',
+  },
+  set_variable: {
+    label: 'Set Variable', icon: Variable,
+    color: 'bg-blue-500', gradient: 'bg-gradient-to-br from-blue-500 to-blue-600',
+    accent: '#3b82f6', textColor: 'text-blue-700', ring: 'bg-blue-50',
+    description: 'Assign a variable value',
+  },
+  condition: {
+    label: 'Condition', icon: GitBranch,
+    color: 'bg-amber-500', gradient: 'bg-gradient-to-br from-amber-500 to-orange-500',
+    accent: '#f59e0b', textColor: 'text-amber-700', ring: 'bg-amber-50',
+    description: 'Branch on a boolean expression',
+  },
+  subflow: {
+    label: 'Subflow', icon: Box,
+    color: 'bg-violet-500', gradient: 'bg-gradient-to-br from-violet-500 to-purple-600',
+    accent: '#8b5cf6', textColor: 'text-violet-700', ring: 'bg-violet-50',
+    description: 'Run a nested workflow',
+  },
+  merge: {
+    label: 'Merge', icon: GitMerge,
+    color: 'bg-teal-500', gradient: 'bg-gradient-to-br from-teal-500 to-cyan-600',
+    accent: '#14b8a6', textColor: 'text-teal-700', ring: 'bg-teal-50',
+    description: 'Join parallel branches',
+  },
 }
 
 export function defaultLabel(type: NodeType): string {

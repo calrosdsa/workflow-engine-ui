@@ -12,10 +12,11 @@ export function NodePalette() {
   }
 
   return (
-    <div className="absolute left-2 top-2 z-10 flex flex-col gap-1.5 rounded-xl border bg-white/90 p-2 shadow-md backdrop-blur">
-      <p className="px-1 text-[9px] font-semibold uppercase tracking-wider text-gray-400">Nodes</p>
+    <div className="absolute left-3 top-3 z-10 flex w-44 flex-col gap-1 rounded-2xl border border-slate-200/80 bg-white/80 p-2 shadow-lg shadow-slate-900/5 backdrop-blur-md">
+      <p className="px-1.5 pb-0.5 pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Add Node</p>
       {PALETTE_NODES.map((type) => {
         const reg = NODE_REGISTRY[type]
+        const Icon = reg.icon
         return (
           <div
             key={type}
@@ -23,15 +24,19 @@ export function NodePalette() {
             onDragStart={(e) => onDragStart(e, type)}
             onClick={() => addNode(type)}
             className={cn(
-              'flex cursor-grab items-center gap-2 rounded-lg border px-2.5 py-1.5',
-              'hover:shadow-sm active:cursor-grabbing transition-shadow',
-              'text-xs font-medium text-gray-700 select-none',
-              'bg-white hover:bg-gray-50',
+              'group flex cursor-grab items-center gap-2.5 rounded-xl px-2 py-1.5',
+              'transition-colors hover:bg-slate-100 active:cursor-grabbing',
+              'select-none',
             )}
             title={reg.description}
           >
-            <span className={cn('h-2 w-2 rounded-full', reg.color)} />
-            {reg.label}
+            <div className={cn(
+              'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white shadow-sm transition-transform group-hover:scale-105',
+              reg.gradient,
+            )}>
+              <Icon size={14} strokeWidth={2.25} />
+            </div>
+            <span className="text-[13px] font-medium text-slate-700">{reg.label}</span>
           </div>
         )
       })}

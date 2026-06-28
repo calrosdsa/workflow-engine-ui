@@ -4,15 +4,6 @@ import { NODE_REGISTRY, PALETTE_NODES } from './node-registry'
 import { cn } from '@/lib/utils'
 import type { NodeType } from '../types'
 
-const NODE_ICONS: Record<string, string> = {
-  entry:        '▶',
-  exit:         '⏹',
-  set_variable: '✦',
-  condition:    '◆',
-  subflow:      '⊞',
-  merge:        '⊕',
-}
-
 // Groups shown in the picker tabs
 const CATEGORIES: { label: string; types: NodeType[] }[] = [
   { label: 'All',   types: PALETTE_NODES },
@@ -26,8 +17,8 @@ interface NodePickerModalProps {
 }
 
 export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
-  const [search,      setSearch]      = useState('')
-  const [activeTab,   setActiveTab]   = useState(0)
+  const [search,    setSearch]    = useState('')
+  const [activeTab, setActiveTab] = useState(0)
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -51,38 +42,38 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
   return (
     // Backdrop
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="relative w-[580px] max-h-[520px] flex flex-col rounded-2xl border bg-white shadow-2xl overflow-hidden">
+      <div className="relative flex max-h-[540px] w-[600px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
 
         {/* Header */}
-        <div className="flex items-center gap-2 border-b px-4 py-3">
-          <Search size={15} className="shrink-0 text-gray-400" />
+        <div className="flex items-center gap-2.5 border-b border-slate-100 px-4 py-3.5">
+          <Search size={16} className="shrink-0 text-slate-400" />
           <input
             ref={searchRef}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setActiveTab(0) }}
             placeholder="Search nodes…"
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
+            className="flex-1 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
           />
-          <button onClick={onClose} className="rounded p-1 hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-            <X size={14} />
+          <button onClick={onClose} className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
+            <X size={15} />
           </button>
         </div>
 
         {/* Category tabs — only show when not searching */}
         {!search && (
-          <div className="flex gap-1 border-b px-4 pt-2">
+          <div className="flex gap-1 px-4 pt-3">
             {CATEGORIES.map((cat, i) => (
               <button
                 key={cat.label}
                 onClick={() => setActiveTab(i)}
                 className={cn(
-                  'px-3 py-1.5 text-xs font-medium rounded-t transition-colors',
+                  'rounded-lg px-3 py-1.5 text-xs font-semibold transition-all',
                   activeTab === i
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100',
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700',
                 )}
               >
                 {cat.label}
@@ -94,30 +85,33 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
         {/* Node grid */}
         <div className="overflow-y-auto p-4">
           {candidates.length === 0 ? (
-            <p className="py-8 text-center text-sm text-gray-400">No nodes match "{search}"</p>
+            <div className="flex flex-col items-center gap-2 py-12 text-center">
+              <Search size={24} className="text-slate-300" />
+              <p className="text-sm text-slate-400">No nodes match "{search}"</p>
+            </div>
           ) : (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2.5">
               {candidates.map((type) => {
                 const reg = NODE_REGISTRY[type]
+                const Icon = reg.icon
                 return (
                   <button
                     key={type}
                     onClick={() => onSelect(type)}
                     className={cn(
-                      'flex flex-col items-center gap-2 rounded-xl border-2 border-transparent p-4',
-                      'hover:border-gray-200 hover:bg-gray-50 hover:shadow-sm',
-                      'transition-all text-center group',
+                      'group flex flex-col items-start gap-2.5 rounded-xl border border-slate-200 p-3.5 text-left',
+                      'transition-all hover:border-slate-300 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5',
                     )}
                   >
                     <div className={cn(
-                      'flex h-12 w-12 items-center justify-center rounded-xl text-white text-xl shadow-sm',
-                      reg.color,
+                      'flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-sm transition-transform group-hover:scale-105',
+                      reg.gradient,
                     )}>
-                      {NODE_ICONS[type] ?? '●'}
+                      <Icon size={18} strokeWidth={2.25} />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-gray-800">{reg.label}</p>
-                      <p className="mt-0.5 text-[10px] text-gray-400 leading-tight">{reg.description}</p>
+                      <p className="text-[13px] font-semibold text-slate-800">{reg.label}</p>
+                      <p className="mt-0.5 text-[10px] leading-snug text-slate-400">{reg.description}</p>
                     </div>
                   </button>
                 )

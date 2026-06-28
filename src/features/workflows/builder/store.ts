@@ -59,6 +59,11 @@ export type PickerContext =
   | { kind: 'node';      sourceNodeId: string; sourceHandle: string }
   | null
 
+// Where a dragged node is dropped relative to a target node.
+//   before / after → insert in sequence (re-chains the line)
+//   left / right   → make a parallel sibling (shares the target's parent)
+export type DropPosition = 'before' | 'after' | 'left' | 'right'
+
 export interface BuilderState {
   workflowId:    string
   name:          string
@@ -75,6 +80,12 @@ export interface BuilderState {
   toggleVarsPanel:  () => void
   toggleConfigPanel:() => void
 
+  // drag-to-reorder state
+  draggingNodeId:    string | null
+  activeDropTarget:  { nodeId: string; position: DropPosition } | null
+  setDraggingNode:   (id: string | null) => void
+  setActiveDropTarget: (t: { nodeId: string; position: DropPosition } | null) => void
+
   // node picker
   pickerContext: PickerContext
   openPicker:   (ctx: PickerContext) => void
@@ -89,6 +100,7 @@ export interface BuilderState {
   addNode:              (type: NodeType, position?: { x: number; y: number }) => void
   addConnectedNode:     (type: NodeType, sourceNodeId: string, sourceHandle?: string) => void
   insertNodeOnEdge:     (type: NodeType, edgeId: string) => void
+  reorderNode:          (draggedId: string, targetId: string, position: DropPosition) => void
   updateNodeConfig:     (nodeId: string, config: unknown) => void
   updateNodeLabel:      (nodeId: string, label: string) => void
   selectNode:           (id: string | null) => void
@@ -113,6 +125,11 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   configPanelOpen:   true,
   toggleVarsPanel:   () => set((s) => ({ varsPanelOpen:   !s.varsPanelOpen })),
   toggleConfigPanel: () => set((s) => ({ configPanelOpen: !s.configPanelOpen })),
+
+  draggingNodeId:      null,
+  activeDropTarget:    null,
+  setDraggingNode:     (id) => set({ draggingNodeId: id }),
+  setActiveDropTarget: (t)  => set({ activeDropTarget: t }),
 
   pickerContext: null,
   openPicker:   (ctx) => set({ pickerContext: ctx }),
@@ -264,6 +281,117 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     }))
   },
 
+  // Reorder: detach draggedId from its current position and re-attach it
+  // relative to targetId, rewiring all edges automatically.
+  //   before / after → splice into the sequence (re-chain the line)
+  //   left / right   → make a parallel sibling sharing the target's parents
+  reorderNode: (draggedId, targetId, position) => {
+    if (draggedId === targetId) return
+    const s = get()
+
+    const incomingToDragged   = s.edges.filter((e) => e.target === draggedId)
+    const outgoingFromDragged = s.edges.filter((e) => e.source === draggedId)
+    const incomingToTarget    = s.edges.filter((e) => e.target === targetId)
+    const outgoingFromTarget   = s.edges.filter((e) => e.source === targetId)
+
+    const mk = (source: string, target: string, sourceHandle = 'out', targetHandle = 'in'): FlowEdge => ({
+      id:           nanoid(),
+      source, target, sourceHandle, targetHandle,
+      data:         { condition: '' },
+      animated:     false,
+      style:        { strokeWidth: 2 },
+    })
+
+    // Edge ids to remove + new edges to add, decided per drop position.
+    const removeIds = new Set<string>()
+    const newEdges: FlowEdge[] = []
+
+    if (position === 'left' || position === 'right') {
+      // Parallel sibling: detach dragged from its own parents/children and
+      // attach it to the SAME parents as the target (fan-out branch).
+      // Target keeps its own edges untouched.
+      for (const e of incomingToDragged)   removeIds.add(e.id)
+      for (const e of outgoingFromDragged) removeIds.add(e.id)
+
+      // Bridge dragged's old parents → dragged's old children so the line
+      // dragged was sitting in doesn't break.
+      for (const pe of incomingToDragged) {
+        for (const ce of outgoingFromDragged) {
+          newEdges.push(mk(pe.source, ce.target, pe.sourceHandle ?? 'out', ce.targetHandle ?? 'in'))
+        }
+      }
+
+      // Attach dragged under each of the target's parents → sibling of target.
+      for (const e of incomingToTarget) {
+        newEdges.push(mk(e.source, draggedId, e.sourceHandle ?? 'out', 'in'))
+      }
+    } else if (position === 'before') {
+      // Insert dragged immediately before target in the chain.
+      for (const e of incomingToDragged)   removeIds.add(e.id)
+      for (const e of outgoingFromDragged) removeIds.add(e.id)
+      for (const e of incomingToTarget)    removeIds.add(e.id)
+
+      // dragged's old parents → dragged
+      for (const e of incomingToDragged) {
+        newEdges.push(mk(e.source, draggedId, e.sourceHandle ?? 'out', 'in'))
+      }
+      // target's old parents → dragged
+      for (const e of incomingToTarget) {
+        if (!incomingToDragged.some((de) => de.source === e.source)) {
+          newEdges.push(mk(e.source, draggedId, e.sourceHandle ?? 'out', 'in'))
+        }
+      }
+      // dragged → target
+      newEdges.push(mk(draggedId, targetId))
+      // dragged's old children rerouted from target
+      for (const e of outgoingFromDragged) {
+        if (e.target !== targetId) {
+          newEdges.push(mk(targetId, e.target, 'out', e.targetHandle ?? 'in'))
+        }
+      }
+    } else {
+      // position === 'after': insert dragged immediately after target.
+      for (const e of incomingToDragged)   removeIds.add(e.id)
+      for (const e of outgoingFromDragged) removeIds.add(e.id)
+      for (const e of outgoingFromTarget)  removeIds.add(e.id)
+
+      // target → dragged
+      newEdges.push(mk(targetId, draggedId))
+      // dragged's old parents → target's old children
+      for (const e of outgoingFromTarget) {
+        if (e.target !== draggedId) {
+          for (const pe of incomingToDragged) {
+            newEdges.push(mk(pe.source, e.target, pe.sourceHandle ?? 'out', 'in'))
+          }
+        }
+      }
+      // dragged → its old children
+      for (const e of outgoingFromDragged) {
+        newEdges.push(mk(draggedId, e.target, 'out', e.targetHandle ?? 'in'))
+      }
+    }
+
+    const keptEdges = s.edges.filter((e) => !removeIds.has(e.id))
+
+    // Merge kept + new edges, then dedup self-loops and duplicate
+    // source→target pairs, and drop any edge whose endpoints don't both exist.
+    const nodeIds = new Set(s.nodes.map((n) => n.id))
+    const seen = new Set<string>()
+    const finalEdges = [...keptEdges, ...newEdges].filter((e) => {
+      if (e.source === e.target) return false
+      if (!nodeIds.has(e.source) || !nodeIds.has(e.target)) return false
+      const key = `${e.source}→${e.target}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+
+    set(() => ({
+      edges:   finalEdges,
+      isDirty: true,
+    }))
+  },
+
   updateNodeConfig: (nodeId, config) =>
     set((s) => ({
       nodes: s.nodes.map((n) =>
@@ -328,18 +456,24 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
   toDefinition: (): WorkflowDefinitionGraph => {
     const s = get()
+    const nodeIds = new Set(s.nodes.map((n) => n.id))
     const graphNodes: GraphNode[] = s.nodes.map((n) => ({
       ...n.data,
       position: { x: n.position.x, y: n.position.y },
     }))
-    const graphEdges: GraphEdge[] = s.edges.map((e) => ({
-      id:            e.id,
-      source:        e.source,
-      target:        e.target,
-      source_handle: e.sourceHandle ?? 'out',
-      target_handle: e.targetHandle ?? 'in',
-      condition:     e.data?.condition ?? '',
-    }))
+    // Drop any edge whose source or target node no longer exists. This guards
+    // against dangling edges left behind by deletes or reorders (the backend
+    // rejects a definition that references a missing node).
+    const graphEdges: GraphEdge[] = s.edges
+      .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target))
+      .map((e) => ({
+        id:            e.id,
+        source:        e.source,
+        target:        e.target,
+        source_handle: e.sourceHandle ?? 'out',
+        target_handle: e.targetHandle ?? 'in',
+        condition:     e.data?.condition ?? '',
+      }))
     return {
       id:        s.workflowId,
       variables: s.variables,

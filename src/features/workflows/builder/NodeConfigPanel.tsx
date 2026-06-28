@@ -1,34 +1,39 @@
-import { Settings, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Settings, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { useBuilderStore } from './store'
+import { NODE_REGISTRY } from './node-registry'
+import { cn } from '@/lib/utils'
 import type { VariableDecl, SetVariableConfig, ConditionConfig } from '../types'
 
 export function NodeConfigPanel() {
   const { nodes, selectedNodeId, variables, updateNodeConfig, updateNodeLabel, configPanelOpen, toggleConfigPanel } = useBuilderStore()
   const node = nodes.find((n) => n.id === selectedNodeId)
+  const reg  = node ? NODE_REGISTRY[node.data.type] : null
+  const Icon = reg?.icon
 
   return (
     <aside
       className={[
-        'relative flex shrink-0 flex-col border-l bg-white transition-all duration-200',
-        configPanelOpen ? 'w-72' : 'w-9',
+        'relative flex shrink-0 flex-col border-l border-slate-200 bg-white transition-all duration-200',
+        configPanelOpen ? 'w-72' : 'w-10',
       ].join(' ')}
     >
       {/* Toggle button — always visible on the left edge */}
       <button
         onClick={toggleConfigPanel}
-        className="absolute -left-3 top-8 z-10 flex h-6 w-6 items-center justify-center rounded-full border bg-white shadow-sm hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors"
+        className="absolute -left-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-600"
         title={configPanelOpen ? 'Collapse config' : 'Expand config'}
       >
-        {configPanelOpen ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+        {configPanelOpen ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
       </button>
 
       {/* Collapsed state */}
       {!configPanelOpen && (
-        <div className="flex flex-1 items-center justify-center">
-          <span className="rotate-90 whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-gray-400 select-none">
+        <div className="flex flex-1 flex-col items-center gap-2 pt-4">
+          <SlidersHorizontal size={15} className="text-slate-400" />
+          <span className="rotate-90 select-none whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-slate-400">
             Config
           </span>
         </div>
@@ -36,24 +41,31 @@ export function NodeConfigPanel() {
 
       {/* Expanded — no node selected */}
       {configPanelOpen && !node && (
-        <div className="flex flex-1 flex-col items-center justify-center text-center p-4">
-          <Settings size={28} className="mb-3 text-gray-300" />
-          <p className="text-sm text-gray-400">Select a node to configure</p>
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100">
+            <Settings size={22} className="text-slate-300" />
+          </div>
+          <p className="text-sm text-slate-400">Select a node<br />to configure it</p>
         </div>
       )}
 
       {/* Expanded — node selected */}
-      {configPanelOpen && node && (
+      {configPanelOpen && node && reg && Icon && (
         <>
-          <div className="border-b px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Node Config</p>
-            <p className="mt-0.5 font-mono text-[10px] text-gray-400">{node.id}</p>
+          <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3.5">
+            <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-sm', reg.gradient)}>
+              <Icon size={17} strokeWidth={2.25} />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-semibold text-slate-800">{reg.label}</p>
+              <p className="truncate font-mono text-[10px] text-slate-400">{node.id}</p>
+            </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-5 p-4">
+          <div className="flex-1 space-y-5 overflow-y-auto p-4">
             {/* Label */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Label</Label>
+              <Label className="text-xs text-slate-600">Label</Label>
               <Input
                 value={node.data.label}
                 onChange={(e) => updateNodeLabel(node.id, e.target.value)}

@@ -11,6 +11,7 @@ import {
 } from "@xyflow/react";
 
 import { CustomEdge } from "./CustomEdge";
+import "./index.css";
 import { BaseNode } from "@/features/workflows/builder/nodes/BaseNode";
 import {
   useBuilderStore,
@@ -80,7 +81,6 @@ const Flow = () => {
   const onKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Delete" || e.key === "Backspace") {
       useBuilderStore.getState().deleteSelected();
-      // Re-layout after deletion settles
       setTimeout(() => useBuilderStore.getState().applyDagreLayout("TB"), 0);
     }
   }, []);
@@ -95,7 +95,6 @@ const Flow = () => {
         addConnectedNode(type, pickerContext.sourceNodeId, pickerContext.sourceHandle);
       }
       closePicker();
-      // Re-layout after new node is added
       setTimeout(() => useBuilderStore.getState().applyDagreLayout("TB"), 0);
     },
     [pickerContext, insertNodeOnEdge, addConnectedNode, closePicker],
@@ -110,33 +109,26 @@ const Flow = () => {
     [onConnect],
   );
 
-  // Re-layout after nodes are deleted (fired by XYFlow after the delete is applied)
-  const handleNodesDelete = useCallback(
-    (deleted: Node[]) => {
-      console.log("nodesDelete", deleted);
-      setTimeout(() => useBuilderStore.getState().applyDagreLayout("TB"), 0);
-    },
-    [],
-  );
+  // Re-layout after nodes are deleted
+  const handleNodesDelete = useCallback((_deleted: Node[]) => {
+    setTimeout(() => useBuilderStore.getState().applyDagreLayout("TB"), 0);
+  }, []);
 
   // Re-layout after edges are deleted
-  const handleEdgesDelete = useCallback(
-    (deleted: Edge[]) => {
-      console.log("edgesDelete", deleted);
-      setTimeout(() => useBuilderStore.getState().applyDagreLayout("TB"), 0);
-    },
-    [],
-  );
+  const handleEdgesDelete = useCallback((_deleted: Edge[]) => {
+    setTimeout(() => useBuilderStore.getState().applyDagreLayout("TB"), 0);
+  }, []);
 
   return (
     <div
-      className="relative flex-1 h-screen p-10"
+      className="relative h-full flex-1 bg-slate-50"
       onDrop={onDrop}
       onDragOver={onDragOver}
       onKeyDown={onKeyDown}
       tabIndex={0}
     >
-        {/* {JSON.stringify(nodes)} */}
+      {/* <NodePalette /> */}
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -145,7 +137,7 @@ const Flow = () => {
         defaultEdgeOptions={{
           animated: false,
           type: "default",
-          style: { strokeWidth: 2, stroke: "#94a3b8" },
+          style: { strokeWidth: 2, stroke: "#cbd5e1" },
         }}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
@@ -155,18 +147,32 @@ const Flow = () => {
         onInit={onInit}
         onNodeClick={(_, node) => selectNode(node.id)}
         onPaneClick={() => selectNode(null)}
+        nodesDraggable
+        elevateEdgesOnSelect
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        // fitViewOptions={{ padding: 0.3 }}
         connectionLineStyle={{ strokeWidth: 2, stroke: "#3b82f6" }}
         snapToGrid
-        snapGrid={[16, 16]}
+        // snapGrid={[16, 16]}
         minZoom={0.3}
         maxZoom={2}
         deleteKeyCode={null}
-        colorMode="system"
+        proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#e2e8f0" />
-        <Controls showInteractive={false} />
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1.5} color="#d8dee9" />
+        <Controls
+          showInteractive={false}
+          className="!rounded-xl !border !border-slate-200 !bg-white !shadow-lg overflow-hidden [&>button]:!border-slate-100 [&>button]:!text-slate-500 [&>button:hover]:!bg-slate-50"
+        />
+        {/* <MiniMap
+          pannable
+          zoomable
+          className="!rounded-xl !border !border-slate-200 !bg-white !shadow-lg"
+          maskColor="rgba(241,245,249,0.7)"
+          nodeColor={(n) => NODE_REGISTRY[(n.data as FlowNode["data"]).type]?.accent ?? "#94a3b8"}
+          nodeStrokeWidth={0}
+          nodeBorderRadius={4}
+        /> */}
       </ReactFlow>
 
       {pickerContext && (
@@ -178,7 +184,7 @@ const Flow = () => {
 
 export function FlowLayout() {
   return (
-    <div className="relative flex-1">
+    <div className="relative h-full flex-1">
       <Flow />
     </div>
   );
