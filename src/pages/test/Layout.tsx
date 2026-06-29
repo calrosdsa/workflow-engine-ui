@@ -25,13 +25,15 @@ const edgeTypes = {
 };
 
 const nodeTypes = {
-  entry:        BaseNode,
-  exit:         BaseNode,
+  entry: BaseNode,
+  exit: BaseNode,
   set_variable: BaseNode,
-  condition:    BaseNode,
-  subflow:      BaseNode,
-  merge:        BaseNode,
+  condition: BaseNode,
+  subflow: BaseNode,
+  merge: BaseNode,
   fetch_records: BaseNode,
+  iterator: BaseNode,
+  loop_end: BaseNode,
 };
 
 const Flow = () => {
@@ -63,7 +65,9 @@ const Flow = () => {
         "application/xyflow-node-type",
       ) as NodeType;
       if (!type || !rfInstanceRef.current) return;
-      const bounds = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+      const bounds = (
+        e.currentTarget as HTMLDivElement
+      ).getBoundingClientRect();
       const position = rfInstanceRef.current.screenToFlowPosition({
         x: e.clientX - bounds.left,
         y: e.clientY - bounds.top,
@@ -93,7 +97,11 @@ const Flow = () => {
       if (pickerContext.kind === "edge") {
         insertNodeOnEdge(type, pickerContext.edgeId);
       } else {
-        addConnectedNode(type, pickerContext.sourceNodeId, pickerContext.sourceHandle);
+        addConnectedNode(
+          type,
+          pickerContext.sourceNodeId,
+          pickerContext.sourceHandle,
+        );
       }
       closePicker();
       setTimeout(() => useBuilderStore.getState().applyDagreLayout("TB"), 0);
@@ -160,7 +168,12 @@ const Flow = () => {
         deleteKeyCode={null}
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1.5} color="#d8dee9" />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={20}
+          size={1.5}
+          color="#d8dee9"
+        />
         <Controls
           showInteractive={false}
           className="!rounded-xl !border !border-slate-200 !bg-white !shadow-lg overflow-hidden [&>button]:!border-slate-100 [&>button]:!text-slate-500 [&>button:hover]:!bg-slate-50"

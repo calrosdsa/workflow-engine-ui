@@ -25,6 +25,8 @@ const nodeTypes = {
   subflow:       BaseNode,
   merge:         BaseNode,
   fetch_records: BaseNode,
+  iterator:      BaseNode,
+  loop_end:      BaseNode,
 }
 
 const edgeTypes = {
@@ -127,7 +129,7 @@ export function FlowCanvas() {
             const colorMap: Record<string, string> = {
               entry: '#10b981', exit: '#9ca3af', set_variable: '#3b82f6',
               condition: '#f59e0b', subflow: '#a855f7', merge: '#14b8a6',
-              fetch_records: '#f43f5e',
+              fetch_records: '#f43f5e', iterator: '#f59e0b', loop_end: '#94a3b8',
             }
             return colorMap[type] ?? '#94a3b8'
           }}

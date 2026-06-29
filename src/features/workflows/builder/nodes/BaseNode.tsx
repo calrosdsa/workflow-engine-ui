@@ -6,7 +6,7 @@ import { NODE_REGISTRY } from '../node-registry'
 import { useBuilderStore, type FlowNode, type DropPosition } from '../store'
 import { computeExecutionOrder } from '../executionOrder'
 import { DropZone } from './DropZone'
-import type { SetVariableConfig, ConditionConfig, VariableAssignment, FetchRecordsConfig, FilterGroup } from '../../types'
+import type { SetVariableConfig, ConditionConfig, VariableAssignment, FetchRecordsConfig, FilterGroup, IteratorConfig } from '../../types'
 
 const DRAG_TRANSFER_KEY = 'application/workflow-node-reorder'
 
@@ -236,6 +236,32 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
     case 'subflow': {
       const cfg = data.configuration as { definition_id?: string }
       return <p className="text-[11px] italic text-slate-400">{cfg?.definition_id ? `↳ ${cfg.definition_id.slice(0, 8)}…` : 'Not linked'}</p>
+    }
+    case 'loop_end':
+      return <p className="text-[11px] text-slate-400">Marks the end of the loop body</p>
+    case 'iterator': {
+      const cfg = data.configuration as IteratorConfig | undefined
+      if (!cfg?.source_expr) return <p className="text-[11px] italic text-slate-400">No source list set</p>
+      const itemV = cfg.item_var || 'item'
+      const idxV = cfg.index_var || 'index'
+      return (
+        <div className="space-y-1 text-[10px]">
+          <div className="flex items-center gap-1">
+            <span className="text-slate-400">for</span>
+            <code className="rounded bg-amber-50 px-1 py-0.5 font-semibold text-amber-700">{itemV}</code>
+            <span className="text-slate-300">,</span>
+            <code className="rounded bg-amber-50 px-1 py-0.5 font-semibold text-amber-700">{idxV}</code>
+            <span className="text-slate-400">in</span>
+          </div>
+          <code className="block truncate rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-600">{cfg.source_expr}</code>
+          {(cfg.filter_expr || cfg.stop_expr) && (
+            <div className="flex gap-1 text-slate-400">
+              {cfg.filter_expr && <span className="rounded bg-slate-100 px-1">filter</span>}
+              {cfg.stop_expr && <span className="rounded bg-slate-100 px-1">stop</span>}
+            </div>
+          )}
+        </div>
+      )
     }
     case 'fetch_records': {
       const cfg = data.configuration as FetchRecordsConfig | undefined

@@ -26,6 +26,11 @@ import type { NodeOutputSchema, OutputField } from './node-output-schema'
 // Vars/Times/Context string-key access (NodeOutputs handled separately below).
 const VAR_BRACKET_RE = /(Vars|Times|Context)\s*\[\s*"([^"]*)$/
 
+// Vars["item"][ "path"... ][ "  — deep path into a loop-scoped var (the cursor
+// is in a LATER bracket). Captures the top-level var key, the closed segments,
+// and the in-progress key, so we can walk the var's inferred field shape.
+const VARS_PATH_RE = /Vars\s*\[\s*"([^"]+)"\s*\]((?:\s*\[\s*(?:"[^"]*"|\d+)\s*\])+)\s*\[\s*"([^"]*)$/
+
 // NodeOutputs["  — cursor inside the FIRST bracket (choosing the node id).
 const NODEOUT_ID_RE = /NodeOutputs\s*\[\s*"([^"]*)$/
 
@@ -87,22 +92,52 @@ function parseSegments(raw: string): string[] {
 }
 
 function fieldCompletions(fields: OutputField[]): Completion[] {
-  return fields.map((f) => ({
-    label: f.key,
-    type: f.children ? 'class' : 'property',
-    detail: f.isArray ? `${f.type}[]` : f.type,
-    boost: 60,
-  }))
+  return fields.map((f) => {
+    const t = f.isArray ? `${f.type}[]` : f.type
+    // `label` must stay the key (it's what gets inserted into the Expr path);
+    // surface the human-readable form label + type as the detail.
+    const detail = f.label && f.label !== f.key ? `${f.label} · ${t}` : t
+    return {
+      label: f.key,
+      type: f.children ? 'class' : 'property',
+      detail,
+      boost: 60,
+    }
+  })
 }
 
 function exprCompletionSource(variables: VariableDecl[], nodeContext: NodeOutputSchema[]) {
   const varComps = variableCompletions(variables)
   const fnComps = functionCompletions()
   const rootComps = rootCompletions()
-  const byId = new Map(nodeContext.map((s) => [s.nodeId, s]))
+  const byId = new Map(nodeContext.filter((s) => s.root !== 'vars').map((s) => [s.nodeId, s]))
+
+  // Loop-scoped vars (root: 'vars') expose their top-level fields directly under
+  // Vars["name"] — collect them by key so we can complete the name and drill in.
+  const varFieldsByKey = new Map<string, OutputField>()
+  for (const s of nodeContext) {
+    if (s.root !== 'vars') continue
+    for (const f of s.fields) varFieldsByKey.set(f.key, f)
+  }
+  const loopVarComps: Completion[] = [...varFieldsByKey.keys()].map((key) => ({
+    label: key, type: 'variable', detail: 'loop', boost: 65,
+  }))
 
   return (context: CompletionContext): CompletionResult | null => {
     const before = context.state.sliceDoc(0, context.pos)
+
+    // Vars["item"]…[" → drill into a loop var's inferred fields.
+    const varsPath = VARS_PATH_RE.exec(before)
+    if (varsPath) {
+      const [, topKey, midSegments, typed] = varsPath
+      const root = varFieldsByKey.get(topKey)
+      if (root) {
+        // Walk from the root var's children through the closed segments.
+        const fields = fieldsAtPath({ fields: root.children ?? [] } as NodeOutputSchema, parseSegments(midSegments))
+        const from = context.pos - typed.length
+        return { from, options: fieldCompletions(fields), validFor: /^[^"]*$/ }
+      }
+    }
 
     // 2/3/4. NodeOutputs deep path: NodeOutputs["id"]…[" → field keys.
     const pathMatch = NODEOUT_PATH_RE.exec(before)
@@ -133,12 +168,13 @@ function exprCompletionSource(variables: VariableDecl[], nodeContext: NodeOutput
       return { from, options, validFor: /^[^"]*$/ }
     }
 
-    // 1. Vars/Times/Context[" → variable names.
+    // 1. Vars/Times/Context[" → variable names (+ loop-scoped item/index for Vars).
     const bracket = VAR_BRACKET_RE.exec(before)
     if (bracket) {
       const typed = bracket[2]
       const from = context.pos - typed.length
-      return { from, options: varComps, validFor: /^[^"]*$/ }
+      const opts = bracket[1] === 'Vars' ? [...loopVarComps, ...varComps] : varComps
+      return { from, options: opts, validFor: /^[^"]*$/ }
     }
 
     // 5. Bare word → functions + roots.

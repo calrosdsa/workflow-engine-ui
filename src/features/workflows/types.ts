@@ -10,6 +10,8 @@ export type NodeType =
   | 'subflow'
   | 'merge'
   | 'fetch_records'
+  | 'iterator'
+  | 'loop_end'
 
 export type PortKind = 'data' | 'control' | 'trigger'
 
@@ -164,4 +166,24 @@ export interface FetchRecordsConfig {
   limit: number
   output_var: string
   count_var?: string
+}
+
+// ---------------------------------------------------------------------------
+// Iterator (foreach loop) — mirrors internal/graph/configs_loop.go
+// ---------------------------------------------------------------------------
+
+export interface IteratorConfig {
+  /** Expr → the list to iterate, e.g. NodeOutputs["fetch"]["records"]. */
+  source_expr: string
+  /** Loop-scoped variable names exposing the current element + index. */
+  item_var?: string
+  index_var?: string
+  /** Per-element: run the body only when truthy. */
+  filter_expr?: string
+  /** Optional while/until: stop the loop when truthy. */
+  stop_expr?: string
+  /** Safety cap on iterations (0 = unlimited). */
+  max_iters?: number
+  /** The paired Loop End node id that closes the body. */
+  loop_end_id: string
 }

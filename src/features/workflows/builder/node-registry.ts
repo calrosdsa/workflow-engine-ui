@@ -6,9 +6,11 @@ import {
   Box,
   GitMerge,
   Database,
+  Repeat,
+  FlagOff,
   type LucideIcon,
 } from 'lucide-react'
-import type { NodeType, Port, SetVariableConfig, ConditionConfig, FetchRecordsConfig } from '../types'
+import type { NodeType, Port, SetVariableConfig, ConditionConfig, FetchRecordsConfig, IteratorConfig } from '../types'
 
 export interface NodeRegistryEntry {
   label: string
@@ -64,6 +66,18 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     accent: '#f43f5e', textColor: 'text-rose-700', ring: 'bg-rose-50',
     description: 'Query records from a form',
   },
+  iterator: {
+    label: 'Iterator', icon: Repeat,
+    color: 'bg-amber-500', gradient: 'bg-gradient-to-br from-amber-500 to-yellow-600',
+    accent: '#f59e0b', textColor: 'text-amber-700', ring: 'bg-amber-50',
+    description: 'Loop over a list, running the body per item',
+  },
+  loop_end: {
+    label: 'Loop End', icon: FlagOff,
+    color: 'bg-slate-400', gradient: 'bg-gradient-to-br from-slate-400 to-slate-500',
+    accent: '#94a3b8', textColor: 'text-slate-600', ring: 'bg-slate-100',
+    description: 'Marks the end of a loop body',
+  },
 }
 
 export function defaultLabel(type: NodeType): string {
@@ -97,7 +111,7 @@ export function defaultPorts(type: NodeType): { inputs: Port[]; outputs: Port[] 
   }
 }
 
-export function defaultConfig(type: NodeType): SetVariableConfig | ConditionConfig | FetchRecordsConfig | Record<string, never> {
+export function defaultConfig(type: NodeType): SetVariableConfig | ConditionConfig | FetchRecordsConfig | IteratorConfig | Record<string, never> {
   switch (type) {
     case 'set_variable':
       return { assignments: [] } satisfies SetVariableConfig
@@ -109,10 +123,16 @@ export function defaultConfig(type: NodeType): SetVariableConfig | ConditionConf
         filter: { combinator: 'and', conditions: [], groups: [] },
         sort: [], limit: 0, output_var: '',
       } satisfies FetchRecordsConfig
+    case 'iterator':
+      return {
+        source_expr: '', item_var: 'item', index_var: 'index',
+        filter_expr: '', stop_expr: '', max_iters: 0, loop_end_id: '',
+      } satisfies IteratorConfig
     default:
       return {}
   }
 }
 
-// Node types available from the drag-and-drop palette (excludes entry/exit added automatically)
-export const PALETTE_NODES: NodeType[] = ['set_variable', 'condition', 'fetch_records', 'merge', 'subflow']
+// Node types available from the drag-and-drop palette (entry/exit and loop_end
+// are added automatically — loop_end is auto-paired when an iterator is added).
+export const PALETTE_NODES: NodeType[] = ['set_variable', 'condition', 'fetch_records', 'iterator', 'merge', 'subflow']

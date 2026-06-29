@@ -551,6 +551,7 @@ function NodeContextTree({ schema, search, onInsert }: {
               field={f}
               path={[f]}
               nodeId={schema.nodeId}
+              root={schema.root ?? 'node_outputs'}
               search={q}
               depth={0}
               onInsert={onInsert}
@@ -562,10 +563,11 @@ function NodeContextTree({ schema, search, onInsert }: {
   )
 }
 
-function OutputFieldRow({ field, path, nodeId, search, depth, onInsert }: {
+function OutputFieldRow({ field, path, nodeId, root, search, depth, onInsert }: {
   field: OutputField
   path: OutputField[]
   nodeId: string
+  root: 'node_outputs' | 'vars'
   search: string
   depth: number
   onInsert: (text: string) => void
@@ -573,13 +575,17 @@ function OutputFieldRow({ field, path, nodeId, search, depth, onInsert }: {
   const [open, setOpen] = useState(depth < 1)
   const hasChildren = !!field.children && field.children.length > 0
 
-  // Filter: keep this row if its key matches, or any descendant matches.
-  const selfMatch = !search || field.key.toLowerCase().includes(search)
-  const childMatch = hasChildren &&
-    field.children!.some((c) => c.key.toLowerCase().includes(search))
+  // Filter: keep this row if its label/key matches, or any descendant matches.
+  const fieldMatches = (f: OutputField) =>
+    f.key.toLowerCase().includes(search) || (f.label ?? '').toLowerCase().includes(search)
+  const selfMatch = !search || fieldMatches(field)
+  const childMatch = hasChildren && field.children!.some(fieldMatches)
   if (search && !selfMatch && !childMatch) return null
 
-  const insertPath = outputFieldPath(nodeId, path)
+  const insertPath = outputFieldPath(nodeId, path, root)
+  // Show the human-readable label; the raw key is a subtle hint when it differs.
+  const display = field.label || field.key
+  const showKeyHint = !!field.label && field.label !== field.key
 
   return (
     <div>
@@ -593,13 +599,18 @@ function OutputFieldRow({ field, path, nodeId, search, depth, onInsert }: {
         )}
         <button
           onClick={() => onInsert(insertPath)}
-          className="group flex flex-1 items-center justify-between rounded px-1.5 py-1 text-left hover:bg-rose-50"
+          className="group flex flex-1 items-center justify-between gap-2 rounded px-1.5 py-1 text-left hover:bg-rose-50"
           title={insertPath}
         >
-          <span className="truncate font-mono text-[11px] text-slate-700">
-            {field.key}{field.isArray && <span className="text-slate-400">[ ]</span>}
+          <span className="flex min-w-0 items-baseline gap-1.5">
+            <span className="truncate text-[11px] text-slate-700">
+              {display}{field.isArray && <span className="text-slate-400">[ ]</span>}
+            </span>
+            {showKeyHint && (
+              <span className="truncate font-mono text-[9px] text-slate-400">{field.key}</span>
+            )}
           </span>
-          <span className="ml-2 shrink-0 rounded bg-slate-100 px-1 text-[9px] text-slate-500">{field.type}</span>
+          <span className="ml-1 shrink-0 rounded bg-slate-100 px-1 text-[9px] text-slate-500">{field.type}</span>
         </button>
       </div>
       {hasChildren && open && (
@@ -610,6 +621,7 @@ function OutputFieldRow({ field, path, nodeId, search, depth, onInsert }: {
               field={c}
               path={[...path, c]}
               nodeId={nodeId}
+              root={root}
               search={search}
               depth={depth + 1}
               onInsert={onInsert}

@@ -44,6 +44,46 @@ function stripFetchRecordsIds(cfg: Record<string, unknown>): Record<string, unkn
 }
 
 // ---------------------------------------------------------------------------
+// Node construction helpers
+// ---------------------------------------------------------------------------
+
+function makeNode(type: NodeType, position: { x: number; y: number }): FlowNode {
+  const id = nanoid()
+  const { inputs, outputs } = defaultPorts(type)
+  return {
+    id, type, position,
+    data: {
+      id, type,
+      label:         defaultLabel(type),
+      position:      { x: position.x, y: position.y },
+      configuration: defaultConfig(type),
+      inputs, outputs,
+    },
+  }
+}
+
+// Builds an iterator + its paired Loop End node, linked iterator→loop_end, with
+// the iterator's config pointing at the loop_end id. The Loop End sits below so
+// body nodes can be dropped between them.
+function makeIteratorPair(position: { x: number; y: number }) {
+  const iterator = makeNode('iterator', position)
+  const loopEnd = makeNode('loop_end', { x: position.x, y: position.y + 220 })
+  iterator.data.configuration = {
+    ...(iterator.data.configuration as Record<string, unknown>),
+    loop_end_id: loopEnd.id,
+  }
+  const edge: FlowEdge = {
+    id: nanoid(),
+    source: iterator.id, target: loopEnd.id,
+    sourceHandle: 'out', targetHandle: 'in',
+    data: { condition: '' },
+    animated: false,
+    style: { strokeWidth: 2 },
+  }
+  return { iterator, loopEnd, edge }
+}
+
+// ---------------------------------------------------------------------------
 // Dagre auto-layout
 // ---------------------------------------------------------------------------
 
@@ -195,63 +235,56 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   },
 
   addNode: (type, position = { x: 200 + Math.random() * 200, y: 100 + Math.random() * 200 }) => {
-    const id = nanoid()
-    const { inputs, outputs } = defaultPorts(type)
-    const newNode: FlowNode = {
-      id,
-      type,                          // XYFlow uses this to pick the custom component
-      position,
-      data: {
-        id,
-        type,
-        label:         defaultLabel(type),
-        position:      { x: position.x, y: position.y },
-        configuration: defaultConfig(type),
-        inputs,
-        outputs,
-      },
+    const newNode = makeNode(type, position)
+    // An iterator auto-creates its paired Loop End so the body region exists.
+    if (type === 'iterator') {
+      const { iterator, loopEnd, edge } = makeIteratorPair(position)
+      set((s) => ({
+        nodes:          [...s.nodes, iterator, loopEnd],
+        edges:          [...s.edges, edge],
+        selectedNodeId: iterator.id,
+        isDirty:        true,
+      }))
+      return
     }
     set((s) => ({
       nodes:         [...s.nodes, newNode],
-      selectedNodeId: id,
+      selectedNodeId: newNode.id,
       isDirty:       true,
     }))
   },
 
   // Add a node connected FROM an existing node's output handle (vertical layout: below).
   addConnectedNode: (type, sourceNodeId, sourceHandle = 'out') => {
-    const id = nanoid()
-    const { inputs, outputs } = defaultPorts(type)
     const s = get()
     const sourceNode = s.nodes.find((n) => n.id === sourceNodeId)
     const position = sourceNode
       ? { x: sourceNode.position.x, y: sourceNode.position.y + 160 }
       : { x: 300, y: 200 }
 
-    const newNode: FlowNode = {
-      id, type, position,
-      data: {
-        id, type,
-        label:         defaultLabel(type),
-        position:      { x: position.x, y: position.y },
-        configuration: defaultConfig(type),
-        inputs, outputs,
-      },
+    const linkEdge = (target: string): FlowEdge => ({
+      id: nanoid(), source: sourceNodeId, target,
+      sourceHandle, targetHandle: 'in',
+      data: { condition: '' }, animated: false, style: { strokeWidth: 2 },
+    })
+
+    // Iterator auto-pairs with a Loop End; the source links into the iterator.
+    if (type === 'iterator') {
+      const { iterator, loopEnd, edge } = makeIteratorPair(position)
+      set((st) => ({
+        nodes:          [...st.nodes, iterator, loopEnd],
+        edges:          [...st.edges, linkEdge(iterator.id), edge],
+        selectedNodeId: iterator.id,
+        isDirty:        true,
+      }))
+      return
     }
-    const newEdge: FlowEdge = {
-      id:           nanoid(),
-      source:       sourceNodeId,
-      target:       id,
-      sourceHandle: sourceHandle,
-      targetHandle: 'in',
-      data:         { condition: '' },
-      animated:     false,
-      style:        { strokeWidth: 2 },
-    }
-    set((s) => ({
-      nodes:          [...s.nodes, newNode],
-      edges:          [...s.edges, newEdge],
-      selectedNodeId: id,
+
+    const newNode = makeNode(type, position)
+    set((st) => ({
+      nodes:          [...st.nodes, newNode],
+      edges:          [...st.edges, linkEdge(newNode.id)],
+      selectedNodeId: newNode.id,
       isDirty:        true,
     }))
   },
@@ -316,8 +349,12 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   //   before / after → splice into the sequence (re-chain the line)
   //   left / right   → make a parallel sibling sharing the target's parents
   reorderNode: (draggedId, targetId, position) => {
+    console.log("Reorder Node",position, draggedId, targetId)
     if (draggedId === targetId) return
     const s = get()
+    console.log("Reorder Node","Pass")
+
+
 
     const incomingToDragged   = s.edges.filter((e) => e.target === draggedId)
     const outgoingFromDragged = s.edges.filter((e) => e.source === draggedId)
