@@ -31,6 +31,7 @@ const nodeTypes = {
   condition:    BaseNode,
   subflow:      BaseNode,
   merge:        BaseNode,
+  fetch_records: BaseNode,
 };
 
 const Flow = () => {

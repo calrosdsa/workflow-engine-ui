@@ -1,5 +1,31 @@
 @import "tailwindcss";
 
+/* Radix/shadcn dialog animation keyframes */
+@keyframes fade-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes zoom-in  { from { transform: translate(-50%, -50%) scale(0.95); } to { transform: translate(-50%, -50%) scale(1); } }
+@keyframes zoom-out { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(0.95); } }
+@keyframes slide-in-from-top { from { transform: translate(-50%, calc(-50% - 8px)); } to { transform: translate(-50%, -50%); } }
+@keyframes slide-out-to-top  { from { transform: translate(-50%, -50%); } to { transform: translate(-50%, calc(-50% - 8px)); } }
+@keyframes accordion-down { from { height: 0; } to { height: var(--radix-accordion-content-height); } }
+@keyframes accordion-up   { from { height: var(--radix-accordion-content-height); } to { height: 0; } }
+
+@layer utilities {
+  .animate-in  { animation-duration: 150ms; animation-fill-mode: both; animation-timing-function: ease-out; }
+  .animate-out { animation-duration: 150ms; animation-fill-mode: both; animation-timing-function: ease-in; }
+  .fade-in-0   { animation-name: fade-in;  }
+  .fade-out-0  { animation-name: fade-out; }
+  .zoom-in-95  { animation-name: zoom-in;  }
+  .zoom-out-95 { animation-name: zoom-out; }
+  .slide-in-from-top-\[48\%\] { animation-name: slide-in-from-top; }
+  .slide-out-to-top-\[48\%\]  { animation-name: slide-out-to-top;  }
+  .animate-accordion-down { animation: accordion-down 180ms ease-out; }
+  .animate-accordion-up   { animation: accordion-up 180ms ease-out; }
+  /* Radix data-state helpers used by the overlay */
+  [data-state="open"]   .animate-in  { animation-name: fade-in;  }
+  [data-state="closed"] .animate-out { animation-name: fade-out; }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

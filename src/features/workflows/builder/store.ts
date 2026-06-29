@@ -14,6 +14,36 @@ import type { GraphNode, GraphEdge, VariableDecl, NodeType, WorkflowDefinitionGr
 import { defaultPorts, defaultConfig, defaultLabel } from './node-registry'
 
 // ---------------------------------------------------------------------------
+// fetch_records serialisation — strip UI-only `id` keys from filter/sort
+// ---------------------------------------------------------------------------
+
+interface RawGroup {
+  id?: string
+  combinator?: string
+  conditions?: Array<{ id?: string } & Record<string, unknown>>
+  groups?: RawGroup[]
+}
+
+function stripGroupIds(g: RawGroup): Record<string, unknown> {
+  return {
+    combinator: g.combinator ?? 'and',
+    conditions: (g.conditions ?? []).map(({ id: _id, ...rest }) => rest),
+    groups: (g.groups ?? []).map(stripGroupIds),
+  }
+}
+
+function stripFetchRecordsIds(cfg: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...cfg }
+  if (cfg.filter && typeof cfg.filter === 'object') {
+    out.filter = stripGroupIds(cfg.filter as RawGroup)
+  }
+  if (Array.isArray(cfg.sort)) {
+    out.sort = (cfg.sort as Array<{ id?: string } & Record<string, unknown>>).map(({ id: _id, ...rest }) => rest)
+  }
+  return out
+}
+
+// ---------------------------------------------------------------------------
 // Dagre auto-layout
 // ---------------------------------------------------------------------------
 
@@ -408,7 +438,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       isDirty: true,
     })),
 
-  selectNode: (id) => set({ selectedNodeId: id }),
+  selectNode: (id) => set({ selectedNodeId: id, configPanelOpen: id !== null ? true : get().configPanelOpen }),
 
   deleteSelected: () =>
     set((s) => ({
@@ -425,12 +455,41 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     })),
 
   loadDefinition: (id, name, def) => {
-    const nodes: FlowNode[] = def.nodes.map((gn) => ({
-      id:       gn.id,
-      type:     gn.type,
-      position: { x: gn.position.x, y: gn.position.y },
-      data:     gn,
-    }))
+    const nodes: FlowNode[] = def.nodes.map((gn) => {
+      // Normalise legacy single-assignment set_variable configs into the new
+      // multi-assignment shape expected by the frontend.
+      let cfg = gn.configuration
+      if (gn.type === 'set_variable') {
+        const raw = cfg as Record<string, unknown>
+        if (!Array.isArray(raw?.assignments) && raw?.variable_name) {
+          cfg = {
+            assignments: [{
+              id:            nanoid(),
+              variable_name: String(raw.variable_name ?? ''),
+              mode:          (raw.mode as 'literal' | 'expression') ?? 'literal',
+              literal_value: raw.literal_value,
+              expression:    String(raw.expression ?? ''),
+            }],
+          }
+        } else if (Array.isArray(raw?.assignments)) {
+          // Ensure each assignment has a UI id
+          cfg = {
+            assignments: (raw.assignments as Record<string, unknown>[]).map((a) => ({
+              id: nanoid(),
+              ...a,
+            })),
+          }
+        } else {
+          cfg = { assignments: [] }
+        }
+      }
+      return {
+        id:       gn.id,
+        type:     gn.type,
+        position: { x: gn.position.x, y: gn.position.y },
+        data:     { ...gn, configuration: cfg },
+      }
+    })
 
     const edges: FlowEdge[] = def.edges.map((ge) => ({
       id:           ge.id,
@@ -457,10 +516,28 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   toDefinition: (): WorkflowDefinitionGraph => {
     const s = get()
     const nodeIds = new Set(s.nodes.map((n) => n.id))
-    const graphNodes: GraphNode[] = s.nodes.map((n) => ({
-      ...n.data,
-      position: { x: n.position.x, y: n.position.y },
-    }))
+    const graphNodes: GraphNode[] = s.nodes.map((n) => {
+      let cfg = n.data.configuration
+      // Strip the UI-only `id` field from each assignment before serialising
+      // so the backend receives clean { variable_name, mode, ... } objects.
+      if (n.data.type === 'set_variable' && cfg) {
+        const raw = cfg as { assignments?: { id?: string; variable_name: string; mode: string; literal_value?: unknown; expression?: string }[] }
+        if (Array.isArray(raw.assignments)) {
+          cfg = {
+            assignments: raw.assignments.map(({ id: _id, ...rest }) => rest),
+          }
+        }
+      }
+      // Strip UI-only `id` keys from fetch_records filter/sort before serialising.
+      if (n.data.type === 'fetch_records' && cfg) {
+        cfg = stripFetchRecordsIds(cfg as Record<string, unknown>)
+      }
+      return {
+        ...n.data,
+        configuration: cfg,
+        position: { x: n.position.x, y: n.position.y },
+      }
+    })
     // Drop any edge whose source or target node no longer exists. This guards
     // against dangling edges left behind by deletes or reorders (the backend
     // rejects a definition that references a missing node).

@@ -1,0 +1,79 @@
+import {
+  Type, AlignLeft, Hash, Mail, Lock, Phone, Link2,
+  Calendar, Clock, CalendarClock,
+  CheckSquare, ToggleLeft, CircleDot, ChevronDownSquare, ListChecks, Search,
+  Upload, Image,
+  FileText, Minus, Heading, Pilcrow, StretchVertical, EyeOff,
+  FormInput,
+  type LucideIcon,
+} from 'lucide-react'
+import type { ComponentType, ComponentCategory } from './schema'
+import type { FieldType } from '@/features/forms/types'
+
+export interface ComponentRegistryEntry {
+  type: ComponentType
+  label: string
+  icon: LucideIcon
+  category: ComponentCategory
+  /** True when this component holds data (maps to a SQL column on save). */
+  dataBearing: boolean
+  /** The backend FieldType this maps to (only for dataBearing components). */
+  fieldType?: FieldType
+  description: string
+}
+
+export const COMPONENT_REGISTRY: Record<ComponentType, ComponentRegistryEntry> = {
+  // --- Input ---
+  text:      { type: 'text',      label: 'Text Input',   icon: Type,      category: 'Input', dataBearing: true,  fieldType: 'string',   description: 'Single-line text' },
+  textarea:  { type: 'textarea',  label: 'Text Area',    icon: AlignLeft, category: 'Input', dataBearing: true,  fieldType: 'text',     description: 'Multi-line text' },
+  number:    { type: 'number',    label: 'Number',       icon: Hash,      category: 'Input', dataBearing: true,  fieldType: 'decimal',  description: 'Numeric input' },
+  email:     { type: 'email',     label: 'Email',        icon: Mail,      category: 'Input', dataBearing: true,  fieldType: 'email',    description: 'Email address' },
+  password:  { type: 'password',  label: 'Password',     icon: Lock,      category: 'Input', dataBearing: true,  fieldType: 'string',   description: 'Masked input' },
+  phone:     { type: 'phone',     label: 'Phone Number', icon: Phone,     category: 'Input', dataBearing: true,  fieldType: 'phone',    description: 'Phone number' },
+  url:       { type: 'url',       label: 'URL',          icon: Link2,     category: 'Input', dataBearing: true,  fieldType: 'string',   description: 'Web address' },
+
+  // --- DateTime ---
+  date:      { type: 'date',      label: 'Date',         icon: Calendar,      category: 'DateTime', dataBearing: true, fieldType: 'date',     description: 'Date picker' },
+  time:      { type: 'time',      label: 'Time',         icon: Clock,         category: 'DateTime', dataBearing: true, fieldType: 'time',     description: 'Time picker' },
+  datetime:  { type: 'datetime',  label: 'Date & Time',  icon: CalendarClock, category: 'DateTime', dataBearing: true, fieldType: 'datetime', description: 'Date and time' },
+
+  // --- Choice ---
+  checkbox:    { type: 'checkbox',    label: 'Checkbox',     icon: CheckSquare,       category: 'Choice', dataBearing: true, fieldType: 'boolean', description: 'Single checkbox' },
+  switch:      { type: 'switch',      label: 'Switch',       icon: ToggleLeft,        category: 'Choice', dataBearing: true, fieldType: 'boolean', description: 'On/off toggle' },
+  radio:       { type: 'radio',       label: 'Radio Group',  icon: CircleDot,         category: 'Choice', dataBearing: true, fieldType: 'enum',    description: 'Pick one option' },
+  select:      { type: 'select',      label: 'Select',       icon: ChevronDownSquare, category: 'Choice', dataBearing: true, fieldType: 'enum',    description: 'Dropdown select' },
+  multiselect: { type: 'multiselect', label: 'Multi Select', icon: ListChecks,        category: 'Choice', dataBearing: true, fieldType: 'json',    description: 'Pick several options' },
+  autocomplete:{ type: 'autocomplete',label: 'Autocomplete', icon: Search,            category: 'Choice', dataBearing: true, fieldType: 'string',  description: 'Searchable select' },
+  form:        { type: 'form',        label: 'Form Reference', icon: FormInput,        category: 'Choice', dataBearing: true, fieldType: 'reference', description: 'Reference another form' },
+
+  // --- Media ---
+  file:      { type: 'file',  label: 'File Upload',  icon: Upload, category: 'Media', dataBearing: true, fieldType: 'file', description: 'Upload a file' },
+  image:     { type: 'image', label: 'Image Upload', icon: Image,  category: 'Media', dataBearing: true, fieldType: 'file', description: 'Upload an image' },
+
+  // --- Layout / presentational (NOT data-bearing) ---
+  richtext:  { type: 'richtext',  label: 'Rich Text',  icon: FileText,        category: 'Layout', dataBearing: true,  fieldType: 'text', description: 'Formatted text input' },
+  divider:   { type: 'divider',   label: 'Divider',    icon: Minus,           category: 'Layout', dataBearing: false, description: 'Horizontal line' },
+  heading:   { type: 'heading',   label: 'Heading',    icon: Heading,         category: 'Layout', dataBearing: false, description: 'Section heading' },
+  paragraph: { type: 'paragraph', label: 'Paragraph',  icon: Pilcrow,         category: 'Layout', dataBearing: false, description: 'Static text block' },
+  spacer:    { type: 'spacer',    label: 'Spacer',     icon: StretchVertical, category: 'Layout', dataBearing: false, description: 'Vertical space' },
+  hidden:    { type: 'hidden',    label: 'Hidden Field', icon: EyeOff,        category: 'Layout', dataBearing: true,  fieldType: 'string', description: 'Stored, not shown' },
+}
+
+export const COMPONENT_CATEGORIES: ComponentCategory[] = ['Input', 'Choice', 'DateTime', 'Media', 'Layout']
+
+export function componentsByCategory(cat: ComponentCategory): ComponentRegistryEntry[] {
+  return Object.values(COMPONENT_REGISTRY).filter((c) => c.category === cat)
+}
+
+// Backend field types a UNIQUE constraint is meaningful for: text-like and
+// numeric columns. (Booleans, enums, json/file and references are excluded.)
+const UNIQUE_CAPABLE_FIELD_TYPES: ReadonlySet<FieldType> = new Set<FieldType>([
+  'string', 'text', 'email', 'phone', 'integer', 'decimal',
+])
+
+/** True when a component maps to a string- or number-typed column that can carry
+ *  a UNIQUE constraint. Drives the "Unique" toggle in the config panel. */
+export function supportsUnique(type: ComponentType): boolean {
+  const ft = COMPONENT_REGISTRY[type].fieldType
+  return !!ft && UNIQUE_CAPABLE_FIELD_TYPES.has(ft)
+}

@@ -9,7 +9,9 @@ export default defineConfig({
     alias: { '@': path.resolve(__dirname, './src') },
   },
   server: {
-    port: 5173,
+    // Honor a PORT override (e.g. from the preview tooling) but default to 5173
+    // for a plain `npm run dev`.
+    port: process.env.PORT ? Number(process.env.PORT) : 5173,
     proxy: {
       '/api': {
         target: 'http://localhost:8080',

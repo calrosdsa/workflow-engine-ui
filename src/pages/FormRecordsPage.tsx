@@ -10,6 +10,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import type { FieldDef, FormRecord } from '@/features/forms/types'
 
+async function extractError(err: unknown): Promise<string> {
+  if (err && typeof err === 'object' && 'response' in err) {
+    const res = (err as { response: Response }).response
+    try {
+      const body = await res.json() as Record<string, unknown>
+      if (typeof body.error === 'string') return body.error
+      if (body.fields && typeof body.fields === 'object') {
+        return 'Validation failed: ' + Object.entries(body.fields as Record<string, string>)
+          .map(([k, v]) => `${k} ${v}`).join(', ')
+      }
+      return JSON.stringify(body)
+    } catch {
+      return await res.text().catch(() => res.statusText)
+    }
+  }
+  return err instanceof Error ? err.message : String(err)
+}
+
 export function FormRecordsPage() {
   const { formId } = useParams({ from: '/shell/forms/$formId/records' })
   const { data: form, isLoading: loadingForm } = useForm(formId)
@@ -17,6 +35,7 @@ export function FormRecordsPage() {
   const createMutation = useCreateRecord(formId)
   const deleteMutation = useDeleteRecord(formId)
   const [showCreate, setShowCreate] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
 
   if (loadingForm || loadingRecords) return <div className="flex h-64 items-center justify-center"><Spinner /></div>
   if (!form) return <p className="p-6 text-red-600">Form not found</p>
@@ -37,9 +56,22 @@ export function FormRecordsPage() {
         <Card>
           <CardHeader><CardTitle className="text-sm">New Record</CardTitle></CardHeader>
           <CardContent>
+            {createError && (
+              <div className="mb-3 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                {createError}
+              </div>
+            )}
             <RecordForm
               fields={form.fields}
-              onSubmit={(data) => createMutation.mutate(data, { onSuccess: () => setShowCreate(false) })}
+              onSubmit={(data) => {
+                setCreateError(null)
+                createMutation.mutate(data, {
+                  onSuccess: () => { setShowCreate(false); setCreateError(null) },
+                  onError: (err) => {
+                    extractError(err).then(setCreateError)
+                  },
+                })
+              }}
               isSubmitting={createMutation.isPending}
             />
           </CardContent>

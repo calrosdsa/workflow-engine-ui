@@ -9,6 +9,7 @@ export type NodeType =
   | 'condition'
   | 'subflow'
   | 'merge'
+  | 'fetch_records'
 
 export type PortKind = 'data' | 'control' | 'trigger'
 
@@ -98,11 +99,18 @@ export type UpdateWorkflowPayload = CreateWorkflowPayload
 
 export type AssignMode = 'literal' | 'expression'
 
-export interface SetVariableConfig {
+export interface VariableAssignment {
+  id: string           // local UI-only key for list rendering (not sent to backend)
   variable_name: string
   mode: AssignMode
   literal_value?: unknown
   expression?: string
+}
+
+/** Multi-assignment set_variable config. `assignments` is the canonical field.
+ *  Legacy single-field payloads from the backend are normalised on load. */
+export interface SetVariableConfig {
+  assignments: VariableAssignment[]
 }
 
 export interface ConditionConfig {
@@ -111,4 +119,49 @@ export interface ConditionConfig {
 
 export interface SubflowConfig {
   definition_id: string
+}
+
+// ---------------------------------------------------------------------------
+// Database node configs (mirror internal/graph/configs_db.go)
+// ---------------------------------------------------------------------------
+
+export type CompareOp =
+  | 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte'
+  | 'contains' | 'starts_with' | 'in' | 'is_null' | 'not_null'
+
+export type ValueMode = 'static' | 'expression'
+
+export interface FilterCondition {
+  id: string                // UI-only key for list rendering (stripped on save)
+  field: string             // form field key
+  op: CompareOp
+  value_mode?: ValueMode
+  value?: unknown
+  expression?: string
+}
+
+export interface FilterGroup {
+  id?: string               // UI-only key (stripped on save)
+  combinator: 'and' | 'or'
+  conditions: FilterCondition[]
+  groups: FilterGroup[]
+}
+
+export interface SortRule {
+  id: string                // UI-only key (stripped on save)
+  field: string
+  dir: 'asc' | 'desc'
+}
+
+export type FetchMode = 'many' | 'one'
+
+export interface FetchRecordsConfig {
+  form_id: string
+  mode: FetchMode
+  filter?: FilterGroup
+  refine_expr?: string
+  sort: SortRule[]
+  limit: number
+  output_var: string
+  count_var?: string
 }

@@ -98,3 +98,41 @@ export function computeExecutionOrder(
   })
   return result
 }
+
+/**
+ * Returns the set of nodes that execute strictly *before* `targetId` — i.e. its
+ * graph ancestors (every node on a path that reaches the target). This excludes
+ * the target itself, its descendants, and parallel branches that don't lead to
+ * it, so the expression editor only surfaces outputs guaranteed to exist at the
+ * target's execution point.
+ *
+ * Implemented as a reverse BFS over the edges (target → parents → …).
+ */
+export function computeAncestors(
+  nodes: FlowNode[],
+  edges: FlowEdge[],
+  targetId: string,
+): Set<string> {
+  const nodeIds = new Set(nodes.map((n) => n.id))
+  if (!nodeIds.has(targetId)) return new Set()
+
+  // parents map: nodeId → direct predecessors.
+  const parents = new Map<string, string[]>()
+  for (const n of nodes) parents.set(n.id, [])
+  for (const e of edges) {
+    if (!nodeIds.has(e.source) || !nodeIds.has(e.target)) continue
+    parents.get(e.target)!.push(e.source)
+  }
+
+  const ancestors = new Set<string>()
+  const queue = [...(parents.get(targetId) ?? [])]
+  while (queue.length > 0) {
+    const id = queue.shift()!
+    if (ancestors.has(id)) continue
+    ancestors.add(id)
+    for (const p of parents.get(id) ?? []) {
+      if (!ancestors.has(p)) queue.push(p)
+    }
+  }
+  return ancestors
+}

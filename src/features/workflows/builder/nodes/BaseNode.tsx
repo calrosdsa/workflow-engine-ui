@@ -6,7 +6,7 @@ import { NODE_REGISTRY } from '../node-registry'
 import { useBuilderStore, type FlowNode, type DropPosition } from '../store'
 import { computeExecutionOrder } from '../executionOrder'
 import { DropZone } from './DropZone'
-import type { SetVariableConfig, ConditionConfig } from '../../types'
+import type { SetVariableConfig, ConditionConfig, VariableAssignment, FetchRecordsConfig, FilterGroup } from '../../types'
 
 const DRAG_TRANSFER_KEY = 'application/workflow-node-reorder'
 
@@ -208,15 +208,23 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
       return <p className="text-[11px] text-slate-400">Joins parallel branches</p>
     case 'set_variable': {
       const cfg = data.configuration as SetVariableConfig
-      if (!cfg?.variable_name) return <p className="text-[11px] italic text-slate-400">Not configured</p>
+      const assignments: VariableAssignment[] = cfg?.assignments ?? []
+      if (assignments.length === 0) return <p className="text-[11px] italic text-slate-400">Not configured</p>
       return (
-        <div className="flex items-center gap-1.5 text-[11px]">
-          <code className="rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-700">{cfg.variable_name}</code>
-          <span className="text-slate-400">=</span>
-          {cfg.mode === 'literal'
-            ? <code className="truncate font-mono text-slate-600">{String(cfg.literal_value ?? '""')}</code>
-            : <code className="truncate font-mono italic text-violet-600">{cfg.expression || '…'}</code>
-          }
+        <div className="space-y-1">
+          {assignments.slice(0, 3).map((a, i) => (
+            <div key={a.id ?? i} className="flex items-center gap-1 text-[10px]">
+              <code className="shrink-0 rounded bg-blue-50 px-1 py-0.5 font-semibold text-blue-700">{a.variable_name || '…'}</code>
+              <span className="text-slate-300">=</span>
+              {a.mode === 'literal'
+                ? <code className="truncate text-slate-500">{String(a.literal_value ?? '""')}</code>
+                : <code className="truncate italic text-violet-500">{'{'}{'{'}…{'}'}{'}'}</code>
+              }
+            </div>
+          ))}
+          {assignments.length > 3 && (
+            <p className="text-[10px] text-slate-400">+{assignments.length - 3} more…</p>
+          )}
         </div>
       )
     }
@@ -229,7 +237,35 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
       const cfg = data.configuration as { definition_id?: string }
       return <p className="text-[11px] italic text-slate-400">{cfg?.definition_id ? `↳ ${cfg.definition_id.slice(0, 8)}…` : 'Not linked'}</p>
     }
+    case 'fetch_records': {
+      const cfg = data.configuration as FetchRecordsConfig | undefined
+      if (!cfg?.form_id) return <p className="text-[11px] italic text-slate-400">No form selected</p>
+      const conds = countConditions(cfg.filter)
+      return (
+        <div className="space-y-1 text-[10px]">
+          <div className="flex items-center gap-1">
+            <code className="rounded bg-rose-50 px-1 py-0.5 font-semibold text-rose-700">{cfg.mode === 'one' ? 'single' : 'multiple'}</code>
+            {conds > 0 && <span className="text-slate-400">· {conds} filter{conds > 1 ? 's' : ''}</span>}
+            {cfg.limit ? <span className="text-slate-400">· top {cfg.limit}</span> : null}
+          </div>
+          {cfg.output_var && (
+            <div className="flex items-center gap-1">
+              <span className="text-slate-300">→</span>
+              <code className="truncate font-semibold text-blue-700">{cfg.output_var}</code>
+            </div>
+          )}
+        </div>
+      )
+    }
     default:
       return null
   }
+}
+
+// Counts leaf conditions across a (possibly nested) filter group.
+function countConditions(g: FilterGroup | undefined): number {
+  if (!g) return 0
+  let n = g.conditions?.length ?? 0
+  for (const sub of g.groups ?? []) n += countConditions(sub)
+  return n
 }

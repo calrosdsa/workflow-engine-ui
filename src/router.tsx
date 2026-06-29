@@ -12,6 +12,7 @@ import { ExecutionsPage } from '@/pages/ExecutionsPage'
 import { ExecutionDetailPage } from '@/pages/ExecutionDetailPage'
 import { FormsPage } from '@/pages/FormsPage'
 import { FormRecordsPage } from '@/pages/FormRecordsPage'
+import { FormBuilderPage } from '@/pages/forms/FormBuilderPage'
 import TestLayout from './pages/test/Test'
 
 // ---------------------------------------------------------------------------
@@ -91,24 +92,21 @@ const formsRoute = createRoute({
 const formNewRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/forms/new',
-  component: () => (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900">New Form</h1>
-      <p className="text-gray-500 mt-2">Form builder editor coming soon.</p>
-    </div>
-  ),
+  component: () => <FormBuilderPage mode="new" />,
+})
+
+// /forms/$formId/records must be declared before /forms/$formId so the more
+// specific path wins.
+const formRecordsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/forms/$formId/records',
+  component: FormRecordsPage,
 })
 
 const formDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/forms/$formId',
-  component: FormsPage,
-})
-
-const formRecordsRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/forms/$formId/records',
-  component: FormRecordsPage,
+  component: () => <FormBuilderPage mode="edit" />,
 })
 
 // ---------------------------------------------------------------------------

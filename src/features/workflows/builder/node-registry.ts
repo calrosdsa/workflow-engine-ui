@@ -5,9 +5,10 @@ import {
   GitBranch,
   Box,
   GitMerge,
+  Database,
   type LucideIcon,
 } from 'lucide-react'
-import type { NodeType, Port, SetVariableConfig, ConditionConfig } from '../types'
+import type { NodeType, Port, SetVariableConfig, ConditionConfig, FetchRecordsConfig } from '../types'
 
 export interface NodeRegistryEntry {
   label: string
@@ -57,6 +58,12 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     accent: '#14b8a6', textColor: 'text-teal-700', ring: 'bg-teal-50',
     description: 'Join parallel branches',
   },
+  fetch_records: {
+    label: 'Fetch Records', icon: Database,
+    color: 'bg-rose-500', gradient: 'bg-gradient-to-br from-rose-500 to-pink-600',
+    accent: '#f43f5e', textColor: 'text-rose-700', ring: 'bg-rose-50',
+    description: 'Query records from a form',
+  },
 }
 
 export function defaultLabel(type: NodeType): string {
@@ -90,16 +97,22 @@ export function defaultPorts(type: NodeType): { inputs: Port[]; outputs: Port[] 
   }
 }
 
-export function defaultConfig(type: NodeType): SetVariableConfig | ConditionConfig | Record<string, never> {
+export function defaultConfig(type: NodeType): SetVariableConfig | ConditionConfig | FetchRecordsConfig | Record<string, never> {
   switch (type) {
     case 'set_variable':
-      return { variable_name: '', mode: 'literal', literal_value: '' } satisfies SetVariableConfig
+      return { assignments: [] } satisfies SetVariableConfig
     case 'condition':
       return { expression: '' } satisfies ConditionConfig
+    case 'fetch_records':
+      return {
+        form_id: '', mode: 'many',
+        filter: { combinator: 'and', conditions: [], groups: [] },
+        sort: [], limit: 0, output_var: '',
+      } satisfies FetchRecordsConfig
     default:
       return {}
   }
 }
 
 // Node types available from the drag-and-drop palette (excludes entry/exit added automatically)
-export const PALETTE_NODES: NodeType[] = ['set_variable', 'condition', 'merge', 'subflow']
+export const PALETTE_NODES: NodeType[] = ['set_variable', 'condition', 'fetch_records', 'merge', 'subflow']

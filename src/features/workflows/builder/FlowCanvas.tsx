@@ -18,12 +18,13 @@ import { NodePalette } from './NodePalette'
 import type { NodeType } from '../types'
 
 const nodeTypes = {
-  entry:        BaseNode,
-  exit:         BaseNode,
-  set_variable: BaseNode,
-  condition:    BaseNode,
-  subflow:      BaseNode,
-  merge:        BaseNode,
+  entry:         BaseNode,
+  exit:          BaseNode,
+  set_variable:  BaseNode,
+  condition:     BaseNode,
+  subflow:       BaseNode,
+  merge:         BaseNode,
+  fetch_records: BaseNode,
 }
 
 const edgeTypes = {
@@ -126,6 +127,7 @@ export function FlowCanvas() {
             const colorMap: Record<string, string> = {
               entry: '#10b981', exit: '#9ca3af', set_variable: '#3b82f6',
               condition: '#f59e0b', subflow: '#a855f7', merge: '#14b8a6',
+              fetch_records: '#f43f5e',
             }
             return colorMap[type] ?? '#94a3b8'
           }}
