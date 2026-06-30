@@ -98,7 +98,11 @@ function dagreLayout(
   const g = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}))
   g.setGraph({ rankdir: direction, nodesep: 60, ranksep: 80 })
 
-  nodes.forEach((n) => g.setNode(n.id, { width: NODE_WIDTH, height: NODE_HEIGHT }))
+  // Add nodes in left-to-right (x) order so dagre's initial within-rank ordering
+  // follows the current horizontal layout. This keeps sibling order stable across
+  // reorders — a node nudged just left/right of a sibling stays on that side.
+  const ordered = [...nodes].sort((a, b) => (a.position?.x ?? 0) - (b.position?.x ?? 0))
+  ordered.forEach((n) => g.setNode(n.id, { width: NODE_WIDTH, height: NODE_HEIGHT }))
   edges.forEach((e) => g.setEdge(e.source, e.target))
 
   dagre.layout(g)
@@ -347,14 +351,11 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   // Reorder: detach draggedId from its current position and re-attach it
   // relative to targetId, rewiring all edges automatically.
   //   before / after → splice into the sequence (re-chain the line)
-  //   left / right   → make a parallel sibling sharing the target's parents
+  //   left / right   → make a parallel sibling sharing the target's parents;
+  //                    the dragged node's ENTIRE downstream subtree moves with it
   reorderNode: (draggedId, targetId, position) => {
-    console.log("Reorder Node",position, draggedId, targetId)
     if (draggedId === targetId) return
     const s = get()
-    console.log("Reorder Node","Pass")
-
-
 
     const incomingToDragged   = s.edges.filter((e) => e.target === draggedId)
     const outgoingFromDragged = s.edges.filter((e) => e.source === draggedId)
@@ -373,24 +374,30 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     const removeIds = new Set<string>()
     const newEdges: FlowEdge[] = []
 
+    // siblingX is set for left/right moves: the x the dragged subtree's root
+    // should sit at relative to the target, so execution order (which sorts
+    // children by position.x) matches the drop side immediately, before dagre
+    // re-runs. left → just left of target; right → just right of target.
+    let siblingX: number | null = null
+
     if (position === 'left' || position === 'right') {
-      // Parallel sibling: detach dragged from its own parents/children and
-      // attach it to the SAME parents as the target (fan-out branch).
-      // Target keeps its own edges untouched.
-      for (const e of incomingToDragged)   removeIds.add(e.id)
-      for (const e of outgoingFromDragged) removeIds.add(e.id)
-
-      // Bridge dragged's old parents → dragged's old children so the line
-      // dragged was sitting in doesn't break.
-      for (const pe of incomingToDragged) {
-        for (const ce of outgoingFromDragged) {
-          newEdges.push(mk(pe.source, ce.target, pe.sourceHandle ?? 'out', ce.targetHandle ?? 'in'))
-        }
-      }
-
-      // Attach dragged under each of the target's parents → sibling of target.
+      // Parallel sibling. Detach the dragged node from its OWN parents only —
+      // its outgoing edges are LEFT INTACT, so the whole downstream subtree
+      // travels with it (Bug 2). Re-attach the dragged node under each of the
+      // target's parents, making it a sibling of target.
+      for (const e of incomingToDragged) removeIds.add(e.id)
       for (const e of incomingToTarget) {
         newEdges.push(mk(e.source, draggedId, e.sourceHandle ?? 'out', 'in'))
+      }
+
+      // Position the dragged root just to the left/right of the target so the
+      // left-to-right execution order reflects the drop side (Bug 1). dagre will
+      // refine spacing on the subsequent layout pass but preserve this ordering.
+      const targetNode = s.nodes.find((n) => n.id === targetId)
+      if (targetNode) {
+        siblingX = position === 'left'
+          ? targetNode.position.x - (NODE_WIDTH + 60)
+          : targetNode.position.x + (NODE_WIDTH + 60)
       }
     } else if (position === 'before') {
       // Insert dragged immediately before target in the chain.
@@ -444,7 +451,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     // source→target pairs, and drop any edge whose endpoints don't both exist.
     const nodeIds = new Set(s.nodes.map((n) => n.id))
     const seen = new Set<string>()
-    const finalEdges = [...keptEdges, ...newEdges].filter((e) => {
+    let finalEdges = [...keptEdges, ...newEdges].filter((e) => {
       if (e.source === e.target) return false
       if (!nodeIds.has(e.source) || !nodeIds.has(e.target)) return false
       const key = `${e.source}→${e.target}`
@@ -453,7 +460,39 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       return true
     })
 
+    // For a left/right move, dagre lays siblings out in edge order. Reorder each
+    // shared parent's edges so parent→dragged sits before parent→target (left)
+    // or after it (right) — making the visual side match the drop side (Bug 1).
+    if (position === 'left' || position === 'right') {
+      const parents = incomingToTarget.map((e) => e.source)
+      for (const parent of parents) {
+        const di = finalEdges.findIndex((e) => e.source === parent && e.target === draggedId)
+        const ti = finalEdges.findIndex((e) => e.source === parent && e.target === targetId)
+        if (di === -1 || ti === -1) continue
+        const [draggedEdge] = finalEdges.splice(di, 1)
+        // Recompute target index after the splice.
+        const ti2 = finalEdges.findIndex((e) => e.source === parent && e.target === targetId)
+        const insertAt = position === 'left' ? ti2 : ti2 + 1
+        finalEdges = [
+          ...finalEdges.slice(0, insertAt),
+          draggedEdge,
+          ...finalEdges.slice(insertAt),
+        ]
+      }
+    }
+
+    // Nudge the dragged subtree's root x so execution order (sorted by x) matches
+    // the drop side immediately; dagre refines positions on the next layout pass.
+    const nodes = siblingX === null
+      ? s.nodes
+      : s.nodes.map((n) =>
+          n.id === draggedId
+            ? { ...n, position: { ...n.position, x: siblingX as number } }
+            : n,
+        )
+
     set(() => ({
+      nodes,
       edges:   finalEdges,
       isDirty: true,
     }))
