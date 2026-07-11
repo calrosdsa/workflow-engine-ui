@@ -6,9 +6,11 @@ import type { NodeType } from '../types'
 
 // Groups shown in the picker tabs
 const CATEGORIES: { label: string; types: NodeType[] }[] = [
-  { label: 'All',   types: PALETTE_NODES },
-  { label: 'Logic', types: ['condition', 'merge'] },
-  { label: 'Data',  types: ['set_variable', 'subflow'] },
+  { label: 'All',          types: PALETTE_NODES },
+  { label: 'Data',         types: ['fetch_records', 'upsert_records', 'update_records', 'delete_records', 'transform', 'save_records', 'set_variable'] },
+  { label: 'Logic',        types: ['condition', 'iterator', 'merge', 'subflow'] },
+  { label: 'Integrations', types: ['http_request'] },
+  { label: 'Notify',       types: ['show_message'] },
 ]
 
 interface NodePickerModalProps {
@@ -54,9 +56,19 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
             ref={searchRef}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setActiveTab(0) }}
+            onKeyDown={(e) => {
+              // Enter picks the top match — type a few letters and hit Enter.
+              if (e.key === 'Enter' && candidates.length > 0) {
+                e.preventDefault()
+                onSelect(candidates[0])
+              }
+            }}
             placeholder="Search nodes…"
             className="flex-1 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
           />
+          {search && candidates.length > 0 && (
+            <kbd className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400">↵</kbd>
+          )}
           <button onClick={onClose} className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
             <X size={15} />
           </button>

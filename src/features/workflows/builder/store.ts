@@ -43,6 +43,40 @@ function stripFetchRecordsIds(cfg: Record<string, unknown>): Record<string, unkn
   return out
 }
 
+// http_request serialisation — strip UI-only `id` keys from every
+// KeyValuePair list (params/headers/body_form). Same purpose as
+// stripFetchRecordsIds above.
+function stripIdKey<T extends { id?: string }>(rows: T[] | undefined): Omit<T, 'id'>[] {
+  return (rows ?? []).map(({ id: _id, ...rest }) => rest)
+}
+
+// Strips response_schemas' UI-only ids one level deeper than the flat lists
+// above: each schema itself has an id, and each of its field rows has its own.
+function stripResponseSchemaIds(schemas: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(schemas)) return []
+  return (schemas as Array<{ id?: string; fields?: Array<{ id?: string }> } & Record<string, unknown>>)
+    .map(({ id: _id, fields, ...rest }) => ({ ...rest, fields: stripIdKey(fields) }))
+}
+
+function stripHttpRequestIds(cfg: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...cfg }
+  if (Array.isArray(cfg.params)) out.params = stripIdKey(cfg.params as Array<{ id?: string }>)
+  if (Array.isArray(cfg.headers)) out.headers = stripIdKey(cfg.headers as Array<{ id?: string }>)
+  if (Array.isArray(cfg.body_form)) out.body_form = stripIdKey(cfg.body_form as Array<{ id?: string }>)
+  if (Array.isArray(cfg.response_schemas)) out.response_schemas = stripResponseSchemaIds(cfg.response_schemas)
+  return out
+}
+
+// trigger serialisation — strip UI-only `id` keys from the (optional) filter
+// tree. Same shape/purpose as stripFetchRecordsIds' filter handling above.
+function stripTriggerIds(cfg: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...cfg }
+  if (cfg.filter && typeof cfg.filter === 'object') {
+    out.filter = stripGroupIds(cfg.filter as RawGroup)
+  }
+  return out
+}
+
 // ---------------------------------------------------------------------------
 // Node construction helpers
 // ---------------------------------------------------------------------------
@@ -62,6 +96,16 @@ function makeNode(type: NodeType, position: { x: number; y: number }): FlowNode 
   }
 }
 
+function makeEdge(source: string, target: string, sourceHandle = 'out', targetHandle = 'in'): FlowEdge {
+  return {
+    id: nanoid(),
+    source, target, sourceHandle, targetHandle,
+    data: { condition: '' },
+    animated: false,
+    style: { strokeWidth: 2 },
+  }
+}
+
 // Builds an iterator + its paired Loop End node, linked iterator→loop_end, with
 // the iterator's config pointing at the loop_end id. The Loop End sits below so
 // body nodes can be dropped between them.
@@ -72,15 +116,74 @@ function makeIteratorPair(position: { x: number; y: number }) {
     ...(iterator.data.configuration as Record<string, unknown>),
     loop_end_id: loopEnd.id,
   }
-  const edge: FlowEdge = {
-    id: nanoid(),
-    source: iterator.id, target: loopEnd.id,
-    sourceHandle: 'out', targetHandle: 'in',
-    data: { condition: '' },
-    animated: false,
-    style: { strokeWidth: 2 },
-  }
+  const edge = makeEdge(iterator.id, loopEnd.id)
   return { iterator, loopEnd, edge }
+}
+
+// An iterator and its loop_end always live and die together: deleting either
+// one pulls the partner into the deletion set, so the graph never keeps an
+// orphaned half (the backend rejects an iterator without its loop_end).
+function expandLoopPairs(nodes: FlowNode[], ids: Set<string>): Set<string> {
+  const expanded = new Set(ids)
+  for (const n of nodes) {
+    if (n.data.type !== 'iterator') continue
+    const endId = (n.data.configuration as { loop_end_id?: string } | undefined)?.loop_end_id
+    if (!endId) continue
+    if (expanded.has(n.id)) expanded.add(endId)
+    else if (expanded.has(endId)) expanded.add(n.id)
+  }
+  return expanded
+}
+
+// Removes `ids` from the edge list while healing the chain: each removed
+// node's parents are bridged to its children, so deleting a middle node never
+// orphans the downstream subtree. Contracting one id at a time makes runs of
+// adjacent removed nodes resolve transitively.
+function contractNodes(edges: FlowEdge[], ids: Set<string>): FlowEdge[] {
+  let out = edges
+  for (const id of ids) {
+    const incoming = out.filter((e) => e.target === id)
+    const outgoing = out.filter((e) => e.source === id)
+    const rest     = out.filter((e) => e.source !== id && e.target !== id)
+    const bridged: FlowEdge[] = []
+    for (const ie of incoming) {
+      for (const oe of outgoing) {
+        bridged.push(makeEdge(ie.source, oe.target, ie.sourceHandle ?? 'out', oe.targetHandle ?? 'in'))
+      }
+    }
+    out = [...rest, ...bridged]
+  }
+  // Dedup source→target pairs and drop self-loops introduced by bridging.
+  const seen = new Set<string>()
+  return out.filter((e) => {
+    if (e.source === e.target) return false
+    const key = `${e.source}→${e.target}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+// Node types where "duplicate" makes sense — excludes structural/singleton
+// nodes (entry points, exit, merge) and nodes with multi-handle or paired
+// semantics (condition, iterator/loop_end) where an insert-after copy would
+// corrupt the graph shape.
+export const DUPLICABLE_NODE_TYPES: ReadonlySet<NodeType> = new Set<NodeType>([
+  'set_variable', 'fetch_records', 'upsert_records', 'update_records',
+  'delete_records', 'http_request', 'show_message', 'subflow',
+])
+
+// The workflow's entry point can't be re-added from the picker, so deletion
+// keeps at least one trigger/entry node alive. Returns the ids allowed to go.
+function protectEntryPoint(nodes: FlowNode[], ids: Set<string>): Set<string> {
+  const entryIds = nodes
+    .filter((n) => n.data.type === 'trigger' || n.data.type === 'entry')
+    .map((n) => n.id)
+  const survives = entryIds.some((id) => !ids.has(id))
+  if (survives || entryIds.length === 0) return ids
+  const allowed = new Set(ids)
+  for (const id of entryIds) allowed.delete(id)
+  return allowed
 }
 
 // ---------------------------------------------------------------------------
@@ -138,6 +241,15 @@ export type PickerContext =
 //   left / right   → make a parallel sibling (shares the target's parent)
 export type DropPosition = 'before' | 'after' | 'left' | 'right'
 
+// A point-in-time copy of everything undo/redo restores. Positions are
+// included so undoing a structural change also rolls back the re-layout.
+interface HistorySnapshot {
+  name:      string
+  variables: VariableDecl[]
+  nodes:     FlowNode[]
+  edges:     FlowEdge[]
+}
+
 export interface BuilderState {
   workflowId:    string
   name:          string
@@ -148,11 +260,22 @@ export interface BuilderState {
   isDirty:       boolean
   validationErrors: Record<string, string[]>  // nodeId → errors
 
+  // undo/redo
+  past:   HistorySnapshot[]
+  future: HistorySnapshot[]
+  undo: () => void
+  redo: () => void
+
   // sidebar collapse state
   varsPanelOpen:    boolean
   configPanelOpen:  boolean
+  /** Widen the config panel (e.g. for the HTTP node's response schema
+   *  builder). Orthogonal to configPanelOpen — a global preference, not
+   *  scoped per-node (never reset on node selection). */
+  configPanelWide:  boolean
   toggleVarsPanel:  () => void
   toggleConfigPanel:() => void
+  toggleConfigPanelWide: () => void
 
   // drag-to-reorder state
   draggingNodeId:    string | null
@@ -175,17 +298,54 @@ export interface BuilderState {
   addConnectedNode:     (type: NodeType, sourceNodeId: string, sourceHandle?: string) => void
   insertNodeOnEdge:     (type: NodeType, edgeId: string) => void
   reorderNode:          (draggedId: string, targetId: string, position: DropPosition) => void
+  deleteBranch:         (parentId: string, branchRootId: string) => void
+  swapLastTwoBranches:  (parentId: string) => void
   updateNodeConfig:     (nodeId: string, config: unknown) => void
   updateNodeLabel:      (nodeId: string, label: string) => void
   selectNode:           (id: string | null) => void
+  deleteNode:           (nodeId: string) => void
+  duplicateNode:        (nodeId: string) => void
   deleteSelected:       () => void
+  seedNew:              () => void
   applyDagreLayout:     (direction?: 'TB' | 'LR') => void
   loadDefinition:       (id: string, name: string, def: WorkflowDefinitionGraph) => void
   toDefinition:         () => WorkflowDefinitionGraph
   markSaved:            () => void
 }
 
-export const useBuilderStore = create<BuilderState>((set, get) => ({
+const HISTORY_LIMIT = 50
+
+export const useBuilderStore = create<BuilderState>((set, get) => {
+  // Coalescing state for keystroke-level edits: consecutive pushes with the
+  // same key inside the window collapse into one undo step, so undoing a
+  // typed expression removes the whole burst, not one character.
+  let lastHistoryKey: string | null = null
+  let lastHistoryTime = 0
+
+  const snapshot = (): HistorySnapshot => {
+    const s = get()
+    return structuredClone({ name: s.name, variables: s.variables, nodes: s.nodes, edges: s.edges })
+  }
+
+  /** Call BEFORE mutating. Pass a key for continuous edits (typing) so they
+   *  coalesce; structural changes push unconditionally. Clears redo. */
+  const pushHistory = (key?: string) => {
+    const now = Date.now()
+    if (key && key === lastHistoryKey && now - lastHistoryTime < 1200) {
+      lastHistoryTime = now
+      return
+    }
+    lastHistoryKey  = key ?? null
+    lastHistoryTime = now
+    set((s) => ({ past: [...s.past, snapshot()].slice(-HISTORY_LIMIT), future: [] }))
+  }
+
+  const resetHistory = () => {
+    lastHistoryKey = null
+    lastHistoryTime = 0
+  }
+
+  return {
   workflowId:       '',
   name:             'Untitled Workflow',
   variables:        [],
@@ -195,10 +355,57 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   isDirty:          false,
   validationErrors: {},
 
+  past:   [],
+  future: [],
+
+  undo: () => {
+    const s = get()
+    const prev = s.past[s.past.length - 1]
+    if (!prev) return
+    const current = snapshot()
+    resetHistory()
+    set({
+      name:      prev.name,
+      variables: prev.variables,
+      nodes:     prev.nodes.map((n) => ({ ...n, selected: false })),
+      edges:     prev.edges.map((e) => ({ ...e, selected: false })),
+      past:      s.past.slice(0, -1),
+      future:    [...s.future, current],
+      selectedNodeId:   null,
+      pickerContext:    null,
+      draggingNodeId:   null,
+      activeDropTarget: null,
+      isDirty:   true,
+    })
+  },
+
+  redo: () => {
+    const s = get()
+    const next = s.future[s.future.length - 1]
+    if (!next) return
+    const current = snapshot()
+    resetHistory()
+    set({
+      name:      next.name,
+      variables: next.variables,
+      nodes:     next.nodes.map((n) => ({ ...n, selected: false })),
+      edges:     next.edges.map((e) => ({ ...e, selected: false })),
+      future:    s.future.slice(0, -1),
+      past:      [...s.past, current],
+      selectedNodeId:   null,
+      pickerContext:    null,
+      draggingNodeId:   null,
+      activeDropTarget: null,
+      isDirty:   true,
+    })
+  },
+
   varsPanelOpen:     true,
   configPanelOpen:   true,
+  configPanelWide:   false,
   toggleVarsPanel:   () => set((s) => ({ varsPanelOpen:   !s.varsPanelOpen })),
   toggleConfigPanel: () => set((s) => ({ configPanelOpen: !s.configPanelOpen })),
+  toggleConfigPanelWide: () => set((s) => ({ configPanelWide: !s.configPanelWide })),
 
   draggingNodeId:      null,
   activeDropTarget:    null,
@@ -209,9 +416,15 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   openPicker:   (ctx) => set({ pickerContext: ctx }),
   closePicker:  ()    => set({ pickerContext: null }),
 
-  setName: (name) => set({ name, isDirty: true }),
+  setName: (name) => {
+    pushHistory('name')
+    set({ name, isDirty: true })
+  },
 
-  setVariables: (variables) => set({ variables, isDirty: true }),
+  setVariables: (variables) => {
+    pushHistory('vars')
+    set({ variables, isDirty: true })
+  },
 
   onNodesChange: (changes) =>
     set((s) => ({ nodes: applyNodeChanges(changes, s.nodes), isDirty: true })),
@@ -220,25 +433,23 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     set((s) => ({ edges: applyEdgeChanges(changes, s.edges), isDirty: true })),
 
   onConnect: (connection) => {
+    pushHistory()
     set((s) => ({
       edges: [
         ...s.edges,
-        {
-          id:           nanoid(),
-          source:       connection.source ?? '',
-          target:       connection.target ?? '',
-          sourceHandle: connection.sourceHandle ?? 'out',
-          targetHandle: connection.targetHandle ?? 'in',
-          data:         { condition: '' },
-          animated:     false,
-          style:        { strokeWidth: 2 },
-        } satisfies FlowEdge,
+        makeEdge(
+          connection.source ?? '',
+          connection.target ?? '',
+          connection.sourceHandle ?? 'out',
+          connection.targetHandle ?? 'in',
+        ),
       ],
       isDirty: true,
     }))
   },
 
   addNode: (type, position = { x: 200 + Math.random() * 200, y: 100 + Math.random() * 200 }) => {
+    pushHistory()
     const newNode = makeNode(type, position)
     // An iterator auto-creates its paired Loop End so the body region exists.
     if (type === 'iterator') {
@@ -260,6 +471,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
   // Add a node connected FROM an existing node's output handle (vertical layout: below).
   addConnectedNode: (type, sourceNodeId, sourceHandle = 'out') => {
+    pushHistory()
     const s = get()
     const sourceNode = s.nodes.find((n) => n.id === sourceNodeId)
     const position = sourceNode
@@ -298,6 +510,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     const s = get()
     const edge = s.edges.find((e) => e.id === edgeId)
     if (!edge) return
+    pushHistory()
 
     const id = nanoid()
     const { inputs, outputs } = defaultPorts(type)
@@ -355,6 +568,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   //                    the dragged node's ENTIRE downstream subtree moves with it
   reorderNode: (draggedId, targetId, position) => {
     if (draggedId === targetId) return
+    pushHistory()
     const s = get()
 
     const incomingToDragged   = s.edges.filter((e) => e.target === draggedId)
@@ -460,9 +674,13 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       return true
     })
 
-    // For a left/right move, dagre lays siblings out in edge order. Reorder each
-    // shared parent's edges so parent→dragged sits before parent→target (left)
-    // or after it (right) — making the visual side match the drop side (Bug 1).
+    // For a left/right move, dagre lays siblings out in edge order — but
+    // empirically (verified against @dagrejs/dagre directly) the LAST edge
+    // added from a shared parent ends up on the LEFT and the FIRST stays on
+    // the RIGHT, the opposite of the naive assumption. So to land the dragged
+    // node on the requested side, a 'left' drop must make parent→dragged the
+    // LAST edge from that parent (insert after parent→target) and a 'right'
+    // drop must make it come BEFORE parent→target.
     if (position === 'left' || position === 'right') {
       const parents = incomingToTarget.map((e) => e.source)
       for (const parent of parents) {
@@ -472,7 +690,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         const [draggedEdge] = finalEdges.splice(di, 1)
         // Recompute target index after the splice.
         const ti2 = finalEdges.findIndex((e) => e.source === parent && e.target === targetId)
-        const insertAt = position === 'left' ? ti2 : ti2 + 1
+        const insertAt = position === 'left' ? ti2 + 1 : ti2
         finalEdges = [
           ...finalEdges.slice(0, insertAt),
           draggedEdge,
@@ -498,31 +716,158 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     }))
   },
 
-  updateNodeConfig: (nodeId, config) =>
+  // Removes an entire parallel branch — the branchRootId subtree reachable
+  // only through parentId's edge to it (siblings sharing further-downstream
+  // nodes, e.g. after a merge, are left intact).
+  deleteBranch: (parentId, branchRootId) => {
+    pushHistory()
+    const s = get()
+    const toRemove = new Set<string>([branchRootId])
+    const queue = [branchRootId]
+    while (queue.length > 0) {
+      const cur = queue.shift()!
+      for (const e of s.edges) {
+        if (e.source !== cur) continue
+        // Keep a descendant if it has another parent outside this branch
+        // (e.g. a merge node rejoining a sibling branch).
+        const hasOtherParent = s.edges.some((pe) => pe.target === e.target && !toRemove.has(pe.source) && pe.source !== cur)
+        if (!hasOtherParent && !toRemove.has(e.target)) {
+          toRemove.add(e.target)
+          queue.push(e.target)
+        }
+      }
+    }
+    set(() => ({
+      nodes:   s.nodes.filter((n) => !toRemove.has(n.id)),
+      edges:   s.edges.filter((e) => !toRemove.has(e.source) && !toRemove.has(e.target)),
+      selectedNodeId: s.selectedNodeId && toRemove.has(s.selectedNodeId) ? null : s.selectedNodeId,
+      isDirty: true,
+    }))
+  },
+
+  // Swaps the horizontal position of the two rightmost branches fanning out
+  // from parentId, so their left-to-right (execution) order flips.
+  swapLastTwoBranches: (parentId) => {
+    const s = get()
+    const childIds = Array.from(new Set(s.edges.filter((e) => e.source === parentId).map((e) => e.target)))
+    if (childIds.length < 2) return
+    const sorted = [...childIds].sort((a, b) => {
+      const na = s.nodes.find((n) => n.id === a)
+      const nb = s.nodes.find((n) => n.id === b)
+      return (na?.position.x ?? 0) - (nb?.position.x ?? 0)
+    })
+    const [secondLast, last] = sorted.slice(-2)
+    const nodeA = s.nodes.find((n) => n.id === secondLast)
+    const nodeB = s.nodes.find((n) => n.id === last)
+    if (!nodeA || !nodeB) return
+    pushHistory()
+    set(() => ({
+      nodes: s.nodes.map((n) => {
+        if (n.id === secondLast) return { ...n, position: { ...n.position, x: nodeB.position.x } }
+        if (n.id === last)       return { ...n, position: { ...n.position, x: nodeA.position.x } }
+        return n
+      }),
+      isDirty: true,
+    }))
+  },
+
+  updateNodeConfig: (nodeId, config) => {
+    pushHistory(`cfg:${nodeId}`)
     set((s) => ({
       nodes: s.nodes.map((n) =>
         n.id === nodeId ? { ...n, data: { ...n.data, configuration: config } } : n,
       ),
       isDirty: true,
-    })),
+    }))
+  },
 
-  updateNodeLabel: (nodeId, label) =>
+  updateNodeLabel: (nodeId, label) => {
+    pushHistory(`label:${nodeId}`)
     set((s) => ({
       nodes: s.nodes.map((n) =>
         n.id === nodeId ? { ...n, data: { ...n.data, label } } : n,
       ),
       isDirty: true,
-    })),
+    }))
+  },
 
   selectNode: (id) => set({ selectedNodeId: id, configPanelOpen: id !== null ? true : get().configPanelOpen }),
 
-  deleteSelected: () =>
-    set((s) => ({
-      nodes: s.nodes.filter((n) => !n.selected),
-      edges: s.edges.filter((e) => !e.selected),
+  // Deletes one node, healing the chain (parents bridged to children).
+  // Iterator/loop_end delete as a pair; any body nodes fold into the main chain.
+  deleteNode: (nodeId) => {
+    const s = get()
+    if (!s.nodes.some((n) => n.id === nodeId)) return
+    const ids = protectEntryPoint(s.nodes, expandLoopPairs(s.nodes, new Set([nodeId])))
+    if (ids.size === 0) return
+    pushHistory()
+    set(() => ({
+      nodes: s.nodes.filter((n) => !ids.has(n.id)),
+      edges: contractNodes(s.edges, ids),
+      selectedNodeId: s.selectedNodeId && ids.has(s.selectedNodeId) ? null : s.selectedNodeId,
+      isDirty: true,
+    }))
+  },
+
+  // Inserts a configured copy right after the original in the chain.
+  duplicateNode: (nodeId) => {
+    const s = get()
+    const src = s.nodes.find((n) => n.id === nodeId)
+    if (!src || !DUPLICABLE_NODE_TYPES.has(src.data.type)) return
+    pushHistory()
+    const copy = makeNode(src.data.type, { x: src.position.x, y: src.position.y + 160 })
+    copy.data.label = src.data.label
+    copy.data.configuration = structuredClone(src.data.configuration)
+    const outgoing = s.edges.filter((e) => e.source === nodeId)
+    set(() => ({
+      nodes: [...s.nodes, copy],
+      edges: [
+        ...s.edges.filter((e) => e.source !== nodeId),
+        makeEdge(nodeId, copy.id),
+        ...outgoing.map((e) => makeEdge(copy.id, e.target, 'out', e.targetHandle ?? 'in')),
+      ],
+      selectedNodeId: copy.id,
+      isDirty: true,
+    }))
+  },
+
+  deleteSelected: () => {
+    const s = get()
+    const selNodeIds = new Set(s.nodes.filter((n) => n.selected).map((n) => n.id))
+    const selEdgeIds = new Set(s.edges.filter((e) => e.selected).map((e) => e.id))
+    if (selNodeIds.size === 0 && selEdgeIds.size === 0) return
+    const ids = protectEntryPoint(s.nodes, expandLoopPairs(s.nodes, selNodeIds))
+    if (ids.size === 0 && selEdgeIds.size === 0) return
+    pushHistory()
+    // Explicitly selected edges are removed as-is (no healing — the user cut
+    // the link on purpose); deleted nodes heal so the chain stays connected.
+    const keptEdges = s.edges.filter((e) => !selEdgeIds.has(e.id))
+    set(() => ({
+      nodes: s.nodes.filter((n) => !ids.has(n.id)),
+      edges: contractNodes(keptEdges, ids),
       selectedNodeId: null,
       isDirty: true,
-    })),
+    }))
+  },
+
+  // Seeds a brand-new workflow: a connected trigger → exit chain, so the
+  // edge's + button is immediately available for the first real step.
+  seedNew: () => {
+    resetHistory()
+    const trigger = makeNode('trigger', { x: 0, y: 0 })
+    const exit    = makeNode('exit',    { x: 0, y: 240 })
+    set({
+      workflowId:     '',
+      name:           'Untitled Workflow',
+      variables:      [],
+      nodes:          [trigger, exit],
+      edges:          [makeEdge(trigger.id, exit.id)],
+      selectedNodeId: null,
+      isDirty:        true,
+      past:           [],
+      future:         [],
+    })
+  },
 
   applyDagreLayout: (direction = 'TB') =>
     set((s) => ({
@@ -578,6 +923,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       style:        { strokeWidth: 2 },
     }))
 
+    resetHistory()
     set({
       workflowId:    id,
       name,
@@ -586,6 +932,8 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       edges,
       selectedNodeId: null,
       isDirty:       false,
+      past:          [],
+      future:        [],
     })
   },
 
@@ -607,6 +955,14 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       // Strip UI-only `id` keys from fetch_records filter/sort before serialising.
       if (n.data.type === 'fetch_records' && cfg) {
         cfg = stripFetchRecordsIds(cfg as Record<string, unknown>)
+      }
+      // Strip UI-only `id` keys from http_request's header/param/body_form rows.
+      if (n.data.type === 'http_request' && cfg) {
+        cfg = stripHttpRequestIds(cfg as Record<string, unknown>)
+      }
+      // Strip UI-only `id` keys from trigger's (optional) filter tree.
+      if (n.data.type === 'trigger' && cfg) {
+        cfg = stripTriggerIds(cfg as Record<string, unknown>)
       }
       return {
         ...n.data,
@@ -637,4 +993,5 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   },
 
   markSaved: () => set({ isDirty: false }),
-}))
+  }
+})

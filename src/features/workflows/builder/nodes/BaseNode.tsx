@@ -1,12 +1,13 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Handle, Position, type NodeProps, useStore } from '@xyflow/react'
-import { Plus, GripVertical } from 'lucide-react'
+import { Plus, GripVertical, ArrowLeftRight, Trash2, GitBranchPlus, Copy, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NODE_REGISTRY } from '../node-registry'
-import { useBuilderStore, type FlowNode, type DropPosition } from '../store'
+import { useBuilderStore, DUPLICABLE_NODE_TYPES, type FlowNode, type DropPosition } from '../store'
 import { computeExecutionOrder } from '../executionOrder'
+import { nodeSetupIssue } from '../node-validation'
 import { DropZone } from './DropZone'
-import type { SetVariableConfig, ConditionConfig, VariableAssignment, FetchRecordsConfig, FilterGroup, IteratorConfig } from '../../types'
+import type { SetVariableConfig, ConditionConfig, VariableAssignment, FetchRecordsConfig, FilterGroup, IteratorConfig, HttpRequestConfig, TriggerConfig, ShowMessageConfig } from '../../types'
 
 const DRAG_TRANSFER_KEY = 'application/workflow-node-reorder'
 
@@ -17,8 +18,18 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const hasOutputs = data.outputs?.length > 0
 
   // Show + button below this node only if it's a leaf (no outgoing edges) and not exit
-  const hasOutgoingEdge = useStore((s) => s.edges.some((e) => e.source === id))
+  const outgoingEdges   = useStore((s) => s.edges.filter((e) => e.source === id))
+  const hasOutgoingEdge = outgoingEdges.length > 0
   const showAddButton   = hasOutputs && !hasOutgoingEdge && data.type !== 'exit'
+
+  // This node is a "branch point" once it fans out to 2+ children off the same
+  // handle (parallel siblings) — matches the reference builder's fork toolbar.
+  const branchChildIds = useMemo(
+    () => Array.from(new Set(outgoingEdges.map((e) => e.target))),
+    [outgoingEdges],
+  )
+  const isBranchPoint = branchChildIds.length > 1
+  const [branchToolbarOpen, setBranchToolbarOpen] = useState(false)
 
   const openPicker          = useBuilderStore((s) => s.openPicker)
   const draggingNodeId      = useBuilderStore((s) => s.draggingNodeId)
@@ -27,6 +38,17 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const setActiveDropTarget = useBuilderStore((s) => s.setActiveDropTarget)
   const reorderNode         = useBuilderStore((s) => s.reorderNode)
   const applyDagreLayout    = useBuilderStore((s) => s.applyDagreLayout)
+  const addConnectedNode    = useBuilderStore((s) => s.addConnectedNode)
+  const deleteBranch        = useBuilderStore((s) => s.deleteBranch)
+  const swapLastTwoBranches = useBuilderStore((s) => s.swapLastTwoBranches)
+  const deleteNode          = useBuilderStore((s) => s.deleteNode)
+  const duplicateNode       = useBuilderStore((s) => s.duplicateNode)
+
+  // Quick actions: entry points are protected (the picker can't re-add one);
+  // duplicate only where an insert-after copy keeps the graph valid.
+  const canDelete    = data.type !== 'trigger' && data.type !== 'entry'
+  const canDuplicate = DUPLICABLE_NODE_TYPES.has(data.type)
+  const setupIssue   = nodeSetupIssue(data)
 
   // Execution order badge
   const nodes    = useBuilderStore((s) => s.nodes)
@@ -73,6 +95,12 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const dropAt = (pos: DropPosition) =>
     activeDropTarget?.nodeId === id && activeDropTarget.position === pos
 
+  // While a reorder drag is in flight, dim every node that isn't the one
+  // being dragged and isn't the currently-hovered drop target — keeps focus
+  // on the drag/drop pair, matching the reference builder's fade-out.
+  const isActiveDropTarget = activeDropTarget?.nodeId === id
+  const dimForDrag = draggingNodeId !== null && !isDraggingThis && !isActiveDropTarget
+
   return (
     <div
       className={cn(
@@ -81,6 +109,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           ? 'border-blue-400 ring-2 ring-blue-400/30 shadow-lg shadow-blue-500/10'
           : 'border-slate-200/80 shadow-sm hover:border-slate-300 hover:shadow-md',
         isDraggingThis ? 'opacity-40 scale-95' : '',
+        dimForDrag ? 'opacity-40' : '',
       )}
     >
       {/* Drop zones — appear around the node while another node is dragged */}
@@ -115,6 +144,59 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
             <div className="flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-500/90 px-1 text-[9px] font-semibold tabular-nums text-white/90 shadow ring-2 ring-white">
               W{info.wave}
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Needs-setup badge — the node can't run until this is resolved */}
+      {setupIssue && (
+        <div
+          className="absolute -top-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-white shadow-md shadow-amber-500/30 ring-2 ring-white"
+          title={setupIssue}
+        >
+          <AlertTriangle size={11} strokeWidth={2.75} />
+        </div>
+      )}
+
+      {/* Quick-action toolbar — floats above the node on hover / selection */}
+      {(canDelete || canDuplicate) && !draggingNodeId && (
+        <div
+          className={cn(
+            'absolute -top-8 right-0 z-20 flex items-center gap-0.5 rounded-full bg-white p-0.5 shadow-lg shadow-slate-900/10 ring-1 ring-slate-200 transition-all duration-150 nodrag nopan',
+            selected
+              ? 'opacity-100 scale-100 pointer-events-auto'
+              : 'opacity-0 scale-90 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto',
+          )}
+        >
+          {canDuplicate && (
+            <button
+              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                duplicateNode(id)
+                setTimeout(() => applyDagreLayout('TB'), 0)
+              }}
+              title="Duplicate node"
+            >
+              <Copy size={12} strokeWidth={2.5} />
+            </button>
+          )}
+          {canDelete && (
+            <button
+              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                deleteNode(id)
+                setTimeout(() => applyDagreLayout('TB'), 0)
+              }}
+              title={data.type === 'iterator' || data.type === 'loop_end'
+                ? 'Delete loop (keeps body steps)'
+                : 'Delete node (reconnects the chain)'}
+            >
+              <Trash2 size={12} strokeWidth={2.5} />
+            </button>
           )}
         </div>
       )}
@@ -192,6 +274,59 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           </button>
         </div>
       )}
+
+      {/* Branch-point hover toolbar — appears where this node fans out into
+          2+ parallel siblings. Mirrors the reference builder's fork popover:
+          reorder the last two branches, delete the rightmost branch, or add
+          a new parallel branch. */}
+      {isBranchPoint && !draggingNodeId && (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 -bottom-9 z-20 flex flex-col items-center"
+          onMouseEnter={() => setBranchToolbarOpen(true)}
+          onMouseLeave={() => setBranchToolbarOpen(false)}
+        >
+          <div className="h-3.5 w-px bg-slate-300" />
+          <div
+            className={cn(
+              'pointer-events-auto flex items-center gap-0.5 rounded-full bg-white p-1 shadow-lg shadow-slate-900/10 ring-1 ring-slate-200 transition-all duration-150 nodrag nopan',
+              branchToolbarOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none',
+            )}
+          >
+            <button
+              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                swapLastTwoBranches(id)
+                setTimeout(() => applyDagreLayout('TB'), 0)
+              }}
+              title="Reorder branches"
+            >
+              <ArrowLeftRight size={12} strokeWidth={2.5} />
+            </button>
+            <button
+              className="flex h-6 w-6 items-center justify-center rounded-full text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-600"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                deleteBranch(id, branchChildIds[branchChildIds.length - 1])
+                setTimeout(() => applyDagreLayout('TB'), 0)
+              }}
+              title="Delete last branch"
+            >
+              <Trash2 size={12} strokeWidth={2.5} />
+            </button>
+            <button
+              className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-sm transition-all hover:bg-blue-600 hover:scale-110"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => handleAddClick(e, data.outputs[0]?.id ?? 'out')}
+              title="Add node in a new branch"
+            >
+              <GitBranchPlus size={13} strokeWidth={2.5} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -202,6 +337,41 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
   switch (data.type) {
     case 'entry':
       return <p className="text-[11px] text-slate-400">Workflow starts here</p>
+    case 'trigger': {
+      const cfg = data.configuration as TriggerConfig | undefined
+      if (!cfg?.mode) return <p className="text-[11px] italic text-slate-400">Not configured</p>
+      const labels: Record<TriggerConfig['mode'], string> = {
+        on_demand: 'On demand', scheduled: 'Scheduled',
+        before: 'Before write', after: 'After write', after_async: 'After write (async)',
+      }
+      return (
+        <div className="space-y-1 text-[10px]">
+          <div className="flex items-center gap-1">
+            <code className="rounded bg-emerald-50 px-1 py-0.5 font-semibold text-emerald-700">{labels[cfg.mode]}</code>
+            {cfg.enabled === false && <span className="rounded bg-slate-100 px-1 text-slate-400">disabled</span>}
+          </div>
+          {cfg.mode === 'scheduled' && cfg.cron && (
+            <code className="block truncate rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-600">{cfg.cron}</code>
+          )}
+          {(cfg.mode === 'before' || cfg.mode === 'after' || cfg.mode === 'after_async') && (
+            <p className="truncate text-slate-400">{cfg.event_type ?? '…'} on {cfg.form_id ? cfg.form_id.slice(0, 8) + '…' : 'no form'}</p>
+          )}
+        </div>
+      )
+    }
+    case 'show_message': {
+      const cfg = data.configuration as ShowMessageConfig | undefined
+      if (!cfg?.message) return <p className="text-[11px] italic text-slate-400">No message set</p>
+      const typeColor: Record<ShowMessageConfig['message_type'], string> = {
+        success: 'bg-emerald-50 text-emerald-700', error: 'bg-red-50 text-red-700', info: 'bg-sky-50 text-sky-700',
+      }
+      return (
+        <div className="space-y-1 text-[10px]">
+          <code className={cn('rounded px-1 py-0.5 font-semibold', typeColor[cfg.message_type])}>{cfg.message_type}</code>
+          <p className="truncate text-slate-500">{cfg.message}</p>
+        </div>
+      )
+    }
     case 'exit':
       return <p className="text-[11px] text-slate-400">Workflow ends here</p>
     case 'merge':
@@ -279,6 +449,22 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
               <span className="text-slate-300">→</span>
               <code className="truncate font-semibold text-blue-700">{cfg.output_var}</code>
             </div>
+          )}
+        </div>
+      )
+    }
+    case 'http_request': {
+      const cfg = data.configuration as HttpRequestConfig | undefined
+      const url = cfg?.url_mode === 'expression' ? cfg?.url_expr : cfg?.url
+      if (!url) return <p className="text-[11px] italic text-slate-400">No URL set</p>
+      return (
+        <div className="space-y-1 text-[10px]">
+          <div className="flex items-center gap-1.5">
+            <code className="shrink-0 rounded bg-cyan-50 px-1 py-0.5 font-semibold text-cyan-700">{cfg?.method ?? 'GET'}</code>
+            <code className="truncate text-slate-500">{url}</code>
+          </div>
+          {cfg?.auth_type && cfg.auth_type !== 'none' && (
+            <span className="rounded bg-slate-100 px-1 text-slate-400">auth: {cfg.auth_type}</span>
           )}
         </div>
       )

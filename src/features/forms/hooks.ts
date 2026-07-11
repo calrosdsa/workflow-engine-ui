@@ -14,7 +14,7 @@ export function useForms() {
 }
 
 export function useForm(id: string) {
-  return useQuery({ queryKey: formKeys.detail(id), queryFn: () => formsApi.get(id) })
+  return useQuery({ queryKey: formKeys.detail(id), queryFn: () => formsApi.get(id), enabled: !!id })
 }
 
 export function useCreateForm() {
@@ -56,6 +56,33 @@ export function useDeleteForm() {
   return useMutation({
     mutationFn: (id: string) => formsApi.delete(id),
     onSuccess:  () => qc.invalidateQueries({ queryKey: formKeys.all }),
+  })
+}
+
+/** "Copy Form" — duplicates a form (fresh id/table/columns, "-copy" slug)
+ *  under the same parent. */
+export function useCopyForm() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => formsApi.copy(id),
+    onSuccess:  () => qc.invalidateQueries({ queryKey: formKeys.all }),
+  })
+}
+
+/** "Unlink Dependent Form" — detaches a form from its parent without deleting it. */
+export function useUnlinkForm() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => formsApi.unlink(id),
+    onSuccess:  () => qc.invalidateQueries({ queryKey: formKeys.all }),
+  })
+}
+
+/** "Share This Form In Other Apps" — clones the definition into another app
+ *  under the same client. */
+export function useShareForm() {
+  return useMutation({
+    mutationFn: ({ id, targetAppId }: { id: string; targetAppId: string }) => formsApi.share(id, targetAppId),
   })
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { useNavigate, useParams } from '@tanstack/react-router'
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import {
   ArrowLeft, Save, FilePlus2, Eye, AlertCircle, FileText, Loader2, Table2,
 } from 'lucide-react'
@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { useForm, useForms, useCreateForm, useUpdateForm } from '@/features/forms/hooks'
-import { useFormBuilderStore } from '@/features/form-builder/store'
+import { formsApi } from '@/features/forms/api'
+import { useFormBuilderStore, useFormMetaStore, loadForm as loadFormIntoStores, resetFormBuilder } from '@/features/form-builder/store'
 import { Toolbox } from '@/features/form-builder/Toolbox'
 import { FormBuilderDnd } from '@/features/form-builder/canvas/FormBuilderDnd'
 import { FormCanvas } from '@/features/form-builder/canvas/FormCanvas'
@@ -15,6 +16,7 @@ import { ConfigPanel } from '@/features/form-builder/config/ConfigPanel'
 import { FormPreviewDialog } from '@/features/form-builder/FormPreviewDialog'
 import { toBuilder, toPayload } from '@/features/form-builder/serialize'
 import { projectToFields, validateFormRefs } from '@/features/form-builder/projection'
+import { syncLineItemsChildren } from '@/features/form-builder/lineItemsSync'
 import { slugifyKey } from '@/features/form-builder/factory'
 import type { VariableDecl } from '@/features/workflows/types'
 
@@ -26,16 +28,19 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   const navigate = useNavigate()
   const params = useParams({ strict: false }) as { formId?: string }
   const formId = mode === 'edit' ? params.formId : undefined
+  const search = useSearch({ strict: false }) as { parentFormId?: string }
+  const parentFormId = mode === 'new' ? search.parentFormId : undefined
 
   const { data: loaded, isLoading } = useForm(formId ?? '')
   const { data: allForms } = useForms()
   const createMutation = useCreateForm()
   const updateMutation = useUpdateForm(formId ?? '')
 
+  const schema = useFormBuilderStore((s) => s.schema)
   const {
-    name, slug, description, schema, isDirty,
-    setName, setSlug, loadForm, reset, markSaved,
-  } = useFormBuilderStore()
+    name, slug, description, isDirty,
+    setName, setSlug, markSaved,
+  } = useFormMetaStore()
 
   const [slugTouched, setSlugTouched] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -45,13 +50,13 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   useEffect(() => {
     if (mode === 'edit' && loaded) {
       const b = toBuilder(loaded)
-      loadForm({ id: loaded.id, name: b.name, slug: b.slug, description: b.description, schema: b.schema })
+      loadFormIntoStores({ id: loaded.id, name: b.name, slug: b.slug, description: b.description, schema: b.schema })
       setSlugTouched(true) // existing slug is locked anyway
     } else if (mode === 'new') {
-      reset()
+      resetFormBuilder()
       setSlugTouched(false)
     }
-  }, [mode, loaded, loadForm, reset])
+  }, [mode, loaded])
 
   // Auto-derive slug from name until the user edits it (new forms only).
   useEffect(() => {
@@ -91,11 +96,26 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
     const payload = toPayload({ name, slug, description, schema })
     try {
       if (mode === 'new') {
-        const created = await createMutation.mutateAsync(payload)
+        const created = await createMutation.mutateAsync(
+          parentFormId ? { ...payload, parent_form_id: parentFormId } : payload,
+        )
+        // Line Items child forms link back via parent_form_id, which only
+        // exists once the parent itself has been created — sync them now,
+        // then persist the resulting childFormId(s) back onto the parent's
+        // layout with a follow-up update.
+        const { changed, schema: syncedSchema } = await syncLineItemsChildren(schema, created.id, created.slug)
+        if (changed) {
+          await formsApi.update(created.id, { ...payload, layout: syncedSchema, parent_form_id: parentFormId })
+        }
         markSaved()
         navigate({ to: '/forms/$formId', params: { formId: created.id } })
       } else if (formId) {
-        await updateMutation.mutateAsync(payload)
+        const { changed, schema: syncedSchema } = await syncLineItemsChildren(schema, formId, slug)
+        if (changed) {
+          await updateMutation.mutateAsync({ ...payload, layout: syncedSchema })
+        } else {
+          await updateMutation.mutateAsync(payload)
+        }
         markSaved()
       }
     } catch (e) {
@@ -105,6 +125,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   }
 
   const saving = createMutation.isPending || updateMutation.isPending
+  const parentForm = parentFormId ? allForms?.find((f) => f.id === parentFormId) : undefined
 
   if (mode === 'edit' && isLoading) {
     return <div className="flex h-full items-center justify-center"><Spinner /></div>
@@ -150,6 +171,12 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
           <Table2 size={13} className="text-slate-400" />
           {projection.fields.length} {projection.fields.length === 1 ? 'column' : 'columns'}
         </div>
+
+        {parentForm && (
+          <span className="rounded-full bg-indigo-50 px-2 py-1 text-[11px] font-medium text-indigo-600">
+            Dependent of {parentForm.name}
+          </span>
+        )}
 
         {isDirty && <span className="rounded-full bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-600">Unsaved</span>}
 

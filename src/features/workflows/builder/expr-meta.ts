@@ -60,6 +60,7 @@ export const EXPR_ROOTS: ExprRoot[] = [
   { name: 'Times',       detail: 'map',  description: 'Typed time/datetime variables — Times["name"]' },
   { name: 'NodeOutputs', detail: 'map',  description: 'Outputs of prior nodes — NodeOutputs["id"]["field"]' },
   { name: 'Context',     detail: 'map',  description: 'Workflow metadata — Context["key"]' },
+  { name: 'AppSettings', detail: 'map',  description: 'App-level global variables (Global Settings) — AppSettings["name"]' },
 ]
 
 export const FUNCTION_CATEGORIES = [...new Set(EXPR_FUNCTIONS.map((f) => f.category))]

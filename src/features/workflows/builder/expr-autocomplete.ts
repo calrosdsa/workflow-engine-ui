@@ -110,7 +110,18 @@ function exprCompletionSource(variables: VariableDecl[], nodeContext: NodeOutput
   const varComps = variableCompletions(variables)
   const fnComps = functionCompletions()
   const rootComps = rootCompletions()
-  const byId = new Map(nodeContext.filter((s) => s.root !== 'vars').map((s) => [s.nodeId, s]))
+  // One node id can now map to MULTIPLE schema entries (e.g. an http_request
+  // node's base fields plus one entry per named response schema — see
+  // node-output-schema.ts's buildNodeOutputSchema). Group by id rather than
+  // keeping only the last one, so completions merge every entry's fields
+  // instead of the later entries silently shadowing the earlier ones.
+  const byId = new Map<string, NodeOutputSchema[]>()
+  for (const s of nodeContext) {
+    if (s.root === 'vars') continue
+    const list = byId.get(s.nodeId)
+    if (list) list.push(s)
+    else byId.set(s.nodeId, [s])
+  }
 
   // Loop-scoped vars (root: 'vars') expose their top-level fields directly under
   // Vars["name"] — collect them by key so we can complete the name and drill in.
@@ -143,21 +154,28 @@ function exprCompletionSource(variables: VariableDecl[], nodeContext: NodeOutput
     const pathMatch = NODEOUT_PATH_RE.exec(before)
     if (pathMatch) {
       const [, nodeId, midSegments, typed] = pathMatch
-      const schema = byId.get(nodeId)
-      if (schema) {
+      const schemas = byId.get(nodeId)
+      if (schemas) {
+        // Merge every schema sharing this node id into one flat top-level
+        // field list before walking segments — e.g. an http_request node's
+        // base fields (status_code/body/…) plus each named response schema's
+        // fields (Id/Name/Email/…) all need to be reachable here.
+        const merged: NodeOutputSchema = { ...schemas[0], fields: schemas.flatMap((s) => s.fields) }
         const segments = parseSegments(midSegments)
-        const fields = fieldsAtPath(schema, segments)
+        const fields = fieldsAtPath(merged, segments)
         const from = context.pos - typed.length
         return { from, options: fieldCompletions(fields), validFor: /^[^"]*$/ }
       }
     }
 
     // 2. NodeOutputs[" → upstream node ids (labelled by friendly node name).
+    // One id can appear multiple times in nodeContext (see byId above) — only
+    // offer it once here, keeping the first (base) entry's label.
     const idMatch = NODEOUT_ID_RE.exec(before)
     if (idMatch) {
       const typed = idMatch[1]
       const from = context.pos - typed.length
-      const options: Completion[] = nodeContext.map((s) => ({
+      const options: Completion[] = [...byId.values()].map(([s]) => ({
         label: s.nodeId,
         displayLabel: s.nodeLabel,
         apply: s.nodeId,

@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid'
 import {
   type ComponentType, type FormElement, type FormSection, type FormColumn,
-  type ColumnLayout, COLUMN_LAYOUTS,
+  type ColumnLayout, COLUMN_LAYOUTS, emptyLineItemsConfig,
 } from './schema'
 import { COMPONENT_REGISTRY } from './component-registry'
 
@@ -68,6 +68,10 @@ export function createElement(component: ComponentType): FormElement {
       break
     case 'hidden':
       base.label = 'Hidden Field'
+      break
+    case 'line_items':
+      base.lineItemColumns = []
+      base.lineItemConfig = emptyLineItemsConfig()
       break
   }
   return base

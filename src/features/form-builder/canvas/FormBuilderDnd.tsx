@@ -27,8 +27,8 @@ type ActiveDrag =
  */
 export function FormBuilderDnd({ children }: { children: ReactNode }) {
   const schema = useFormBuilderStore((s) => s.schema)
-  const addElement = useFormBuilderStore((s) => s.addElement)
-  const moveElement = useFormBuilderStore((s) => s.moveElement)
+  const addElement = useFormBuilderStore((s) => s.addItem)
+  const moveElement = useFormBuilderStore((s) => s.moveItem)
   const moveSection = useFormBuilderStore((s) => s.moveSection)
 
   const [activeDrag, setActiveDrag] = useState<ActiveDrag>(null)
@@ -162,12 +162,12 @@ function ElementDragPreview({ elementId }: { elementId: string }) {
   const schema = useFormBuilderStore((s) => s.schema)
   const found = findElement(schema, elementId)
   if (!found) return null
-  const reg = COMPONENT_REGISTRY[found.element.component]
+  const reg = COMPONENT_REGISTRY[found.item.component]
   const Icon = reg.icon
   return (
     <div className="flex items-center gap-2.5 rounded-lg border border-indigo-300 bg-white px-3 py-2 shadow-xl">
       <Icon size={14} className="text-indigo-500" />
-      <span className="text-[12px] font-medium text-slate-700">{found.element.label}</span>
+      <span className="text-[12px] font-medium text-slate-700">{found.item.label}</span>
     </div>
   )
 }

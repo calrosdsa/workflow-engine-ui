@@ -14,10 +14,10 @@ interface ElementCardProps {
 }
 
 export function ElementCard({ element, sectionId, columnId }: ElementCardProps) {
-  const selectedId = useFormBuilderStore((s) => s.selectedElementId)
-  const selectElement = useFormBuilderStore((s) => s.selectElement)
-  const duplicate = useFormBuilderStore((s) => s.duplicateElementById)
-  const remove = useFormBuilderStore((s) => s.deleteElement)
+  const selectedId = useFormBuilderStore((s) => s.selectedItemId)
+  const selectElement = useFormBuilderStore((s) => s.selectItem)
+  const duplicate = useFormBuilderStore((s) => s.duplicateItemById)
+  const remove = useFormBuilderStore((s) => s.deleteItem)
 
   const selected = selectedId === element.id
   const reg = COMPONENT_REGISTRY[element.component]

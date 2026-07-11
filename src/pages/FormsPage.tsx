@@ -1,84 +1,73 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Plus, Trash2, Database, ExternalLink } from 'lucide-react'
-import { useForms, useDeleteForm } from '@/features/forms/hooks'
+import { Plus, Database, HelpCircle } from 'lucide-react'
+import { useForms } from '@/features/forms/hooks'
+import { useApplication } from '@/features/applications/hooks'
+import { usePermission } from '@/features/auth/permissions'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
-import type { FormDefinition } from '@/features/forms/types'
+import { FormTree } from '@/features/forms/FormTree'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog'
 
 export function FormsPage() {
   const { data: forms, isLoading } = useForms()
-  const deleteMutation = useDeleteForm()
+  const { data: app } = useApplication()
+  const canWrite = usePermission('forms:write')
+  const [helpOpen, setHelpOpen] = useState(false)
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Spinner /></div>
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="relative flex h-full flex-col p-6">
+      <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Form Builder</h1>
           <p className="text-sm text-gray-500 mt-1">{forms?.length ?? 0} forms</p>
         </div>
-        <Link to="/forms/new">
-          <Button><Plus size={16} />New Form</Button>
-        </Link>
       </div>
 
       {!forms?.length ? (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
           <Database size={32} className="text-gray-300 mb-3" />
           <p className="text-gray-500 mb-4">No forms yet. Create one to auto-generate a Postgres table.</p>
-          <Link to="/forms/new">
-            <Button variant="outline"><Plus size={16} />Create your first form</Button>
-          </Link>
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {forms.map((form) => (
-            <FormCard key={form.id} form={form} onDelete={() => deleteMutation.mutate(form.id)} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function FormCard({ form, onDelete }: { form: FormDefinition; onDelete: () => void }) {
-  return (
-    <Card className="flex flex-col">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <CardTitle className="truncate">{form.name}</CardTitle>
-            <CardDescription className="mt-1 font-mono text-xs">{form.slug}</CardDescription>
-          </div>
-          <Link to="/forms/$formId" params={{ formId: form.id }}>
-            <Button variant="ghost" size="icon"><ExternalLink size={14} /></Button>
-          </Link>
-        </div>
-      </CardHeader>
-      <CardContent className="flex-1">
-        {form.description && <p className="text-sm text-gray-600 mb-2">{form.description}</p>}
-        <p className="text-xs text-gray-400">{form.fields.length} fields</p>
-        <div className="mt-2 flex flex-wrap gap-1">
-          {form.fields.slice(0, 4).map((f) => (
-            <span key={f.name} className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">{f.name}</span>
-          ))}
-          {form.fields.length > 4 && (
-            <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-400">+{form.fields.length - 4} more</span>
+          {canWrite && (
+            <Link to="/forms/new">
+              <Button variant="outline"><Plus size={16} />Create your first form</Button>
+            </Link>
           )}
         </div>
-      </CardContent>
-      <div className="flex gap-2 border-t p-4">
-        <Link to="/forms/$formId/records" params={{ formId: form.id }} className="flex-1">
-          <Button variant="outline" size="sm" className="w-full">
-            <Database size={14} />View Records
-          </Button>
-        </Link>
-        <Button size="sm" variant="outline" onClick={onDelete} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-          <Trash2 size={14} />
+      ) : (
+        <div className="flex-1 overflow-auto">
+          <FormTree appName={app?.name ?? 'App'} forms={forms} canWrite={canWrite} />
+        </div>
+      )}
+
+      <div className="absolute bottom-6 right-6 flex flex-col items-end gap-2">
+        {canWrite && (
+          <Link to="/forms/new">
+            <Button className="rounded-full shadow-md"><Plus size={16} />Add Form</Button>
+          </Link>
+        )}
+        <Button variant="outline" className="rounded-full bg-white shadow-md" onClick={() => setHelpOpen(true)}>
+          <HelpCircle size={16} />What is a Form?
         </Button>
       </div>
-    </Card>
+
+      <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
+        <DialogContent className="w-full max-w-md">
+          <DialogHeader>
+            <DialogTitle>What is a Form?</DialogTitle>
+            <DialogDescription>
+              A Form defines a data table: its fields become Postgres columns, and its layout drives the
+              record entry/edit screens. Forms can be nested as <strong>dependent forms</strong> under a
+              parent — use the ⋯ menu on any form to add one, copy it, share it into another app, or
+              detach it from its parent.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

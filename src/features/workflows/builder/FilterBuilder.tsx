@@ -27,10 +27,14 @@ const OPERATORS: { value: CompareOp; label: string }[] = [
   { value: 'in', label: 'in list' },
   { value: 'is_null', label: 'is empty' },
   { value: 'not_null', label: 'is not empty' },
+  // Change-detection — only meaningful where an old/new record pair exists
+  // (a Trigger node's before/after/after_async filter). Harmless elsewhere:
+  // evaluates false when there's no old record to compare against.
+  { value: 'was_updated', label: 'was updated' },
 ]
 
 function opNeedsValue(op: CompareOp): boolean {
-  return op !== 'is_null' && op !== 'not_null'
+  return op !== 'is_null' && op !== 'not_null' && op !== 'was_updated'
 }
 
 export function newCondition(): FilterCondition {

@@ -26,12 +26,16 @@ export function CustomEdge({
     borderRadius: 16,
   })
 
-  const openPicker = useBuilderStore((s) => s.openPicker)
+  const openPicker     = useBuilderStore((s) => s.openPicker)
+  const draggingNodeId = useBuilderStore((s) => s.draggingNodeId)
 
   // Selected edges get a distinct accent color + thicker stroke; hover is a
   // lighter highlight. Default is the muted slate from props.
   const stroke = selected ? '#6366f1' : hovered ? '#3b82f6' : style?.stroke ?? '#cbd5e1'
   const strokeWidth = selected ? 3 : 2
+  // Dim edges while a reorder drag is in flight, matching the node fade so the
+  // whole idle tree recedes and the drag/drop pair stays visually prominent.
+  const opacity = draggingNodeId !== null ? 0.35 : 1
 
   return (
     <>
@@ -47,7 +51,7 @@ export function CustomEdge({
         id={id}
         path={edgePath}
         markerEnd={markerEnd}
-        style={{ ...style, stroke, strokeWidth }}
+        style={{ ...style, stroke, strokeWidth, opacity, transition: 'opacity 150ms' }}
       />
       <EdgeLabelRenderer>
         <div

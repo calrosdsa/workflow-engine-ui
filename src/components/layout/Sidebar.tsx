@@ -1,12 +1,14 @@
 import { Link } from '@tanstack/react-router'
-import { Workflow, Play, FileText, LayoutDashboard } from 'lucide-react'
+import { Workflow, Play, FileText, LayoutDashboard, LayoutGrid, Users2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
-  { to: '/',            label: 'Dashboard',  icon: LayoutDashboard },
-  { to: '/workflows',   label: 'Workflows',  icon: Workflow },
-  { to: '/executions',  label: 'Executions', icon: Play },
-  { to: '/forms',       label: 'Forms',      icon: FileText },
+  { to: '/',             label: 'Dashboard',    icon: LayoutDashboard },
+  { to: '/workflows',    label: 'Workflows',    icon: Workflow },
+  { to: '/executions',   label: 'Executions',   icon: Play },
+  { to: '/forms',        label: 'Forms',        icon: FileText },
+  { to: '/applications', label: 'Applications', icon: LayoutGrid },
+  { to: '/team',         label: 'Team',         icon: Users2 },
 ]
 
 export function Sidebar() {

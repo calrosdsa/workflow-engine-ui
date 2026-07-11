@@ -4,7 +4,7 @@ import {
   CheckSquare, ToggleLeft, CircleDot, ChevronDownSquare, ListChecks, Search,
   Upload, Image,
   FileText, Minus, Heading, Pilcrow, StretchVertical, EyeOff,
-  FormInput,
+  FormInput, Table2,
   type LucideIcon,
 } from 'lucide-react'
 import type { ComponentType, ComponentCategory } from './schema'
@@ -45,6 +45,7 @@ export const COMPONENT_REGISTRY: Record<ComponentType, ComponentRegistryEntry> =
   multiselect: { type: 'multiselect', label: 'Multi Select', icon: ListChecks,        category: 'Choice', dataBearing: true, fieldType: 'json',    description: 'Pick several options' },
   autocomplete:{ type: 'autocomplete',label: 'Autocomplete', icon: Search,            category: 'Choice', dataBearing: true, fieldType: 'string',  description: 'Searchable select' },
   form:        { type: 'form',        label: 'Form Reference', icon: FormInput,        category: 'Choice', dataBearing: true, fieldType: 'reference', description: 'Reference another form' },
+  line_items:  { type: 'line_items',  label: 'Line Items',    icon: Table2,            category: 'Choice', dataBearing: false, description: 'Embedded child record grid' },
 
   // --- Media ---
   file:      { type: 'file',  label: 'File Upload',  icon: Upload, category: 'Media', dataBearing: true, fieldType: 'file', description: 'Upload a file' },

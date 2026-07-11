@@ -1,6 +1,7 @@
 import {
   Play,
   CircleStop,
+  Zap,
   Variable,
   GitBranch,
   Box,
@@ -8,9 +9,20 @@ import {
   Database,
   Repeat,
   FlagOff,
+  DatabaseZap,
+  Pencil,
+  Trash2,
+  Globe,
+  MessageSquare,
+  Wand2,
+  Save,
   type LucideIcon,
 } from 'lucide-react'
-import type { NodeType, Port, SetVariableConfig, ConditionConfig, FetchRecordsConfig, IteratorConfig } from '../types'
+import type {
+  NodeType, Port, SetVariableConfig, ConditionConfig, FetchRecordsConfig, IteratorConfig,
+  UpsertRecordsConfig, UpdateRecordsConfig, DeleteRecordsConfig, HttpRequestConfig,
+  TriggerConfig, ShowMessageConfig, TransformConfig, SaveRecordsConfig,
+} from '../types'
 
 export interface NodeRegistryEntry {
   label: string
@@ -28,7 +40,13 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     label: 'Start', icon: Play,
     color: 'bg-emerald-500', gradient: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
     accent: '#10b981', textColor: 'text-emerald-700', ring: 'bg-emerald-50',
-    description: 'Workflow entry point',
+    description: 'Workflow entry point (legacy)',
+  },
+  trigger: {
+    label: 'Trigger', icon: Zap,
+    color: 'bg-emerald-500', gradient: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+    accent: '#10b981', textColor: 'text-emerald-700', ring: 'bg-emerald-50',
+    description: 'Entry point — on demand, scheduled, or on a record change',
   },
   exit: {
     label: 'End', icon: CircleStop,
@@ -66,6 +84,24 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     accent: '#f43f5e', textColor: 'text-rose-700', ring: 'bg-rose-50',
     description: 'Query records from a form',
   },
+  upsert_records: {
+    label: 'Upsert Record', icon: DatabaseZap,
+    color: 'bg-indigo-500', gradient: 'bg-gradient-to-br from-indigo-500 to-blue-600',
+    accent: '#6366f1', textColor: 'text-indigo-700', ring: 'bg-indigo-50',
+    description: 'Create or update a record by its unique fields',
+  },
+  update_records: {
+    label: 'Update Records', icon: Pencil,
+    color: 'bg-sky-500', gradient: 'bg-gradient-to-br from-sky-500 to-cyan-600',
+    accent: '#0ea5e9', textColor: 'text-sky-700', ring: 'bg-sky-50',
+    description: 'Update record(s) matching a filter',
+  },
+  delete_records: {
+    label: 'Delete Records', icon: Trash2,
+    color: 'bg-red-500', gradient: 'bg-gradient-to-br from-red-500 to-rose-600',
+    accent: '#ef4444', textColor: 'text-red-700', ring: 'bg-red-50',
+    description: 'Delete record(s) matching a filter',
+  },
   iterator: {
     label: 'Iterator', icon: Repeat,
     color: 'bg-amber-500', gradient: 'bg-gradient-to-br from-amber-500 to-yellow-600',
@@ -78,6 +114,30 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     accent: '#94a3b8', textColor: 'text-slate-600', ring: 'bg-slate-100',
     description: 'Marks the end of a loop body',
   },
+  http_request: {
+    label: 'HTTP Request', icon: Globe,
+    color: 'bg-cyan-500', gradient: 'bg-gradient-to-br from-cyan-500 to-blue-600',
+    accent: '#06b6d4', textColor: 'text-cyan-700', ring: 'bg-cyan-50',
+    description: 'Make an outbound HTTP call',
+  },
+  show_message: {
+    label: 'Show Message', icon: MessageSquare,
+    color: 'bg-fuchsia-500', gradient: 'bg-gradient-to-br from-fuchsia-500 to-pink-600',
+    accent: '#d946ef', textColor: 'text-fuchsia-700', ring: 'bg-fuchsia-50',
+    description: 'Publish a success/error/info message',
+  },
+  transform: {
+    label: 'Transform', icon: Wand2,
+    color: 'bg-purple-500', gradient: 'bg-gradient-to-br from-purple-500 to-fuchsia-600',
+    accent: '#a855f7', textColor: 'text-purple-700', ring: 'bg-purple-50',
+    description: 'Map a source list into a target form’s schema',
+  },
+  save_records: {
+    label: 'Save Records', icon: Save,
+    color: 'bg-indigo-600', gradient: 'bg-gradient-to-br from-indigo-600 to-violet-700',
+    accent: '#4f46e5', textColor: 'text-indigo-700', ring: 'bg-indigo-50',
+    description: 'Bulk upsert a list of records at once',
+  },
 }
 
 export function defaultLabel(type: NodeType): string {
@@ -87,6 +147,7 @@ export function defaultLabel(type: NodeType): string {
 export function defaultPorts(type: NodeType): { inputs: Port[]; outputs: Port[] } {
   switch (type) {
     case 'entry':
+    case 'trigger':
       return { inputs: [], outputs: [{ id: 'out', label: 'out', kind: 'control' }] }
     case 'exit':
       return { inputs: [{ id: 'in', label: 'in', kind: 'control' }], outputs: [] }
@@ -111,8 +172,16 @@ export function defaultPorts(type: NodeType): { inputs: Port[]; outputs: Port[] 
   }
 }
 
-export function defaultConfig(type: NodeType): SetVariableConfig | ConditionConfig | FetchRecordsConfig | IteratorConfig | Record<string, never> {
+export function defaultConfig(type: NodeType):
+  | SetVariableConfig | ConditionConfig | FetchRecordsConfig | IteratorConfig
+  | UpsertRecordsConfig | UpdateRecordsConfig | DeleteRecordsConfig | HttpRequestConfig
+  | TriggerConfig | ShowMessageConfig | TransformConfig | SaveRecordsConfig
+  | Record<string, never> {
   switch (type) {
+    case 'trigger':
+      return { mode: 'on_demand', enabled: true } satisfies TriggerConfig
+    case 'show_message':
+      return { message: '', message_type: 'info' } satisfies ShowMessageConfig
     case 'set_variable':
       return { assignments: [] } satisfies SetVariableConfig
     case 'condition':
@@ -123,16 +192,43 @@ export function defaultConfig(type: NodeType): SetVariableConfig | ConditionConf
         filter: { combinator: 'and', conditions: [], groups: [] },
         sort: [], limit: 0, output_var: '',
       } satisfies FetchRecordsConfig
+    case 'upsert_records':
+      return { form_id: '', values: [] } satisfies UpsertRecordsConfig
+    case 'update_records':
+      return {
+        form_id: '', mode: 'one',
+        filter: { combinator: 'and', conditions: [], groups: [] },
+        values: [],
+      } satisfies UpdateRecordsConfig
+    case 'delete_records':
+      return {
+        form_id: '', mode: 'one',
+        filter: { combinator: 'and', conditions: [], groups: [] },
+      } satisfies DeleteRecordsConfig
     case 'iterator':
       return {
         source_expr: '', item_var: 'item', index_var: 'index',
         filter_expr: '', stop_expr: '', max_iters: 0, loop_end_id: '',
       } satisfies IteratorConfig
+    case 'http_request':
+      return {
+        method: 'GET', url: '', params: [], headers: [], body_mode: 'none', body_form: [],
+        auth_type: 'none',
+      } satisfies HttpRequestConfig
+    case 'transform':
+      return { source_expr: '', form_id: '', mappings: [] } satisfies TransformConfig
+    case 'save_records':
+      return { source_expr: '', form_id: '' } satisfies SaveRecordsConfig
     default:
       return {}
   }
 }
 
-// Node types available from the drag-and-drop palette (entry/exit and loop_end
-// are added automatically — loop_end is auto-paired when an iterator is added).
-export const PALETTE_NODES: NodeType[] = ['set_variable', 'condition', 'fetch_records', 'iterator', 'merge', 'subflow']
+// Node types available from the drag-and-drop palette (trigger/entry/exit and
+// loop_end are added automatically — loop_end is auto-paired when an iterator
+// is added; trigger/entry is seeded once when a new workflow is created).
+export const PALETTE_NODES: NodeType[] = [
+  'set_variable', 'condition', 'fetch_records', 'upsert_records', 'update_records',
+  'delete_records', 'transform', 'save_records', 'iterator', 'http_request', 'show_message',
+  'merge', 'subflow',
+]

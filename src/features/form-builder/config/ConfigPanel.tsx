@@ -9,7 +9,7 @@ import {
   SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select-menu'
 import { cn } from '@/lib/utils'
-import { useFormBuilderStore } from '../store'
+import { useFormBuilderStore, useFormMetaStore } from '../store'
 import { COMPONENT_REGISTRY, supportsUnique } from '../component-registry'
 import { slugifyKey } from '../factory'
 import {
@@ -19,6 +19,9 @@ import {
 import { ExpressionField } from './ExpressionField'
 import { OptionsEditor } from './OptionsEditor'
 import { FormReferenceSelect } from './FormReferenceSelect'
+import { DisplayFieldSelect } from './DisplayFieldSelect'
+import { LineItemsColumnsEditor } from './LineItemsColumnsEditor'
+import type { LineItemsConfig } from '../schema'
 import type { VariableDecl } from '@/features/workflows/types'
 
 // ---------------------------------------------------------------------------
@@ -50,10 +53,10 @@ function ToggleRow({ label, checked, onCheckedChange }: { label: string; checked
 
 export function ConfigPanel({ variables }: { variables: VariableDecl[] }) {
   const schema = useFormBuilderStore((s) => s.schema)
-  const formId = useFormBuilderStore((s) => s.formId)
-  const selectedElementId = useFormBuilderStore((s) => s.selectedElementId)
+  const formId = useFormMetaStore((s) => s.formId)
+  const selectedElementId = useFormBuilderStore((s) => s.selectedItemId)
   const selectedSectionId = useFormBuilderStore((s) => s.selectedSectionId)
-  const updateElement = useFormBuilderStore((s) => s.updateElement)
+  const updateElement = useFormBuilderStore((s) => s.updateItem)
   const updateSection = useFormBuilderStore((s) => s.updateSection)
 
   // Find selected element
@@ -150,20 +153,33 @@ function ElementConfig({ element, variables, formId, onChange }: {
   const isNumeric = element.component === 'number'
   const isTextual = ['text', 'textarea', 'email', 'url', 'password', 'phone'].includes(element.component)
   const isFormRef = element.component === 'form'
+  const isLineItems = element.component === 'line_items'
   const canBeUnique = supportsUnique(element.component)
+
+  const header = (
+    <div className="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-br from-indigo-500 to-indigo-600 px-4 py-3.5">
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/30">
+        <Icon size={17} className="text-white" />
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-[13px] font-semibold text-white">{reg.label}</p>
+        <p className="truncate font-mono text-[10px] text-white/60">{element.key}</p>
+      </div>
+    </div>
+  )
+
+  if (isLineItems) {
+    return (
+      <>
+        {header}
+        <LineItemsConfigTabs element={element} formId={formId} onChange={onChange} />
+      </>
+    )
+  }
 
   return (
     <>
-      {/* Header */}
-      <div className="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-br from-indigo-500 to-indigo-600 px-4 py-3.5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/30">
-          <Icon size={17} className="text-white" />
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-[13px] font-semibold text-white">{reg.label}</p>
-          <p className="truncate font-mono text-[10px] text-white/60">{element.key}</p>
-        </div>
-      </div>
+      {header}
 
       <Tabs defaultValue="general" className="flex min-h-0 flex-1 flex-col">
         <div className="border-b border-slate-100 px-3 pb-2 pt-2.5">
@@ -216,7 +232,14 @@ function ElementConfig({ element, variables, formId, onChange }: {
                         <FormReferenceSelect
                           value={element.formRef}
                           excludeId={formId ?? undefined}
-                          onChange={(formRef) => onChange({ formRef })}
+                          onChange={(formRef) => onChange({ formRef, displayField: undefined })}
+                        />
+                      </Field>
+                      <Field label="Display Field" hint="Which field of the referenced form to show in the dropdown and use for search.">
+                        <DisplayFieldSelect
+                          formId={element.formRef}
+                          value={element.displayField}
+                          onChange={(displayField) => onChange({ displayField })}
                         />
                       </Field>
                     </div>
@@ -402,6 +425,108 @@ function ElementConfig({ element, variables, formId, onChange }: {
         </ScrollArea>
       </Tabs>
     </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Line Items config (General / Layout / Behavior / Columns)
+// ---------------------------------------------------------------------------
+
+function LineItemsConfigTabs({ element, formId, onChange }: {
+  element: FormElement
+  formId: string | null
+  onChange: (patch: Partial<FormElement>) => void
+}) {
+  const cfg: LineItemsConfig = element.lineItemConfig ?? {}
+  const setConfig = (patch: Partial<LineItemsConfig>) => onChange({ lineItemConfig: { ...cfg, ...patch } })
+
+  return (
+    <Tabs defaultValue="general" className="flex min-h-0 flex-1 flex-col">
+      <div className="border-b border-slate-100 px-3 pb-2 pt-2.5">
+        <TabsList className="w-full">
+          <TabsTrigger value="general" className="flex-1 text-[11px]">General</TabsTrigger>
+          <TabsTrigger value="layout" className="flex-1 text-[11px]">Layout</TabsTrigger>
+          <TabsTrigger value="behavior" className="flex-1 text-[11px]">Behavior</TabsTrigger>
+          <TabsTrigger value="columns" className="flex-1 text-[11px]">Columns</TabsTrigger>
+        </TabsList>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="p-4">
+          {/* GENERAL */}
+          <TabsContent value="general" className="mt-0 space-y-4">
+            <Field label="Label">
+              <Input value={element.label} onChange={(e) => onChange({ label: e.target.value })} className="h-8 text-sm" />
+            </Field>
+            <Field label="Internal Name / Key" hint="Machine name — becomes the nested records key.">
+              <Input value={element.key} onChange={(e) => onChange({ key: slugifyKey(e.target.value) })} className="h-8 font-mono text-[12px]" />
+            </Field>
+            <Field label="Description">
+              <Input value={element.description ?? ''} onChange={(e) => onChange({ description: e.target.value })} placeholder="Shown under the label" className="h-8 text-sm" />
+            </Field>
+            <ToggleRow
+              label="Required"
+              checked={element.behavior.required === 'always'}
+              onCheckedChange={(v) => onChange({ behavior: { ...element.behavior, required: v ? 'always' : 'optional' } })}
+            />
+            <ToggleRow
+              label="Read Only"
+              checked={element.behavior.readOnly === 'always'}
+              onCheckedChange={(v) => onChange({ behavior: { ...element.behavior, readOnly: v ? 'always' : 'editable' } })}
+            />
+            <ToggleRow
+              label="Hidden"
+              checked={element.behavior.visibility === 'hidden'}
+              onCheckedChange={(v) => onChange({ behavior: { ...element.behavior, visibility: v ? 'hidden' : 'always' } })}
+            />
+          </TabsContent>
+
+          {/* LAYOUT */}
+          <TabsContent value="layout" className="mt-0 space-y-4">
+            <Field label="Table Height (px)" hint="Leave blank to grow with content.">
+              <Input
+                type="number"
+                value={cfg.tableHeight ?? ''}
+                onChange={(e) => setConfig({ tableHeight: e.target.value === '' ? undefined : Number(e.target.value) })}
+                className="h-8 text-sm"
+              />
+            </Field>
+            <ToggleRow label="Allow Column Resize" checked={cfg.allowResize !== false} onCheckedChange={(v) => setConfig({ allowResize: v })} />
+            <ToggleRow label="Sticky Header" checked={cfg.stickyHeader !== false} onCheckedChange={(v) => setConfig({ stickyHeader: v })} />
+            <ToggleRow label="Alternate Row Colors" checked={cfg.alternateRowColors !== false} onCheckedChange={(v) => setConfig({ alternateRowColors: v })} />
+            <ToggleRow label="Compact Mode" checked={!!cfg.compactMode} onCheckedChange={(v) => setConfig({ compactMode: v })} />
+          </TabsContent>
+
+          {/* BEHAVIOR */}
+          <TabsContent value="behavior" className="mt-0 space-y-4">
+            <ToggleRow label="Allow Add Rows" checked={cfg.allowAddRows !== false} onCheckedChange={(v) => setConfig({ allowAddRows: v })} />
+            <ToggleRow label="Allow Delete Rows" checked={cfg.allowDeleteRows !== false} onCheckedChange={(v) => setConfig({ allowDeleteRows: v })} />
+            <ToggleRow label="Allow Duplicate Rows" checked={cfg.allowDuplicateRows !== false} onCheckedChange={(v) => setConfig({ allowDuplicateRows: v })} />
+            <ToggleRow label="Allow Reorder Rows" checked={cfg.allowReorderRows !== false} onCheckedChange={(v) => setConfig({ allowReorderRows: v })} />
+            <div className="grid grid-cols-3 gap-2">
+              <Field label="Min Rows">
+                <Input type="number" min={0} value={cfg.minRows ?? ''} onChange={(e) => setConfig({ minRows: e.target.value === '' ? undefined : Number(e.target.value) })} className="h-8 text-sm" />
+              </Field>
+              <Field label="Max Rows">
+                <Input type="number" min={0} value={cfg.maxRows ?? ''} onChange={(e) => setConfig({ maxRows: e.target.value === '' ? undefined : Number(e.target.value) })} className="h-8 text-sm" />
+              </Field>
+              <Field label="Default Rows">
+                <Input type="number" min={0} value={cfg.defaultRows ?? ''} onChange={(e) => setConfig({ defaultRows: e.target.value === '' ? undefined : Number(e.target.value) })} className="h-8 text-sm" />
+              </Field>
+            </div>
+          </TabsContent>
+
+          {/* COLUMNS */}
+          <TabsContent value="columns" className="mt-0">
+            <LineItemsColumnsEditor
+              columns={element.lineItemColumns ?? []}
+              onChange={(lineItemColumns) => onChange({ lineItemColumns })}
+              excludeFormId={formId ?? undefined}
+            />
+          </TabsContent>
+        </div>
+      </ScrollArea>
+    </Tabs>
   )
 }
 

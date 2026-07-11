@@ -27,7 +27,7 @@ export type ComponentType =
   // Choice
   | 'checkbox' | 'switch' | 'radio' | 'select' | 'multiselect' | 'autocomplete'
   // Relational
-  | 'form'
+  | 'form' | 'line_items'
   // Files
   | 'file' | 'image'
   // Rich / presentational
@@ -99,6 +99,59 @@ export interface ElementBinding {
   optionSource?: string
 }
 
+// ---------------------------------------------------------------------------
+// Line Items ('line_items' component)
+// ---------------------------------------------------------------------------
+
+/** One column of a Line Items grid — a constrained FormElement: any
+ *  data-bearing component except another 'line_items' (no nested grids). */
+export type LineItemColumnComponent = Exclude<ComponentType, 'line_items'>
+
+export interface LineItemColumnDef {
+  id: string
+  component: LineItemColumnComponent
+  label: string
+  key: string
+  options?: SelectOption[]
+  formRef?: string
+  displayField?: string
+  defaultValue?: unknown
+  validation: ElementValidation
+  behavior: ElementBehavior
+}
+
+/** Layout/Behavior configuration for a Line Items field, set in the Config
+ *  Panel and stored verbatim in the parent's `layout` (opaque to the backend). */
+export interface LineItemsConfig {
+  // Layout
+  tableHeight?: number       // px; undefined = auto/grow
+  allowResize?: boolean
+  stickyHeader?: boolean
+  alternateRowColors?: boolean
+  compactMode?: boolean
+  // Behavior
+  allowAddRows?: boolean
+  allowDeleteRows?: boolean
+  allowDuplicateRows?: boolean
+  allowReorderRows?: boolean
+  minRows?: number
+  maxRows?: number
+  defaultRows?: number
+}
+
+export function emptyLineItemsConfig(): LineItemsConfig {
+  return {
+    allowResize: true,
+    stickyHeader: true,
+    alternateRowColors: true,
+    compactMode: false,
+    allowAddRows: true,
+    allowDeleteRows: true,
+    allowDuplicateRows: true,
+    allowReorderRows: true,
+  }
+}
+
 /** A single element on the canvas (a field or a presentational block). */
 export interface FormElement {
   id: string
@@ -120,6 +173,26 @@ export interface FormElement {
   // Relational ('form' component): the referenced form's unique identifier.
   // The UI displays the form's name but always stores its id here.
   formRef?: string
+
+  // Relational ('form' component): the name of a field on the referenced
+  // form (formRef) to use as this reference's display/search value at
+  // runtime, instead of the name/label/id fallback heuristic. Optional.
+  displayField?: string
+
+  // Line Items ('line_items' component): the id of the generated child form
+  // backing this grid. Empty until the parent form's first save, at which
+  // point the builder creates the child form and stores its id here —
+  // mirrors formRef's "stores the id, backend resolves the rest" shape.
+  childFormId?: string
+
+  // Line Items ('line_items' component): the mini form-builder's column
+  // list — this form's own Fields are projected from these on save. Kept
+  // here (not just on the child FormDef) so the builder can render/edit
+  // columns before the child form exists yet.
+  lineItemColumns?: LineItemColumnDef[]
+
+  // Line Items ('line_items' component): Layout/Behavior configuration.
+  lineItemConfig?: LineItemsConfig
 
   // Presentational components (heading/paragraph/divider/spacer)
   content?: string          // heading/paragraph text

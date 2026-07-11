@@ -69,6 +69,12 @@ function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | nul
     field.reference_table = el.formRef
   }
 
+  // Optional: which field of the referenced form to display/search instead
+  // of the runtime's name/label/id fallback heuristic.
+  if (el.component === 'form' && el.displayField) {
+    field.display_field = el.displayField
+  }
+
   // SQL default — only emit for primitive static defaults we can express safely.
   const def = staticDefaultLiteral(el)
   if (def !== undefined) field.default = def

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { workflowsApi } from './api'
-import type { CreateWorkflowPayload, UpdateWorkflowPayload } from './types'
+import type { CreateWorkflowPayload, UpdateWorkflowPayload, ReorderWorkflowsPayload } from './types'
 
 export const workflowKeys = {
   all:    ['workflows'] as const,
@@ -42,6 +42,14 @@ export function useDeleteWorkflow() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => workflowsApi.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: workflowKeys.all }),
+  })
+}
+
+export function useReorderWorkflows() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (p: ReorderWorkflowsPayload) => workflowsApi.reorder(p),
     onSuccess: () => qc.invalidateQueries({ queryKey: workflowKeys.all }),
   })
 }

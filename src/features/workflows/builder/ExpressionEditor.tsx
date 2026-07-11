@@ -334,9 +334,9 @@ export function ExpressionEditor({ open, onClose, value, onChange, variables, no
                     {/* Upstream node outputs (context-aware) */}
                     {nodeContext.length > 0 && (
                       <VarGroup icon={<Database size={11} />} title="Workflow Context" count={nodeContext.length}>
-                        {nodeContext.map((schema) => (
+                        {nodeContext.map((schema, i) => (
                           <NodeContextTree
-                            key={schema.nodeId}
+                            key={`${schema.nodeId}-${i}`}
                             schema={schema}
                             search={varSearch}
                             onInsert={insert}

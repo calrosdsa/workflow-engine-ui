@@ -96,6 +96,8 @@ function FieldControl({ element }: { element: FormElement }) {
       )
     case 'form':
       return <FormRefControl formRef={element.formRef} />
+    case 'line_items':
+      return <LineItemsControl element={element} />
     case 'multiselect':
       return (
         <div className="flex min-h-8 flex-wrap items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1">
@@ -165,6 +167,39 @@ function FormRefControl({ formRef }: { formRef?: string }) {
       <FileText size={13} className="shrink-0 text-indigo-400" />
       <span className="flex-1 truncate">{isLoading ? 'Loading…' : selected?.name}</span>
       <ChevronDown size={14} className="text-slate-400" />
+    </div>
+  )
+}
+
+// Renders a small mock grid matching the configured columns — a preview
+// only, not interactive (real editing happens in the runtime's LineItemsGrid).
+function LineItemsControl({ element }: { element: FormElement }) {
+  const columns = element.lineItemColumns ?? []
+  if (columns.length === 0) {
+    return (
+      <div className="flex h-16 items-center justify-center rounded-md border border-dashed border-slate-200 bg-slate-50/50 text-[12px] text-slate-400">
+        No columns configured yet
+      </div>
+    )
+  }
+  return (
+    <div className="overflow-hidden rounded-md border border-slate-200">
+      <table className="w-full text-left text-[11px]">
+        <thead className="bg-slate-50 text-slate-500">
+          <tr>
+            {columns.map((c) => (
+              <th key={c.id} className="border-b border-slate-200 px-2 py-1.5 font-medium">{c.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="text-slate-300">
+          <tr>
+            {columns.map((c) => (
+              <td key={c.id} className="border-b border-slate-100 px-2 py-1.5">—</td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
     </div>
   )
 }

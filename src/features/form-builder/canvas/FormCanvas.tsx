@@ -12,7 +12,7 @@ import { SectionCard } from './SectionCard'
 export function FormCanvas() {
   const schema = useFormBuilderStore((s) => s.schema)
   const addSection = useFormBuilderStore((s) => s.addSection)
-  const selectElement = useFormBuilderStore((s) => s.selectElement)
+  const selectElement = useFormBuilderStore((s) => s.selectItem)
 
   const hasSections = schema.sections.length > 0
 

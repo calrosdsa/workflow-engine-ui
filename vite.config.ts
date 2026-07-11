@@ -1,10 +1,54 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 
+// Every top-level path segment the BUILDER's router.tsx actually owns
+// (dashboard '/', /workflows, /executions, /forms, /applications, /dev,
+// /test, /login) — anything else 2-3 segments deep is assumed to be a
+// runtime URL (/{clientId}/{appId}[/{menuSlug}]). This list must be kept in
+// sync with router.tsx's top-level routes; a missing entry here would
+// silently misroute that builder page to the runtime bundle in dev only
+// (confirmed by hand: this exact bug happened with /applications/{appId}
+// before this list existed — the original version only excluded '/api',
+// '/@', '/node_modules', and dotted asset paths, which doesn't cover
+// builder routes with a param segment like /applications/{appId} at all).
+const BUILDER_ROUTE_PREFIXES = ['workflows', 'executions', 'forms', 'applications', 'dev', 'test', 'login']
+
+// Vite's dev server only auto-falls-back to index.html for unmatched paths
+// (its built-in SPA middleware doesn't know about a second entry) — a
+// direct hit on /{clientId}/{appId}/{menuSlug} in dev would otherwise 404
+// or, worse, silently resolve to the BUILDER's index.html and show ITS
+// router's 404 page. This middleware runs before Vite's own SPA fallback
+// and rewrites any 2-3 segment path that ISN'T a known builder route to
+// serve runtime.html instead. Production hosting needs the equivalent rule
+// at the web-server/CDN layer (route /{clientId}/{appId}/* to runtime.html,
+// everything else to index.html) — this only covers `npm run dev`.
+function runtimeDevFallback(): Plugin {
+  return {
+    name: 'runtime-dev-fallback',
+    configureServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        const url = req.url?.split('?')[0] ?? ''
+        const segments = url.split('/').filter(Boolean)
+        const looksLikeRuntimePath =
+          (segments.length === 2 || segments.length === 3) &&
+          !url.startsWith('/api') &&
+          !url.startsWith('/@') &&
+          !url.startsWith('/node_modules') &&
+          !url.includes('.') &&
+          !BUILDER_ROUTE_PREFIXES.includes(segments[0])
+        if (looksLikeRuntimePath) {
+          req.url = '/runtime.html'
+        }
+        next()
+      })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), runtimeDevFallback()],
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
@@ -16,6 +60,16 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         rewrite: (p) => p.replace(/^\/api/, ''),
+      },
+    },
+  },
+  build: {
+    // Two entry points: index.html (the authenticated admin builder tool)
+    // and runtime.html (the public runtime for published apps).
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        runtime: path.resolve(__dirname, 'runtime.html'),
       },
     },
   },
