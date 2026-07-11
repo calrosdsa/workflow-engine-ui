@@ -18,18 +18,56 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
 import { ExpressionField } from '@/features/form-builder/config/ExpressionField'
-import { KeyValueRows } from './KeyValueRows'
+import { KeyValueRows } from '../KeyValueRows'
 import { useCredentials } from '@/features/app-settings/hooks'
-import { nanoid } from './nanoid'
-import type { NodeOutputSchema } from './node-output-schema'
+import { nanoid } from '../nanoid'
+import { ensureKeyValueIds, ensureResponseSchemaIds } from './id-helpers'
+import type { NodeOutputSchema } from '../node-output-schema'
 import type {
   VariableDecl, HttpRequestConfig, HTTPMethod, HTTPAuthType, HTTPBodyMode, ValueMode,
   ResponseSchema, ResponseSchemaField, ResponseFieldType, ResponseSchemaKind, ResponseSchemaSource,
-} from '../types'
+} from '../../types'
 
 const METHODS: HTTPMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD']
 
-interface HttpRequestFormProps {
+export function normaliseHttpRequestConfig(raw: unknown): HttpRequestConfig {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<HttpRequestConfig>
+  return {
+    method:  r.method ?? 'GET',
+    url_mode: r.url_mode ?? 'static',
+    url: r.url ?? '',
+    url_expr: r.url_expr ?? '',
+    params:  ensureKeyValueIds(r.params),
+    headers: ensureKeyValueIds(r.headers),
+    body_mode: r.body_mode ?? 'none',
+    body_value_mode: r.body_value_mode ?? 'static',
+    body_value: r.body_value ?? '',
+    body_expression: r.body_expression ?? '',
+    body_raw_content_type: r.body_raw_content_type ?? '',
+    body_form: ensureKeyValueIds(r.body_form),
+    auth_type: r.auth_type ?? 'none',
+    auth_credential: r.auth_credential ?? '',
+    auth_username_mode: r.auth_username_mode ?? 'static',
+    auth_username: r.auth_username ?? '',
+    auth_username_expr: r.auth_username_expr ?? '',
+    auth_password_mode: r.auth_password_mode ?? 'static',
+    auth_password: r.auth_password ?? '',
+    auth_password_expr: r.auth_password_expr ?? '',
+    auth_token_mode: r.auth_token_mode ?? 'static',
+    auth_token: r.auth_token ?? '',
+    auth_token_expr: r.auth_token_expr ?? '',
+    auth_api_key_name: r.auth_api_key_name ?? '',
+    auth_api_key_location: r.auth_api_key_location ?? 'header',
+    auth_api_key_value_mode: r.auth_api_key_value_mode ?? 'static',
+    auth_api_key_value: r.auth_api_key_value ?? '',
+    auth_api_key_value_expr: r.auth_api_key_value_expr ?? '',
+    timeout_ms: r.timeout_ms,
+    output_var: r.output_var ?? '',
+    response_schemas: ensureResponseSchemaIds(r.response_schemas),
+  }
+}
+
+export interface HttpRequestFormProps {
   config: HttpRequestConfig
   variables: VariableDecl[]
   nodeContext: NodeOutputSchema[]
@@ -159,7 +197,7 @@ export function HttpRequestForm({ config, variables, nodeContext, onChange }: Ht
 
 // ---------------------------------------------------------------------------
 // Static/Expression mode toggle — same visual language as AssignmentRow's
-// Static/Expression buttons in NodeConfigPanel.tsx.
+// Static/Expression buttons in SetVariableForm.tsx.
 // ---------------------------------------------------------------------------
 
 function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMode) => void }) {
