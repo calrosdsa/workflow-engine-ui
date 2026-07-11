@@ -28,7 +28,7 @@ import type { VariableDecl } from '@/features/workflows/types'
 // Small layout helpers
 // ---------------------------------------------------------------------------
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
       <Label className="text-[11px] font-medium text-slate-600">{label}</Label>
@@ -195,8 +195,8 @@ function ElementConfig({ element, variables, formId, onChange }: {
           <div className="p-4">
             {/* GENERAL */}
             <TabsContent value="general" className="mt-0 space-y-4">
-              {isPresentational ? (
-                <PresentationalGeneral element={element} onChange={onChange} />
+              {isPresentational && reg.configPanel ? (
+                <reg.configPanel element={element} onChange={onChange} />
               ) : (
                 <>
                   <Field label="Label">
@@ -572,56 +572,6 @@ function RuleGroup({ title, mode, options, onModeChange, expression, onExpressio
   )
 }
 
-// ---------------------------------------------------------------------------
-// Presentational element general tab
-// ---------------------------------------------------------------------------
-
-function PresentationalGeneral({ element, onChange }: { element: FormElement; onChange: (patch: Partial<FormElement>) => void }) {
-  switch (element.component) {
-    case 'heading':
-      return (
-        <>
-          <Field label="Heading Text">
-            <Input value={element.content ?? ''} onChange={(e) => onChange({ content: e.target.value })} className="h-8 text-sm" />
-          </Field>
-          <Field label="Level">
-            <SelectMenu value={String(element.level ?? 2)} onValueChange={(v) => onChange({ level: Number(v) as 1 | 2 | 3 })}>
-              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1" className="text-xs">Heading 1 (large)</SelectItem>
-                <SelectItem value="2" className="text-xs">Heading 2 (medium)</SelectItem>
-                <SelectItem value="3" className="text-xs">Heading 3 (small)</SelectItem>
-              </SelectContent>
-            </SelectMenu>
-          </Field>
-        </>
-      )
-    case 'paragraph':
-      return (
-        <Field label="Paragraph Text">
-          <Textarea value={element.content ?? ''} onChange={(e) => onChange({ content: e.target.value })} rows={4} className="text-sm" />
-        </Field>
-      )
-    case 'spacer':
-      return (
-        <Field label="Height (px)">
-          <Input type="number" value={element.height ?? 24} onChange={(e) => onChange({ height: Number(e.target.value) })} className="h-8 text-sm" />
-        </Field>
-      )
-    case 'divider':
-      return <p className="text-xs text-slate-400">A horizontal divider line. No configuration needed.</p>
-    case 'hidden':
-      return (
-        <>
-          <Field label="Field Name / Key">
-            <Input value={element.key} onChange={(e) => onChange({ key: slugifyKey(e.target.value) })} className="h-8 font-mono text-[12px]" />
-          </Field>
-          <Field label="Default Value">
-            <Input value={element.defaultValue == null ? '' : String(element.defaultValue)} onChange={(e) => onChange({ defaultValue: e.target.value })} className="h-8 text-sm" />
-          </Field>
-        </>
-      )
-    default:
-      return null
-  }
-}
+// Presentational (non-data-bearing) types' General-tab bodies live in
+// PresentationalForms.tsx, referenced via component-registry.ts's
+// configPanel field (see the dispatch in ElementConfig above).

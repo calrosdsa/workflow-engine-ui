@@ -1,3 +1,4 @@
+import type { ComponentType as ComponentTypeReact } from 'react'
 import {
   Type, AlignLeft, Hash, Mail, Lock, Phone, Link2,
   Calendar, Clock, CalendarClock,
@@ -9,6 +10,10 @@ import {
 } from 'lucide-react'
 import type { ComponentType, ComponentCategory } from './schema'
 import type { FieldType } from '@/features/forms/types'
+import {
+  HeadingForm, ParagraphForm, SpacerForm, DividerForm, HiddenForm,
+  type PresentationalFormProps,
+} from './config/PresentationalForms'
 
 export interface ComponentRegistryEntry {
   type: ComponentType
@@ -20,6 +25,10 @@ export interface ComponentRegistryEntry {
   /** The backend FieldType this maps to (only for dataBearing components). */
   fieldType?: FieldType
   description: string
+  /** Renders this type's General-tab body. Only set for the 5 presentational
+   *  types — the other 19 share ConfigPanel.tsx's ElementConfig tabs
+   *  directly (a shared flow, not one-component-per-type). */
+  configPanel?: ComponentTypeReact<PresentationalFormProps>
 }
 
 export const COMPONENT_REGISTRY: Record<ComponentType, ComponentRegistryEntry> = {
@@ -53,11 +62,11 @@ export const COMPONENT_REGISTRY: Record<ComponentType, ComponentRegistryEntry> =
 
   // --- Layout / presentational (NOT data-bearing) ---
   richtext:  { type: 'richtext',  label: 'Rich Text',  icon: FileText,        category: 'Layout', dataBearing: true,  fieldType: 'text', description: 'Formatted text input' },
-  divider:   { type: 'divider',   label: 'Divider',    icon: Minus,           category: 'Layout', dataBearing: false, description: 'Horizontal line' },
-  heading:   { type: 'heading',   label: 'Heading',    icon: Heading,         category: 'Layout', dataBearing: false, description: 'Section heading' },
-  paragraph: { type: 'paragraph', label: 'Paragraph',  icon: Pilcrow,         category: 'Layout', dataBearing: false, description: 'Static text block' },
-  spacer:    { type: 'spacer',    label: 'Spacer',     icon: StretchVertical, category: 'Layout', dataBearing: false, description: 'Vertical space' },
-  hidden:    { type: 'hidden',    label: 'Hidden Field', icon: EyeOff,        category: 'Layout', dataBearing: true,  fieldType: 'string', description: 'Stored, not shown' },
+  divider:   { type: 'divider',   label: 'Divider',    icon: Minus,           category: 'Layout', dataBearing: false, description: 'Horizontal line', configPanel: DividerForm },
+  heading:   { type: 'heading',   label: 'Heading',    icon: Heading,         category: 'Layout', dataBearing: false, description: 'Section heading', configPanel: HeadingForm },
+  paragraph: { type: 'paragraph', label: 'Paragraph',  icon: Pilcrow,         category: 'Layout', dataBearing: false, description: 'Static text block', configPanel: ParagraphForm },
+  spacer:    { type: 'spacer',    label: 'Spacer',     icon: StretchVertical, category: 'Layout', dataBearing: false, description: 'Vertical space', configPanel: SpacerForm },
+  hidden:    { type: 'hidden',    label: 'Hidden Field', icon: EyeOff,        category: 'Layout', dataBearing: true,  fieldType: 'string', description: 'Stored, not shown', configPanel: HiddenForm },
 }
 
 export const COMPONENT_CATEGORIES: ComponentCategory[] = ['Input', 'Choice', 'DateTime', 'Media', 'Layout']
