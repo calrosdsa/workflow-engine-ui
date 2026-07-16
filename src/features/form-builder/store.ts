@@ -1,9 +1,10 @@
 import { create } from 'zustand'
 import {
   type FormSchema, type FormElement, type FormSection, type FormColumn,
-  type ColumnLayout, type ComponentType, emptySchema,
+  type ColumnLayout, type ComponentType, type CreateUserSettings,
+  emptySchema, emptyFormSettings, emptyCreateUserSettings,
 } from './schema'
-import { createElement, createSection, duplicateElement, duplicateSection, relayoutSection } from './factory'
+import { createElement, createSection, duplicateElement, duplicateSection, relayoutSection, createAccountSection } from './factory'
 import { createTreeStore, findItem, type ItemLocation } from '@/features/builder-kit/tree-store'
 
 export type ElementLocation = ItemLocation
@@ -34,6 +35,65 @@ export const useFormBuilderStore = createTreeStore<FormSchema, FormSection, Form
 
 export function findElement(schema: FormSchema, id: string) {
   return findItem(schema, id, accessors)
+}
+
+/** Patches FormSchema.settings.createUser (the "Additional Form Settings" ->
+ *  Create User section). Not part of the generic tree-store core — that core
+ *  is shared with page-builder, which has no equivalent concept — so this is
+ *  a one-off, form-builder-specific mutation living next to the store it
+ *  extends, mirroring the core's "mutate then mark dirty" contract. */
+export function updateCreateUserSettings(patch: Partial<CreateUserSettings>) {
+  useFormBuilderStore.setState((s) => ({
+    schema: {
+      ...s.schema,
+      settings: {
+        ...(s.schema.settings ?? emptyFormSettings()),
+        createUser: { ...(s.schema.settings?.createUser ?? emptyCreateUserSettings()), ...patch },
+      },
+    },
+  }))
+  useFormMetaStore.getState().markDirty()
+}
+
+/** Injects the "Account" section (Name/Email/Role fields) onto the canvas
+ *  and records its section/field keys on CreateUserSettings. Called when the
+ *  "Create user with each enrollment" toggle turns on. Prepends the section
+ *  so Account fields appear first, ahead of the form's own fields. Not part
+ *  of the generic tree-store core for the same reason as
+ *  updateCreateUserSettings — this concept doesn't exist in page-builder. */
+export function insertAccountSection() {
+  const { section, nameKey, emailKey, roleKey } = createAccountSection()
+  useFormBuilderStore.setState((s) => ({
+    schema: { ...s.schema, sections: [section, ...s.schema.sections] },
+  }))
+  useFormMetaStore.getState().markDirty()
+  updateCreateUserSettings({
+    enabled: true,
+    accountSectionId: section.id,
+    nameFieldKey: nameKey,
+    emailFieldKey: emailKey,
+    roleFieldKey: roleKey,
+  })
+}
+
+/** Removes the previously-injected "Account" section (tracked via
+ *  CreateUserSettings.accountSectionId) and clears the field-key references.
+ *  Called when the "Create user with each enrollment" toggle turns off. A
+ *  no-op if no section is currently tracked. */
+export function removeAccountSection() {
+  useFormBuilderStore.setState((s) => {
+    const id = s.schema.settings?.createUser?.accountSectionId
+    if (!id) return s
+    return { schema: { ...s.schema, sections: s.schema.sections.filter((sec) => sec.id !== id) } }
+  })
+  useFormMetaStore.getState().markDirty()
+  updateCreateUserSettings({
+    enabled: false,
+    accountSectionId: undefined,
+    nameFieldKey: undefined,
+    emailFieldKey: undefined,
+    roleFieldKey: undefined,
+  })
 }
 
 // ---------------------------------------------------------------------------

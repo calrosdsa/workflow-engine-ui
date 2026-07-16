@@ -21,7 +21,12 @@ export function useCreateForm() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (p: CreateFormPayload) => formsApi.create(p),
-    onSuccess:  () => qc.invalidateQueries({ queryKey: formKeys.all }),
+    onSuccess:  () => {
+      qc.invalidateQueries({ queryKey: formKeys.all })
+      // A new form adds View/Create/Edit/Delete entries to the per-form
+      // permission catalog (see features/permissions/hooks.ts).
+      qc.invalidateQueries({ queryKey: ['permissions'] })
+    },
   })
 }
 
@@ -47,6 +52,9 @@ export function useUpdateForm(id: string) {
     onSettled:  () => {
       qc.invalidateQueries({ queryKey: formKeys.all })
       qc.invalidateQueries({ queryKey: formKeys.detail(id) })
+      // The form's name may have changed, and the per-form catalog's labels
+      // ("Items: View records") are derived from it.
+      qc.invalidateQueries({ queryKey: ['permissions'] })
     },
   })
 }
@@ -55,7 +63,10 @@ export function useDeleteForm() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => formsApi.delete(id),
-    onSuccess:  () => qc.invalidateQueries({ queryKey: formKeys.all }),
+    onSuccess:  () => {
+      qc.invalidateQueries({ queryKey: formKeys.all })
+      qc.invalidateQueries({ queryKey: ['permissions'] })
+    },
   })
 }
 
@@ -65,7 +76,10 @@ export function useCopyForm() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => formsApi.copy(id),
-    onSuccess:  () => qc.invalidateQueries({ queryKey: formKeys.all }),
+    onSuccess:  () => {
+      qc.invalidateQueries({ queryKey: formKeys.all })
+      qc.invalidateQueries({ queryKey: ['permissions'] })
+    },
   })
 }
 
@@ -74,7 +88,10 @@ export function useUnlinkForm() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => formsApi.unlink(id),
-    onSuccess:  () => qc.invalidateQueries({ queryKey: formKeys.all }),
+    onSuccess:  () => {
+      qc.invalidateQueries({ queryKey: formKeys.all })
+      qc.invalidateQueries({ queryKey: ['permissions'] })
+    },
   })
 }
 
@@ -101,10 +118,25 @@ export function useCreateRecord(formId: string) {
   })
 }
 
+export function useUpdateRecord(formId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ recordId, data }: { recordId: string; data: FormRecord }) => formsApi.updateRecord(formId, recordId, data),
+    // Invalidates the whole ['forms', formId, ...] prefix — React Query's
+    // default partial matching catches both the plain records list and every
+    // parameterized Search menu query (['forms', formId, 'search', filter,
+    // sort, page, pageSize]), not just formKeys.records(formId) itself.
+    onSuccess: (_result, { recordId }) => {
+      qc.invalidateQueries({ queryKey: formKeys.detail(formId) })
+      qc.invalidateQueries({ queryKey: formKeys.record(formId, recordId) })
+    },
+  })
+}
+
 export function useDeleteRecord(formId: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (recordId: string) => formsApi.deleteRecord(formId, recordId),
-    onSuccess:  () => qc.invalidateQueries({ queryKey: formKeys.records(formId) }),
+    onSuccess:  () => qc.invalidateQueries({ queryKey: formKeys.detail(formId) }),
   })
 }

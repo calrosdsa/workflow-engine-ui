@@ -17,12 +17,16 @@ import {
   MessageSquare,
   Wand2,
   Save,
+  Bell,
+  BookOpen,
+  BookOpenCheck,
   type LucideIcon,
 } from 'lucide-react'
 import type {
   NodeType, Port, VariableDecl, SetVariableConfig, ConditionConfig, FetchRecordsConfig, IteratorConfig,
   UpsertRecordsConfig, UpdateRecordsConfig, DeleteRecordsConfig, HttpRequestConfig,
-  TriggerConfig, ShowMessageConfig, TransformConfig, SaveRecordsConfig,
+  TriggerConfig, ShowMessageConfig, TransformConfig, SaveRecordsConfig, NotificationConfig,
+  KnowledgeRetrievalConfig, KnowledgeIngestConfig,
 } from '../types'
 import type { NodeOutputSchema } from './node-output-schema'
 import { TriggerForm, normaliseTriggerConfig } from './node-forms/TriggerForm'
@@ -38,6 +42,9 @@ import { TransformForm, normaliseTransformConfig } from './node-forms/TransformF
 import { SaveRecordsForm, normaliseSaveRecordsConfig } from './node-forms/SaveRecordsForm'
 import { IteratorForm, normaliseIteratorConfig } from './node-forms/IteratorForm'
 import { HttpRequestForm, normaliseHttpRequestConfig } from './node-forms/HttpRequestForm'
+import { NotificationForm, normaliseNotificationConfig } from './node-forms/NotificationForm'
+import { KnowledgeRetrievalForm, normaliseKnowledgeRetrievalConfig } from './node-forms/KnowledgeRetrievalForm'
+import { KnowledgeIngestForm, normaliseKnowledgeIngestConfig } from './node-forms/KnowledgeIngestForm'
 import { NoAdditionalConfig, LoopEndNoConfig } from './node-forms/NoConfigNeeded'
 
 // The fixed prop shape every node type's config form receives — unused props
@@ -209,6 +216,30 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     form: SaveRecordsForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseSaveRecordsConfig(raw),
   },
+  notification: {
+    label: 'Notification', icon: Bell,
+    color: 'bg-fuchsia-600', gradient: 'bg-gradient-to-br from-fuchsia-600 to-purple-700',
+    accent: '#c026d3', textColor: 'text-fuchsia-700', ring: 'bg-fuchsia-50',
+    description: 'Notify a user — appears in their notification center',
+    form: NotificationForm as unknown as ComponentType<NodeFormProps>,
+    normalise: (raw) => normaliseNotificationConfig(raw),
+  },
+  knowledge_retrieval: {
+    label: 'Knowledge Retrieval', icon: BookOpenCheck,
+    color: 'bg-teal-600', gradient: 'bg-gradient-to-br from-teal-600 to-cyan-700',
+    accent: '#0d9488', textColor: 'text-teal-700', ring: 'bg-teal-50',
+    description: 'Query a knowledge base for context or a grounded answer',
+    form: KnowledgeRetrievalForm as unknown as ComponentType<NodeFormProps>,
+    normalise: (raw) => normaliseKnowledgeRetrievalConfig(raw),
+  },
+  knowledge_ingest: {
+    label: 'Knowledge Ingest', icon: BookOpen,
+    color: 'bg-teal-500', gradient: 'bg-gradient-to-br from-teal-500 to-emerald-600',
+    accent: '#14b8a6', textColor: 'text-teal-700', ring: 'bg-teal-50',
+    description: 'Insert text into a knowledge base for asynchronous indexing',
+    form: KnowledgeIngestForm as unknown as ComponentType<NodeFormProps>,
+    normalise: (raw) => normaliseKnowledgeIngestConfig(raw),
+  },
 }
 
 export function defaultLabel(type: NodeType): string {
@@ -246,7 +277,8 @@ export function defaultPorts(type: NodeType): { inputs: Port[]; outputs: Port[] 
 export function defaultConfig(type: NodeType):
   | SetVariableConfig | ConditionConfig | FetchRecordsConfig | IteratorConfig
   | UpsertRecordsConfig | UpdateRecordsConfig | DeleteRecordsConfig | HttpRequestConfig
-  | TriggerConfig | ShowMessageConfig | TransformConfig | SaveRecordsConfig
+  | TriggerConfig | ShowMessageConfig | TransformConfig | SaveRecordsConfig | NotificationConfig
+  | KnowledgeRetrievalConfig | KnowledgeIngestConfig
   | Record<string, never> {
   switch (type) {
     case 'trigger':
@@ -290,6 +322,16 @@ export function defaultConfig(type: NodeType):
       return { source_expr: '', form_id: '', mappings: [] } satisfies TransformConfig
     case 'save_records':
       return { source_expr: '', form_id: '' } satisfies SaveRecordsConfig
+    case 'notification':
+      return { recipient_mode: 'static', title: '', severity: 'info' } satisfies NotificationConfig
+    case 'knowledge_retrieval':
+      return {
+        kb_id: '', mode: 'mix', query_mode: 'static', query: '', include_answer: true, output_var: '',
+      } satisfies KnowledgeRetrievalConfig
+    case 'knowledge_ingest':
+      return {
+        kb_id: '', content_mode: 'static', content: '', file_name_mode: 'static', output_var: '',
+      } satisfies KnowledgeIngestConfig
     default:
       return {}
   }
@@ -301,5 +343,5 @@ export function defaultConfig(type: NodeType):
 export const PALETTE_NODES: NodeType[] = [
   'set_variable', 'condition', 'fetch_records', 'upsert_records', 'update_records',
   'delete_records', 'transform', 'save_records', 'iterator', 'http_request', 'show_message',
-  'merge', 'subflow',
+  'notification', 'knowledge_retrieval', 'knowledge_ingest', 'merge', 'subflow',
 ]

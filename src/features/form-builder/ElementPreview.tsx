@@ -86,12 +86,12 @@ function FieldControl({ element }: { element: FormElement }) {
     case 'datetime':
       return <FakeInput icon={<Calendar size={13} />} text={ph || 'Select date & time'} />
 
-    case 'select': case 'autocomplete':
+    case 'select': case 'autocomplete': case 'role':
       return (
         <FakeInput
           icon={element.component === 'autocomplete' ? <Search size={13} /> : undefined}
           trailing={<ChevronDown size={14} className="text-slate-400" />}
-          text={ph || 'Select…'}
+          text={ph || (element.component === 'role' ? 'Select a role…' : 'Select…')}
         />
       )
     case 'form':

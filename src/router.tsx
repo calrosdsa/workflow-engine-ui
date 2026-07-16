@@ -17,12 +17,15 @@ import { FormBuilderPage } from '@/pages/forms/FormBuilderPage'
 import { ApplicationsListPage } from '@/pages/applications/ApplicationsListPage'
 import { ApplicationBuilderPage } from '@/pages/applications/ApplicationBuilderPage'
 import { TeamPage } from '@/pages/team/TeamPage'
+import { KnowledgeBasesPage } from '@/pages/KnowledgeBasesPage'
+import { KnowledgeBaseDetailPage } from '@/pages/knowledge/KnowledgeBaseDetailPage'
 import { FormRendererHarness } from '@/pages/dev/FormRendererHarness'
 import { PageBuilderHarness } from '@/pages/dev/PageBuilderHarness'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { AcceptInvitePage } from '@/features/auth/AcceptInvitePage'
-import { authApi } from '@/features/auth/api'
-import { useAuthStore } from '@/stores/auth'
+import { requireSession } from '@/features/auth/requireSession'
+import { qualifiesForBuilder } from '@/features/auth/access'
+import { RuntimePortalPage, runtimeUrlFor } from '@/pages/portal/RuntimePortalPage'
 import TestLayout from './pages/test/Test'
 
 // ---------------------------------------------------------------------------
@@ -54,13 +57,41 @@ const shellRoute = createRoute({
   id: 'shell',
   component: AppShell,
   beforeLoad: async () => {
-    try {
-      const me = await authApi.me()
-      useAuthStore.getState().setSession(me)
-    } catch {
-      throw redirect({ to: '/login' })
+    const me = await requireSession()
+    // Not every authenticated user belongs in the App Builder — a Runtime
+    // User (no application:design, no team-admin permissions) is bounced to
+    // the Runtime Portal instead. This covers both the post-login landing
+    // decision AND direct navigation to any builder URL, since beforeLoad
+    // runs on every navigation into the shell, not just the first one.
+    if (!qualifiesForBuilder(me)) {
+      throw redirect({ to: '/portal' })
     }
   },
+})
+
+// Sibling of shellRoute, not nested inside it — the Portal replaces the
+// builder's chrome entirely rather than living within AppShell's sidebar
+// layout, and Runtime Users who land here should never even briefly qualify
+// for (or flash) the builder shell.
+const portalRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/portal',
+  beforeLoad: async () => {
+    const me = await requireSession()
+    // Single-app users skip the picker entirely — redirect straight into
+    // that app's runtime.html bundle before RuntimePortalPage ever mounts,
+    // so there's no picker-UI flash. This is a full page navigation across
+    // Vite bundles (runtimeUrlFor), not a router.navigate — TanStack Router
+    // has no primitive for "redirect outside this route tree," so the
+    // never-resolving promise below halts this beforeLoad while the browser
+    // navigation (already in flight) takes over.
+    const appMemberships = (me.memberships ?? []).filter((m) => m.app_id)
+    if (appMemberships.length === 1) {
+      window.location.replace(runtimeUrlFor(appMemberships[0].client_id, appMemberships[0].app_id!))
+      await new Promise(() => {})
+    }
+  },
+  component: RuntimePortalPage,
 })
 
 // ---------------------------------------------------------------------------
@@ -165,6 +196,21 @@ const applicationBuilderRoute = createRoute({
 })
 
 // ---------------------------------------------------------------------------
+// Knowledge Bases (RAG)
+// ---------------------------------------------------------------------------
+const knowledgeBasesRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/knowledge-bases',
+  component: KnowledgeBasesPage,
+})
+
+const knowledgeBaseDetailRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/knowledge-bases/$kbId',
+  component: KnowledgeBaseDetailPage,
+})
+
+// ---------------------------------------------------------------------------
 // Team (client-wide users + per-app roles)
 // ---------------------------------------------------------------------------
 const teamRoute = createRoute({
@@ -194,6 +240,7 @@ const pageBuilderHarnessRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   loginRoute,
   acceptInviteRoute,
+  portalRoute,
   shellRoute.addChildren([
     dashboardRoute,
     workflowsRoute,
@@ -207,6 +254,8 @@ const routeTree = rootRoute.addChildren([
     formRecordsRoute,
     applicationsRoute,
     applicationBuilderRoute,
+    knowledgeBasesRoute,
+    knowledgeBaseDetailRoute,
     teamRoute,
     formRendererHarnessRoute,
     pageBuilderHarnessRoute,

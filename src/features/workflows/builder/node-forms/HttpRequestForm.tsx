@@ -2,24 +2,18 @@
 // then Params/Headers/Body/Auth tabs. Reuses this codebase's existing
 // building blocks throughout — KeyValueRows (headers/params/form-body rows),
 // ExpressionField (single-value static/expression toggle, from the
-// form-builder package), and the FormReferenceSelect async-picker pattern
-// (adapted here for picking a saved app credential by name).
+// form-builder package), and the shared CredentialSelect async-picker.
 
-import { useMemo, useState } from 'react'
-import {
-  Check, ChevronsUpDown, Loader2, KeyRound, Table2, ChevronDown, ChevronRight,
-  Plus, Trash2,
-} from 'lucide-react'
+import { useState } from 'react'
+import { Table2, ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
 import { ExpressionField } from '@/features/form-builder/config/ExpressionField'
 import { KeyValueRows } from '../KeyValueRows'
-import { useCredentials } from '@/features/app-settings/hooks'
+import { CredentialSelect } from '@/features/app-settings/CredentialSelect'
 import { nanoid } from '../nanoid'
 import { ensureKeyValueIds, ensureResponseSchemaIds } from './id-helpers'
 import type { NodeOutputSchema } from '../node-output-schema'
@@ -718,80 +712,3 @@ function StaticOrExprField({
   )
 }
 
-// ---------------------------------------------------------------------------
-// Credential picker — adapted from FormReferenceSelect.tsx's async
-// searchable-combobox pattern, swapping useForms() for useCredentials().
-// ---------------------------------------------------------------------------
-
-function CredentialSelect({ value, onChange }: { value?: string; onChange: (name: string | undefined) => void }) {
-  const { data: credentials, isLoading } = useCredentials()
-  const [open, setOpen] = useState(false)
-
-  const selected = useMemo(
-    () => (credentials ?? []).find((c) => c.name === value),
-    [credentials, value],
-  )
-  const isBroken = !!value && !isLoading && !selected
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn(
-            'h-8 w-full justify-between gap-2 px-2.5 text-[12px] font-normal',
-            !value && 'text-slate-400',
-            isBroken && 'border-amber-300',
-          )}
-        >
-          <span className="flex min-w-0 items-center gap-1.5">
-            <KeyRound size={13} className="shrink-0 text-slate-400" />
-            <span className="truncate">
-              {isLoading && !selected
-                ? 'Loading credentials…'
-                : selected
-                  ? selected.name
-                  : isBroken
-                    ? 'Unavailable credential'
-                    : 'Select a credential…'}
-            </span>
-          </span>
-          <ChevronsUpDown size={13} className="shrink-0 text-slate-400" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-        <Command filter={(itemValue, search) => (itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0)}>
-          <CommandInput placeholder="Search credentials…" />
-          <CommandList>
-            {isLoading ? (
-              <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-slate-400">
-                <Loader2 size={13} className="animate-spin" /> Loading credentials…
-              </div>
-            ) : (
-              <>
-                <CommandEmpty>No credentials found. Add one in Global Settings.</CommandEmpty>
-                <CommandGroup>
-                  {(credentials ?? []).map((c) => (
-                    <CommandItem
-                      key={c.name}
-                      value={c.name}
-                      onSelect={() => { onChange(c.name === value ? undefined : c.name); setOpen(false) }}
-                    >
-                      <Check size={14} className={cn('shrink-0', c.name === value ? 'opacity-100 text-cyan-600' : 'opacity-0')} />
-                      <span className="flex min-w-0 flex-col">
-                        <span className="truncate">{c.name}</span>
-                        <span className="truncate font-mono text-[10px] text-slate-400">{c.type}</span>
-                      </span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  )
-}

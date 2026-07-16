@@ -4,7 +4,7 @@
 //  • toPayload(state) — produce the Create/Update payload: derives fields[] from
 //                       the schema (for SQL) and embeds the full schema in layout.
 
-import { type FormSchema, emptySchema } from './schema'
+import { type FormSchema, emptySchema, emptyFormSettings } from './schema'
 import { projectToFields } from './projection'
 import type { FormDefinition, CreateFormPayload, FieldDef } from '@/features/forms/types'
 
@@ -21,7 +21,12 @@ export function parseLayout(layout: unknown): FormSchema {
   try {
     const obj = typeof layout === 'string' ? JSON.parse(layout) : layout
     if (obj && typeof obj === 'object' && Array.isArray((obj as FormSchema).sections)) {
-      return { version: 1, sections: (obj as FormSchema).sections, variables: (obj as FormSchema).variables }
+      return {
+        version: 1,
+        sections: (obj as FormSchema).sections,
+        variables: (obj as FormSchema).variables,
+        settings: (obj as FormSchema).settings ?? emptyFormSettings(),
+      }
     }
   } catch {
     // fall through
@@ -61,11 +66,21 @@ export function toBuilder(def: FormDefinition): BuilderFormState {
 /** Build the Create/Update payload from builder state. */
 export function toPayload(state: BuilderFormState): CreateFormPayload {
   const { fields } = projectToFields(state.schema)
+  const cu = state.schema.settings?.createUser
   return {
     name: state.name,
     slug: state.slug,
     description: state.description || undefined,
     fields,
     layout: state.schema,
+    // Explicit, backend-readable mirror of schema.settings.createUser — see
+    // FormDefinition's doc comment. The builder's own source of truth stays
+    // schema.settings.createUser (hydrated from `layout` by toBuilder); these
+    // exist purely so the Go backend can read the setting without parsing
+    // the opaque layout blob.
+    create_user_on_submit: cu?.enabled ?? false,
+    create_user_name_field: cu?.nameFieldKey,
+    create_user_email_field: cu?.emailFieldKey,
+    create_user_role_field: cu?.roleFieldKey,
   }
 }

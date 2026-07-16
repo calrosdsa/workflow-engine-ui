@@ -16,14 +16,16 @@ export function PermissionDeniedPage() {
 
   if (!session) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-        <LogIn size={36} className="opacity-40" />
+      <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center animate-in fade-in-0 duration-300">
+        <LogIn size={36} style={{ color: 'hsl(var(--muted-foreground))' }} className="opacity-60" />
         <h2 className="text-base font-semibold">Sign in to continue</h2>
-        <p className="max-w-sm text-sm opacity-70">This section requires an account with access. Sign in to view it.</p>
+        <p className="max-w-sm text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          This section requires an account with access. Sign in to view it.
+        </p>
         <RuntimeLink
           to={`/${clientId ?? ''}/${appId ?? ''}/login?returnTo=${encodeURIComponent(window.location.pathname)}`}
-          className="mt-1 rounded-md px-4 py-2 text-sm font-medium text-white"
-          style={{ backgroundColor: 'hsl(var(--primary))' }}
+          className="mt-1 inline-flex items-center rounded-md px-4 py-2 text-sm font-medium transition-colors duration-150 ease-out hover:bg-[hsl(var(--primary))]/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))]"
+          style={{ backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}
         >
           Sign in
         </RuntimeLink>
@@ -32,10 +34,12 @@ export function PermissionDeniedPage() {
   }
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-      <ShieldAlert size={36} className="opacity-40" />
+    <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center animate-in fade-in-0 duration-300">
+      <ShieldAlert size={36} style={{ color: 'hsl(var(--muted-foreground))' }} className="opacity-60" />
       <h2 className="text-base font-semibold">You don't have access to this section</h2>
-      <p className="max-w-sm text-sm opacity-70">Contact an administrator if you believe this is a mistake.</p>
+      <p className="max-w-sm text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
+        Contact an administrator if you believe this is a mistake.
+      </p>
     </div>
   )
 }

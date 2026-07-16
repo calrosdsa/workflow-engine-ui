@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { MENU_TYPE_REGISTRY } from '@/features/menus/menu-registry'
 import { RuntimeLink } from './RuntimeLink'
 import { cn } from '@/lib/utils'
@@ -17,7 +17,7 @@ interface RuntimeSidebarProps {
 export function RuntimeSidebar({ appName, navTree, clientId, appId, activeMenuId, onNavigate }: RuntimeSidebarProps) {
   return (
     <aside className="flex h-screen w-60 flex-col border-r" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--card))' }}>
-      <div className="flex h-14 items-center border-b px-4" style={{ borderColor: 'hsl(var(--border))' }}>
+      <div className="flex h-14 shrink-0 items-center border-b px-4" style={{ borderColor: 'hsl(var(--border))' }}>
         <span className="truncate text-sm font-semibold" style={{ color: 'hsl(var(--card-foreground))' }}>{appName}</span>
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
@@ -25,7 +25,9 @@ export function RuntimeSidebar({ appName, navTree, clientId, appId, activeMenuId
           <NavItem key={node.id} node={node} clientId={clientId} appId={appId} activeMenuId={activeMenuId} onNavigate={onNavigate} depth={0} />
         ))}
         {navTree.length === 0 && (
-          <p className="px-2 py-4 text-center text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Nothing to show yet.</p>
+          <div className="flex flex-col items-center gap-1 px-2 py-8 text-center">
+            <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Nothing to show yet.</p>
+          </div>
         )}
       </nav>
     </aside>
@@ -51,16 +53,27 @@ function NavItem({ node, clientId, appId, activeMenuId, onNavigate, depth }: {
     <div>
       <div className="flex items-center" style={{ paddingLeft: depth * 12 }}>
         {hasChildren && (
-          <button onClick={() => setOpen((o) => !o)} className="shrink-0 p-1 opacity-60 hover:opacity-100" aria-label="Toggle section">
-            {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          <button
+            onClick={() => setOpen((o) => !o)}
+            className="shrink-0 rounded p-1 opacity-60 transition-[opacity,background-color] hover:opacity-100 hover:bg-[hsl(var(--accent))] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+            aria-label={open ? `Collapse ${node.name}` : `Expand ${node.name}`}
+            aria-expanded={open}
+          >
+            <ChevronDown
+              size={12}
+              className="transition-transform duration-150 ease-out motion-reduce:transition-none"
+              style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+            />
           </button>
         )}
         <RuntimeLink
           to={`/${clientId}/${appId}/${node.slug}`}
           onClick={onNavigate}
+          aria-current={isActive ? 'page' : undefined}
           className={cn(
-            'flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors',
+            'flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]',
             !hasChildren && 'ml-5',
+            !isActive && 'hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))]',
           )}
           style={isActive ? { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' } : { color: 'hsl(var(--card-foreground))' }}
         >
@@ -68,11 +81,16 @@ function NavItem({ node, clientId, appId, activeMenuId, onNavigate, depth }: {
           <span className="truncate">{node.name}</span>
         </RuntimeLink>
       </div>
-      {hasChildren && open && (
-        <div>
-          {node.children.map((child) => (
-            <NavItem key={child.id} node={child} clientId={clientId} appId={appId} activeMenuId={activeMenuId} onNavigate={onNavigate} depth={depth + 1} />
-          ))}
+      {hasChildren && (
+        <div
+          className="grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none"
+          style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+        >
+          <div className="overflow-hidden">
+            {node.children.map((child) => (
+              <NavItem key={child.id} node={child} clientId={clientId} appId={appId} activeMenuId={activeMenuId} onNavigate={onNavigate} depth={depth + 1} />
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -70,6 +70,8 @@ export function useMoveMenu() {
         sort_order: menu.sort_order,
         config: menu.config,
         required_permission: menu.required_permission,
+        permission_mode: menu.permission_mode,
+        required_role_ids: menu.required_role_ids,
       }),
     onSuccess: (_data, { menu }) => {
       qc.invalidateQueries({ queryKey: menuKeys.all })

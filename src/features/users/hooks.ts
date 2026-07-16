@@ -14,3 +14,36 @@ export function useRevokeUserAccess() {
     onSuccess:  () => qc.invalidateQueries({ queryKey: userKeys.all }),
   })
 }
+
+export function useRevokeUserAppAccess() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ userId, appId }: { userId: string; appId: string }) => usersApi.revokeAppAccess(userId, appId),
+    onSuccess:  () => qc.invalidateQueries({ queryKey: userKeys.all }),
+  })
+}
+
+export function useUpdateUserAppRole() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ userId, appId, roleId }: { userId: string; appId: string; roleId: string }) =>
+      usersApi.updateAppRole(userId, appId, roleId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.all }),
+  })
+}
+
+export function useGrantSuperAdmin() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) => usersApi.grantSuperAdmin(userId),
+    onSuccess:  () => qc.invalidateQueries({ queryKey: userKeys.all }),
+  })
+}
+
+export function useRevokeSuperAdmin() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) => usersApi.revokeSuperAdmin(userId),
+    onSuccess:  () => qc.invalidateQueries({ queryKey: userKeys.all }),
+  })
+}

@@ -1,5 +1,5 @@
 import type { ThemeConfig } from '@/features/theme/types'
-import type { MenuType, MenuConfig } from '@/features/menus/types'
+import type { MenuType, MenuConfig, PermissionMode } from '@/features/menus/types'
 
 // Mirrors internal/appbuilder.AppSnapshot / MenuSnapshotItem exactly — the
 // JSON the public GET /runtime/{client_id}/{app_id} endpoint returns.
@@ -20,6 +20,8 @@ export interface MenuSnapshotItem {
   sort_order: number
   config: MenuConfig
   required_permission?: string
+  permission_mode: PermissionMode
+  required_role_ids: string[]
 }
 
 export interface AppSnapshot {

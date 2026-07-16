@@ -1,6 +1,6 @@
 import type {
   GraphNode, TriggerConfig, SetVariableConfig, ConditionConfig, IteratorConfig,
-  HttpRequestConfig, ShowMessageConfig, TransformConfig, SaveRecordsConfig,
+  HttpRequestConfig, ShowMessageConfig, TransformConfig, SaveRecordsConfig, NotificationConfig,
 } from '../types'
 
 /**
@@ -61,6 +61,12 @@ export function nodeSetupIssue(data: GraphNode): string | null {
     }
     case 'show_message':
       return (cfg as ShowMessageConfig | undefined)?.message ? null : 'Write a message'
+    case 'notification': {
+      const c = cfg as NotificationConfig | undefined
+      if (!c?.title) return 'Write a title'
+      const recipient = c.recipient_mode === 'expression' ? c.recipient_expr : c.recipient_user_id
+      return recipient ? null : 'Set a recipient'
+    }
     default:
       return null // entry / exit / merge / loop_end need no configuration
   }

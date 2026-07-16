@@ -11,6 +11,12 @@ function freshKey(component: ComponentType): string {
   return `${component}_${nanoid(6)}`
 }
 
+// Every generated table's fixed audit/identity columns (see the backend's
+// selectCols) — a field key matching one of these would alias the field's
+// own physical column to the same output name as the real column, silently
+// overwriting the real id/timestamps in every record the API returns.
+export const RESERVED_FIELD_KEYS = new Set(['id', 'created_at', 'updated_at'])
+
 /** Slugify a label into a safe machine key (letters/digits/underscores). */
 export function slugifyKey(label: string): string {
   const s = label
@@ -19,7 +25,8 @@ export function slugifyKey(label: string): string {
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
     .replace(/^(\d)/, '_$1') // can't start with a digit
-  return s || 'field'
+  const key = s || 'field'
+  return RESERVED_FIELD_KEYS.has(key) ? `${key}_field` : key
 }
 
 export function createElement(component: ComponentType): FormElement {
@@ -129,4 +136,29 @@ export function relayoutSection(section: FormSection, layout: ColumnLayout): For
     newColumns[i % newColumns.length].elements.push(el)
   })
   return { ...section, layout, columns: newColumns }
+}
+
+/** Builds the "Account" section injected when the "Create user with each
+ *  enrollment" setting is turned on — a real, fully-editable section with
+ *  Name/Email/Role fields, indistinguishable from a manually-added one. The
+ *  returned keys are stored on CreateUserSettings so the setting can find
+ *  these specific fields later (e.g. at runtime, to resolve which submitted
+ *  values become the created user's name/email/role). */
+export function createAccountSection(): { section: FormSection; nameKey: string; emailKey: string; roleKey: string } {
+  const name: FormElement = { ...createElement('text'), label: 'Name', key: 'account_name' }
+  const email: FormElement = {
+    ...createElement('email'),
+    label: 'Email',
+    key: 'account_email',
+    behavior: { ...createElement('email').behavior, required: 'always' },
+  }
+  const role: FormElement = {
+    ...createElement('role'),
+    label: 'Role',
+    key: 'account_role',
+    behavior: { ...createElement('role').behavior, required: 'always' },
+  }
+  const section = createSection('Account', '1')
+  section.columns[0].elements = [name, email, role]
+  return { section, nameKey: name.key, emailKey: email.key, roleKey: role.key }
 }

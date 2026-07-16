@@ -133,7 +133,7 @@ export function ReferenceFieldAutocomplete({ el, field, disabled }: ReferenceFie
                         key={id}
                         value={id}
                         onSelect={() => {
-                          field.onChange(id === currentValue ? '' : id)
+                          field.onChange(id === currentValue ? null : id)
                           setOpen(false)
                         }}
                       >
@@ -152,7 +152,7 @@ export function ReferenceFieldAutocomplete({ el, field, disabled }: ReferenceFie
             <span className="truncate text-[11px] text-slate-500">{selectedLabel}</span>
             <button
               type="button"
-              onClick={() => field.onChange('')}
+              onClick={() => field.onChange(null)}
               className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
               title="Clear selection"
             >

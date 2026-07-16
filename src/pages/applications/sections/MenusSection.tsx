@@ -11,14 +11,18 @@ import { CSS } from '@dnd-kit/utilities'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Spinner } from '@/components/ui/spinner'
 import { useMenus, useCreateMenu, useUpdateMenu, useDeleteMenu, useReorderMenus, useMoveMenu } from '@/features/menus/hooks'
 import { buildMenuTree } from '@/features/menus/tree'
 import { MENU_TYPE_REGISTRY } from '@/features/menus/menu-registry'
 import { usePermission } from '@/features/auth/permissions'
 import { usePermissionsCatalog } from '@/features/permissions/hooks'
+import { useRoles } from '@/features/roles/hooks'
+import { useForm as useFormDef } from '@/features/forms/hooks'
 import { cn } from '@/lib/utils'
-import type { Menu, MenuType, MenuTreeNode } from '@/features/menus/types'
+import type { Menu, MenuType, MenuTreeNode, PermissionMode } from '@/features/menus/types'
+import type { SearchMenuConfig, AddMenuConfig } from '@/features/menus/types'
 
 const ROOT_DROP_ZONE_ID = '__menu-tree-root-drop-zone__'
 
@@ -26,7 +30,7 @@ interface MenusSectionProps {
   appId: string
 }
 
-export function MenusSection({ appId: _appId }: MenusSectionProps) {
+export function MenusSection({ appId }: MenusSectionProps) {
   const { data: menus, isLoading } = useMenus()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -64,7 +68,7 @@ export function MenusSection({ appId: _appId }: MenusSectionProps) {
 
       <div className="min-w-0 flex-1 overflow-y-auto">
         {selected ? (
-          <MenuDetail key={selected.id} menu={selected} onDeleted={() => setSelectedId(null)} />
+          <MenuDetail key={selected.id} menu={selected} appId={appId} onDeleted={() => setSelectedId(null)} />
         ) : (
           <div className="p-6 text-sm text-gray-400">Select a menu to configure it.</div>
         )}
@@ -432,6 +436,8 @@ function MenuTypePickerDialog({ open, onClose, parentId, onCreated }: {
         name: `New ${entry.label}`,
         sort_order: 0,
         config: entry.createDefaultConfig(),
+        permission_mode: 'all',
+        required_role_ids: [],
       })
       onCreated(menu.id)
     } catch {
@@ -479,24 +485,39 @@ function MenuTypePickerDialog({ open, onClose, parentId, onCreated }: {
 // Detail / config panel
 // ---------------------------------------------------------------------------
 
-function MenuDetail({ menu, onDeleted }: { menu: Menu; onDeleted: () => void }) {
+function MenuDetail({ menu, appId, onDeleted }: { menu: Menu; appId: string; onDeleted: () => void }) {
   const updateMutation = useUpdateMenu(menu.id)
   const deleteMutation = useDeleteMenu()
   const canWrite = usePermission('menus:write')
   const { data: permissionsCatalog } = usePermissionsCatalog()
+  const { data: roles } = useRoles(appId)
 
   const [name, setName] = useState(menu.name)
   const [slug, setSlug] = useState(menu.slug)
   const [requiredPermission, setRequiredPermission] = useState(menu.required_permission ?? '')
+  const [permissionMode, setPermissionMode] = useState<PermissionMode>(menu.permission_mode)
+  const [requiredRoleIds, setRequiredRoleIds] = useState<string[]>(menu.required_role_ids)
   const [config, setConfig] = useState<Menu['config']>(menu.config)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
   const ConfigPanel = MENU_TYPE_REGISTRY[menu.menu_type].configPanel
+  const isResourceBacked = menu.menu_type === 'search' || menu.menu_type === 'add'
+  const resourceFormId = isResourceBacked ? (config as SearchMenuConfig | AddMenuConfig).form_id : undefined
+  const { data: resourceForm } = useFormDef(resourceFormId ?? '')
+
+  const toggleRole = (roleId: string) => {
+    setRequiredRoleIds((prev) => (prev.includes(roleId) ? prev.filter((id) => id !== roleId) : [...prev, roleId]))
+    setSaved(false)
+  }
 
   const handleSave = async () => {
     setError(null)
     setSaved(false)
+    if (permissionMode === 'role' && requiredRoleIds.length === 0) {
+      setError('Select at least one role, or switch back to "For All".')
+      return
+    }
     try {
       await updateMutation.mutateAsync({
         parent_id: menu.parent_id,
@@ -507,6 +528,8 @@ function MenuDetail({ menu, onDeleted }: { menu: Menu; onDeleted: () => void }) 
         sort_order: menu.sort_order,
         config,
         required_permission: requiredPermission || undefined,
+        permission_mode: permissionMode,
+        required_role_ids: permissionMode === 'role' ? requiredRoleIds : [],
       })
       setSaved(true)
     } catch {
@@ -538,6 +561,48 @@ function MenuDetail({ menu, onDeleted }: { menu: Menu; onDeleted: () => void }) 
       </div>
 
       <div>
+        <label className="mb-2 block text-xs font-medium text-gray-600">Permission</label>
+        <div className="flex items-center gap-4">
+          {(['all', 'role'] as const).map((mode) => (
+            <label key={mode} className="flex items-center gap-1.5 text-sm text-gray-700">
+              <input
+                type="radio"
+                name={`permission-mode-${menu.id}`}
+                checked={permissionMode === mode}
+                disabled={!canWrite}
+                onChange={() => { setPermissionMode(mode); setSaved(false) }}
+                className="text-indigo-600"
+              />
+              {mode === 'all' ? 'For All' : 'Specific Role'}
+            </label>
+          ))}
+        </div>
+
+        {permissionMode === 'role' && (
+          <div className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-md border border-slate-200 p-2">
+            {(roles ?? []).map((role) => (
+              <label key={role.id} className="flex items-center gap-2 text-[12px] text-slate-700">
+                <Checkbox
+                  checked={requiredRoleIds.includes(role.id)}
+                  onCheckedChange={() => toggleRole(role.id)}
+                  disabled={!canWrite}
+                />
+                {role.name}
+              </label>
+            ))}
+            {(roles ?? []).length === 0 && (
+              <p className="text-[11px] text-slate-400">No roles defined for this app yet.</p>
+            )}
+          </div>
+        )}
+        <p className="mt-1 text-[11px] text-gray-400">
+          {permissionMode === 'all'
+            ? 'Visible to anyone who can view the app.'
+            : "Only visible to members whose current role is checked above."}
+        </p>
+      </div>
+
+      <div>
         <label className="mb-1 block text-xs font-medium text-gray-600">Required permission (optional)</label>
         <select
           value={requiredPermission}
@@ -545,10 +610,16 @@ function MenuDetail({ menu, onDeleted }: { menu: Menu; onDeleted: () => void }) 
           disabled={!canWrite}
           className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700"
         >
-          <option value="">Visible to everyone</option>
+          <option value="">No additional permission required</option>
           {(permissionsCatalog ?? []).map((p) => <option key={p.key} value={p.key}>{p.label} ({p.key})</option>)}
         </select>
-        <p className="mt-1 text-[11px] text-gray-400">Menus without a required permission are visible to anyone who can view the app.</p>
+        {isResourceBacked && (
+          <p className="mt-1 text-[11px] text-gray-400">
+            {MENU_TYPE_REGISTRY[menu.menu_type].label} menus also require the viewer to have{' '}
+            {menu.menu_type === 'add' ? 'Create' : 'View'} access on{' '}
+            {resourceForm ? `"${resourceForm.name}"` : 'this form'} — enforced automatically on top of the settings above.
+          </p>
+        )}
       </div>
 
       <div>

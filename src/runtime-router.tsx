@@ -192,9 +192,19 @@ function RuntimeRecordRoute() {
   )
 }
 
+// A sibling of runtimeMenuRoute (parented directly on runtimeAppRoute), NOT
+// a child of it — RuntimeMenuRoute's component (RuntimeAppShell) is a leaf
+// render with no <Outlet/>, so a route nested under runtimeMenuRoute would
+// never actually get a slot to render into: the URL would change (matching
+// the router's own state) but RuntimeAppShell would just keep rendering the
+// list page underneath it, forever. Declaring it as an independent
+// '/$menuSlug/$recordId' route under runtimeAppRoute instead means it's
+// matched and rendered directly, same as runtimeMenuRoute itself is — which
+// is also why RuntimeRecordPage builds its own full shell rather than
+// nesting inside RuntimeAppShell's.
 const runtimeRecordRoute = createRoute({
-  getParentRoute: () => runtimeMenuRoute,
-  path: '/$recordId',
+  getParentRoute: () => runtimeAppRoute,
+  path: '/$menuSlug/$recordId',
   component: RuntimeRecordRoute,
 })
 
@@ -208,7 +218,12 @@ const runtimeRouteTree = runtimeRootRoute.addChildren([
   runtimeAppRoute.addChildren([
     runtimeLoginRoute,
     runtimeIndexRoute,
-    runtimeMenuRoute.addChildren([runtimeRecordRoute]),
+    // More-specific-before-less-specific (matching /login's own ordering
+    // rationale above): '/$menuSlug/$recordId' must be tried before the
+    // single-segment '/$menuSlug' so a record URL doesn't get swallowed as
+    // an (invalid) menu slug lookup first.
+    runtimeRecordRoute,
+    runtimeMenuRoute,
   ]),
   runtimeCatchAllRoute,
 ])

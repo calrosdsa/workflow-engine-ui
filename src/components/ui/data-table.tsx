@@ -5,6 +5,11 @@ export interface DataTableColumn {
   key: string
   label: string
   sortable?: boolean
+  /** Custom cell renderer — falls back to formatCell(row[key]) when omitted.
+   *  Lets columns render badges/action buttons instead of plain text. */
+  render?: (row: Record<string, unknown>) => React.ReactNode
+  /** Right-aligns the header + cells — used for an Actions column. */
+  align?: 'left' | 'right'
 }
 
 export interface DataTableProps {
@@ -31,7 +36,11 @@ export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortC
       <thead>
         <tr className="border-b" style={{ borderColor: 'hsl(var(--border))' }}>
           {columns.map((col) => (
-            <th key={col.key} className="px-3 py-2 text-left font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            <th
+              key={col.key}
+              className={cn('px-3 py-2 font-medium', col.align === 'right' ? 'text-right' : 'text-left')}
+              style={{ color: 'hsl(var(--muted-foreground))' }}
+            >
               {col.sortable ? (
                 <button
                   onClick={() => onSortChange?.(col.key)}
@@ -79,8 +88,8 @@ export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortC
                 style={{ borderColor: 'hsl(var(--border))' }}
               >
                 {columns.map((col) => (
-                  <td key={col.key} className="px-3 py-2">
-                    {formatCell(row[col.key])}
+                  <td key={col.key} className={cn('px-3 py-2', col.align === 'right' && 'text-right')}>
+                    {col.render ? col.render(row) : formatCell(row[col.key])}
                   </td>
                 ))}
               </tr>

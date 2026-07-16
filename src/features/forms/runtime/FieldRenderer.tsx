@@ -7,6 +7,8 @@ import { Switch } from '@/components/ui/switch'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ReferenceFieldAutocomplete } from './ReferenceFieldAutocomplete'
 import { LineItemsGrid } from './LineItemsGrid'
+import { useAuthStore } from '@/stores/auth'
+import { useRoles } from '@/features/roles/hooks'
 import type { FormElement } from '@/features/form-builder/schema'
 import type { FieldRuntimeState } from './expression-context'
 
@@ -154,6 +156,9 @@ function FieldInput({ el, field, disabled }: {
         </Select>
       )
 
+    case 'role':
+      return <RoleFieldInput value={(field.value as string) ?? ''} onChange={field.onChange} disabled={disabled} />
+
     case 'multiselect': {
       const values = Array.isArray(field.value) ? (field.value as string[]) : []
       const toggle = (v: string) => {
@@ -216,6 +221,28 @@ function FieldInput({ el, field, disabled }: {
         <Input value={(field.value as string) ?? ''} onChange={(e) => field.onChange(e.target.value)} onBlur={field.onBlur} placeholder={el.placeholder} disabled={disabled} />
       )
   }
+}
+
+// A dedicated component (not inlined in FieldInput's switch) since it needs
+// useRoles — a hook — scoped to the active app. Backs the 'role' component
+// type, e.g. the Role field auto-injected by the "Create user with each
+// enrollment" setting (see form-builder/factory.ts's createAccountSection).
+function RoleFieldInput({ value, onChange, disabled }: {
+  value: string
+  onChange: (v: string) => void
+  disabled: boolean
+}) {
+  const appId = useAuthStore((s) => s.activeMembership?.app_id) ?? ''
+  const { data: roles, isLoading } = useRoles(appId)
+
+  return (
+    <Select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled || isLoading}>
+      <option value="">{isLoading ? 'Loading roles…' : 'Select…'}</option>
+      {(roles ?? []).map((r) => (
+        <option key={r.id} value={r.id}>{r.name}</option>
+      ))}
+    </Select>
+  )
 }
 
 function PresentationalElement({ element: el }: { element: FormElement }) {

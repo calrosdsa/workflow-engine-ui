@@ -1,139 +1,178 @@
-import { useState } from 'react'
-import { UserPlus, Users, Trash2, Mail, RotateCw, XCircle } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Trash2, RotateCw, XCircle, Pencil } from 'lucide-react'
 import { useTeamUsers, useRevokeUserAccess } from '@/features/users/hooks'
 import { useInvitations, useResendInvitation, useRevokeInvitation } from '@/features/invitations/hooks'
+import { useApps } from '@/features/applications/hooks'
 import { usePermission } from '@/features/auth/permissions'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
-import { InviteDialog } from '../components/InviteDialog'
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
+import { Pagination } from '@/components/ui/pagination'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { TeamListLayout } from '../components/TeamListLayout'
+import { UserFormDrawer } from '../components/UserFormDrawer'
 import type { TeamUser } from '@/features/users/types'
 import type { Invitation } from '@/features/invitations/types'
+
+const PAGE_SIZE = 10
+
+type Row =
+  | { kind: 'user'; id: string; name: string; email: string; status: 'Active'; user: TeamUser }
+  | { kind: 'invitation'; id: string; name: string; email: string; status: 'Pending'; invitation: Invitation }
 
 export function UsersSection() {
   const { data: users, isLoading: usersLoading } = useTeamUsers()
   const { data: invitations, isLoading: invitationsLoading } = useInvitations()
+  const { data: apps } = useApps()
   const revokeAccessMutation = useRevokeUserAccess()
+  const resendMutation = useResendInvitation()
+  const revokeInviteMutation = useRevokeInvitation()
   const canWrite = usePermission('users:write')
 
-  const [inviteOpen, setInviteOpen] = useState(false)
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [formOpen, setFormOpen] = useState(false)
+  const [manageAccessTarget, setManageAccessTarget] = useState<TeamUser | null>(null)
+  const [revokeTarget, setRevokeTarget] = useState<Row | null>(null)
 
   const pendingInvitations = (invitations ?? []).filter((inv) => inv.status === 'pending')
+
+  const rows = useMemo<Row[]>(() => {
+    const userRows: Row[] = (users ?? [])
+      .filter((u) => !selectedAppId || u.memberships.some((m) => m.app_id === selectedAppId))
+      .map((u) => ({
+        kind: 'user', id: u.id, status: 'Active',
+        name: `${u.first_name} ${u.last_name}`.trim() || u.email, email: u.email, user: u,
+      }))
+    const invitationRows: Row[] = pendingInvitations
+      .filter((inv) => !selectedAppId || inv.grants.some((g) => g.app_id === selectedAppId))
+      .map((inv) => ({ kind: 'invitation', id: inv.id, status: 'Pending', name: inv.email, email: inv.email, invitation: inv }))
+    const all = [...userRows, ...invitationRows]
+    const q = search.trim().toLowerCase()
+    return q ? all.filter((r) => r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q)) : all
+  }, [users, pendingInvitations, selectedAppId, search])
+
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+  const pagedRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const handleSelectApp = (appId: string | null) => {
+    setSelectedAppId(appId)
+    setPage(1)
+  }
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value)
+    setPage(1)
+  }
+
+  const handleConfirmRevoke = () => {
+    if (!revokeTarget) return
+    if (revokeTarget.kind === 'user') revokeAccessMutation.mutate(revokeTarget.user.id)
+    else revokeInviteMutation.mutate(revokeTarget.invitation.id)
+    setRevokeTarget(null)
+  }
+
+  const columns: DataTableColumn[] = [
+    { key: 'name', label: 'Name' },
+    { key: 'email', label: 'Email' },
+    {
+      key: 'status', label: 'Status',
+      render: (row) => (
+        <Badge variant={row.status === 'Active' ? 'success' : 'warning'}>{row.status as string}</Badge>
+      ),
+    },
+    {
+      key: 'actions', label: '', align: 'right',
+      render: (row) => {
+        const r = row as unknown as Row
+        if (!canWrite) return null
+        if (r.kind === 'invitation') {
+          return (
+            <div className="flex justify-end gap-1">
+              <Button
+                variant="ghost" size="icon" title="Resend invitation"
+                disabled={resendMutation.isPending} onClick={() => resendMutation.mutate(r.invitation.id)}
+              >
+                <RotateCw size={14} />
+              </Button>
+              <Button
+                variant="ghost" size="icon" title="Revoke invitation" className="text-red-500 hover:bg-red-50 hover:text-red-700"
+                onClick={() => setRevokeTarget(r)}
+              >
+                <XCircle size={14} />
+              </Button>
+            </div>
+          )
+        }
+        return (
+          <div className="flex justify-end gap-1">
+            <Button
+              variant="ghost" size="icon" title="Edit user"
+              onClick={() => setManageAccessTarget(r.user)}
+            >
+              <Pencil size={14} />
+            </Button>
+            <Button
+              variant="ghost" size="icon" title="Revoke access" className="text-red-500 hover:bg-red-50 hover:text-red-700"
+              onClick={() => setRevokeTarget(r)}
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        )
+      },
+    },
+  ]
 
   if (usersLoading || invitationsLoading) {
     return <div className="flex h-64 items-center justify-center"><Spinner /></div>
   }
 
   return (
-    <div className="space-y-8 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Team members</h2>
-          <p className="mt-1 text-sm text-gray-500">{users?.length ?? 0} people with access</p>
-        </div>
-        {canWrite && (
-          <Button onClick={() => setInviteOpen(true)}><UserPlus size={16} />Invite</Button>
-        )}
-      </div>
+    <TeamListLayout
+      apps={apps ?? []}
+      selectedAppId={selectedAppId}
+      onSelectApp={handleSelectApp}
+      search={search}
+      onSearchChange={handleSearchChange}
+      searchPlaceholder="Search Users..."
+      primaryAction={canWrite ? { label: '+ Add User', onClick: () => setFormOpen(true) } : undefined}
+    >
+      <DataTable
+        columns={columns}
+        rows={pagedRows as unknown as Record<string, unknown>[]}
+        getRowId={(row) => (row as unknown as Row).id}
+        emptyMessage="No one has access yet."
+      />
+      <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
 
-      {!users?.length ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-          <Users size={32} className="mb-3 text-gray-300" />
-          <p className="mb-4 text-gray-500">No one has access yet.</p>
-          {canWrite && (
-            <Button variant="outline" onClick={() => setInviteOpen(true)}><UserPlus size={16} />Invite your first team member</Button>
-          )}
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {users.map((user) => (
-            <UserCard
-              key={user.id}
-              user={user}
-              canWrite={canWrite}
-              onRevoke={() => revokeAccessMutation.mutate(user.id)}
-            />
-          ))}
-        </div>
+      <UserFormDrawer open={formOpen} onClose={() => setFormOpen(false)} />
+
+      {manageAccessTarget && (
+        <UserFormDrawer
+          open
+          mode="manage-access"
+          existingUser={manageAccessTarget}
+          onClose={() => setManageAccessTarget(null)}
+        />
       )}
 
-      {pendingInvitations.length > 0 && (
-        <div>
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Pending invitations ({pendingInvitations.length})
-          </h3>
-          <div className="space-y-2">
-            {pendingInvitations.map((inv) => (
-              <PendingInvitationRow key={inv.id} invitation={inv} canWrite={canWrite} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      <InviteDialog open={inviteOpen} onClose={() => setInviteOpen(false)} />
-    </div>
-  )
-}
-
-function UserCard({ user, canWrite, onRevoke }: { user: TeamUser; canWrite: boolean; onRevoke: () => void }) {
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <CardTitle className="truncate">{user.first_name} {user.last_name}</CardTitle>
-            <CardDescription className="mt-1 truncate text-xs">{user.email}</CardDescription>
-          </div>
-          {canWrite && (
-            <Button
-              variant="ghost" size="icon" onClick={onRevoke}
-              title="Revoke access" className="text-red-500 hover:bg-red-50 hover:text-red-700"
-            >
-              <Trash2 size={14} />
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-1.5">
-          {user.memberships.map((m) => (
-            <span key={m.app_id} className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
-              {m.app_name}: {m.role_name}
-            </span>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function PendingInvitationRow({ invitation, canWrite }: { invitation: Invitation; canWrite: boolean }) {
-  const resendMutation = useResendInvitation()
-  const revokeMutation = useRevokeInvitation()
-
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-gray-200 bg-white px-4 py-2.5">
-      <div className="flex min-w-0 items-center gap-2">
-        <Mail size={14} className="shrink-0 text-gray-400" />
-        <span className="truncate text-sm text-gray-700">{invitation.email}</span>
-        <span className="shrink-0 text-xs text-gray-400">{invitation.grants.length} app{invitation.grants.length === 1 ? '' : 's'}</span>
-      </div>
-      {canWrite && (
-        <div className="flex shrink-0 items-center gap-1">
-          <Button
-            variant="ghost" size="icon" title="Resend invitation"
-            disabled={resendMutation.isPending} onClick={() => resendMutation.mutate(invitation.id)}
-          >
-            <RotateCw size={14} />
-          </Button>
-          <Button
-            variant="ghost" size="icon" title="Revoke invitation" className="text-red-500 hover:bg-red-50 hover:text-red-700"
-            disabled={revokeMutation.isPending} onClick={() => revokeMutation.mutate(invitation.id)}
-          >
-            <XCircle size={14} />
-          </Button>
-        </div>
-      )}
-    </div>
+      <ConfirmDialog
+        open={!!revokeTarget}
+        onOpenChange={(o) => !o && setRevokeTarget(null)}
+        title={revokeTarget?.kind === 'invitation' ? 'Revoke invitation?' : 'Revoke access?'}
+        description={
+          revokeTarget?.kind === 'invitation'
+            ? `${revokeTarget.email} will no longer be able to accept this invitation.`
+            : `${revokeTarget?.email} will lose access to this workspace.`
+        }
+        confirmLabel="Revoke"
+        destructive
+        loading={revokeAccessMutation.isPending || revokeInviteMutation.isPending}
+        onConfirm={handleConfirmRevoke}
+      />
+    </TeamListLayout>
   )
 }

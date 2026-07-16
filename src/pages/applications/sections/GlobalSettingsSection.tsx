@@ -144,7 +144,7 @@ function CredentialFormDialog({ onClose }: { onClose: () => void }) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="space-y-3 px-6 py-4">
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">Name</label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. stripe_api" className="font-mono text-xs" />

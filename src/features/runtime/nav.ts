@@ -1,4 +1,4 @@
-import { hasPermission } from '@/features/auth/permissions'
+import { canViewMenu } from '@/features/auth/permissions'
 import { buildMenuTree, findAncestors } from '@/features/menus/tree'
 import type { Menu, MenuTreeNode } from '@/features/menus/types'
 import type { MenuSnapshotItem } from './types'
@@ -16,20 +16,20 @@ export function toMenu(item: MenuSnapshotItem): Menu {
 }
 
 /** Builds the runtime nav tree from a published snapshot's flat menu list,
- *  filtering out any node (and its whole subtree) whose required_permission
- *  the caller's permissions don't satisfy — the "hide" half of role-based
- *  menu visibility. Reuses buildMenuTree from features/menus/tree.ts,
- *  written once and imported by both the builder's tree view and this. */
-export function buildRuntimeNavTree(menus: MenuSnapshotItem[], permissions: string[]): MenuTreeNode[] {
+ *  filtering out any node (and its whole subtree) that canViewMenu rejects —
+ *  the "hide" half of role-based menu visibility. Reuses buildMenuTree from
+ *  features/menus/tree.ts, written once and imported by both the builder's
+ *  tree view and this. */
+export function buildRuntimeNavTree(menus: MenuSnapshotItem[], roleId: string | undefined, permissions: string[]): MenuTreeNode[] {
   const tree = buildMenuTree(menus.map(toMenu))
-  return filterByPermission(tree, permissions)
+  return filterByPermission(tree, roleId, permissions)
 }
 
-function filterByPermission(nodes: MenuTreeNode[], permissions: string[]): MenuTreeNode[] {
+function filterByPermission(nodes: MenuTreeNode[], roleId: string | undefined, permissions: string[]): MenuTreeNode[] {
   const out: MenuTreeNode[] = []
   for (const node of nodes) {
-    if (node.required_permission && !hasPermission(permissions, node.required_permission)) continue
-    out.push({ ...node, children: filterByPermission(node.children, permissions) })
+    if (!canViewMenu(node, roleId, permissions)) continue
+    out.push({ ...node, children: filterByPermission(node.children, roleId, permissions) })
   }
   return out
 }

@@ -20,6 +20,9 @@ export type NodeType =
   | 'show_message'
   | 'transform'
   | 'save_records'
+  | 'notification'
+  | 'knowledge_retrieval'
+  | 'knowledge_ingest'
 
 export type PortKind = 'data' | 'control' | 'trigger'
 
@@ -450,4 +453,55 @@ export interface ShowMessageConfig {
   is_html?: boolean
   timeout_ms?: number
   message_type: MessageType
+}
+
+// ---------------------------------------------------------------------------
+// notification — mirrors internal/graph/configs_notification.go. Writes a
+// persisted, in-app notification for a single recipient user, read by the
+// runtime app's notification center — unlike show_message, this survives
+// until the recipient reads it and reaches users who never triggered the
+// workflow themselves.
+// ---------------------------------------------------------------------------
+
+export type NotificationSeverity = 'info' | 'success' | 'warning' | 'error'
+
+export interface NotificationConfig {
+  recipient_mode: ValueMode
+  recipient_user_id?: string
+  recipient_expr?: string
+  title: string
+  body?: string
+  severity: NotificationSeverity
+  link_url?: string
+}
+
+// ---------------------------------------------------------------------------
+// knowledge_retrieval / knowledge_ingest — mirrors internal/graph/configs_rag.go
+// ---------------------------------------------------------------------------
+
+export type KnowledgeQueryMode = 'naive' | 'local' | 'global' | 'hybrid' | 'mix' | 'bypass'
+
+export interface KnowledgeRetrievalConfig {
+  kb_id: string
+  mode?: KnowledgeQueryMode
+  query_mode?: ValueMode
+  query?: string
+  query_expr?: string
+  include_answer: boolean
+  response_type?: string
+  user_prompt?: string
+  top_k?: number
+  chunk_top_k?: number
+  output_var: string
+}
+
+export interface KnowledgeIngestConfig {
+  kb_id: string
+  content_mode?: ValueMode
+  content?: string
+  content_expr?: string
+  file_name_mode?: ValueMode
+  file_name?: string
+  file_name_expr?: string
+  output_var: string
 }

@@ -58,6 +58,18 @@ export function ThemeProvider({ theme, scopeElement, children }: ThemeProviderPr
   }
 
   useEffect(() => {
+    // scopeElement === null means "caller wants a scoped element but it
+    // hasn't mounted yet" (e.g. ThemeSection's preview pane on first
+    // render) — skip entirely rather than falling back to
+    // document.documentElement, which would theme the whole page for one
+    // commit and (worse) get stuck there: the cleanup below only clears
+    // document.documentElement when scopeElement is truthy, so a `null`
+    // this-render + real-element next-render leaves the first commit's
+    // .dark class and inline vars stranded on <html> forever.
+    // scopeElement === undefined still means "theme the whole page", for
+    // callers that genuinely want that (none currently do — every call
+    // site passes a concrete element).
+    if (scopeElement === null) return
     const el = scopeElement ?? document.documentElement
     el.classList.toggle('dark', resolvedMode === 'dark')
 

@@ -7,7 +7,7 @@
 
 import type { FormSchema, FormElement } from './schema'
 import { COMPONENT_REGISTRY, supportsUnique } from './component-registry'
-import { slugifyKey } from './factory'
+import { slugifyKey, RESERVED_FIELD_KEYS } from './factory'
 import type { FieldDef } from '@/features/forms/types'
 
 /** Walks the schema in document order and yields every element. */
@@ -35,6 +35,12 @@ function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | nul
   // backend's key-based record contract stays unambiguous — it is NOT the
   // physical column (which the backend owns and never changes).
   let name = el.key && /^[a-zA-Z_]\w*$/.test(el.key) ? el.key : slugifyKey(el.label)
+  // A key can reach here already looking like a valid identifier (e.g. loaded
+  // from older data saved before slugifyKey rejected reserved words) — guard
+  // again here since this is the actual point where `name` becomes the wire
+  // field key that collides with the backend's hardcoded id/created_at/
+  // updated_at columns (see RESERVED_FIELD_KEYS's doc comment).
+  if (RESERVED_FIELD_KEYS.has(name)) name = `${name}_field`
   if (usedNames.has(name)) {
     let i = 2
     while (usedNames.has(`${name}_${i}`)) i++

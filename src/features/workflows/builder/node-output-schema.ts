@@ -371,6 +371,45 @@ export function buildNodeOutputSchema(
       return [base, ...schemaEntries]
     }
 
+    case 'knowledge_retrieval': {
+      return [{
+        nodeId: node.id,
+        nodeLabel: label,
+        nodeType: type,
+        fields: [
+          { key: 'answer', type: 'string' },
+          { key: 'context', type: 'string' },
+          {
+            key: 'chunks', type: 'array', isArray: true,
+            children: [
+              { key: 'content', type: 'string' },
+              { key: 'file_path', type: 'string' },
+              { key: 'reference_id', type: 'integer' },
+            ],
+          },
+          {
+            key: 'references', type: 'array', isArray: true,
+            children: [
+              { key: 'reference_id', type: 'integer' },
+              { key: 'file_path', type: 'string' },
+            ],
+          },
+        ],
+      }]
+    }
+
+    case 'knowledge_ingest': {
+      return [{
+        nodeId: node.id,
+        nodeLabel: label,
+        nodeType: type,
+        fields: [
+          { key: 'doc_id', type: 'string' },
+          { key: 'status', type: 'string' },
+        ],
+      }]
+    }
+
     case 'trigger': {
       // Before/After/AfterAsync triggers: the dispatcher (internal/triggers/
       // dispatch.go) snapshots the changed record and the engine

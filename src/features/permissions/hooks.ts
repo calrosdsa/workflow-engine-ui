@@ -1,9 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { permissionsApi } from './api'
 
-/** The permission catalog is a static server-side list (changes only on a
- *  backend deploy, not per-session) — staleTime: Infinity avoids refetching
- *  it on every window focus/mount like a normal resource list. */
-export function usePermissionsCatalog() {
-  return useQuery({ queryKey: ['permissions'], queryFn: permissionsApi.list, staleTime: Infinity })
+/** The static portion of the catalog only changes on a backend deploy, but
+ *  once appId is given the response also includes per-form entries derived
+ *  from that app's forms — which change whenever a form is created, renamed,
+ *  or deleted (see features/forms/hooks.ts's mutations, which invalidate
+ *  this same ['permissions'] key). No more staleTime: Infinity. */
+export function usePermissionsCatalog(appId?: string) {
+  return useQuery({
+    queryKey: ['permissions', appId],
+    queryFn: () => permissionsApi.list(appId),
+  })
 }

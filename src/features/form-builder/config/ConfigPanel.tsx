@@ -9,18 +9,20 @@ import {
   SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select-menu'
 import { cn } from '@/lib/utils'
-import { useFormBuilderStore, useFormMetaStore } from '../store'
+import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection } from '../store'
 import { COMPONENT_REGISTRY, supportsUnique } from '../component-registry'
 import { slugifyKey } from '../factory'
 import {
-  type FormElement, type VisibilityMode, type RequiredMode, type ReadOnlyMode,
+  type FormElement, type FormSchema, type VisibilityMode, type RequiredMode, type ReadOnlyMode,
   type ElementValidation, type ElementBehavior, type ElementAppearance, type BindingSource,
+  type CreateUserSettings, emptyCreateUserSettings,
 } from '../schema'
 import { ExpressionField } from './ExpressionField'
 import { OptionsEditor } from './OptionsEditor'
 import { FormReferenceSelect } from './FormReferenceSelect'
 import { DisplayFieldSelect } from './DisplayFieldSelect'
 import { LineItemsColumnsEditor } from './LineItemsColumnsEditor'
+import { AdvancedSettingsSection } from './AdvancedSettingsSection'
 import type { LineItemsConfig } from '../schema'
 import type { VariableDecl } from '@/features/workflows/types'
 
@@ -73,7 +75,7 @@ export function ConfigPanel({ variables }: { variables: VariableDecl[] }) {
   return (
     <aside className="flex w-80 shrink-0 flex-col border-l border-slate-200 bg-white">
       {element ? (
-        <ElementConfig element={element} variables={variables} formId={formId} onChange={(p) => updateElement(element!.id, p)} />
+        <ElementConfig element={element} variables={variables} formId={formId} schema={schema} onChange={(p) => updateElement(element!.id, p)} />
       ) : section ? (
         <SectionConfig
           key={section.id}
@@ -82,20 +84,60 @@ export function ConfigPanel({ variables }: { variables: VariableDecl[] }) {
           onChange={(p) => updateSection(section.id, p)}
         />
       ) : (
-        <EmptyConfig />
+        <FormConfig schema={schema} />
       )}
     </aside>
   )
 }
 
-function EmptyConfig() {
+// ---------------------------------------------------------------------------
+// Form config (shown when nothing is selected — the builder's default state)
+// ---------------------------------------------------------------------------
+
+function FormConfig({ schema }: { schema: FormSchema }) {
+  const formName = useFormMetaStore((s) => s.name)
+  const cfg: CreateUserSettings = schema.settings?.createUser ?? emptyCreateUserSettings()
+
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100">
-        <SlidersHorizontal size={22} className="text-slate-300" />
+    <>
+      <div className="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-br from-slate-600 to-slate-700 px-4 py-3.5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/30">
+          <SlidersHorizontal size={17} className="text-white" />
+        </div>
+        <div>
+          <p className="text-[13px] font-semibold text-white">Form Settings</p>
+          <p className="text-[10px] text-white/60">Additional configuration</p>
+        </div>
       </div>
-      <p className="text-sm text-slate-400">Select a field or section<br />to configure it</p>
-    </div>
+      <ScrollArea className="flex-1">
+        <div className="space-y-4 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Additional Form Settings</p>
+          <ToggleRow
+            label={`Do you want to create a user with each ${formName} enrollment?`}
+            checked={cfg.enabled}
+            onCheckedChange={(enabled) => (enabled ? insertAccountSection() : removeAccountSection())}
+          />
+          {cfg.enabled && (
+            <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Create User</p>
+              <p className="text-[11px] text-slate-500">
+                An "Account" section was added to the canvas with Name, Email, and Role fields.
+                Edit those fields directly on the canvas — they behave like any other field.
+              </p>
+              <div className="space-y-1.5 pt-1">
+                <p className="text-[11px] font-medium text-slate-600">View-only columns</p>
+                {cfg.viewOnlyColumns.map((col) => (
+                  <div key={col.id} className="flex items-center justify-between rounded-md bg-white px-2.5 py-1.5 text-[12px] text-slate-500 ring-1 ring-slate-200">
+                    {col.label}
+                    <span className="text-[10px] uppercase tracking-wide text-slate-400">Read only</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    </>
   )
 }
 
@@ -134,10 +176,11 @@ function SectionConfig({ title, description, onChange }: {
 // Element config (tabbed)
 // ---------------------------------------------------------------------------
 
-function ElementConfig({ element, variables, formId, onChange }: {
+function ElementConfig({ element, variables, formId, schema, onChange }: {
   element: FormElement
   variables: VariableDecl[]
   formId: string | null
+  schema: FormSchema
   onChange: (patch: Partial<FormElement>) => void
 }) {
   const reg = COMPONENT_REGISTRY[element.component]
@@ -155,6 +198,14 @@ function ElementConfig({ element, variables, formId, onChange }: {
   const isFormRef = element.component === 'form'
   const isLineItems = element.component === 'line_items'
   const canBeUnique = supportsUnique(element.component)
+
+  // This form's own fields, for the Advanced Settings condition builder's
+  // field picker — excludes the element being configured (a rule can't
+  // meaningfully condition on the field it's attached to).
+  const formFields = schema.sections
+    .flatMap((s) => s.columns)
+    .flatMap((c) => c.elements)
+    .filter((e) => e.id !== element.id)
 
   const header = (
     <div className="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-br from-indigo-500 to-indigo-600 px-4 py-3.5">
@@ -388,6 +439,13 @@ function ElementConfig({ element, variables, formId, onChange }: {
                     <Input value={element.binding.optionSource ?? ''} onChange={(e) => setBinding({ optionSource: e.target.value })} placeholder="e.g. countries" className="h-8 text-sm" />
                   </Field>
                 )}
+
+                <div className="h-px bg-slate-100" />
+                <AdvancedSettingsSection
+                  settings={element.advancedSettings ?? []}
+                  fields={formFields}
+                  onChange={(advancedSettings) => onChange({ advancedSettings })}
+                />
               </TabsContent>
             )}
 

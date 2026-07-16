@@ -11,5 +11,6 @@ export interface TeamUser {
   first_name: string
   last_name: string
   status: string
+  is_super_admin: boolean
   memberships: UserMembership[]
 }

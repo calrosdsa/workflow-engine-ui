@@ -45,6 +45,15 @@ export interface FormDefinition {
    *  field on its parent. Hidden from the standalone forms list/tree; its
    *  rows are only ever read/written nested on the parent record. */
   is_line_items?: boolean
+  /** Backend-readable mirror of schema.settings.createUser — explicit typed
+   *  fields (not parsed out of the opaque `layout` blob) so record creation
+   *  can provision a real user account. Derived from schema.settings.createUser
+   *  by form-builder/serialize.ts's toPayload; the builder's own source of
+   *  truth stays schema.settings.createUser, hydrated from `layout` as usual. */
+  create_user_on_submit?: boolean
+  create_user_name_field?: string
+  create_user_email_field?: string
+  create_user_role_field?: string
   created_at: string
   updated_at: string
   migration_warnings?: string[]

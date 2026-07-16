@@ -11,6 +11,7 @@ import { PermissionGate } from '@/features/auth/PermissionGate'
 import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuilder'
 import { nanoid } from '@/features/workflows/builder/nanoid'
 import { RecordDetailPanel } from '@/features/forms/runtime/RecordDetailPanel'
+import { parseLayout } from '@/features/form-builder/serialize'
 import type { MenuRuntimeRendererProps } from '../menu-registry'
 import type { SearchMenuConfig, AddMenuConfig } from '../types'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
@@ -89,7 +90,7 @@ export function SearchMenuRuntime({ menu, menus, onNavigate }: MenuRuntimeRender
           <Button variant="outline" size="sm" onClick={() => setFilterOpen((o) => !o)} className="gap-1.5">
             <FilterIcon size={14} />Filter
           </Button>
-          <PermissionGate need="forms:write">
+          <PermissionGate need={`forms:${config.form_id}:create`}>
             <Button
               size="sm"
               className="gap-1.5"
@@ -143,7 +144,7 @@ export function SearchMenuRuntime({ menu, menus, onNavigate }: MenuRuntimeRender
       </div>
 
       <Drawer open={!!selectedRecord} onOpenChange={(o) => !o && closeRecord()}>
-        <DrawerContent size="lg">
+        <DrawerContent size="lg" container={document.getElementById('runtime-root')}>
           <DrawerHeader className="flex flex-row items-center justify-between pr-10">
             <DrawerTitle>Record details</DrawerTitle>
             {selectedRecord && (
@@ -158,7 +159,13 @@ export function SearchMenuRuntime({ menu, menus, onNavigate }: MenuRuntimeRender
             )}
           </DrawerHeader>
           {selectedRecord && (
-            <RecordDetailPanel formId={config.form_id} recordId={selectedRecord.id as string} fields={form.fields} />
+            <RecordDetailPanel
+              formId={config.form_id}
+              recordId={selectedRecord.id as string}
+              fields={form.fields}
+              schema={parseLayout(form.layout)}
+              onDeleted={closeRecord}
+            />
           )}
         </DrawerContent>
       </Drawer>

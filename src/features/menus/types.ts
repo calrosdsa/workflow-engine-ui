@@ -47,6 +47,13 @@ export interface CustomMenuConfig {
 
 export type MenuConfig = SearchMenuConfig | AddMenuConfig | ParentMenuConfig | CustomMenuConfig
 
+/** How the "Permission" section of the menu editor gates visibility:
+ *  'all' shows the menu to anyone who can view the app; 'role' restricts it
+ *  to members whose current role (Membership.role_id) is in
+ *  required_role_ids. Independent of required_permission, which continues to
+ *  gate on a resource:action permission key. */
+export type PermissionMode = 'all' | 'role'
+
 export interface Menu {
   id: string
   app_id: string
@@ -58,6 +65,8 @@ export interface Menu {
   sort_order: number
   config: MenuConfig
   required_permission?: string
+  permission_mode: PermissionMode
+  required_role_ids: string[]
   created_at: string
   updated_at: string
 }

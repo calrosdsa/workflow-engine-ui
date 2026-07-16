@@ -7,7 +7,7 @@ import { useBuilderStore, DUPLICABLE_NODE_TYPES, type FlowNode, type DropPositio
 import { computeExecutionOrder } from '../executionOrder'
 import { nodeSetupIssue } from '../node-validation'
 import { DropZone } from './DropZone'
-import type { SetVariableConfig, ConditionConfig, VariableAssignment, FetchRecordsConfig, FilterGroup, IteratorConfig, HttpRequestConfig, TriggerConfig, ShowMessageConfig } from '../../types'
+import type { SetVariableConfig, ConditionConfig, VariableAssignment, FetchRecordsConfig, FilterGroup, IteratorConfig, HttpRequestConfig, TriggerConfig, ShowMessageConfig, NotificationConfig } from '../../types'
 
 const DRAG_TRANSFER_KEY = 'application/workflow-node-reorder'
 
@@ -369,6 +369,22 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
         <div className="space-y-1 text-[10px]">
           <code className={cn('rounded px-1 py-0.5 font-semibold', typeColor[cfg.message_type])}>{cfg.message_type}</code>
           <p className="truncate text-slate-500">{cfg.message}</p>
+        </div>
+      )
+    }
+    case 'notification': {
+      const cfg = data.configuration as NotificationConfig | undefined
+      if (!cfg?.title) return <p className="text-[11px] italic text-slate-400">No title set</p>
+      const severityColor: Record<NotificationConfig['severity'], string> = {
+        success: 'bg-emerald-50 text-emerald-700', error: 'bg-red-50 text-red-700',
+        warning: 'bg-amber-50 text-amber-700', info: 'bg-sky-50 text-sky-700',
+      }
+      const recipient = cfg.recipient_mode === 'expression' ? cfg.recipient_expr : cfg.recipient_user_id
+      return (
+        <div className="space-y-1 text-[10px]">
+          <code className={cn('rounded px-1 py-0.5 font-semibold', severityColor[cfg.severity])}>{cfg.severity}</code>
+          <p className="truncate text-slate-500">{cfg.title}</p>
+          {recipient && <p className="truncate text-slate-400">to: {recipient}</p>}
         </div>
       )
     }

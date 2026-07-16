@@ -56,6 +56,9 @@ const nodeTypes = {
   loop_end: BaseNode,
   http_request: BaseNode,
   show_message: BaseNode,
+  notification: BaseNode,
+  send_email: BaseNode,
+
 };
 
 const Flow = () => {

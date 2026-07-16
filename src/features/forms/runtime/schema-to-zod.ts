@@ -45,7 +45,12 @@ function fieldSchema(el: FormElement): z.ZodTypeAny {
   }
 
   if (!isStaticRequired) {
-    base = base.optional().or(z.literal(''))
+    // A reference field's unset state is a real SQL NULL on a uuid FK column
+    // (see FormRenderer.tsx's nullsToEmptyStrings, which deliberately leaves
+    // reference values alone rather than coercing them to '' like every
+    // other string-shaped field) — '' isn't a valid uuid and 500s at the DB
+    // layer, so null has to be an accepted value here too, not just ''.
+    base = reg.fieldType === 'reference' ? base.optional().nullable().or(z.literal('')) : base.optional().or(z.literal(''))
   }
   return base
 }

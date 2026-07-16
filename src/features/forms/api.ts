@@ -22,7 +22,9 @@ export const formsApi = {
   get:    (id: string) => api.get(`forms/${id}`).json<FormDefinition>(),
   create: (p: CreateFormPayload) => api.post('forms', { json: p }).json<FormDefinition>(),
   update: (id: string, p: UpdateFormPayload) => api.put(`forms/${id}`, { json: p }).json<FormDefinition>(),
-  delete: (id: string) => api.delete(`forms/${id}`),
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`forms/${id}`)
+  },
 
   // --- tree actions ("..." menu on a form node) ---
   copy:   (id: string) => api.post(`forms/${id}/copy`).json<FormDefinition>(),
@@ -41,12 +43,35 @@ export const formsApi = {
     api.post(`forms/${formId}/records?executeWorkflows=true`, { json: data }).json<FormRecord>(),
   updateRecord:  (formId: string, recordId: string, data: FormRecord) =>
     api.put(`forms/${formId}/records/${recordId}`, { json: data }).json<FormRecord>(),
-  deleteRecord:  (formId: string, recordId: string) =>
-    api.delete(`forms/${formId}/records/${recordId}`),
+  // Awaits the ky ResponsePromise directly (a 204 has no body to parse) so
+  // callers get a real, settled Promise<void> — passing the raw
+  // ResponsePromise through unresolved is what let React Query's mutation
+  // observer see the DELETE's HTTP request finish while its own isPending/
+  // isSuccess state never flipped (reproduced specifically on the "Expand to
+  // full page" route's standalone confirm dialog).
+  deleteRecord:  async (formId: string, recordId: string): Promise<void> => {
+    await api.delete(`forms/${formId}/records/${recordId}`)
+  },
   searchRecords: (formId: string, req: SearchRecordsRequest) =>
     api.post(`forms/${formId}/records/search`, { json: req }).json<SearchRecordsResponse>(),
   getRecordAuditLog: (formId: string, recordId: string, params: { page: number; page_size: number }) =>
     api.get(`forms/${formId}/records/${recordId}/audit`, { searchParams: params }).json<AuditLogResponse>(),
   getLinkedRecords: (formId: string, recordId: string, params: { page: number; page_size: number }) =>
     api.get(`forms/${formId}/records/${recordId}/linked`, { searchParams: params }).json<LinkedRecordsResponse>(),
+
+  // --- record-detail account actions (create_user_on_submit forms) ---
+  getRecordAccountStatus: (formId: string, recordId: string) =>
+    api.get(`forms/${formId}/records/${recordId}/account`).json<RecordAccountStatus>(),
+  resendRecordInvite: (formId: string, recordId: string) =>
+    api.post(`forms/${formId}/records/${recordId}/account/resend-invite`).json<RecordAccountStatus>(),
+  removeRecordAccess: (formId: string, recordId: string) =>
+    api.post(`forms/${formId}/records/${recordId}/account/remove-access`).json<RecordAccountStatus>(),
+  enableRecordAccess: (formId: string, recordId: string, data: { email: string; role_id: string }) =>
+    api.post(`forms/${formId}/records/${recordId}/account/enable-access`, { json: data }).json<RecordAccountStatus>(),
+}
+
+export interface RecordAccountStatus {
+  status: 'none' | 'pending' | 'active' | 'removed'
+  invitation_id?: string
+  user_id?: string
 }

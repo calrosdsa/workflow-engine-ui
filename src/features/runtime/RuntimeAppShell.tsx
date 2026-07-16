@@ -1,14 +1,17 @@
 import { useState } from 'react'
-import { Menu as MenuIcon, X } from 'lucide-react'
+import { Menu as MenuIcon, X, PencilRuler } from 'lucide-react'
 import { runtimeRouter } from '@/runtime-router'
 import { ThemeProvider } from '@/features/theme/ThemeProvider'
 import { mergeTheme } from '@/features/theme/default-theme'
 import { useAuthStore } from '@/stores/auth'
-import { hasPermission } from '@/features/auth/permissions'
+import { canViewMenu, hasPermission } from '@/features/auth/permissions'
 import { buildRuntimeNavTree, runtimeAncestors, toMenu } from './nav'
 import { RuntimeSidebar } from './RuntimeSidebar'
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
 import { PermissionDeniedPage } from './PermissionDeniedPage'
+import { openDesignHub } from './designHub'
+import { NotificationBell } from './notifications/NotificationBell'
+import { ProfileMenu } from './ProfileMenu'
 import { MENU_TYPE_REGISTRY } from '@/features/menus/menu-registry'
 import type { AppSnapshot, MenuSnapshotItem } from './types'
 
@@ -29,14 +32,17 @@ interface RuntimeAppShellProps {
 export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: RuntimeAppShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const session = useAuthStore((s) => s.session)
-  const permissions = session?.memberships?.find(
+  const membership = session?.memberships?.find(
     (m) => m.client_id === clientId && m.app_id === appId,
-  )?.permissions ?? []
+  )
+  const permissions = membership?.permissions ?? []
+  const roleId = membership?.role_id
+  const canDesign = hasPermission(permissions, 'application:design')
 
-  const navTree = buildRuntimeNavTree(snapshot.menus, permissions)
+  const navTree = buildRuntimeNavTree(snapshot.menus, roleId, permissions)
   const breadcrumbs = runtimeAncestors(snapshot.menus, currentMenu.id)
 
-  const canViewCurrent = !currentMenu.required_permission || hasPermission(permissions, currentMenu.required_permission)
+  const canViewCurrent = canViewMenu(currentMenu, roleId, permissions)
 
   const theme = mergeTheme(snapshot.theme)
   const RuntimeRenderer = MENU_TYPE_REGISTRY[currentMenu.menu_type].runtimeRenderer
@@ -66,8 +72,11 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
         {/* Mobile slide-over nav */}
         {mobileNavOpen && (
           <div className="fixed inset-0 z-50 flex md:hidden">
-            <div className="absolute inset-0 bg-black/40" onClick={() => setMobileNavOpen(false)} />
-            <div className="relative">
+            <div
+              className="absolute inset-0 bg-black/40 animate-in fade-in-0 duration-200 motion-reduce:animate-none"
+              onClick={() => setMobileNavOpen(false)}
+            />
+            <div className="relative animate-in slide-in-from-left duration-200 ease-out motion-reduce:animate-none">
               <RuntimeSidebar
                 appName={snapshot.app.name}
                 navTree={navTree}
@@ -82,14 +91,37 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <header className="flex h-12 shrink-0 items-center gap-3 border-b px-4 md:hidden" style={{ borderColor: 'hsl(var(--border))' }}>
-            <button onClick={() => setMobileNavOpen((o) => !o)} aria-label="Toggle navigation">
+            <button
+              onClick={() => setMobileNavOpen((o) => !o)}
+              aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+              aria-expanded={mobileNavOpen}
+              className="-ml-1.5 rounded-md p-1.5 transition-colors hover:bg-[hsl(var(--accent))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+            >
               {mobileNavOpen ? <X size={18} /> : <MenuIcon size={18} />}
             </button>
-            <span className="text-sm font-semibold">{snapshot.app.name}</span>
+            <span className="truncate text-sm font-semibold">{snapshot.app.name}</span>
           </header>
 
-          <div className="border-b px-4 py-2" style={{ borderColor: 'hsl(var(--border))' }}>
+          <div className="flex items-center justify-between gap-3 border-b px-4 py-2" style={{ borderColor: 'hsl(var(--border))' }}>
             <RuntimeBreadcrumbs appName={snapshot.app.name} ancestors={breadcrumbs} current={currentMenu} clientId={clientId} appId={appId} />
+            <div className="flex shrink-0 items-center gap-2">
+              {canDesign && membership && (
+                <button
+                  onClick={() => openDesignHub(membership)}
+                  className="flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+                  style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}
+                >
+                  <PencilRuler size={13} />
+                  Edit Design
+                </button>
+              )}
+              {session && (
+                <>
+                  <NotificationBell clientId={clientId} appId={appId} />
+                  <ProfileMenu session={session} />
+                </>
+              )}
+            </div>
           </div>
 
           <main className="min-h-0 flex-1 overflow-y-auto">

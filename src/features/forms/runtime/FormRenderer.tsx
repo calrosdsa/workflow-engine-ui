@@ -32,7 +32,37 @@ function emptyDefaults(schema: FormSchema): Record<string, unknown> {
     if (!reg.dataBearing) continue
     if (reg.fieldType === 'boolean') out[el.key] = false
     else if (reg.fieldType === 'json') out[el.key] = el.component === 'multiselect' ? [] : null
+    // 'reference' columns are real Postgres uuid foreign keys, not text —
+    // sending '' for an unset one 500s with "invalid input syntax for type
+    // uuid" (see nullsToEmptyStrings above for the full explanation).
+    else if (reg.fieldType === 'reference') out[el.key] = null
     else out[el.key] = ''
+  }
+  return out
+}
+
+// A real record's SQL NULLs (unset text/enum columns) arrive as `null`,
+// which schema-to-zod's z.string() rejects outright (it only allows '' or a
+// real string) — every other value came through emptyDefaults(), which
+// never produces null for a string-shaped field. Editing an existing record
+// with an unset field is the only path that surfaces this: the Add page
+// always starts from emptyDefaults() alone, so it never carries a raw null
+// in. Coercing null -> '' here keeps the merge below type-safe for every
+// field the schema-to-zod string branch (schema-to-zod.ts:32) covers.
+//
+// 'reference' is excluded even though it also falls into that string
+// branch: its physical column is a real Postgres uuid (a foreign key), not
+// text, so an unset reference must stay null on submit — sending '' 500s
+// with "invalid input syntax for type uuid" (confirmed against the
+// backend's marshalArg). ReferenceFieldAutocomplete already treats
+// value ?? '' as its own internal empty-selection sentinel for display, so
+// leaving the underlying form value null doesn't break that component.
+function nullsToEmptyStrings(schema: FormSchema, values: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...values }
+  for (const el of iterElements(schema)) {
+    const reg = COMPONENT_REGISTRY[el.component]
+    if (!reg.dataBearing || reg.fieldType === 'json' || reg.fieldType === 'boolean' || reg.fieldType === 'reference') continue
+    if (out[el.key] === null) out[el.key] = ''
   }
   return out
 }
@@ -58,7 +88,7 @@ export function FormRenderer({ schema, defaultValues, onSubmit, submitting, subm
 
   const { control, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(zodSchema),
-    defaultValues: { ...emptyDefaults(schema), ...defaultValues },
+    defaultValues: { ...emptyDefaults(schema), ...nullsToEmptyStrings(schema, defaultValues ?? {}) },
   })
 
   const liveValues = useWatch({ control }) as Record<string, unknown>

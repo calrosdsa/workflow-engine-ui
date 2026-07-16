@@ -2,7 +2,7 @@ import type { ComponentType as ComponentTypeReact } from 'react'
 import {
   Type, AlignLeft, Hash, Mail, Lock, Phone, Link2,
   Calendar, Clock, CalendarClock,
-  CheckSquare, ToggleLeft, CircleDot, ChevronDownSquare, ListChecks, Search,
+  CheckSquare, ToggleLeft, CircleDot, ChevronDownSquare, ListChecks, Search, ShieldCheck,
   Upload, Image,
   FileText, Minus, Heading, Pilcrow, StretchVertical, EyeOff,
   FormInput, Table2,
@@ -55,6 +55,15 @@ export const COMPONENT_REGISTRY: Record<ComponentType, ComponentRegistryEntry> =
   autocomplete:{ type: 'autocomplete',label: 'Autocomplete', icon: Search,            category: 'Choice', dataBearing: true, fieldType: 'string',  description: 'Searchable select' },
   form:        { type: 'form',        label: 'Form Reference', icon: FormInput,        category: 'Choice', dataBearing: true, fieldType: 'reference', description: 'Reference another form' },
   line_items:  { type: 'line_items',  label: 'Line Items',    icon: Table2,            category: 'Choice', dataBearing: false, description: 'Embedded child record grid' },
+  // fieldType 'string', not 'enum': a role's valid values are the app's
+  // dynamic role-id set, not something declarable as a fixed CHECK
+  // constraint at form-save time — FieldDef.Validate() (backend) rejects
+  // any TypeEnum field with an empty enum_values list, which a role field
+  // would always have since options come from useRoles(appId) at fill
+  // time, never from static el.options. Mirrors 'autocomplete' below,
+  // which is 'string' for the same "dynamic, not statically enumerable"
+  // reason.
+  role:        { type: 'role',        label: 'Role',          icon: ShieldCheck,       category: 'Choice', dataBearing: true, fieldType: 'string', description: 'Assign a role' },
 
   // --- Media ---
   file:      { type: 'file',  label: 'File Upload',  icon: Upload, category: 'Media', dataBearing: true, fieldType: 'file', description: 'Upload a file' },

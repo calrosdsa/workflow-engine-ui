@@ -78,7 +78,8 @@ export interface VariableCategory {
 }
 
 export const CONTEXT_ENTRIES: VariableCategory['entries'] = [
-  { insert: 'Context["workflow_id"]', label: 'workflow_id', hint: 'Current workflow definition ID' },
-  { insert: 'Context["run_id"]',      label: 'run_id',      hint: 'Current execution run ID' },
-  { insert: 'Context["task_queue"]',  label: 'task_queue',  hint: 'Temporal task queue name' },
+  { insert: 'Context["workflow_id"]',     label: 'workflow_id',     hint: 'Current workflow definition ID' },
+  { insert: 'Context["run_id"]',          label: 'run_id',          hint: 'Current execution run ID' },
+  { insert: 'Context["task_queue"]',      label: 'task_queue',      hint: 'Temporal task queue name' },
+  { insert: 'Context["trigger_user_id"]', label: 'trigger_user_id', hint: 'User who created/updated/deleted the triggering record (before/after/after_async triggers only)' },
 ]
