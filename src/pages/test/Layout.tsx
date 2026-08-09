@@ -77,6 +77,7 @@ const Flow = () => {
     undo,
     redo,
     applyDagreLayout,
+    closeActiveSidebar,
   } = useBuilderStore();
   const canUndo = useBuilderStore((s) => s.past.length > 0);
   const canRedo = useBuilderStore((s) => s.future.length > 0);
@@ -256,7 +257,10 @@ const Flow = () => {
         onConnect={handleConnect}
         onInit={onInit}
         onNodeClick={(_, node) => selectNode(node.id)}
-        onPaneClick={() => selectNode(null)}
+        onPaneClick={() => {
+          selectNode(null)
+          closeActiveSidebar()
+        }}
         nodesDraggable
         elevateEdgesOnSelect
         fitView

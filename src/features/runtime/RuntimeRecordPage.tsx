@@ -10,7 +10,9 @@ import { RuntimeSidebar } from './RuntimeSidebar'
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
 import { PermissionDeniedPage } from './PermissionDeniedPage'
 import { RecordDetailPanel } from '@/features/forms/runtime/RecordDetailPanel'
+import { resolveRecordTitle } from '@/features/forms/runtime/record-title'
 import { useForm as useFormDef } from '@/features/forms/hooks'
+import { useRecordDetail } from '@/features/forms/runtime/record-detail-hooks'
 import { parseLayout } from '@/features/form-builder/serialize'
 import type { AppSnapshot, MenuSnapshotItem } from './types'
 
@@ -43,6 +45,8 @@ export function RuntimeRecordPage({ snapshot, clientId, appId, currentMenu, form
   const canView = canViewMenu(currentMenu, roleId, permissions)
 
   const { data: form } = useFormDef(formId)
+  const { data: record } = useRecordDetail(formId, recordId)
+  const recordTitle = resolveRecordTitle(form?.fields, record)
   const theme = mergeTheme(snapshot.theme)
 
   return (
@@ -99,13 +103,20 @@ export function RuntimeRecordPage({ snapshot, clientId, appId, currentMenu, form
             {!canView ? (
               <PermissionDeniedPage />
             ) : !form ? null : (
-              <RecordDetailPanel
-                formId={formId}
-                recordId={recordId}
-                fields={form.fields}
-                schema={parseLayout(form.layout)}
-                onDeleted={() => runtimeRouter.navigate({ to: `/${clientId}/${appId}/${currentMenu.slug}` })}
-              />
+              <>
+                {recordTitle && (
+                  <div className="border-b px-6 py-4" style={{ borderColor: 'hsl(var(--border))' }}>
+                    <h1 className="truncate text-lg font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{recordTitle}</h1>
+                  </div>
+                )}
+                <RecordDetailPanel
+                  formId={formId}
+                  recordId={recordId}
+                  fields={form.fields}
+                  schema={parseLayout(form.layout)}
+                  onDeleted={() => runtimeRouter.navigate({ to: `/${clientId}/${appId}/${currentMenu.slug}` })}
+                />
+              </>
             )}
           </main>
         </div>

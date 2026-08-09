@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Plus, Trash2, ExternalLink, BookOpen } from 'lucide-react'
-import { useKnowledgeBases, useCreateKnowledgeBase, useDeleteKnowledgeBase, useProviders } from '@/features/knowledge/hooks'
-import { CredentialSelect } from '@/features/app-settings/CredentialSelect'
+import { Plus, Trash2, ExternalLink, BookOpen, Sparkles } from 'lucide-react'
+import { useKnowledgeBases, useCreateKnowledgeBase, useDeleteKnowledgeBase } from '@/features/knowledge/hooks'
+import { ProviderSelect } from '@/features/llm-providers/ProviderSelect'
+import { ManageProvidersDialog } from '@/features/llm-providers/ManageProvidersDialog'
 import { usePermission } from '@/features/auth/permissions'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
+import { Checkbox } from '@/components/ui/checkbox'
 import type { CreateKnowledgeBasePayload, KnowledgeBaseSummary, Provider } from '@/features/knowledge/types'
 
 export function KnowledgeBasesPage() {
@@ -17,6 +18,7 @@ export function KnowledgeBasesPage() {
   const deleteMutation = useDeleteKnowledgeBase()
   const canWrite = usePermission('knowledge:write')
   const [createOpen, setCreateOpen] = useState(false)
+  const [providersOpen, setProvidersOpen] = useState(false)
 
   if (isLoading) return <PageLoader />
 
@@ -27,12 +29,18 @@ export function KnowledgeBasesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Knowledge Bases</h1>
-          <p className="text-sm text-gray-500 mt-1">{ordered.length} knowledge bases</p>
+          <p className="text-sm text-gray-500 mt-1">{ordered.length} knowledge bases · shared across every application</p>
         </div>
-        {canWrite && (
-          <Button onClick={() => setCreateOpen(true)}><Plus size={16} />New Knowledge Base</Button>
-        )}
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setProvidersOpen(true)} className="gap-1.5">
+            <Sparkles size={16} />Providers
+          </Button>
+          {canWrite && (
+            <Button onClick={() => setCreateOpen(true)}><Plus size={16} />New Knowledge Base</Button>
+          )}
+        </div>
       </div>
+      <ManageProvidersDialog open={providersOpen} onOpenChange={setProvidersOpen} />
 
       {!ordered.length ? (
         <EmptyState canWrite={canWrite} onCreate={() => setCreateOpen(true)} />
@@ -61,7 +69,7 @@ function KnowledgeBaseRow({ kb, canWrite, onDelete }: { kb: KnowledgeBaseSummary
     <div className="group flex items-center gap-3 px-4 py-3">
       <BookOpen size={16} className="shrink-0 text-teal-500" />
       <div className="min-w-0 flex-1">
-        <span className="truncate font-medium text-gray-900">{kb.name}</span>
+        <div className="truncate font-medium text-gray-900">{kb.name}</div>
         <p className="mt-0.5 truncate text-xs text-gray-400">
           {PROVIDER_LABELS[kb.provider]} · {kb.credential_name} · Updated {new Date(kb.updated_at).toLocaleDateString()}
         </p>
@@ -96,29 +104,14 @@ function PageLoader() {
 }
 
 const EMPTY_PAYLOAD: CreateKnowledgeBasePayload = {
-  name: '', description: '', provider: 'openai', credential_name: '', llm_model: '', embedding_model: '',
+  name: '', description: '', llm_provider_id: '', embedding_provider_id: '', shared: true,
 }
 
 function CreateKnowledgeBaseDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { data: providers, isLoading: providersLoading } = useProviders()
   const [form, setForm] = useState<CreateKnowledgeBasePayload>(EMPTY_PAYLOAD)
   const createMutation = useCreateKnowledgeBase()
 
-  const selectedProvider = providers?.find((p) => p.provider === form.provider)
-
-  // Default the model pickers to the provider's first offered model whenever
-  // the provider changes (including on first load, once the catalog arrives).
-  useEffect(() => {
-    if (!selectedProvider) return
-    setForm((f) => ({
-      ...f,
-      llm_model: f.llm_model || selectedProvider.llm_models[0] || '',
-      embedding_model: f.embedding_model || selectedProvider.embedding_models[0]?.model || '',
-    }))
-  }, [selectedProvider])
-
-  const canSubmit = form.name.trim() !== '' && form.credential_name.trim() !== ''
-    && form.llm_model.trim() !== '' && form.embedding_model.trim() !== ''
+  const canSubmit = form.name.trim() !== '' && form.llm_provider_id !== '' && form.embedding_provider_id !== ''
 
   const submit = () => {
     createMutation.mutate(form, {
@@ -129,15 +122,14 @@ function CreateKnowledgeBaseDialog({ open, onOpenChange }: { open: boolean; onOp
     })
   }
 
-  const selectedEmbedding = selectedProvider?.embedding_models.find((m) => m.model === form.embedding_model)
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-lg">
         <DialogHeader>
           <DialogTitle>New Knowledge Base</DialogTitle>
           <DialogDescription>
-            Pick a provider and a saved credential — the API key is resolved server-side and never leaves the backend.
+            Pick a saved LLM provider and embedding provider — the API key is resolved server-side and never leaves
+            the backend.
           </DialogDescription>
         </DialogHeader>
 
@@ -151,71 +143,40 @@ function CreateKnowledgeBaseDialog({ open, onOpenChange }: { open: boolean; onOp
             <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Product support articles and FAQs" />
           </div>
 
+          <label className="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50/60 p-3">
+            <Checkbox
+              checked={form.shared ?? true}
+              onCheckedChange={(checked) => setForm({ ...form, shared: checked === true })}
+              className="mt-0.5"
+            />
+            <span className="text-sm">
+              <span className="block font-medium text-gray-700">Share across every app</span>
+              <span className="block text-[11px] text-gray-400">
+                Available to every application under this client. Uncheck to keep this knowledge base private to the app you're currently working in.
+              </span>
+            </span>
+          </label>
+
           <div>
-            <Label className="mb-1 block text-xs font-medium text-gray-600">Provider</Label>
-            <div className="flex gap-1.5">
-              {(['openai', 'gemini'] as const).map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setForm({ ...form, provider: p, credential_name: '', llm_model: '', embedding_model: '' })}
-                  className={cn(
-                    'flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
-                    form.provider === p ? 'border-teal-400 bg-teal-50 text-teal-700' : 'border-gray-200 text-gray-500 hover:border-gray-300',
-                  )}
-                >
-                  {PROVIDER_LABELS[p]}
-                </button>
-              ))}
-            </div>
+            <Label className="mb-1 block text-xs font-medium text-gray-600">LLM Provider</Label>
+            <ProviderSelect
+              value={form.llm_provider_id || undefined}
+              onChange={(id) => setForm({ ...form, llm_provider_id: id ?? '' })}
+              kind="llm"
+            />
           </div>
 
           <div>
-            <Label className="mb-1 block text-xs font-medium text-gray-600">Credential</Label>
-            <CredentialSelect
-              value={form.credential_name || undefined}
-              onChange={(name) => setForm({ ...form, credential_name: name ?? '' })}
-              typeFilter="bearer"
-              accentClassName="text-teal-600"
+            <Label className="mb-1 block text-xs font-medium text-gray-600">Embedding Provider</Label>
+            <ProviderSelect
+              value={form.embedding_provider_id || undefined}
+              onChange={(id) => setForm({ ...form, embedding_provider_id: id ?? '' })}
+              kind="embedding"
             />
             <p className="mt-1 text-[11px] text-gray-400">
-              A Bearer token credential holding the {PROVIDER_LABELS[form.provider]} API key. Manage saved credentials in Application Settings.
+              Fixed once created — changing the embedding provider later requires a new knowledge base.
             </p>
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="mb-1 block text-xs font-medium text-gray-600">LLM Model</Label>
-              <select
-                value={form.llm_model}
-                onChange={(e) => setForm({ ...form, llm_model: e.target.value })}
-                disabled={providersLoading || !selectedProvider}
-                className="h-9 w-full rounded-md border border-gray-200 bg-white px-2.5 text-sm text-gray-700 disabled:opacity-50"
-              >
-                {(selectedProvider?.llm_models ?? []).map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label className="mb-1 block text-xs font-medium text-gray-600">Embedding Model</Label>
-              <select
-                value={form.embedding_model}
-                onChange={(e) => setForm({ ...form, embedding_model: e.target.value })}
-                disabled={providersLoading || !selectedProvider}
-                className="h-9 w-full rounded-md border border-gray-200 bg-white px-2.5 text-sm text-gray-700 disabled:opacity-50"
-              >
-                {(selectedProvider?.embedding_models ?? []).map((m) => (
-                  <option key={m.model} value={m.model}>{m.model} ({m.dim}d)</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          {selectedEmbedding && (
-            <p className="text-[11px] text-gray-400">
-              The embedding dimension ({selectedEmbedding.dim}d) is fixed once created — changing embedding models later requires a new knowledge base.
-            </p>
-          )}
         </div>
 
         <DialogFooter>

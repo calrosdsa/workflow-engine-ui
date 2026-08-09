@@ -8,9 +8,12 @@ import {
 } from '@xyflow/react'
 import { Plus } from 'lucide-react'
 import { useBuilderStore, type FlowEdge } from '@/features/workflows/builder/store'
+import { useExecutionOverlayStore } from '@/features/workflows/builder/execution-overlay-store'
 
 export function CustomEdge({
   id,
+  source,
+  target,
   sourceX, sourceY,
   targetX, targetY,
   style,
@@ -29,13 +32,29 @@ export function CustomEdge({
   const openPicker     = useBuilderStore((s) => s.openPicker)
   const draggingNodeId = useBuilderStore((s) => s.draggingNodeId)
 
+  // Taken-path highlighting (FR-C5-007): an edge is "taken" only if BOTH its
+  // endpoints were reached by the selected execution — an edge into an
+  // untaken condition branch has just one endpoint reached and must not
+  // light up, since that would misrepresent a path that never executed.
+  const overlayExecution = useExecutionOverlayStore((s) => s.data)
+  const nodeStatuses = overlayExecution?.node_statuses
+  const overlayActive = nodeStatuses != null
+  const isTakenPath = overlayActive && nodeStatuses[source] !== undefined && nodeStatuses[target] !== undefined
+  const dimUntaken = overlayActive && !isTakenPath
+
   // Selected edges get a distinct accent color + thicker stroke; hover is a
-  // lighter highlight. Default is the muted slate from props.
-  const stroke = selected ? '#6366f1' : hovered ? '#3b82f6' : style?.stroke ?? '#cbd5e1'
-  const strokeWidth = selected ? 3 : 2
+  // lighter highlight. A taken path in an active overlay takes priority over
+  // the idle default so the highlight reads clearly even when nothing is
+  // selected/hovered. Default is the muted slate from props.
+  const stroke = selected ? '#6366f1'
+    : hovered ? '#3b82f6'
+    : isTakenPath ? '#10b981'
+    : style?.stroke ?? '#cbd5e1'
+  const strokeWidth = selected || isTakenPath ? 3 : 2
   // Dim edges while a reorder drag is in flight, matching the node fade so the
   // whole idle tree recedes and the drag/drop pair stays visually prominent.
-  const opacity = draggingNodeId !== null ? 0.35 : 1
+  // An untaken path in an active overlay recedes the same way.
+  const opacity = draggingNodeId !== null ? 0.35 : dimUntaken ? 0.3 : 1
 
   return (
     <>

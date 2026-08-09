@@ -1,26 +1,26 @@
 import { Link } from '@tanstack/react-router'
-import { Workflow, Play, FileText, LayoutDashboard, LayoutGrid, Users2, BookOpen } from 'lucide-react'
+import { LayoutGrid, Users2, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { usePermission } from '@/features/auth/permissions'
+import { useAuthStore } from '@/stores/auth'
+import { isSuperAdmin } from '@/features/auth/access'
 
-// requiresDesign: gates design tools (Workflow/Form builders, Applications'
-// Menu Config + App Settings) behind application:design — matches the
-// user's explicit design-tool list. Dashboard, Executions (monitoring/
-// triggering, not building), and Team (its own independent users:write/
-// roles:write gates, deliberately NOT tied to application:design — see
-// features/auth/access.ts) stay ungated here.
+// Global chrome only — Workflows/Forms/Executions moved into the app-scoped
+// design shell (ApplicationDesignShell) since they only make sense inside a
+// specific app now. What's left here is genuinely global: Home (the app
+// list), Knowledge Bases (client-wide, see B in the restructure plan), and
+// Team/User Management (client-wide, Super-Admin-only — see
+// features/auth/access.ts's isSuperAdmin and teamRoute's beforeLoad).
 const navItems = [
-  { to: '/',             label: 'Dashboard',    icon: LayoutDashboard, requiresDesign: false },
-  { to: '/workflows',    label: 'Workflows',    icon: Workflow,        requiresDesign: true },
-  { to: '/executions',   label: 'Executions',   icon: Play,            requiresDesign: false },
-  { to: '/forms',        label: 'Forms',        icon: FileText,        requiresDesign: true },
-  { to: '/knowledge-bases', label: 'Knowledge Bases', icon: BookOpen,  requiresDesign: true },
-  { to: '/applications', label: 'Applications', icon: LayoutGrid,      requiresDesign: true },
-  { to: '/team',         label: 'Team',         icon: Users2,          requiresDesign: false },
+  { to: '/',                label: 'Home',            icon: LayoutGrid },
+]
+
+const globalNavItems = [
+  { to: '/knowledge-bases', label: 'Knowledge Bases', icon: BookOpen },
 ]
 
 export function Sidebar() {
-  const canDesign = usePermission('application:design')
+  const session = useAuthStore((s) => s.session)
+  const canSeeTeam = isSuperAdmin(session)
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r bg-gray-900 text-white">
@@ -30,9 +30,24 @@ export function Sidebar() {
         </span>
       </div>
       <nav className="flex-1 space-y-1 p-3">
-        {navItems
-          .filter(({ requiresDesign }) => !requiresDesign || canDesign)
-          .map(({ to, label, icon: Icon }) => (
+        {navItems.map(({ to, label, icon: Icon }) => (
+          <Link
+            key={to}
+            to={to}
+            className={cn(
+              'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+              'text-gray-300 hover:bg-gray-800 hover:text-white',
+              '[&.active]:bg-blue-600 [&.active]:text-white',
+            )}
+          >
+            <Icon size={16} />
+            {label}
+          </Link>
+        ))}
+
+        <div className="my-2 border-t border-gray-700 pt-2">
+          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Global</p>
+          {globalNavItems.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
@@ -46,6 +61,20 @@ export function Sidebar() {
               {label}
             </Link>
           ))}
+          {canSeeTeam && (
+            <Link
+              to="/team"
+              className={cn(
+                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                'text-gray-300 hover:bg-gray-800 hover:text-white',
+                '[&.active]:bg-blue-600 [&.active]:text-white',
+              )}
+            >
+              <Users2 size={16} />
+              Team
+            </Link>
+          )}
+        </div>
       </nav>
       <div className="border-t border-gray-700 p-3">
         <p className="text-xs text-gray-500">v0.1.0</p>

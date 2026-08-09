@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useParams } from '@tanstack/react-router'
 import { Plus, Database, HelpCircle } from 'lucide-react'
 import { useForms } from '@/features/forms/hooks'
 import { useApplication } from '@/features/applications/hooks'
@@ -16,6 +16,7 @@ export function FormsPage() {
   const { data: app } = useApplication()
   const canWrite = usePermission('forms:write')
   const [helpOpen, setHelpOpen] = useState(false)
+  const { appId } = useParams({ strict: false }) as { appId?: string }
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Spinner /></div>
 
@@ -33,20 +34,20 @@ export function FormsPage() {
           <Database size={32} className="text-gray-300 mb-3" />
           <p className="text-gray-500 mb-4">No forms yet. Create one to auto-generate a Postgres table.</p>
           {canWrite && (
-            <Link to="/forms/new">
+            <Link to="/applications/$appId/forms/new" params={{ appId: appId ?? '' }}>
               <Button variant="outline"><Plus size={16} />Create your first form</Button>
             </Link>
           )}
         </div>
       ) : (
         <div className="flex-1 overflow-auto">
-          <FormTree appName={app?.name ?? 'App'} forms={forms} canWrite={canWrite} />
+          <FormTree appId={appId ?? ''} appName={app?.name ?? 'App'} forms={forms} canWrite={canWrite} />
         </div>
       )}
 
       <div className="absolute bottom-6 right-6 flex flex-col items-end gap-2">
         {canWrite && (
-          <Link to="/forms/new">
+          <Link to="/applications/$appId/forms/new" params={{ appId: appId ?? '' }}>
             <Button className="rounded-full shadow-md"><Plus size={16} />Add Form</Button>
           </Link>
         )}

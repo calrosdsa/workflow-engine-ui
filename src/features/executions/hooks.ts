@@ -16,11 +16,14 @@ export function useExecutions(definitionId?: string) {
   })
 }
 
-// Polls every 2 s until the execution reaches a terminal state.
+// Polls every 2 s until the execution reaches a terminal state. Disabled
+// when executionId is empty (e.g. the Workflow Builder's execution overlay
+// has nothing selected) rather than firing a request with a blank ID.
 export function useExecution(executionId: string) {
   return useQuery({
     queryKey: executionKeys.detail(executionId),
     queryFn:  () => executionsApi.get(executionId),
+    enabled:  executionId !== '',
     refetchInterval: (query) => {
       const status = query.state.data?.status
       return status && TERMINAL.includes(status) ? false : 2000

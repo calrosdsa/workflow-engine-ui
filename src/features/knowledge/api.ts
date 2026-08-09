@@ -3,6 +3,7 @@ import type {
   KnowledgeBase, KnowledgeBaseSummary, ProviderCatalogEntry,
   CreateKnowledgeBasePayload, UpdateKnowledgeBasePayload,
   KnowledgeDocument, ListDocumentsResponse, QueryKnowledgeBasePayload, QueryKnowledgeBaseResponse,
+  DocumentGraphResponse,
 } from './types'
 
 export const knowledgeApi = {
@@ -35,6 +36,11 @@ export const knowledgeApi = {
     }).json<{ doc_id: string; status: string; duplicate: boolean }>()
   },
   deleteDocument: (kbId: string, docId: string) => api.delete(`knowledge-bases/${kbId}/documents/${docId}`),
+  retryDocument: (kbId: string, docId: string) =>
+    api.post(`knowledge-bases/${kbId}/documents/${docId}/retry`)
+      .json<{ doc_id: string; status: string; duplicate: boolean }>(),
+  getDocumentGraph: (kbId: string, docId: string) =>
+    api.get(`knowledge-bases/${kbId}/documents/${docId}/graph`).json<DocumentGraphResponse>(),
 
   query: (kbId: string, p: QueryKnowledgeBasePayload) =>
     api.post(`knowledge-bases/${kbId}/query`, { json: p }).json<QueryKnowledgeBaseResponse>(),

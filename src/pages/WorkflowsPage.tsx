@@ -12,6 +12,7 @@ import { useWorkflows, useDeleteWorkflow, useReorderWorkflows } from '@/features
 import { useTriggerExecution } from '@/features/executions/hooks'
 import { useForms } from '@/features/forms/hooks'
 import { usePermission } from '@/features/auth/permissions'
+import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
@@ -53,6 +54,7 @@ export function WorkflowsPage() {
   const [activeId, setActiveId] = useState<string | null>(null)
   const canWrite = usePermission('workflows:write')
   const canTrigger = usePermission('executions:write')
+  const appId = useAuthStore((s) => s.activeMembership?.app_id) ?? ''
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -99,7 +101,7 @@ export function WorkflowsPage() {
           </p>
         </div>
         {canWrite && (
-          <Link to="/workflows/new">
+          <Link to="/applications/$appId/workflows/new" params={{ appId }}>
             <Button><Plus size={16} />New Workflow</Button>
           </Link>
         )}
@@ -107,12 +109,12 @@ export function WorkflowsPage() {
 
       {triggeredId && (
         <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
-          Execution triggered — <Link to="/executions/$executionId" params={{ executionId: triggeredId }} className="underline font-medium">track it here</Link>
+          Execution triggered — <Link to="/applications/$appId/executions/$executionId" params={{ appId, executionId: triggeredId }} className="underline font-medium">track it here</Link>
         </div>
       )}
 
       {!ordered.length ? (
-        <EmptyState canWrite={canWrite} />
+        <EmptyState canWrite={canWrite} appId={appId} />
       ) : (
         <div className="rounded-lg border border-gray-200 bg-white">
           <p className="border-b border-gray-100 bg-gray-50/60 px-4 py-2 text-xs text-gray-500">
@@ -131,6 +133,7 @@ export function WorkflowsPage() {
                 {ordered.map((wf, index) => (
                   <WorkflowRow
                     key={wf.id}
+                    appId={appId}
                     wf={wf}
                     index={index}
                     count={ordered.length}
@@ -166,8 +169,9 @@ export function WorkflowsPage() {
 }
 
 function WorkflowRow({
-  wf, index, count, triggerCfg, formName, canWrite, canTrigger, onDelete, onTrigger, isTriggering, onMove,
+  appId, wf, index, count, triggerCfg, formName, canWrite, canTrigger, onDelete, onTrigger, isTriggering, onMove,
 }: {
+  appId: string
   wf: WorkflowDefinition
   index: number
   count: number
@@ -243,7 +247,7 @@ function WorkflowRow({
             Run
           </Button>
         )}
-        <Link to="/workflows/$workflowId" params={{ workflowId: wf.id }}>
+        <Link to="/applications/$appId/workflows/$workflowId" params={{ appId, workflowId: wf.id }}>
           <Button variant="ghost" size="icon"><ExternalLink size={14} /></Button>
         </Link>
         {canWrite && (
@@ -256,12 +260,12 @@ function WorkflowRow({
   )
 }
 
-function EmptyState({ canWrite }: { canWrite: boolean }) {
+function EmptyState({ canWrite, appId }: { canWrite: boolean; appId: string }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
       <p className="text-gray-500 mb-4">No workflow definitions yet</p>
       {canWrite && (
-        <Link to="/workflows/new">
+        <Link to="/applications/$appId/workflows/new" params={{ appId }}>
           <Button variant="outline"><Plus size={16} />Create your first workflow</Button>
         </Link>
       )}

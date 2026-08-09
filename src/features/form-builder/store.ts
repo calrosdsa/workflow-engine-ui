@@ -4,7 +4,7 @@ import {
   type ColumnLayout, type ComponentType, type CreateUserSettings,
   emptySchema, emptyFormSettings, emptyCreateUserSettings,
 } from './schema'
-import { createElement, createSection, duplicateElement, duplicateSection, relayoutSection, createAccountSection } from './factory'
+import { createElement, createSection, duplicateElement, duplicateSection, relayoutSection, createAccountSection, createParentReferenceField } from './factory'
 import { createTreeStore, findItem, type ItemLocation } from '@/features/builder-kit/tree-store'
 
 export type ElementLocation = ItemLocation
@@ -94,6 +94,21 @@ export function removeAccountSection() {
     emailFieldKey: undefined,
     roleFieldKey: undefined,
   })
+}
+
+/** Prepends a single-field "Info" section containing a Form Reference field
+ *  pointing at parentFormId/parentName. Called once, right after
+ *  resetFormBuilder(), when a new form is opened via "Add Dependent Form" —
+ *  mirrors insertAccountSection's "inject a real, editable element onto the
+ *  canvas" shape, but for the parent link instead of the create-user fields. */
+export function insertParentReferenceField(parentFormId: string, parentName: string) {
+  const field = createParentReferenceField(parentFormId, parentName)
+  const section = createSection('Info', '1')
+  section.columns[0].elements = [field]
+  useFormBuilderStore.setState((s) => ({
+    schema: { ...s.schema, sections: [section, ...s.schema.sections] },
+  }))
+  useFormMetaStore.getState().markDirty()
 }
 
 // ---------------------------------------------------------------------------

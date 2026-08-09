@@ -138,6 +138,24 @@ export function relayoutSection(section: FormSection, layout: ColumnLayout): For
   return { ...section, layout, columns: newColumns }
 }
 
+/** Builds the "Form Reference" field pointing back at a dependent form's
+ *  parent (e.g. Punch -> Employee) — a real, fully-editable field,
+ *  indistinguishable from one manually dragged in from the toolbox. Used when
+ *  a new form is created via "Add Dependent Form" so the child never starts
+ *  out silently missing the link back to its parent record. Required by
+ *  default since a dependent record without its parent rarely makes sense,
+ *  but the user is free to change that afterward. */
+export function createParentReferenceField(parentFormId: string, parentName: string): FormElement {
+  const base = createElement('form')
+  return {
+    ...base,
+    label: parentName,
+    key: slugifyKey(parentName),
+    formRef: parentFormId,
+    behavior: { ...base.behavior, required: 'always' },
+  }
+}
+
 /** Builds the "Account" section injected when the "Create user with each
  *  enrollment" setting is turned on — a real, fully-editable section with
  *  Name/Email/Role fields, indistinguishable from a manually-added one. The

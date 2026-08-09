@@ -60,3 +60,9 @@ export interface AppSummary {
   name: string
   slug: string
 }
+
+/** slug is optional — left blank, the backend derives it from name. */
+export interface CreateAppPayload {
+  name: string
+  slug?: string
+}

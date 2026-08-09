@@ -14,6 +14,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { useForms } from '@/features/forms/hooks'
+import { iterLineItemElements } from './lineItemsSync'
 import type { FormElement } from './schema'
 
 export function ElementPreview({ element }: { element: FormElement }) {
@@ -173,8 +174,11 @@ function FormRefControl({ formRef }: { formRef?: string }) {
 
 // Renders a small mock grid matching the configured columns — a preview
 // only, not interactive (real editing happens in the runtime's LineItemsGrid).
+// The grid's table view is always a flat column list (a table has no room
+// for the row-editor's own sections/columns) — flatten them here the same
+// way LineItemsGrid.tsx does for the real table.
 function LineItemsControl({ element }: { element: FormElement }) {
-  const columns = element.lineItemColumns ?? []
+  const columns = [...iterLineItemElements(element.lineItemColumns ?? [])]
   if (columns.length === 0) {
     return (
       <div className="flex h-16 items-center justify-center rounded-md border border-dashed border-slate-200 bg-slate-50/50 text-[12px] text-slate-400">

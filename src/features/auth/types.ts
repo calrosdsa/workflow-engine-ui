@@ -7,6 +7,7 @@ export interface User {
 
 export interface Membership {
   client_id: string
+  client_name?: string
   app_id?: string
   app_name?: string
   role_id: string

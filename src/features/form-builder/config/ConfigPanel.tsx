@@ -9,18 +9,20 @@ import {
   SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select-menu'
 import { cn } from '@/lib/utils'
+import { useForm as useFormDef } from '@/features/forms/hooks'
 import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection } from '../store'
-import { COMPONENT_REGISTRY, supportsUnique } from '../component-registry'
+import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable } from '../component-registry'
 import { slugifyKey } from '../factory'
 import {
   type FormElement, type FormSchema, type VisibilityMode, type RequiredMode, type ReadOnlyMode,
   type ElementValidation, type ElementBehavior, type ElementAppearance, type BindingSource,
-  type CreateUserSettings, emptyCreateUserSettings,
+  type CreateUserSettings, type LineItemAggregateFn, emptyCreateUserSettings,
 } from '../schema'
 import { ExpressionField } from './ExpressionField'
 import { OptionsEditor } from './OptionsEditor'
 import { FormReferenceSelect } from './FormReferenceSelect'
 import { DisplayFieldSelect } from './DisplayFieldSelect'
+import { AdoptedReferenceFieldSelect } from './AdoptedReferenceFieldSelect'
 import { LineItemsColumnsEditor } from './LineItemsColumnsEditor'
 import { AdvancedSettingsSection } from './AdvancedSettingsSection'
 import type { LineItemsConfig } from '../schema'
@@ -197,7 +199,10 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
   const isTextual = ['text', 'textarea', 'email', 'url', 'password', 'phone'].includes(element.component)
   const isFormRef = element.component === 'form'
   const isLineItems = element.component === 'line_items'
+  const isLineItemCount = element.component === 'line_item_count'
   const canBeUnique = supportsUnique(element.component)
+  const canBeRecordTitle = supportsRecordTitle(element.component)
+  const canBeSearchable = supportsSearchable(element.component)
 
   // This form's own fields, for the Advanced Settings condition builder's
   // field picker — excludes the element being configured (a rule can't
@@ -206,6 +211,24 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
     .flatMap((s) => s.columns)
     .flatMap((c) => c.elements)
     .filter((e) => e.id !== element.id)
+
+  // Line Item Count's target picker: only grids that have already been saved
+  // at least once (have a childFormId) — otherwise the count field would
+  // point at nothing the backend can resolve.
+  const lineItemsElements = schema.sections
+    .flatMap((s) => s.columns)
+    .flatMap((c) => c.elements)
+    .filter((e) => e.component === 'line_items' && e.childFormId)
+
+  // Line Item Count's column picker (sum/avg/min/max only): the target
+  // grid's own row columns, restricted to 'number' components — the only
+  // column component whose fieldType (component-registry.ts) is numeric
+  // (backend's numericTypes only allows TypeInteger/TypeDecimal, and this
+  // builder never produces an integer column outside its own system fields).
+  const numericColumnsOfTargetGrid = (lineItemsElements.find((e) => e.childFormId === element.formRef)?.lineItemColumns ?? [])
+    .flatMap((s) => s.columns)
+    .flatMap((c) => c.elements)
+    .filter((e) => e.component === 'number')
 
   const header = (
     <div className="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-br from-indigo-500 to-indigo-600 px-4 py-3.5">
@@ -263,7 +286,19 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                   <Field label="Description">
                     <Input value={element.description ?? ''} onChange={(e) => onChange({ description: e.target.value })} placeholder="Shown under the label" className="h-8 text-sm" />
                   </Field>
-                  {!hasOptions && !isFormRef && element.component !== 'checkbox' && element.component !== 'switch' && (
+                  {canBeRecordTitle && (
+                    <div className="space-y-1">
+                      <ToggleRow
+                        label="Use in Record Title"
+                        checked={!!element.isRecordTitle}
+                        onCheckedChange={(v) => onChange({ isRecordTitle: v })}
+                      />
+                      <p className="text-[10px] text-slate-400">
+                        Shown instead of the record ID on the Detail page and wherever another form links to this record. Combine with other title fields to build a composite title.
+                      </p>
+                    </div>
+                  )}
+                  {!hasOptions && !isFormRef && !isLineItemCount && element.component !== 'checkbox' && element.component !== 'switch' && (
                     <Field label="Placeholder">
                       <Input value={element.placeholder ?? ''} onChange={(e) => onChange({ placeholder: e.target.value })} className="h-8 text-sm" />
                     </Field>
@@ -295,7 +330,58 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                       </Field>
                     </div>
                   )}
-                  {!isFormRef && (
+                  {isLineItemCount && (
+                    <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Line Item Aggregate</p>
+                      <Field label="Grid" hint="Which Line Items grid on this form to aggregate. Only grids that have been saved at least once are shown.">
+                        <SelectMenu
+                          value={element.formRef ?? ''}
+                          onValueChange={(formRef) => onChange({ formRef, aggregateField: undefined })}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder={lineItemsElements.length ? 'Select a grid…' : 'Save the form first to add a grid'} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {lineItemsElements.map((el) => (
+                              <SelectItem key={el.id} value={el.childFormId!}>{el.label || el.key}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </SelectMenu>
+                      </Field>
+                      <Field label="Function">
+                        <SelectMenu
+                          value={element.aggregateFn ?? 'count'}
+                          onValueChange={(aggregateFn) => onChange({ aggregateFn: aggregateFn as LineItemAggregateFn, aggregateField: undefined })}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="count">Count</SelectItem>
+                            <SelectItem value="sum">Sum</SelectItem>
+                            <SelectItem value="avg">Average</SelectItem>
+                            <SelectItem value="min">Min</SelectItem>
+                            <SelectItem value="max">Max</SelectItem>
+                          </SelectContent>
+                        </SelectMenu>
+                      </Field>
+                      {element.aggregateFn && element.aggregateFn !== 'count' && (
+                        <Field label="Column" hint="Which numeric column on that grid to aggregate.">
+                          <SelectMenu value={element.aggregateField ?? ''} onValueChange={(aggregateField) => onChange({ aggregateField })}>
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder={numericColumnsOfTargetGrid.length ? 'Select a column…' : 'Grid has no Number columns'} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {numericColumnsOfTargetGrid.map((col) => (
+                                <SelectItem key={col.id} value={col.key}>{col.label || col.key}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </SelectMenu>
+                        </Field>
+                      )}
+                    </div>
+                  )}
+                  {!isFormRef && !isLineItemCount && (
                     <Field label="Default Value">
                       <Input
                         value={element.defaultValue == null ? '' : String(element.defaultValue)}
@@ -325,6 +411,16 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                       onCheckedChange={(v) => onChange({ unique: v })}
                     />
                     <p className="text-[10px] text-slate-400">No two records may share this value.</p>
+                  </div>
+                )}
+                {canBeSearchable && (
+                  <div className="space-y-1">
+                    <ToggleRow
+                      label="Include in Search"
+                      checked={!!element.searchable}
+                      onCheckedChange={(v) => onChange({ searchable: v })}
+                    />
+                    <p className="text-[10px] text-slate-400">Included when users search this form's records.</p>
                   </div>
                 )}
                 {isTextual && (
@@ -522,6 +618,45 @@ function LineItemsConfigTabs({ element, formId, onChange }: {
             <Field label="Description">
               <Input value={element.description ?? ''} onChange={(e) => onChange({ description: e.target.value })} placeholder="Shown under the label" className="h-8 text-sm" />
             </Field>
+
+            <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Data Source</p>
+              <Field label="Source" hint="Existing form: the grid becomes a filtered view into a normal, independently-visible form — it keeps its own workflows/permissions/standalone page. Generated: the original behavior — a hidden child form owned entirely by this grid.">
+                <SelectMenu
+                  value={element.sourceMode ?? 'generated'}
+                  onValueChange={(sourceMode) => onChange({ sourceMode: sourceMode as 'generated' | 'existing' })}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="generated">Generated (auto-create a child form)</SelectItem>
+                    <SelectItem value="existing">Existing form</SelectItem>
+                  </SelectContent>
+                </SelectMenu>
+              </Field>
+              {element.sourceMode === 'existing' && (
+                <>
+                  <Field label="Form" hint="An existing form with a reference field pointing back at this form — that's what makes it eligible to adopt as a Line Items child.">
+                    <FormReferenceSelect
+                      value={element.adoptedFormRef}
+                      excludeId={formId ?? undefined}
+                      requireReferenceTo={formId ?? undefined}
+                      onChange={(adoptedFormRef) => onChange({ adoptedFormRef, adoptedReferenceField: undefined })}
+                    />
+                  </Field>
+                  <Field label="Reference Field" hint="Which field on that form points back at this one. The adopted form must already have this field — adoption never creates or changes fields on a form it doesn't own.">
+                    <AdoptedReferenceFieldSelect
+                      formId={element.adoptedFormRef}
+                      parentFormId={formId ?? undefined}
+                      value={element.adoptedReferenceField}
+                      onChange={(adoptedReferenceField) => onChange({ adoptedReferenceField })}
+                    />
+                  </Field>
+                </>
+              )}
+            </div>
+
             <ToggleRow
               label="Required"
               checked={element.behavior.required === 'always'}
@@ -541,22 +676,48 @@ function LineItemsConfigTabs({ element, formId, onChange }: {
 
           {/* LAYOUT */}
           <TabsContent value="layout" className="mt-0 space-y-4">
-            <Field label="Table Height (px)" hint="Leave blank to grow with content.">
-              <Input
-                type="number"
-                value={cfg.tableHeight ?? ''}
-                onChange={(e) => setConfig({ tableHeight: e.target.value === '' ? undefined : Number(e.target.value) })}
-                className="h-8 text-sm"
-              />
+            <Field label="Display Mode" hint="Cards works better on narrow screens or grids with many columns.">
+              <SelectMenu value={cfg.displayMode ?? 'table'} onValueChange={(displayMode) => setConfig({ displayMode: displayMode as 'table' | 'cards' })}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="table">Table</SelectItem>
+                  <SelectItem value="cards">Cards</SelectItem>
+                </SelectContent>
+              </SelectMenu>
             </Field>
-            <ToggleRow label="Allow Column Resize" checked={cfg.allowResize !== false} onCheckedChange={(v) => setConfig({ allowResize: v })} />
-            <ToggleRow label="Sticky Header" checked={cfg.stickyHeader !== false} onCheckedChange={(v) => setConfig({ stickyHeader: v })} />
-            <ToggleRow label="Alternate Row Colors" checked={cfg.alternateRowColors !== false} onCheckedChange={(v) => setConfig({ alternateRowColors: v })} />
+            {(cfg.displayMode ?? 'table') === 'table' && (
+              <>
+                <Field label="Table Height (px)" hint="Leave blank to grow with content.">
+                  <Input
+                    type="number"
+                    value={cfg.tableHeight ?? ''}
+                    onChange={(e) => setConfig({ tableHeight: e.target.value === '' ? undefined : Number(e.target.value) })}
+                    className="h-8 text-sm"
+                  />
+                </Field>
+                <ToggleRow label="Allow Column Resize" checked={cfg.allowResize !== false} onCheckedChange={(v) => setConfig({ allowResize: v })} />
+                <ToggleRow label="Sticky Header" checked={cfg.stickyHeader !== false} onCheckedChange={(v) => setConfig({ stickyHeader: v })} />
+                <ToggleRow label="Alternate Row Colors" checked={cfg.alternateRowColors !== false} onCheckedChange={(v) => setConfig({ alternateRowColors: v })} />
+              </>
+            )}
             <ToggleRow label="Compact Mode" checked={!!cfg.compactMode} onCheckedChange={(v) => setConfig({ compactMode: v })} />
           </TabsContent>
 
           {/* BEHAVIOR */}
           <TabsContent value="behavior" className="mt-0 space-y-4">
+            <Field label="Row Editing" hint="Inline edits fields directly in the grid, with no separate row-open step. A column that is itself a nested Line Items grid always opens the sidebar regardless of this setting.">
+              <SelectMenu value={cfg.rowEditMode ?? 'sidebar'} onValueChange={(rowEditMode) => setConfig({ rowEditMode: rowEditMode as 'sidebar' | 'inline' })}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sidebar">Sidebar (open row to edit)</SelectItem>
+                  <SelectItem value="inline">Inline (edit directly in grid)</SelectItem>
+                </SelectContent>
+              </SelectMenu>
+            </Field>
             <ToggleRow label="Allow Add Rows" checked={cfg.allowAddRows !== false} onCheckedChange={(v) => setConfig({ allowAddRows: v })} />
             <ToggleRow label="Allow Delete Rows" checked={cfg.allowDeleteRows !== false} onCheckedChange={(v) => setConfig({ allowDeleteRows: v })} />
             <ToggleRow label="Allow Duplicate Rows" checked={cfg.allowDuplicateRows !== false} onCheckedChange={(v) => setConfig({ allowDuplicateRows: v })} />
@@ -576,15 +737,48 @@ function LineItemsConfigTabs({ element, formId, onChange }: {
 
           {/* COLUMNS */}
           <TabsContent value="columns" className="mt-0">
-            <LineItemsColumnsEditor
-              columns={element.lineItemColumns ?? []}
-              onChange={(lineItemColumns) => onChange({ lineItemColumns })}
-              excludeFormId={formId ?? undefined}
-            />
+            {element.sourceMode === 'existing' ? (
+              <AdoptedColumnsPreview formId={element.adoptedFormRef} />
+            ) : (
+              <LineItemsColumnsEditor
+                columns={element.lineItemColumns ?? []}
+                onChange={(lineItemColumns) => onChange({ lineItemColumns })}
+                excludeFormId={formId ?? undefined}
+              />
+            )}
           </TabsContent>
         </div>
       </ScrollArea>
     </Tabs>
+  )
+}
+
+/** Read-only stand-in for LineItemsColumnsEditor when the grid targets an
+ *  adopted form — columns aren't authored here in that mode, they ARE the
+ *  adopted form's own real fields (edited on that form's own builder page).
+ *  Shown instead of hiding the tab outright so it's clear the tab isn't
+ *  broken/empty, just not the place to configure columns for this grid. */
+function AdoptedColumnsPreview({ formId }: { formId?: string }) {
+  const { data: targetForm, isLoading } = useFormDef(formId ?? '')
+
+  if (!formId) {
+    return <p className="p-3 text-[12px] text-slate-400">Select a form in the General tab first.</p>
+  }
+  if (isLoading) {
+    return <p className="p-3 text-[12px] text-slate-400">Loading fields…</p>
+  }
+  return (
+    <div className="space-y-1 p-1">
+      <p className="mb-2 text-[11px] text-slate-400">
+        Columns come from this form's own fields. Edit them on its own page in the Forms list.
+      </p>
+      {(targetForm?.fields ?? []).map((f) => (
+        <div key={f.name} className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50/50 px-2.5 py-1.5 text-[12px]">
+          <span className="text-slate-700">{f.label || f.name}</span>
+          <span className="font-mono text-[10px] text-slate-400">{f.type}</span>
+        </div>
+      ))}
+    </div>
   )
 }
 

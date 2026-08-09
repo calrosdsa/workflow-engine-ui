@@ -148,6 +148,12 @@ export interface SubflowConfig {
 export type CompareOp =
   | 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte'
   | 'contains' | 'starts_with' | 'in' | 'is_null' | 'not_null'
+  // Full-text search against the form's combined "tsv" column (fields marked
+  // searchable). Unlike every other op, `field` is ignored — there is no
+  // single per-field column to target. Not supported inside a Trigger node's
+  // filter (see internal/graph/filter_expr.go — no in-memory tsvector
+  // equivalent to evaluate against).
+  | 'search'
   // Change-detection family — evaluated against an OLD-vs-NEW record pair
   // (see internal/expr/changedetect.go). Only meaningful inside a Trigger
   // node's filter (before/after/after_async modes).

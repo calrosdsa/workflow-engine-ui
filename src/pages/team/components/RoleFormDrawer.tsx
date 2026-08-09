@@ -76,7 +76,11 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
     }
     try {
       if (role) {
-        await updateMutation.mutateAsync({ app_id: appId, name, permissions })
+        // hidden_fields has no editor UI yet (see this file's header comment) —
+        // round-trip the existing value unchanged so saving a role through
+        // this drawer never silently wipes out a mask set some other way
+        // (e.g. directly via the API).
+        await updateMutation.mutateAsync({ app_id: appId, name, permissions, hidden_fields: role.hidden_fields })
       } else {
         await createMutation.mutateAsync({ app_id: appId, name, permissions })
       }

@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useParams } from '@tanstack/react-router'
 import { useExecutions } from '@/features/executions/hooks'
 import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
@@ -14,6 +14,7 @@ const statusVariant: Record<ExecutionStatus, 'warning' | 'default' | 'success' |
 
 export function ExecutionsPage() {
   const { data: executions, isLoading } = useExecutions()
+  const { appId } = useParams({ strict: false }) as { appId?: string }
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Spinner /></div>
 
@@ -50,8 +51,8 @@ export function ExecutionsPage() {
                   <tr key={ex.execution_id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <Link
-                        to="/executions/$executionId"
-                        params={{ executionId: ex.execution_id }}
+                        to="/applications/$appId/executions/$executionId"
+                        params={{ appId: appId ?? '', executionId: ex.execution_id }}
                         className="font-mono text-xs text-blue-600 hover:underline"
                       >
                         {ex.execution_id.slice(0, 12)}…

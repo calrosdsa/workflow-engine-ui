@@ -60,6 +60,7 @@ export function AddMenuRuntime({ menu, onNavigate }: AddMenuRuntimeProps) {
       <FormRenderer
         schema={parseLayout(form.layout)}
         fields={form.fields}
+        formId={form.id}
         onSubmit={handleSubmit}
         submitting={submitting}
         submitLabel="Save"

@@ -15,6 +15,9 @@ import type { FieldRuntimeState } from './expression-context'
 interface FieldRendererProps {
   element: FormElement
   control: Control
+  /** This form's own id — see FormRendererProps' doc comment. Only consumed
+   *  by the 'line_items' case below. */
+  formId?: string
   runtimeState: FieldRuntimeState
   error?: string
 }
@@ -27,7 +30,7 @@ interface FieldRendererProps {
 // field.TypeFile's documented {name,url,size,mime} shape — real upload
 // infrastructure is out of scope for the App Builder and should be its own
 // follow-up.
-export function FieldRenderer({ element: el, control, runtimeState, error }: FieldRendererProps) {
+export function FieldRenderer({ element: el, control, formId, runtimeState, error }: FieldRendererProps) {
   if (['heading', 'paragraph', 'divider', 'spacer'].includes(el.component)) {
     return <PresentationalElement element={el} />
   }
@@ -47,7 +50,7 @@ export function FieldRenderer({ element: el, control, runtimeState, error }: Fie
         name={el.key}
         control={control}
         render={({ field }) => (
-          <FieldInput el={el} field={field} disabled={runtimeState.readOnly} />
+          <FieldInput el={el} field={field} formId={formId} disabled={runtimeState.readOnly} />
         )}
       />
       {el.helpText && <p className="mt-1 text-[11px] text-gray-400">{el.helpText}</p>}
@@ -56,9 +59,10 @@ export function FieldRenderer({ element: el, control, runtimeState, error }: Fie
   )
 }
 
-function FieldInput({ el, field, disabled }: {
+function FieldInput({ el, field, formId, disabled }: {
   el: FormElement
   field: { value: unknown; onChange: (v: unknown) => void; onBlur: () => void }
+  formId?: string
   disabled: boolean
 }) {
   switch (el.component) {
@@ -180,7 +184,7 @@ function FieldInput({ el, field, disabled }: {
       return <ReferenceFieldAutocomplete el={el} field={field} disabled={disabled} />
 
     case 'line_items':
-      return <LineItemsGrid el={el} field={field} disabled={disabled} />
+      return <LineItemsGrid el={el} field={field} parentFormId={formId} disabled={disabled} />
 
     case 'file':
     case 'image':

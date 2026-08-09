@@ -5,7 +5,7 @@ import {
   CheckSquare, ToggleLeft, CircleDot, ChevronDownSquare, ListChecks, Search, ShieldCheck,
   Upload, Image,
   FileText, Minus, Heading, Pilcrow, StretchVertical, EyeOff,
-  FormInput, Table2,
+  FormInput, Table2, ListOrdered,
   type LucideIcon,
 } from 'lucide-react'
 import type { ComponentType, ComponentCategory } from './schema'
@@ -55,6 +55,11 @@ export const COMPONENT_REGISTRY: Record<ComponentType, ComponentRegistryEntry> =
   autocomplete:{ type: 'autocomplete',label: 'Autocomplete', icon: Search,            category: 'Choice', dataBearing: true, fieldType: 'string',  description: 'Searchable select' },
   form:        { type: 'form',        label: 'Form Reference', icon: FormInput,        category: 'Choice', dataBearing: true, fieldType: 'reference', description: 'Reference another form' },
   line_items:  { type: 'line_items',  label: 'Line Items',    icon: Table2,            category: 'Choice', dataBearing: false, description: 'Embedded child record grid' },
+  // Unlike line_items itself (dataBearing: false, never becomes a FieldDef),
+  // this DOES flow through to a real backend field — dataBearing: true is
+  // correct — but the backend excludes it from DDL/selectCols since it has
+  // no physical column, resolving its value at read time instead.
+  line_item_count: { type: 'line_item_count', label: 'Line Item Count', icon: ListOrdered, category: 'Choice', dataBearing: true, fieldType: 'line_item_count', description: "Count of a Line Items grid's rows" },
   // fieldType 'string', not 'enum': a role's valid values are the app's
   // dynamic role-id set, not something declarable as a fixed CHECK
   // constraint at form-save time — FieldDef.Validate() (backend) rejects
@@ -95,4 +100,38 @@ const UNIQUE_CAPABLE_FIELD_TYPES: ReadonlySet<FieldType> = new Set<FieldType>([
 export function supportsUnique(type: ComponentType): boolean {
   const ft = COMPONENT_REGISTRY[type].fieldType
   return !!ft && UNIQUE_CAPABLE_FIELD_TYPES.has(ft)
+}
+
+// Backend field types that stringify into something meaningful as part of a
+// record's title: scalar, human-readable types only. Excludes boolean-
+// adjacent choice widgets that don't read as a "name" (radio/select/
+// multiselect still map to 'enum'/'json' and are handled by their own
+// fieldType, not by component), and structural/opaque types (json, file,
+// reference, line_item_count/adopted, parent_link).
+const RECORD_TITLE_CAPABLE_FIELD_TYPES: ReadonlySet<FieldType> = new Set<FieldType>([
+  'string', 'text', 'email', 'phone', 'integer', 'decimal', 'enum',
+  'date', 'time', 'datetime', 'boolean',
+])
+
+/** True when a component's backend field type is human-readable enough to be
+ *  used as (part of) a record's title. Drives the "Use in Record Title"
+ *  toggle in the config panel — see FormElement.isRecordTitle. */
+export function supportsRecordTitle(type: ComponentType): boolean {
+  const ft = COMPONENT_REGISTRY[type].fieldType
+  return !!ft && RECORD_TITLE_CAPABLE_FIELD_TYPES.has(ft)
+}
+
+// Backend field types meaningful in full-text search: text-like only.
+// Numbers are excluded — full-text/stemmed matching isn't useful for them
+// and they're already covered by the existing contains/eq filters.
+const SEARCHABLE_CAPABLE_FIELD_TYPES: ReadonlySet<FieldType> = new Set<FieldType>([
+  'string', 'text', 'email', 'phone',
+])
+
+/** True when a component maps to a text-like column eligible for the form's
+ *  combined full-text search index. Drives the "Include in Search" toggle
+ *  in the config panel — see FieldDef.searchable. */
+export function supportsSearchable(type: ComponentType): boolean {
+  const ft = COMPONENT_REGISTRY[type].fieldType
+  return !!ft && SEARCHABLE_CAPABLE_FIELD_TYPES.has(ft)
 }

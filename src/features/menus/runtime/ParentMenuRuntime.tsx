@@ -1,4 +1,4 @@
-import { FolderTree, Search as SearchIcon, PlusSquare, LayoutTemplate } from 'lucide-react'
+import { FolderTree, Search as SearchIcon, PlusSquare, LayoutTemplate, LayoutDashboard } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { buildMenuTree } from '../tree'
 import type { Menu, MenuType } from '../types'
@@ -20,6 +20,7 @@ const TYPE_ICONS: Record<MenuType, LucideIcon> = {
   add: PlusSquare,
   parent: FolderTree,
   custom: LayoutTemplate,
+  dashboard: LayoutDashboard,
 }
 
 // A Parent menu has no content of its own — landing directly on its URL

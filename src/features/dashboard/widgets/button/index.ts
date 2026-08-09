@@ -1,0 +1,19 @@
+import { Link2 } from 'lucide-react'
+import { registerWidget } from '../../widget-registry'
+import { parseButtonConfig, createDefaultButtonConfig } from './schema'
+import { ButtonRenderer } from './Renderer'
+import { ButtonConfigPanel } from './ConfigPanel'
+
+registerWidget({
+  type: 'button',
+  label: 'Button/Link',
+  icon: Link2,
+  category: 'Content',
+  description: 'A button that navigates somewhere',
+  parseConfig: parseButtonConfig,
+  createDefaultConfig: createDefaultButtonConfig,
+  defaultLayout: { w: 3, h: 2, minW: 2, minH: 1 },
+  defaultChrome: 'plain',
+  Renderer: ButtonRenderer,
+  ConfigPanel: ButtonConfigPanel,
+})

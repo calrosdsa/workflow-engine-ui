@@ -3,12 +3,10 @@ import { useParams } from '@tanstack/react-router'
 import { Plus, Trash2 } from 'lucide-react'
 import { useForm, useFormRecords, useCreateRecord, useDeleteRecord } from '@/features/forms/hooks'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
-import type { FieldDef, FormRecord } from '@/features/forms/types'
+import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
+import { parseLayout } from '@/features/form-builder/serialize'
 
 async function extractError(err: unknown): Promise<string> {
   if (err && typeof err === 'object' && 'response' in err) {
@@ -29,7 +27,7 @@ async function extractError(err: unknown): Promise<string> {
 }
 
 export function FormRecordsPage() {
-  const { formId } = useParams({ from: '/shell/forms/$formId/records' })
+  const { formId } = useParams({ from: '/shell/applications/$appId/forms/$formId/records' })
   const { data: form, isLoading: loadingForm } = useForm(formId)
   const { data: records, isLoading: loadingRecords } = useFormRecords(formId)
   const createMutation = useCreateRecord(formId)
@@ -61,8 +59,10 @@ export function FormRecordsPage() {
                 {createError}
               </div>
             )}
-            <RecordForm
+            <FormRenderer
+              schema={parseLayout(form.layout)}
               fields={form.fields}
+              formId={formId}
               onSubmit={(data) => {
                 setCreateError(null)
                 createMutation.mutate(data, {
@@ -72,7 +72,8 @@ export function FormRecordsPage() {
                   },
                 })
               }}
-              isSubmitting={createMutation.isPending}
+              submitting={createMutation.isPending}
+              submitLabel="Save Record"
             />
           </CardContent>
         </Card>
@@ -124,81 +125,6 @@ export function FormRecordsPage() {
         </div>
       )}
     </div>
-  )
-}
-
-function RecordForm({
-  fields, onSubmit, isSubmitting,
-}: {
-  fields: FieldDef[]
-  onSubmit: (data: FormRecord) => void
-  isSubmitting: boolean
-}) {
-  const [values, setValues] = useState<Record<string, string>>({})
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSubmit(values)
-  }
-
-  const set = (name: string, value: string) =>
-    setValues((prev) => ({ ...prev, [name]: value }))
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        {fields.map((f) => (
-          <div key={f.name} className="space-y-1">
-            <Label htmlFor={f.name}>
-              {f.label || f.name}
-              {f.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <FieldInput field={f} value={values[f.name] ?? ''} onChange={(v) => set(f.name, v)} />
-            {f.description && <p className="text-xs text-gray-400">{f.description}</p>}
-          </div>
-        ))}
-      </div>
-      <div className="flex justify-end gap-2">
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting && <Spinner className="h-4 w-4" />}
-          Save Record
-        </Button>
-      </div>
-    </form>
-  )
-}
-
-function FieldInput({ field, value, onChange }: { field: FieldDef; value: string; onChange: (v: string) => void }) {
-  if (field.type === 'boolean') {
-    return (
-      <Select value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">—</option>
-        <option value="true">true</option>
-        <option value="false">false</option>
-      </Select>
-    )
-  }
-  if (field.type === 'enum' && field.enum_values) {
-    return (
-      <Select value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">Select…</option>
-        {field.enum_values.map((v) => <option key={v} value={v}>{v}</option>)}
-      </Select>
-    )
-  }
-  const typeMap: Record<string, string> = {
-    date: 'date', time: 'time', datetime: 'datetime-local',
-    email: 'email', phone: 'tel', integer: 'number', decimal: 'number',
-  }
-  return (
-    <Input
-      id={field.name}
-      type={typeMap[field.type] ?? 'text'}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      required={field.required}
-      placeholder={field.label || field.name}
-    />
   )
 }
 

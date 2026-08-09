@@ -4,12 +4,18 @@
 // structural pattern, but searches server-side (debounced) via
 // formsApi.searchRecords instead of filtering an already-loaded list.
 //
-// Display/search field convention, in priority order:
+// Search field convention (server-side `contains` filter — must be a single
+// field), in priority order:
 //   1. el.displayField, when configured in the form builder (Config Panel's
 //      "Display Field" picker) — an explicit field on the referenced form.
 //   2. Otherwise, whichever of `name` or `label` exists on the referenced
 //      form's records (legacy heuristic, kept for backward compatibility).
-//   3. Otherwise, id with search disabled (list-only, first page).
+//   3. Otherwise, no search field — list-only, first page.
+//
+// The rendered label for each option/selection is resolved separately by
+// resolveReferenceLabel, which additionally prefers the target form's
+// record-title fields (composite, not searchable as one field) over this
+// search field — see that function's doc comment.
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Check, ChevronsUpDown, X, Loader2, FileText } from 'lucide-react'
@@ -20,14 +26,10 @@ import { cn } from '@/lib/utils'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { formsApi } from '@/features/forms/api'
 import { useForm as useFormDef } from '@/features/forms/hooks'
+import { resolveReferenceLabel } from './record-title'
 import type { FormElement } from '@/features/form-builder/schema'
 import type { FormRecord } from '@/features/forms/types'
 import type { FilterGroup } from '@/features/workflows/types'
-
-function displayLabel(r: FormRecord, field: string | null): string {
-  if (field && r[field] != null) return String(r[field])
-  return (r.name as string) ?? (r.label as string) ?? (r.id as string)
-}
 
 function displayField(hasName: boolean, hasLabel: boolean): string | null {
   if (hasName) return 'name'
@@ -89,7 +91,7 @@ export function ReferenceFieldAutocomplete({ el, field, disabled }: ReferenceFie
   if (!el.formRef) return <p className="text-xs text-amber-600">No form configured for this reference.</p>
 
   const options = results?.records ?? []
-  const selectedLabel = currentRecord ? displayLabel(currentRecord, searchField) : currentValue || undefined
+  const selectedLabel = currentRecord ? resolveReferenceLabel(targetForm?.fields, currentRecord, el.displayField) : currentValue || undefined
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -138,7 +140,7 @@ export function ReferenceFieldAutocomplete({ el, field, disabled }: ReferenceFie
                         }}
                       >
                         <Check size={14} className={cn('shrink-0', id === currentValue ? 'opacity-100 text-indigo-600' : 'opacity-0')} />
-                        <span className="truncate">{displayLabel(r, searchField)}</span>
+                        <span className="truncate">{resolveReferenceLabel(targetForm?.fields, r, el.displayField)}</span>
                       </CommandItem>
                     )
                   })}

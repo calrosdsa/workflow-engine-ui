@@ -17,19 +17,19 @@ import {
   useRecordAccountStatus, useResendRecordInvite, useRemoveRecordAccess, useEnableRecordAccess,
 } from './record-detail-hooks'
 import { FormRenderer } from './FormRenderer'
+import { LineItemsGrid } from './LineItemsGrid'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EnableAccountDialog } from './EnableAccountDialog'
 import { COLUMN_LAYOUTS } from '@/features/form-builder/schema'
 import { COMPONENT_REGISTRY } from '@/features/form-builder/component-registry'
+import { formatValue } from './format-value'
+import { resolveReferenceLabel } from './record-title'
+import { ReferenceValueLabel } from './ReferenceValueLabel'
+import { useForm as useFormDef } from '@/features/forms/hooks'
 import type { FormSchema } from '@/features/form-builder/schema'
-import type { FieldDef, AuditLogEntry, FormRecord } from '@/features/forms/types'
+import type { FieldDef, AuditLogEntry, FormRecord, LinkedRecordGroup } from '@/features/forms/types'
 
-export function formatValue(v: unknown): string {
-  if (v === null || v === undefined || v === '') return '—'
-  if (typeof v === 'boolean') return v ? 'Yes' : 'No'
-  if (typeof v === 'object') return JSON.stringify(v)
-  return String(v)
-}
+export { formatValue }
 
 interface RecordDetailPanelProps {
   formId: string
@@ -230,7 +230,7 @@ function DetailsTab({ formId, recordId, fields, schema, editing, onStartEdit, on
   if (editing && schema && schema.sections.length > 0) {
     return (
       <div className="space-y-3">
-        <FormRenderer schema={schema} fields={fields} defaultValues={record} onSubmit={onSubmit} submitting={submitting} submitLabel="Save" />
+        <FormRenderer schema={schema} fields={fields} formId={formId} defaultValues={record} onSubmit={onSubmit} submitting={submitting} submitLabel="Save" />
         <Button variant="outline" size="sm" onClick={onCancelEdit} disabled={submitting}>Cancel</Button>
       </div>
     )
@@ -247,25 +247,47 @@ function DetailsTab({ formId, recordId, fields, schema, editing, onStartEdit, on
               {section.columns.map((column) => {
                 const ratios = COLUMN_LAYOUTS[section.layout]?.ratios ?? [1]
                 const idx = section.columns.indexOf(column)
-                const dataBearingElements = column.elements.filter((el) => COMPONENT_REGISTRY[el.component].dataBearing && el.component !== 'hidden')
+                // A 'line_items' element is data-bearing ONLY in adopted mode
+                // (see projection.ts's elementToField) — COMPONENT_REGISTRY's
+                // dataBearing flag is per-component-type and can't see a
+                // specific element's sourceMode, so it's always false for
+                // 'line_items' and this filter has to special-case it here,
+                // the same way elementToField does on the write side.
+                // Without this, an adopted Line Items grid's section renders
+                // with a heading and nothing else in read-only view.
+                const visibleElements = column.elements.filter((el) => {
+                  if (el.component === 'hidden') return false
+                  if (el.component === 'line_items') return el.sourceMode === 'existing'
+                  return COMPONENT_REGISTRY[el.component].dataBearing
+                })
                 return (
                   <div key={column.id} className="space-y-3" style={{ flex: ratios[idx] ?? 1 }}>
-                    {dataBearingElements.map((el) => (
+                    {visibleElements.map((el) => (
                       <div key={el.id} className="group text-sm">
                         <div className="mb-1 flex items-center gap-1.5 text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
                           {el.label}
-                          <PermissionGate need={`forms:${formId}:edit`}>
-                            <button
-                              type="button"
-                              onClick={onStartEdit}
-                              className="opacity-0 transition-opacity hover:text-[hsl(var(--foreground))] group-hover:opacity-100 focus-visible:opacity-100"
-                              aria-label={`Edit ${el.label}`}
-                            >
-                              <Pencil size={11} />
-                            </button>
-                          </PermissionGate>
+                          {el.component !== 'line_items' && (
+                            <PermissionGate need={`forms:${formId}:edit`}>
+                              <button
+                                type="button"
+                                onClick={onStartEdit}
+                                className="opacity-0 transition-opacity hover:text-[hsl(var(--foreground))] group-hover:opacity-100 focus-visible:opacity-100"
+                                aria-label={`Edit ${el.label}`}
+                              >
+                                <Pencil size={11} />
+                              </button>
+                            </PermissionGate>
+                          )}
                         </div>
-                        <div style={{ color: 'hsl(var(--foreground))' }}>{formatValue(record[el.key])}</div>
+                        {el.component === 'line_items' ? (
+                          <LineItemsGrid el={el} field={{ value: record[el.key], onChange: () => {} }} parentFormId={formId} disabled />
+                        ) : el.component === 'form' ? (
+                          <div style={{ color: 'hsl(var(--foreground))' }}>
+                            <ReferenceValueLabel formId={el.formRef} recordId={record[el.key]} displayField={el.displayField} />
+                          </div>
+                        ) : (
+                          <div style={{ color: 'hsl(var(--foreground))' }}>{formatValue(record[el.key])}</div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -283,7 +305,13 @@ function DetailsTab({ formId, recordId, fields, schema, editing, onStartEdit, on
       {fields.map((f) => (
         <div key={f.name} className="text-sm">
           <div className="mb-1 text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>{f.label}</div>
-          <div style={{ color: 'hsl(var(--foreground))' }}>{formatValue(record[f.name])}</div>
+          <div style={{ color: 'hsl(var(--foreground))' }}>
+            {f.type === 'reference' ? (
+              <ReferenceValueLabel formId={f.reference_table} recordId={record[f.name]} displayField={f.display_field} />
+            ) : (
+              formatValue(record[f.name])
+            )}
+          </div>
         </div>
       ))}
     </div>
@@ -393,42 +421,60 @@ function LinkedRecordsTab({ formId, recordId, onNavigateToRecord }: {
 
   return (
     <div className="space-y-4">
-      {groups.map((group) => {
-        const totalPages = Math.max(1, Math.ceil(group.total / group.page_size))
-        const columns = [{ key: '__preview', label: group.form_name, sortable: false }]
-        const rows = group.records.map((r) => ({ ...r, __preview: previewValue(r) }))
-        return (
-          <div key={`${group.form_id}-${group.field_name}`} className="rounded-lg border" style={{ borderColor: 'hsl(var(--border))' }}>
-            <div className="border-b px-3 py-2 text-xs font-medium" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
-              {group.form_name} <span style={{ color: 'hsl(var(--muted-foreground))' }}>via {group.field_label}</span>
-            </div>
-            <DataTable
-              columns={columns}
-              rows={rows}
-              getRowId={(r) => r.id as string}
-              onRowClick={onNavigateToRecord ? (r) => onNavigateToRecord(group.form_id, r.id as string) : undefined}
-              emptyMessage="No records."
-            />
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t px-3 py-1.5 text-[11px]" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}>
-                <span>Page {group.page} of {totalPages}</span>
-                <div className="flex gap-1.5">
-                  <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="h-6 gap-1 px-1.5">
-                    <ChevronLeft size={11} />
-                  </Button>
-                  <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="h-6 gap-1 px-1.5">
-                    <ChevronRight size={11} />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        )
-      })}
+      {groups.map((group) => (
+        <LinkedRecordGroupCard
+          key={`${group.form_id}-${group.field_name}`}
+          group={group}
+          page={page}
+          onPageChange={setPage}
+          onNavigateToRecord={onNavigateToRecord}
+        />
+      ))}
     </div>
   )
 }
 
-function previewValue(r: Record<string, unknown>): string {
-  return (r.name as string) ?? (r.label as string) ?? (r.id as string)
+function LinkedRecordGroupCard({ group, page, onPageChange, onNavigateToRecord }: {
+  group: LinkedRecordGroup
+  page: number
+  onPageChange: (p: number) => void
+  onNavigateToRecord?: (formId: string, recordId: string) => void
+}) {
+  // The target form's own field defs — needed to resolve its record-title
+  // fields (see resolveRecordTitle) instead of just falling back to
+  // name/label/id. group.records already carry full field values (not just
+  // ids), so no per-row fetch is needed, just this one query per group.
+  const { data: targetForm } = useFormDef(group.form_id)
+
+  const totalPages = Math.max(1, Math.ceil(group.total / group.page_size))
+  const columns = [{ key: '__preview', label: group.form_name, sortable: false }]
+  const rows = group.records.map((r) => ({ ...r, __preview: resolveReferenceLabel(targetForm?.fields, r) }))
+
+  return (
+    <div className="rounded-lg border" style={{ borderColor: 'hsl(var(--border))' }}>
+      <div className="border-b px-3 py-2 text-xs font-medium" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
+        {group.form_name} <span style={{ color: 'hsl(var(--muted-foreground))' }}>via {group.field_label}</span>
+      </div>
+      <DataTable
+        columns={columns}
+        rows={rows}
+        getRowId={(r) => r.id as string}
+        onRowClick={onNavigateToRecord ? (r) => onNavigateToRecord(group.form_id, r.id as string) : undefined}
+        emptyMessage="No records."
+      />
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t px-3 py-1.5 text-[11px]" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}>
+          <span>Page {group.page} of {totalPages}</span>
+          <div className="flex gap-1.5">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)} className="h-6 gap-1 px-1.5">
+              <ChevronLeft size={11} />
+            </Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)} className="h-6 gap-1 px-1.5">
+              <ChevronRight size={11} />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }

@@ -266,16 +266,23 @@ export interface BuilderState {
   undo: () => void
   redo: () => void
 
-  // sidebar collapse state
+  // Exclusive sidebar state (FR-C5-008) — at most one of Variables/Node
+  // Config/Executions open at a time. varsPanelOpen/configPanelOpen/
+  // executionsPanelOpen are derived getters kept for call-site compatibility
+  // with the three panels, which each still just read "am I open."
+  activeSidebar: 'variables' | 'config' | 'executions' | null
   varsPanelOpen:    boolean
   configPanelOpen:  boolean
+  executionsPanelOpen: boolean
   /** Widen the config panel (e.g. for the HTTP node's response schema
-   *  builder). Orthogonal to configPanelOpen — a global preference, not
-   *  scoped per-node (never reset on node selection). */
+   *  builder). Orthogonal to which sidebar is active — a global preference,
+   *  not scoped per-node (never reset on node selection). */
   configPanelWide:  boolean
   toggleVarsPanel:  () => void
   toggleConfigPanel:() => void
+  toggleExecutionsPanel: () => void
   toggleConfigPanelWide: () => void
+  closeActiveSidebar: () => void
 
   // drag-to-reorder state
   draggingNodeId:    string | null
@@ -400,12 +407,27 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
     })
   },
 
-  varsPanelOpen:     true,
-  configPanelOpen:   true,
-  configPanelWide:   false,
-  toggleVarsPanel:   () => set((s) => ({ varsPanelOpen:   !s.varsPanelOpen })),
-  toggleConfigPanel: () => set((s) => ({ configPanelOpen: !s.configPanelOpen })),
+  // Variables starts as the active sidebar (matches today's "both open by
+  // default" starting impression without violating the new exclusivity rule).
+  activeSidebar:       'variables',
+  varsPanelOpen:       true,
+  configPanelOpen:     false,
+  executionsPanelOpen: false,
+  configPanelWide:     false,
+  toggleVarsPanel: () => set((s) => {
+    const next = s.activeSidebar === 'variables' ? null : 'variables'
+    return { activeSidebar: next, varsPanelOpen: next === 'variables', configPanelOpen: next === 'config', executionsPanelOpen: next === 'executions' }
+  }),
+  toggleConfigPanel: () => set((s) => {
+    const next = s.activeSidebar === 'config' ? null : 'config'
+    return { activeSidebar: next, varsPanelOpen: next === 'variables', configPanelOpen: next === 'config', executionsPanelOpen: next === 'executions' }
+  }),
+  toggleExecutionsPanel: () => set((s) => {
+    const next = s.activeSidebar === 'executions' ? null : 'executions'
+    return { activeSidebar: next, varsPanelOpen: next === 'variables', configPanelOpen: next === 'config', executionsPanelOpen: next === 'executions' }
+  }),
   toggleConfigPanelWide: () => set((s) => ({ configPanelWide: !s.configPanelWide })),
+  closeActiveSidebar: () => set({ activeSidebar: null, varsPanelOpen: false, configPanelOpen: false, executionsPanelOpen: false }),
 
   draggingNodeId:      null,
   activeDropTarget:    null,
@@ -791,7 +813,14 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
     }))
   },
 
-  selectNode: (id) => set({ selectedNodeId: id, configPanelOpen: id !== null ? true : get().configPanelOpen }),
+  // Selecting a node auto-opens Node Config exclusively (FR-C5-008) — closes
+  // Variables/Executions if either was open. Deselecting (id === null, e.g.
+  // an empty-canvas click) leaves activeSidebar untouched here; the canvas's
+  // own onPaneClick additionally calls closeActiveSidebar for that case.
+  selectNode: (id) => set((s) => {
+    if (id === null) return { selectedNodeId: null }
+    return { selectedNodeId: id, activeSidebar: 'config', varsPanelOpen: false, configPanelOpen: true, executionsPanelOpen: false }
+  }),
 
   // Deletes one node, healing the chain (parents bridged to children).
   // Iterator/loop_end delete as a pair; any body nodes fold into the main chain.

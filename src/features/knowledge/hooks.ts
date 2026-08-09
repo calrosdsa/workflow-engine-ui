@@ -7,6 +7,7 @@ export const knowledgeKeys = {
   all:       ['knowledge-bases'] as const,
   detail:    (id: string) => ['knowledge-bases', id] as const,
   documents: (id: string) => ['knowledge-bases', id, 'documents'] as const,
+  graph:     (id: string, docId: string) => ['knowledge-bases', id, 'documents', docId, 'graph'] as const,
 }
 
 // The provider/model catalog is static server-side config, not per-tenant
@@ -84,8 +85,32 @@ export function useDeleteDocument(kbId: string) {
   })
 }
 
+// Reprocesses a FAILED document from its already-stored content — the
+// backend rejects retrying anything not currently FAILED, so the mutation
+// only needs to invalidate the documents list (the retried doc's status
+// flips back to pending/processing and the existing poller picks it up).
+export function useRetryDocument(kbId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (docId: string) => knowledgeApi.retryDocument(kbId, docId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: knowledgeKeys.documents(kbId) }),
+  })
+}
+
 export function useQueryKnowledgeBase(kbId: string) {
   return useMutation({
     mutationFn: (p: QueryKnowledgeBasePayload) => knowledgeApi.query(kbId, p),
+  })
+}
+
+// Lazy — only fetched once a document row is expanded (enabled gates on
+// that), since most documents in a list are never inspected in this much
+// detail. Works for any already-processed document, including ones
+// ingested before this endpoint existed (see rag-engine's DocumentGraph).
+export function useDocumentGraph(kbId: string, docId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: knowledgeKeys.graph(kbId, docId),
+    queryFn: () => knowledgeApi.getDocumentGraph(kbId, docId),
+    enabled: enabled && !!kbId && !!docId,
   })
 }

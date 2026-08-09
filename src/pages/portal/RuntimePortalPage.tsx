@@ -1,14 +1,8 @@
 import { LayoutGrid, ChevronRight } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { runtimeUrlFor } from '@/features/runtime/urls'
 import type { Membership } from '@/features/auth/types'
-
-/** Served by the runtime.html bundle at this app's client-scoped root. This
- *  is a full cross-bundle navigation (window.location, not the router's
- *  navigate) — the Portal lives in the builder SPA, the destination doesn't. */
-export function runtimeUrlFor(clientId: string, appId: string): string {
-  return `/${clientId}/${appId}`
-}
 
 /** Landing page for Runtime Users (no application:design/team-admin
  *  permissions on any membership — see features/auth/access.ts's

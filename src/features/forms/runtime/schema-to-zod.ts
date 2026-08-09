@@ -62,6 +62,15 @@ function fieldSchema(el: FormElement): z.ZodTypeAny {
 export function buildZodSchema(schema: FormSchema): z.ZodObject<Record<string, z.ZodTypeAny>> {
   const shape: Record<string, z.ZodTypeAny> = {}
   for (const el of iterElements(schema)) {
+    if (el.component === 'line_items') {
+      // Not dataBearing (it's a nested child-record array, not a single
+      // FieldDef column) but it DOES carry a real value that must reach
+      // onSubmit — without an explicit shape entry, zodResolver's z.object()
+      // silently strips it as an unrecognized key, so every line-items save
+      // would submit an empty array regardless of what the grid held.
+      shape[el.key] = z.array(z.record(z.string(), z.unknown()))
+      continue
+    }
     if (!COMPONENT_REGISTRY[el.component].dataBearing) continue
     shape[el.key] = fieldSchema(el)
   }

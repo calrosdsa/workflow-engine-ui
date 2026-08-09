@@ -15,9 +15,10 @@ import type { CredentialType } from './types'
 interface CredentialSelectProps {
   value?: string
   onChange: (name: string | undefined) => void
-  /** Restrict the picker to credentials of this type (e.g. only "bearer"
-   *  for an API-key-shaped reference). Omit to show every credential. */
-  typeFilter?: CredentialType
+  /** Restrict the picker to credentials of these type(s) (e.g. "bearer" and
+   *  "api_key" both hold a single bare secret, so either works for a plain
+   *  API-key reference). Omit to show every credential. */
+  typeFilter?: CredentialType | CredentialType[]
   accentClassName?: string
 }
 
@@ -25,9 +26,13 @@ export function CredentialSelect({ value, onChange, typeFilter, accentClassName 
   const { data: allCredentials, isLoading } = useCredentials()
   const [open, setOpen] = useState(false)
 
+  const allowedTypes = useMemo(
+    () => (typeFilter === undefined ? undefined : Array.isArray(typeFilter) ? typeFilter : [typeFilter]),
+    [typeFilter],
+  )
   const credentials = useMemo(
-    () => (typeFilter ? (allCredentials ?? []).filter((c) => c.type === typeFilter) : allCredentials ?? []),
-    [allCredentials, typeFilter],
+    () => (allowedTypes ? (allCredentials ?? []).filter((c) => allowedTypes.includes(c.type)) : allCredentials ?? []),
+    [allCredentials, allowedTypes],
   )
   const selected = useMemo(() => credentials.find((c) => c.name === value), [credentials, value])
   const isBroken = !!value && !isLoading && !selected

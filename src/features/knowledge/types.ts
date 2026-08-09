@@ -39,13 +39,26 @@ export interface KnowledgeBase extends KnowledgeBaseSummary {
 
 // credential_name must reference a saved "bearer" credential (holding
 // {"token": "<api key>"}) — resolved server-side, never sent as a raw key.
+// llm_model accepts any non-empty model id, not just the catalog's list —
+// the backend forwards it to the provider as-is (see providers.go's
+// resolveLLMModel doc comment). embedding_dim is required only when
+// embedding_model isn't one of useProviders()'s catalog entries; ignored by
+// the backend otherwise.
 export interface CreateKnowledgeBasePayload {
   name: string
   description: string
-  provider: Provider
-  credential_name: string
-  llm_model: string
-  embedding_model: string
+  // llm_provider_id/embedding_provider_id reference a saved
+  // features/llm-providers LLMProvider — the preferred way to supply model
+  // config, resolved server-side into provider/credential/model. The legacy
+  // provider/credential_name/*_model fields still exist on the wire (backend
+  // accepts either), but the create form only ever sends provider IDs now.
+  llm_provider_id: string
+  embedding_provider_id: string
+  // Shared creates a client-wide KB, visible from every app under the
+  // client, instead of one scoped to just the currently active app.
+  // Defaults to true in the create form — knowledge bases are shared by
+  // default per the App Builder's nav restructure.
+  shared?: boolean
 }
 
 // Provider and embedding settings can't be changed after creation — rag-
@@ -61,6 +74,21 @@ export interface UpdateKnowledgeBasePayload {
 
 export type DocumentStatus = 'pending' | 'processing' | 'processed' | 'failed' | 'unknown'
 
+export type StageState = 'pending' | 'running' | 'completed' | 'failed' | 'unknown'
+
+// StageStatus is generic over whatever stage names the backend reports —
+// new stage types (e.g. a future PII-detection stage) show up automatically
+// without a frontend change, since nothing here hardcodes a stage list.
+export interface StageStatus {
+  stage: string
+  state: StageState
+  duration_ms?: number
+  items_produced?: number
+  error_msg?: string
+  started_at?: string
+  completed_at?: string
+}
+
 export interface KnowledgeDocument {
   doc_id: string
   status: DocumentStatus
@@ -72,6 +100,41 @@ export interface KnowledgeDocument {
   created_at?: string
   updated_at?: string
   track_id?: string
+  stages?: StageStatus[]
+  entities_count?: number
+  relations_count?: number
+}
+
+export interface GraphEntity {
+  name: string
+  type: string
+  description: string
+}
+
+export interface GraphRelation {
+  source: string
+  target: string
+  description: string
+  keywords: string
+}
+
+export interface DocumentGraphResponse {
+  entities: GraphEntity[]
+  relations: GraphRelation[]
+}
+
+// The wire shape of one SSE frame from GET .../documents/stream — see
+// workflow-engine's api/knowledgebases/sse.go sseDocumentEvent.
+export interface DocumentPipelineEvent {
+  kb_id: string
+  doc_id: string
+  event_type: string
+  stage?: string
+  duration_ms?: number
+  items_produced?: number
+  error_msg?: string
+  at: string
+  document: KnowledgeDocument
 }
 
 export interface ListDocumentsResponse {

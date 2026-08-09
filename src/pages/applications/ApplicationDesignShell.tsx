@@ -1,32 +1,35 @@
-import { useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Settings2, Palette, ListTree, KeyRound, Rocket, Loader2, AlertCircle } from 'lucide-react'
+import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
+import { ArrowLeft, LayoutDashboard, Workflow, FileText, Palette, KeyRound, Rocket, Loader2, AlertCircle, ListTree } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
+import { cn } from '@/lib/utils'
 import { useApplication, usePublishApplication } from '@/features/applications/hooks'
 import { usePermission } from '@/features/auth/permissions'
-import { GeneralSettingsSection } from './sections/GeneralSettingsSection'
-import { ThemeSection } from './sections/ThemeSection'
-import { MenusSection } from './sections/MenusSection'
-import { GlobalSettingsSection } from './sections/GlobalSettingsSection'
+import { useState } from 'react'
 import type { ValidationIssue } from '@/features/applications/types'
 
-type SectionId = 'general' | 'theme' | 'menus' | 'settings'
+// The app-scoped design shell — replaces the old ApplicationBuilderPage's
+// bespoke header+useState tab bar with real nested routes
+// (/applications/$appId/{workflows,forms,design,settings}), so each section
+// is deep-linkable and the URL reflects what you're editing. Workflows/Forms/
+// etc. keep reading "current app" from activeMembership (set by this route's
+// parent beforeLoad in router.tsx) rather than being threaded an explicit
+// appId prop — see the plan's A3 minimal-risk recommendation.
+const NAV_ITEMS = [
+  { to: '/applications/$appId', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { to: '/applications/$appId/workflows', label: 'Workflows', icon: Workflow, exact: false },
+  { to: '/applications/$appId/forms', label: 'Forms', icon: FileText, exact: false },
+  { to: '/applications/$appId/design', label: 'App Design', icon: Palette, exact: false },
+  { to: '/applications/$appId/settings', label: 'Settings', icon: KeyRound, exact: false },
+] as const
 
-const SECTIONS: { id: SectionId; label: string; icon: typeof Settings2 }[] = [
-  { id: 'general', label: 'General', icon: Settings2 },
-  { id: 'theme', label: 'Theme', icon: Palette },
-  { id: 'menus', label: 'Menus', icon: ListTree },
-  { id: 'settings', label: 'Global Settings', icon: KeyRound },
-]
-
-export function ApplicationBuilderPage() {
+export function ApplicationDesignShell({ appId }: { appId: string }) {
   const navigate = useNavigate()
   const { data: app, isLoading } = useApplication()
   const publishMutation = usePublishApplication()
   const canPublish = usePermission('application:publish')
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
 
-  const [section, setSection] = useState<SectionId>('general')
   const [publishIssues, setPublishIssues] = useState<ValidationIssue[] | null>(null)
   const [publishError, setPublishError] = useState<string | null>(null)
 
@@ -38,11 +41,6 @@ export function ApplicationBuilderPage() {
     setPublishError(null)
     try {
       await publishMutation.mutateAsync()
-      // The runtime lives in a separate Vite bundle (runtime.html) reachable
-      // only by a real navigation, not the builder's TanStack router — same
-      // reason RuntimeLink.tsx exists. Its index route auto-resolves to
-      // default_menu_slug (or the first menu), so linking to the bare
-      // /{clientId}/{appId} root is enough.
       window.location.href = `/${app.client_id}/${app.id}`
     } catch (e) {
       const { issues, message } = await extractPublishError(e)
@@ -54,7 +52,7 @@ export function ApplicationBuilderPage() {
   return (
     <div className="flex h-screen flex-col">
       <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-white px-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate({ to: '/applications' })}>
+        <Button variant="ghost" size="icon" onClick={() => navigate({ to: '/' })} title="Back to Home">
           <ArrowLeft size={16} />
         </Button>
         <div className="flex min-w-0 items-center gap-2">
@@ -65,18 +63,23 @@ export function ApplicationBuilderPage() {
         </div>
 
         <nav className="ml-4 flex items-center gap-1">
-          {SECTIONS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setSection(id)}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                section === id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50'
-              }`}
-            >
-              <Icon size={14} />
-              {label}
-            </button>
-          ))}
+          {NAV_ITEMS.map(({ to, label, icon: Icon, exact }) => {
+            const target = to.replace('$appId', appId)
+            const active = exact ? pathname === target : pathname.startsWith(target)
+            return (
+              <button
+                key={to}
+                onClick={() => navigate({ to, params: { appId } })}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                  active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50',
+                )}
+              >
+                <Icon size={14} />
+                {label}
+              </button>
+            )
+          })}
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
@@ -121,22 +124,12 @@ export function ApplicationBuilderPage() {
       )}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {section === 'general' && <GeneralSettingsSection app={app} />}
-        {section === 'theme' && <ThemeSection />}
-        {section === 'menus' && <MenusSection appId={app.id} />}
-        {section === 'settings' && <GlobalSettingsSection />}
+        <Outlet />
       </div>
     </div>
   )
 }
 
-// Publish fails in two distinct shapes: a 422 with {issues: ValidationIssue[]}
-// (pre-publish validation, e.g. a menu with no form selected), or any other
-// error status with the generic respond.Error shape {error: string} (e.g. the
-// 500 "publishing is not configured" when the Publisher isn't wired up, or a
-// network failure). Both must surface something to the user — silently
-// falling through to "no issues, no message" is what made a failed publish
-// look like the button did nothing.
 async function extractPublishError(e: unknown): Promise<{ issues: ValidationIssue[] | null; message: string | null }> {
   const err = e as { response?: Response; message?: string }
   if (!err.response) return { issues: null, message: err.message ?? null }

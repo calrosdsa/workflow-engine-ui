@@ -1,20 +1,18 @@
 import { useAuthStore } from '@/stores/auth'
 import type { Membership } from '@/features/auth/types'
 
-/** Cross-bundle navigation from the runtime app into the builder's design
- *  tools (Workflows/Forms/Applications, all gated on application:design —
- *  see Sidebar.tsx) — the reverse direction of RuntimePortalPage.tsx's
- *  runtimeUrlFor. A full page navigation, not the runtime router's navigate:
- *  the builder lives in a separate Vite bundle (index.html vs runtime.html),
- *  so there is no in-SPA route to push to.
+/** Cross-bundle navigation from the runtime app into the builder's app-scoped
+ *  design shell (Workflows/Forms/App Design/Settings, gated on
+ *  application:design — see ApplicationDesignShell.tsx) — the reverse
+ *  direction of urls.ts's runtimeUrlFor. A full page navigation, not the
+ *  runtime router's navigate: the builder lives in a separate Vite bundle
+ *  (index.html vs runtime.html), so there is no in-SPA route to push to.
  *
- *  The builder resolves "which app" from useAuthStore's activeMembership
- *  (persisted, shared localStorage key across both bundles) rather than a
- *  URL param — see stores/auth.ts and Sidebar.tsx's usePermission calls —
- *  so this sets it explicitly before navigating, using the same membership
- *  object the runtime already resolved for its own permission check
- *  (RuntimeAppShell.tsx), rather than re-fetching anything. */
+ *  The design shell's own beforeLoad (router.tsx's applicationShellRoute)
+ *  re-syncs activeMembership from the URL's $appId on load, so setting it
+ *  here is belt-and-suspenders for the very first paint before that
+ *  beforeLoad resolves, not the sole source of truth. */
 export function openDesignHub(membership: Membership): void {
   useAuthStore.getState().setActiveMembership(membership)
-  window.location.href = '/workflows'
+  window.location.href = `/applications/${membership.app_id}`
 }

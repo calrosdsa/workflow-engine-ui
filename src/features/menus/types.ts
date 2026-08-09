@@ -11,8 +11,9 @@
 export type { FilterGroup, SortRule, CompareOp, FilterCondition } from '@/features/workflows/types'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
 import type { PageSchema } from '@/features/page-builder/schema'
+import type { DashboardSchema } from '@/features/dashboard/schema'
 
-export type MenuType = 'search' | 'add' | 'parent' | 'custom'
+export type MenuType = 'search' | 'add' | 'parent' | 'custom' | 'dashboard'
 
 export interface SearchMenuConfig {
   form_id: string
@@ -45,7 +46,17 @@ export interface CustomMenuConfig {
   embedUrl?: string
 }
 
-export type MenuConfig = SearchMenuConfig | AddMenuConfig | ParentMenuConfig | CustomMenuConfig
+/** Drives a Dashboard menu — a grid canvas of plugin-registered widget tiles
+ *  (see features/dashboard/widget-registry.ts). Also the mechanism for
+ *  "custom pages": a page built entirely from Content-category widgets
+ *  (heading, paragraph, image, ...) is a DashboardMenuConfig with no
+ *  data-bearing widgets, so custom pages and dashboards share one canvas and
+ *  one persistence model rather than being two parallel features. */
+export interface DashboardMenuConfig {
+  schema: DashboardSchema
+}
+
+export type MenuConfig = SearchMenuConfig | AddMenuConfig | ParentMenuConfig | CustomMenuConfig | DashboardMenuConfig
 
 /** How the "Permission" section of the menu editor gates visibility:
  *  'all' shows the menu to anyone who can view the app; 'role' restricts it

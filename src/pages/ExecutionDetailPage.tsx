@@ -14,7 +14,7 @@ const statusVariant: Record<ExecutionStatus, 'warning' | 'default' | 'success' |
 }
 
 export function ExecutionDetailPage() {
-  const { executionId } = useParams({ from: '/shell/executions/$executionId' })
+  const { executionId } = useParams({ from: '/shell/applications/$appId/executions/$executionId' })
   const { data: execution, isLoading } = useExecution(executionId)
 
   if (isLoading || !execution) return <div className="flex h-64 items-center justify-center"><Spinner /></div>

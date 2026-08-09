@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { useForm, useForms, useCreateForm, useUpdateForm } from '@/features/forms/hooks'
 import { formsApi } from '@/features/forms/api'
-import { useFormBuilderStore, useFormMetaStore, loadForm as loadFormIntoStores, resetFormBuilder } from '@/features/form-builder/store'
+import { useFormBuilderStore, useFormMetaStore, loadForm as loadFormIntoStores, resetFormBuilder, insertParentReferenceField } from '@/features/form-builder/store'
 import { Toolbox } from '@/features/form-builder/Toolbox'
 import { FormBuilderDnd } from '@/features/form-builder/canvas/FormBuilderDnd'
 import { FormCanvas } from '@/features/form-builder/canvas/FormCanvas'
@@ -26,7 +26,8 @@ interface FormBuilderPageProps {
 
 export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   const navigate = useNavigate()
-  const params = useParams({ strict: false }) as { formId?: string }
+  const params = useParams({ strict: false }) as { appId?: string; formId?: string }
+  const appId = params.appId ?? ''
   const formId = mode === 'edit' ? params.formId : undefined
   const search = useSearch({ strict: false }) as { parentFormId?: string }
   const parentFormId = mode === 'new' ? search.parentFormId : undefined
@@ -43,6 +44,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   } = useFormMetaStore()
 
   const [slugTouched, setSlugTouched] = useState(false)
+  const [parentRefSeeded, setParentRefSeeded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
 
@@ -55,13 +57,29 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
     } else if (mode === 'new') {
       resetFormBuilder()
       setSlugTouched(false)
+      setParentRefSeeded(false)
     }
-  }, [mode, loaded])
+  }, [mode, loaded, parentFormId])
 
   // Auto-derive slug from name until the user edits it (new forms only).
   useEffect(() => {
     if (mode === 'new' && !slugTouched) setSlug(slugifyKey(name))
   }, [name, slugTouched, mode, setSlug])
+
+  // Seed a new dependent form with a Form Reference field back to its parent
+  // (e.g. opening "Add Dependent Form" from Employee pre-fills Punch with an
+  // Employee reference) — otherwise the link only ever exists as the
+  // internal parent_form_id, invisible on the canvas and never asked for a
+  // value at fill time. Runs once allForms has loaded (so the parent's name
+  // is known); reset() above already cleared the canvas for 'new' mode, so
+  // there's nothing to clash with.
+  useEffect(() => {
+    if (mode !== 'new' || !parentFormId || parentRefSeeded) return
+    const parent = allForms?.find((f) => f.id === parentFormId)
+    if (!parent) return
+    insertParentReferenceField(parent.id, parent.name)
+    setParentRefSeeded(true)
+  }, [mode, parentFormId, allForms, parentRefSeeded])
 
   // Workflow variables available for expressions/binding (from schema.variables).
   const variables: VariableDecl[] = useMemo(
@@ -108,7 +126,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
           await formsApi.update(created.id, { ...payload, layout: syncedSchema, parent_form_id: parentFormId })
         }
         markSaved()
-        navigate({ to: '/forms/$formId', params: { formId: created.id } })
+        navigate({ to: '/applications/$appId/forms/$formId', params: { appId, formId: created.id } })
       } else if (formId) {
         const { changed, schema: syncedSchema } = await syncLineItemsChildren(schema, formId, slug)
         if (changed) {
@@ -136,7 +154,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
       {/* Header */}
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4">
         <button
-          onClick={() => navigate({ to: '/forms' })}
+          onClick={() => navigate({ to: '/applications/$appId/forms', params: { appId } })}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
           title="Back to forms"
         >

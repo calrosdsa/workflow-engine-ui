@@ -6,6 +6,17 @@ export type FieldType =
   // its parent record (UUID, cascade-deletes with the parent). Never used
   // directly by the form builder's field palette.
   | 'parent_link'
+  // Read-only, virtual field on a PARENT form that resolves at read time to
+  // the row count of one of the parent's own Line Items children. Never gets
+  // a physical column — reference_table holds the target child form's id.
+  | 'line_item_count'
+  // Virtual field on a PARENT form marking that one of its Line Items grids
+  // targets an ADOPTED form (an ordinary, independently-visible form with
+  // its own workflows/permissions/standalone page, not a hidden generated
+  // child) — never gets a physical column. reference_table holds the
+  // adopted form's id; adopted_reference_field names the field on that form
+  // pointing back at this parent. Never used directly by the field palette.
+  | 'line_item_adopted'
 
 export interface FieldDef {
   name: string
@@ -24,7 +35,30 @@ export interface FieldDef {
    *  for this reference. Optional; when absent, consumers fall back to
    *  name/label/id heuristics. Only meaningful when type === 'reference'. */
   display_field?: string
+  /** Which aggregate a 'line_item_count' field computes over reference_table's
+   *  rows. Undefined/'count' is the original count-only behavior. */
+  aggregate_fn?: 'count' | 'sum' | 'avg' | 'min' | 'max'
+  /** Name (not physical column) of the numeric field on reference_table to
+   *  aggregate. Required whenever aggregate_fn is anything but 'count'. */
+  aggregate_field?: string
+  /** Name of an ordinary TypeReference field on reference_table pointing
+   *  back at this parent. Required when type === 'line_item_adopted'; also
+   *  reused on a 'line_item_count' field when its target is an adopted form
+   *  rather than a generated child (see the backend's doc comment on this
+   *  same wire key for why one field carries both meanings). */
+  adopted_reference_field?: string
   description?: string
+  /** Marks this field as (one of, possibly several) fields used to build a
+   *  human-readable title for a record of this form, shown wherever the
+   *  runtime would otherwise display the record's raw id. When several
+   *  fields set this, the runtime concatenates their formatted values in
+   *  field order. Falls back to the legacy name/label/id heuristic when no
+   *  field on the form sets this. See features/forms/runtime/record-title.ts. */
+  is_record_title?: boolean
+  /** Marks this field as included in the form's combined full-text search
+   *  column ("tsv", generated server-side from all searchable fields).
+   *  Only meaningful for text-like types (string/text/email/phone). */
+  searchable?: boolean
 }
 
 export interface FormDefinition {
@@ -54,6 +88,13 @@ export interface FormDefinition {
   create_user_name_field?: string
   create_user_email_field?: string
   create_user_role_field?: string
+  /** Parent-configured row-count bounds for a Line Items child form (only
+   *  meaningful when is_line_items is true), enforced server-side alongside
+   *  each row's own validation. Mirrors the owning 'line_items' element's
+   *  lineItemConfig.minRows/maxRows — set by form-builder/lineItemsSync.ts
+   *  on every child-form save. 0/absent means "no bound" for either. */
+  line_items_min_rows?: number
+  line_items_max_rows?: number
   created_at: string
   updated_at: string
   migration_warnings?: string[]

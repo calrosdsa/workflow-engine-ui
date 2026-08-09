@@ -1,0 +1,61 @@
+// Picks which existing TypeReference field on an ADOPTED form points back at
+// the parent form embedding it as a Line Items grid. Mirrors
+// DisplayFieldSelect's shape exactly, but filters to 'reference'-type fields
+// that specifically target parentFormId — not just any reference field on
+// the form, which could point at a completely unrelated third form.
+import { useMemo } from 'react'
+import {
+  SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem,
+} from '@/components/ui/select-menu'
+import { useForm as useFormDef } from '@/features/forms/hooks'
+
+interface AdoptedReferenceFieldSelectProps {
+  /** The adopted form's id (element.adoptedFormRef). */
+  formId?: string
+  /** The parent form embedding this grid — only reference fields pointing at
+   *  this id are valid candidates. */
+  parentFormId?: string
+  /** The currently configured reference field name (element.adoptedReferenceField). */
+  value?: string
+  onChange: (fieldName: string | undefined) => void
+}
+
+export function AdoptedReferenceFieldSelect({ formId, parentFormId, value, onChange }: AdoptedReferenceFieldSelectProps) {
+  const { data: targetForm, isLoading } = useFormDef(formId ?? '')
+
+  const options = useMemo(
+    () => (targetForm?.fields ?? []).filter((f) => f.type === 'reference' && f.reference_table === parentFormId),
+    [targetForm, parentFormId],
+  )
+
+  if (!formId) {
+    return (
+      <SelectMenu disabled>
+        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select a form first" /></SelectTrigger>
+        <SelectContent />
+      </SelectMenu>
+    )
+  }
+
+  if (!isLoading && options.length === 0) {
+    return (
+      <SelectMenu disabled>
+        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="This form has no reference field pointing back at the parent" /></SelectTrigger>
+        <SelectContent />
+      </SelectMenu>
+    )
+  }
+
+  return (
+    <SelectMenu value={value ?? ''} onValueChange={(v) => onChange(v || undefined)} disabled={isLoading}>
+      <SelectTrigger className="h-8 text-sm">
+        <SelectValue placeholder={isLoading ? 'Loading fields…' : 'Select a reference field'} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((f) => (
+          <SelectItem key={f.name} value={f.name} className="text-xs">{f.label || f.name}</SelectItem>
+        ))}
+      </SelectContent>
+    </SelectMenu>
+  )
+}

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { formsApi } from './api'
+import { unlinkDependentForm } from './unlinkDependentForm'
 import type { CreateFormPayload, UpdateFormPayload, FormRecord, FormDefinition } from './types'
 
 export const formKeys = {
@@ -83,13 +84,17 @@ export function useCopyForm() {
   })
 }
 
-/** "Unlink Dependent Form" — detaches a form from its parent without deleting it. */
+/** "Unlink Dependent Form" — detaches a form from its parent without deleting
+ *  it, and removes the auto-injected Form Reference field that pointed back
+ *  at that parent (see unlinkDependentForm) so the child isn't left with a
+ *  dangling required field for a relationship the tree no longer shows. */
 export function useUnlinkForm() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => formsApi.unlink(id),
-    onSuccess:  () => {
+    mutationFn: (id: string) => unlinkDependentForm(id),
+    onSuccess:  (_result, id) => {
       qc.invalidateQueries({ queryKey: formKeys.all })
+      qc.invalidateQueries({ queryKey: formKeys.detail(id) })
       qc.invalidateQueries({ queryKey: ['permissions'] })
     },
   })

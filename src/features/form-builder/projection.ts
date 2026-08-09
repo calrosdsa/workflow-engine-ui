@@ -6,7 +6,7 @@
 // working while the builder owns a much richer schema in the `layout` column.
 
 import type { FormSchema, FormElement } from './schema'
-import { COMPONENT_REGISTRY, supportsUnique } from './component-registry'
+import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable } from './component-registry'
 import { slugifyKey, RESERVED_FIELD_KEYS } from './factory'
 import type { FieldDef } from '@/features/forms/types'
 
@@ -23,13 +23,29 @@ export function* iterElements(schema: FormSchema): Generator<FormElement> {
 
 /** Maps a single element to a backend FieldDef, or null if it isn't data-bearing. */
 function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | null {
+  // A 'line_items' element is data-bearing ONLY in adopted mode ('existing')
+  // — it becomes a TypeLineItemAdopted virtual field marking the association
+  // on the PARENT's own field list (see schema.ts's sourceMode doc comment).
+  // In generated mode (the original, only-ever-existed behavior) it stays
+  // non-data-bearing — COMPONENT_REGISTRY's static dataBearing:false for
+  // 'line_items' covers that case; this is the one place that overrides it.
+  const isAdoptedLineItems = el.component === 'line_items' && el.sourceMode === 'existing'
+
   const reg = COMPONENT_REGISTRY[el.component]
-  if (!reg.dataBearing || !reg.fieldType) return null
+  if (!isAdoptedLineItems && (!reg.dataBearing || !reg.fieldType)) return null
 
   // An unconfigured form reference (no form selected) can't become a valid
   // reference column — the backend requires reference_table. Skip it so the save
   // isn't rejected; the builder's validation surfaces it to the user instead.
   if (el.component === 'form' && !el.formRef) return null
+
+  // Same guard for an unconfigured Line Item Count (no target grid picked
+  // yet) — the backend requires reference_table for type line_item_count too.
+  if (el.component === 'line_item_count' && !el.formRef) return null
+
+  // Same guard for an unconfigured adopted Line Items grid (no form or
+  // reference field picked yet).
+  if (isAdoptedLineItems && (!el.adoptedFormRef || !el.adoptedReferenceField)) return null
 
   // The editable `key` becomes the wire `name`. It's deduplicated only so the
   // backend's key-based record contract stays unambiguous — it is NOT the
@@ -51,7 +67,7 @@ function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | nul
   const field: FieldDef = {
     name,
     label: el.label || name,
-    type: reg.fieldType,
+    type: isAdoptedLineItems ? 'line_item_adopted' : reg.fieldType!,
     required: el.behavior.required === 'always',
   }
 
@@ -59,8 +75,11 @@ function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | nul
   // New elements have no column yet — the backend assigns one on first save.
   if (el.column) field.column = el.column
 
-  // UNIQUE constraint — only for string/number-typed fields that opted in.
-  if (el.unique && supportsUnique(el.component)) field.unique = true
+  // UNIQUE constraint — string/number-typed fields that opted in via the
+  // config panel's toggle, plus 'form' reference fields, whose `unique` is
+  // set programmatically (not via that toggle) to model a one-to-one
+  // dependent-form relationship: at most one child record per parent.
+  if (el.unique && (supportsUnique(el.component) || el.component === 'form')) field.unique = true
 
   if (el.description) field.description = el.description
 
@@ -75,10 +94,46 @@ function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | nul
     field.reference_table = el.formRef
   }
 
+  // Line Item Count: formRef holds the target Line Items grid's childFormId —
+  // the backend resolves it to that child form to count rows against.
+  if (el.component === 'line_item_count' && el.formRef) {
+    field.reference_table = el.formRef
+  }
+
+  // Line Item Count: which aggregate to compute (undefined/'count' is the
+  // original count-only behavior) and, for sum/avg/min/max, which numeric
+  // column on the target grid to aggregate.
+  if (el.component === 'line_item_count' && el.aggregateFn && el.aggregateFn !== 'count') {
+    field.aggregate_fn = el.aggregateFn
+    if (el.aggregateField) field.aggregate_field = el.aggregateField
+  }
+
+  // Adopted Line Items: which existing form this grid targets, and which
+  // field on that form points back at this parent.
+  if (isAdoptedLineItems) {
+    field.reference_table = el.adoptedFormRef
+    field.adopted_reference_field = el.adoptedReferenceField
+  }
+
   // Optional: which field of the referenced form to display/search instead
   // of the runtime's name/label/id fallback heuristic.
   if (el.component === 'form' && el.displayField) {
     field.display_field = el.displayField
+  }
+
+  // Marks this field as part of the record's title (see FieldDef.is_record_title's
+  // doc comment). Re-checked against supportsRecordTitle here (not just trusted
+  // from the config panel's own gating) so a field that was flagged before its
+  // component type changed can't silently project a stale, no-longer-valid flag.
+  if (el.isRecordTitle && supportsRecordTitle(el.component)) {
+    field.is_record_title = true
+  }
+
+  // Marks this field as part of the form's full-text search index (see
+  // FieldDef.searchable's doc comment). Re-checked against supportsSearchable
+  // for the same reason as is_record_title above.
+  if (el.searchable && supportsSearchable(el.component)) {
+    field.searchable = true
   }
 
   // SQL default — only emit for primitive static defaults we can express safely.

@@ -27,7 +27,7 @@ export type ComponentType =
   // Choice
   | 'checkbox' | 'switch' | 'radio' | 'select' | 'multiselect' | 'autocomplete' | 'role'
   // Relational
-  | 'form' | 'line_items'
+  | 'form' | 'line_items' | 'line_item_count'
   // Files
   | 'file' | 'image'
   // Rich / presentational
@@ -103,27 +103,37 @@ export interface ElementBinding {
 // Line Items ('line_items' component)
 // ---------------------------------------------------------------------------
 
-/** One column of a Line Items grid — a constrained FormElement: any
- *  data-bearing component except another 'line_items' (no nested grids). */
-export type LineItemColumnComponent = Exclude<ComponentType, 'line_items'>
+/** A Line Items grid's row-editor fields are authored the SAME way the main
+ *  canvas is — sections of columns of FormElements — not a flat list. This
+ *  is what lets the row-editor sidebar lay fields out multi-column, exactly
+ *  like FormRenderer does for a normal form, instead of always stacking one
+ *  field per row. The summary TABLE (grid headers/cells) still flattens
+ *  this back into document order — a table has no room for section
+ *  columns — see LineItemsGrid's flattenLineItemSections. */
+export type LineItemSection = FormSection
 
-export interface LineItemColumnDef {
-  id: string
-  component: LineItemColumnComponent
-  label: string
-  key: string
-  options?: SelectOption[]
-  formRef?: string
-  displayField?: string
-  defaultValue?: unknown
-  validation: ElementValidation
-  behavior: ElementBehavior
-}
+/** Component types excluded from a Line Items row: 'line_item_count' (a row
+ *  can't meaningfully hold a count of some other grid — that concept only
+ *  makes sense on the PARENT form). Everything else, including 'line_items'
+ *  itself (nested grids, recursively, no depth limit), is allowed. */
+export type LineItemColumnComponent = Exclude<ComponentType, 'line_item_count'>
+
+/** Which aggregate a 'line_item_count' element computes over its target
+ *  grid's rows — same string values as the backend's field.LineItemAggregateFn
+ *  so they round-trip through FieldDef.aggregate_fn with no translation. */
+export type LineItemAggregateFn = 'count' | 'sum' | 'avg' | 'min' | 'max'
 
 /** Layout/Behavior configuration for a Line Items field, set in the Config
  *  Panel and stored verbatim in the parent's `layout` (opaque to the backend). */
 export interface LineItemsConfig {
   // Layout
+  /** Undefined/'table' is the original, only-ever-existed layout (a plain
+   *  summary table). 'cards' renders each row as a stacked label/value card
+   *  instead — meant for narrow/mobile viewports where a wide table with
+   *  many columns has to horizontal-scroll. Table-only settings below
+   *  (stickyHeader, alternateRowColors, tableHeight) are ignored in cards
+   *  mode — there's no header row or fixed height concept for a card list. */
+  displayMode?: 'table' | 'cards'
   tableHeight?: number       // px; undefined = auto/grow
   allowResize?: boolean
   stickyHeader?: boolean
@@ -137,6 +147,15 @@ export interface LineItemsConfig {
   minRows?: number
   maxRows?: number
   defaultRows?: number
+  /** Undefined/'sidebar' is the original, only-ever-existed editing mode (a
+   *  slide-over Drawer with the full row's fields). 'inline' instead renders
+   *  each column as a live editable input directly in the table cell / card
+   *  field — no separate "open the row" step, changes apply immediately.
+   *  Only meaningful in 'table'/'cards' displayMode; a column that is ITSELF
+   *  a nested Line Items grid can never render inline (no room for a grid
+   *  inside a table cell) and always falls back to opening the sidebar for
+   *  that one column, regardless of this setting. */
+  rowEditMode?: 'sidebar' | 'inline'
 }
 
 export function emptyLineItemsConfig(): LineItemsConfig {
@@ -316,11 +335,29 @@ export interface FormElement {
   unique?: boolean          // adds a UNIQUE constraint (string/number fields only)
   defaultValue?: unknown
 
+  // Marks this field as (one of, possibly several) fields used to build a
+  // human-readable title for a record of this form — shown on the runtime
+  // Detail page, record drawers, and wherever another form's reference field
+  // points at a record of this form, instead of the raw id. Restricted by
+  // the config panel to scalar, human-readable component types. Projects to
+  // FieldDef.is_record_title (see projection.ts). When multiple elements set
+  // this, resolveRecordTitle() (features/forms/runtime/record-title.ts)
+  // concatenates their values in document order.
+  isRecordTitle?: boolean
+
+  // Marks this field as included in the form's combined full-text search
+  // column (backend-generated "tsv"). Restricted by the config panel to
+  // text-like component types (supportsSearchable). Projects to
+  // FieldDef.searchable (see projection.ts).
+  searchable?: boolean
+
   // Choice components
   options?: SelectOption[]
 
   // Relational ('form' component): the referenced form's unique identifier.
   // The UI displays the form's name but always stores its id here.
+  // Also reused by 'line_item_count' to hold the target Line Items grid's
+  // childFormId — same "stores an id, backend resolves the rest" shape.
   formRef?: string
 
   // Relational ('form' component): the name of a field on the referenced
@@ -328,17 +365,60 @@ export interface FormElement {
   // runtime, instead of the name/label/id fallback heuristic. Optional.
   displayField?: string
 
+  // 'line_item_count' component: which aggregate to compute over the target
+  // grid's rows (formRef). Undefined/'count' is the original, count-only
+  // behavior of this component — every other value requires aggregateField.
+  aggregateFn?: LineItemAggregateFn
+
+  // 'line_item_count' component: the key of a numeric column on the target
+  // grid (formRef's lineItemColumns) to aggregate. Required whenever
+  // aggregateFn is anything but 'count'/undefined; ignored for 'count'.
+  aggregateField?: string
+
   // Line Items ('line_items' component): the id of the generated child form
   // backing this grid. Empty until the parent form's first save, at which
   // point the builder creates the child form and stores its id here —
-  // mirrors formRef's "stores the id, backend resolves the rest" shape.
+  // mirrors formRef's "stores the id, backend resolves the rest" shape. Only
+  // meaningful when sourceMode is undefined/'generated' — see adoptedFormRef
+  // for the 'existing' case.
   childFormId?: string
 
-  // Line Items ('line_items' component): the mini form-builder's column
-  // list — this form's own Fields are projected from these on save. Kept
-  // here (not just on the child FormDef) so the builder can render/edit
-  // columns before the child form exists yet.
-  lineItemColumns?: LineItemColumnDef[]
+  // Line Items ('line_items' component): undefined/'generated' is the
+  // original, only-ever-existed behavior — the grid owns a hidden, auto-
+  // created child form (childFormId/lineItemColumns), managed entirely by
+  // lineItemsSync.ts. 'existing' instead points the grid at an ALREADY
+  // EXISTING, independently-visible, independently-permissioned normal form
+  // (adoptedFormRef) — that form keeps its own workflows/permissions/
+  // standalone page; the grid is just a filtered view into its records via
+  // adoptedReferenceField, not an owner of it. lineItemColumns/childFormId
+  // are unused in 'existing' mode — the grid's columns come from the
+  // adopted form's own real fields instead (see LineItemsGrid's use of
+  // useFormDef when sourceMode is 'existing').
+  sourceMode?: 'generated' | 'existing'
+
+  // Line Items ('line_items' component, sourceMode 'existing'): the id of
+  // the adopted normal form whose records this grid filters/displays. Kept
+  // as a separate field from childFormId (rather than reusing it) so the two
+  // modes' very different backend contracts — cascade-deleting hidden child
+  // vs. a plain reference into an independent form — are never confused by
+  // code that only checks "is childFormId set."
+  adoptedFormRef?: string
+
+  // Line Items ('line_items' component, sourceMode 'existing'): the name of
+  // an ordinary TypeReference field ALREADY PRESENT on the adopted form
+  // (adoptedFormRef) that points back at this parent — chosen by the user in
+  // the builder, since adoption never creates or modifies fields on a form
+  // it doesn't own. Projected to FieldDef.adopted_reference_field on the
+  // PARENT's own TypeLineItemAdopted field (see projection.ts).
+  adoptedReferenceField?: string
+
+  // Line Items ('line_items' component): the row-editor's own sections of
+  // columns of fields — this grid's Fields are projected from these
+  // (flattened in document order) on save. Kept here (not just on the child
+  // FormDef) so the builder can render/edit them before the child form
+  // exists yet. Same section/column/element shape as the main canvas — see
+  // LineItemSection's doc comment for why.
+  lineItemColumns?: LineItemSection[]
 
   // Line Items ('line_items' component): Layout/Behavior configuration.
   lineItemConfig?: LineItemsConfig

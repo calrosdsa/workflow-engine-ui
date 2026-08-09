@@ -7,6 +7,9 @@ export interface SearchRecordsRequest {
   sort?: SortRule[]
   page: number
   page_size: number
+  /** Free-text full-text search, ANDed server-side into `filter` against the
+   *  form's combined search column (fields marked searchable). */
+  query?: string
 }
 
 export interface SearchRecordsResponse {
@@ -14,6 +17,42 @@ export interface SearchRecordsResponse {
   total: number
   page: number
   page_size: number
+}
+
+export type AggregateFn = 'count' | 'sum' | 'avg' | 'min' | 'max'
+export type DateBucket = 'day' | 'week' | 'month' | 'quarter' | 'year'
+
+export interface AggregateDimensionRequest {
+  field: string
+  bucket?: DateBucket
+}
+
+export interface AggregateSeriesRequest {
+  fn: AggregateFn
+  field?: string
+}
+
+export interface AggregateRecordsRequest {
+  /** Omitting this means "no grouping at all" — one aggregate row over the
+   *  whole (optionally filtered) table, the stat/KPI chart type's data
+   *  source. See workflow-engine's AggregateQuery.GroupBy doc comment. */
+  group_by?: AggregateDimensionRequest
+  group_by2?: AggregateDimensionRequest
+  series?: AggregateSeriesRequest[]
+  filter?: FilterGroup
+  sort_by?: 'group' | 'value'
+  sort_dir?: 'asc' | 'desc'
+  limit?: number
+}
+
+export interface AggregateGroupResponse {
+  key: string
+  key2?: string
+  values: number[]
+}
+
+export interface AggregateRecordsResponse {
+  groups: AggregateGroupResponse[]
 }
 
 export const formsApi = {
@@ -54,6 +93,8 @@ export const formsApi = {
   },
   searchRecords: (formId: string, req: SearchRecordsRequest) =>
     api.post(`forms/${formId}/records/search`, { json: req }).json<SearchRecordsResponse>(),
+  aggregateRecords: (formId: string, req: AggregateRecordsRequest) =>
+    api.post(`forms/${formId}/records/aggregate`, { json: req }).json<AggregateRecordsResponse>(),
   getRecordAuditLog: (formId: string, recordId: string, params: { page: number; page_size: number }) =>
     api.get(`forms/${formId}/records/${recordId}/audit`, { searchParams: params }).json<AuditLogResponse>(),
   getLinkedRecords: (formId: string, recordId: string, params: { page: number; page_size: number }) =>

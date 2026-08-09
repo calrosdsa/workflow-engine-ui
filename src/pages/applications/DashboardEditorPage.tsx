@@ -1,0 +1,175 @@
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { AlertCircle, ArrowLeft, Check, LayoutDashboard, Save } from 'lucide-react'
+import '@/features/dashboard/widgets'
+import { useMenu, useUpdateMenu } from '@/features/menus/hooks'
+import { useDashboardStore } from '@/features/dashboard/store'
+import { parseDashboardSchema } from '@/features/dashboard/serialize'
+import { DashboardBuilderDnd } from '@/features/dashboard/canvas/DashboardBuilderDnd'
+import { GridCanvas } from '@/features/dashboard/canvas/GridCanvas'
+import { DashboardToolbox } from '@/features/dashboard/Toolbox'
+import { WidgetSettingsDrawer } from '@/features/dashboard/WidgetSettingsDrawer'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Spinner } from '@/components/ui/spinner'
+import type { DashboardMenuConfig } from '@/features/menus/types'
+
+interface DashboardEditorPageProps {
+  appId: string
+  menuId: string
+}
+
+// Full-screen dashboard editor — the same GridCanvas/DashboardToolbox/
+// WidgetSettingsDrawer trio DashboardMenuConfigPanel wires into
+// MenusSection's cramped max-w-xl panel, but given the whole viewport
+// instead of a squeezed inline strip. Structurally a sibling of
+// WorkflowBuilderPage.tsx (header: back/name/dirty/save, Ctrl+S,
+// beforeunload guard; body: toolbox | canvas | settings side-by-side) rather
+// than a new pattern — dashboards are the one menu type whose builder
+// (drag/resize grid + a real settings panel) needs room the inline config
+// panel can't give it.
+//
+// The inline config panel (DashboardMenuConfigPanel, still reachable from
+// MenusSection) is left as-is: a compact quick-glance/quick-add view. This
+// page is the place for actually laying a dashboard out.
+export function DashboardEditorPage({ appId, menuId }: DashboardEditorPageProps) {
+  const navigate = useNavigate()
+  const { data: menu, isLoading } = useMenu(menuId)
+  const updateMutation = useUpdateMenu(menuId)
+
+  const schema = useDashboardStore((s) => s.schema)
+  const loadSchema = useDashboardStore((s) => s.loadSchema)
+  const markSaved = useDashboardStore((s) => s.markSaved)
+  const dirty = useDashboardStore((s) => s.dirty)
+  const addWidget = useDashboardStore((s) => s.addWidget)
+
+  const [initialised, setInitialised] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [justSaved, setJustSaved] = useState(false)
+
+  useEffect(() => {
+    if (menu && !initialised) {
+      loadSchema(parseDashboardSchema((menu.config as DashboardMenuConfig).schema))
+      setInitialised(true)
+    }
+  }, [menu, initialised, loadSchema])
+
+  const isSaving = updateMutation.isPending
+
+  const handleSave = async (): Promise<boolean> => {
+    if (!menu) return false
+    setSaveError(null)
+    try {
+      await updateMutation.mutateAsync({
+        parent_id: menu.parent_id,
+        menu_type: menu.menu_type,
+        slug: menu.slug,
+        name: menu.name,
+        icon: menu.icon,
+        sort_order: menu.sort_order,
+        config: { ...(menu.config as DashboardMenuConfig), schema },
+        required_permission: menu.required_permission,
+        permission_mode: menu.permission_mode,
+        required_role_ids: menu.required_role_ids,
+      })
+      markSaved()
+      setJustSaved(true)
+      return true
+    } catch (e: unknown) {
+      setSaveError(e instanceof Error ? e.message : 'Save failed')
+      return false
+    }
+  }
+
+  const saveRef = useRef(handleSave)
+  saveRef.current = handleSave
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        void saveRef.current()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
+  useEffect(() => {
+    if (!dirty) return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault() }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [dirty])
+
+  useEffect(() => {
+    if (!justSaved) return
+    const t = setTimeout(() => setJustSaved(false), 1600)
+    return () => clearTimeout(t)
+  }, [justSaved])
+
+  const handleBack = () => {
+    if (dirty && !window.confirm('You have unsaved changes. Leave without saving?')) return
+    navigate({ to: '/applications/$appId/design', params: { appId }, search: { tab: 'menus' } })
+  }
+
+  if (isLoading || !initialised) {
+    return <div className="flex h-screen items-center justify-center"><Spinner /></div>
+  }
+
+  return (
+    <div className="flex h-screen flex-col overflow-hidden bg-slate-50">
+      <header className="z-20 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-3 shadow-sm">
+        <Button
+          variant="ghost" size="icon"
+          className="h-8 w-8 text-slate-500 hover:text-slate-700"
+          onClick={handleBack}
+          title="Back to menus"
+        >
+          <ArrowLeft size={16} />
+        </Button>
+
+        <div className="h-5 w-px bg-slate-200" />
+
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 shadow-sm">
+          <LayoutDashboard size={16} className="text-white" />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Input
+            value={menu?.name ?? ''}
+            readOnly
+            className="h-8 w-60 border-0 bg-transparent px-1.5 text-[15px] font-semibold text-slate-800 shadow-none focus-visible:ring-0"
+          />
+          {dirty && (
+            <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-600">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+              Unsaved
+            </span>
+          )}
+        </div>
+
+        <div className="flex-1" />
+
+        {saveError && (
+          <span className="flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-xs text-red-600">
+            <AlertCircle size={13} />{saveError}
+          </span>
+        )}
+
+        <Button size="sm" onClick={handleSave} disabled={isSaving} title="Save (Ctrl+S)">
+          {isSaving ? <Spinner className="h-4 w-4" /> : justSaved ? <Check size={13} /> : <Save size={13} />}
+          {justSaved ? 'Saved' : 'Save'}
+        </Button>
+      </header>
+
+      <div className="flex flex-1 overflow-hidden">
+        <DashboardBuilderDnd>
+          <DashboardToolbox />
+          <GridCanvas clientId={appId} appId={appId} onAddFirstWidget={() => addWidget('paragraph')} />
+          <WidgetSettingsDrawer clientId={appId} appId={appId} />
+        </DashboardBuilderDnd>
+      </div>
+    </div>
+  )
+}

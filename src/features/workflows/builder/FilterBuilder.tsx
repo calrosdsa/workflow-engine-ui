@@ -27,6 +27,10 @@ const OPERATORS: { value: CompareOp; label: string }[] = [
   { value: 'in', label: 'in list' },
   { value: 'is_null', label: 'is empty' },
   { value: 'not_null', label: 'is not empty' },
+  // Matches the form's combined full-text search column, not the selected
+  // field — the field picker is ignored for this op (see CompareOp's doc
+  // comment in ../types).
+  { value: 'search', label: 'full-text search' },
   // Change-detection — only meaningful where an old/new record pair exists
   // (a Trigger node's before/after/after_async filter). Harmless elsewhere:
   // evaluates false when there's no old record to compare against.
@@ -35,6 +39,12 @@ const OPERATORS: { value: CompareOp; label: string }[] = [
 
 function opNeedsValue(op: CompareOp): boolean {
   return op !== 'is_null' && op !== 'not_null' && op !== 'was_updated'
+}
+
+/** True when op ignores the condition's `field` (matches the whole record
+ *  instead of one column) — currently only full-text search. */
+function opIgnoresField(op: CompareOp): boolean {
+  return op === 'search'
 }
 
 export function newCondition(): FilterCondition {
@@ -170,26 +180,33 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
 }) {
   const [editorOpen, setEditorOpen] = useState(false)
   const needsValue = opNeedsValue(condition.op)
+  const ignoresField = opIgnoresField(condition.op)
   const isExpr = condition.value_mode === 'expression'
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-2">
       <div className="flex items-center gap-1.5">
         {/* Field */}
-        <select
-          value={condition.field}
-          onChange={(e) => onChange({ field: e.target.value })}
-          className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-rose-400 focus:outline-none"
-        >
-          <option value="">field…</option>
-          {fields.map((f) => (
-            <option key={f.name} value={f.name}>{f.label || f.name}</option>
-          ))}
-        </select>
+        {ignoresField ? (
+          <div className="min-w-0 flex-1 truncate rounded-md border border-slate-100 bg-slate-50 px-1.5 py-1 text-[11px] italic text-slate-400">
+            whole record
+          </div>
+        ) : (
+          <select
+            value={condition.field}
+            onChange={(e) => onChange({ field: e.target.value })}
+            className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-rose-400 focus:outline-none"
+          >
+            <option value="">field…</option>
+            {fields.map((f) => (
+              <option key={f.name} value={f.name}>{f.label || f.name}</option>
+            ))}
+          </select>
+        )}
         {/* Operator */}
         <select
           value={condition.op}
-          onChange={(e) => onChange({ op: e.target.value as CompareOp })}
+          onChange={(e) => onChange({ op: e.target.value as CompareOp, field: e.target.value === 'search' ? '_search' : condition.field })}
           className="shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-rose-400 focus:outline-none"
         >
           {OPERATORS.map((o) => (

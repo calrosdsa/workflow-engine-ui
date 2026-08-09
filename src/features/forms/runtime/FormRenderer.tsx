@@ -70,6 +70,12 @@ function nullsToEmptyStrings(schema: FormSchema, values: Record<string, unknown>
 export interface FormRendererProps {
   schema: FormSchema
   fields: FieldDef[]
+  /** This form's own id — threaded down to a 'line_items' field so it can
+   *  permission-check row actions against the right form (an adopted row's
+   *  OWN form permission, or this form's for a generated row/the grid
+   *  itself). Optional only for FormRendererHarness's ad-hoc dev preview,
+   *  where Line Items permission checks aren't meaningful. */
+  formId?: string
   defaultValues?: Record<string, unknown>
   onSubmit: (values: Record<string, unknown>) => void | Promise<void>
   submitting?: boolean
@@ -82,7 +88,7 @@ export interface FormRendererProps {
 // validation/visibility/required/readOnly rules the builder lets an admin
 // configure. This is the piece Add Menu depends on; no runtime form-fill
 // renderer existed anywhere in the codebase before this.
-export function FormRenderer({ schema, defaultValues, onSubmit, submitting, submitLabel }: FormRendererProps) {
+export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitting, submitLabel }: FormRendererProps) {
   const zodSchema = buildZodSchema(schema)
   const variables = schemaToVariableDecls(schema)
 
@@ -134,6 +140,7 @@ export function FormRenderer({ schema, defaultValues, onSubmit, submitting, subm
                         key={el.id}
                         element={el}
                         control={control}
+                        formId={formId}
                         runtimeState={{ visible: runtimeState.visible, required: resolvedRequired, readOnly: resolvedReadOnly }}
                         error={errors[el.key]?.message as string | undefined}
                       />

@@ -626,7 +626,7 @@ function MenuDetail({ menu, appId, onDeleted }: { menu: Menu; appId: string; onD
         <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
           {MENU_TYPE_REGISTRY[menu.menu_type].label} settings
         </h4>
-        <ConfigPanel menu={{ ...menu, config }} onChange={(c) => { setConfig(c); setSaved(false) }} />
+        <ConfigPanel menu={{ ...menu, config }} onChange={(c) => { setConfig(c); setSaved(false) }} appId={appId} />
       </div>
 
       {error && <p className="flex items-center gap-1.5 text-xs text-red-600"><AlertCircle size={12} />{error}</p>}

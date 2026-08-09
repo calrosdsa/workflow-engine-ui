@@ -1,15 +1,46 @@
 import { useMemo, useState } from 'react'
 import { Handle, Position, type NodeProps, useStore } from '@xyflow/react'
-import { Plus, GripVertical, ArrowLeftRight, Trash2, GitBranchPlus, Copy, AlertTriangle } from 'lucide-react'
+import { Plus, GripVertical, ArrowLeftRight, Trash2, GitBranchPlus, Copy, AlertTriangle, CheckCircle2, XCircle, MinusCircle, Loader2, MessageCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NODE_REGISTRY } from '../node-registry'
 import { useBuilderStore, DUPLICABLE_NODE_TYPES, type FlowNode, type DropPosition } from '../store'
 import { computeExecutionOrder } from '../executionOrder'
 import { nodeSetupIssue } from '../node-validation'
+import { useExecutionOverlayStore } from '../execution-overlay-store'
+import type { NodeExecutionStatus } from '@/features/executions/types'
 import { DropZone } from './DropZone'
 import type { SetVariableConfig, ConditionConfig, VariableAssignment, FetchRecordsConfig, FilterGroup, IteratorConfig, HttpRequestConfig, TriggerConfig, ShowMessageConfig, NotificationConfig } from '../../types'
 
 const DRAG_TRANSFER_KEY = 'application/workflow-node-reorder'
+
+// Execution overlay styling (FR-C5-007) — mirrors ExecutionDetailPage's own
+// statusVariant color family so the canvas and the execution detail view
+// read as one consistent system. RUNNING/PENDING never appear per-node here
+// (a node only enters node_statuses once it's reached a terminal outcome or
+// is actively running), but are included for completeness against the full
+// NodeExecutionStatus union.
+const overlayStatusStyle: Record<NodeExecutionStatus, string> = {
+  PENDING:   'bg-slate-100 text-slate-500',
+  RUNNING:   'bg-blue-100 text-blue-700',
+  COMPLETED: 'bg-emerald-100 text-emerald-700',
+  FAILED:    'bg-red-100 text-red-700',
+  SKIPPED:   'bg-slate-100 text-slate-400',
+}
+
+const overlayStatusIcon: Record<NodeExecutionStatus, React.ReactNode> = {
+  PENDING:   <Loader2 size={10} strokeWidth={3} />,
+  RUNNING:   <Loader2 size={10} strokeWidth={3} className="animate-spin" />,
+  COMPLETED: <CheckCircle2 size={10} strokeWidth={3} />,
+  FAILED:    <XCircle size={10} strokeWidth={3} />,
+  SKIPPED:   <MinusCircle size={10} strokeWidth={3} />,
+}
+
+// No per-node duration is shown here — none is persisted anywhere (FR-B2-012's
+// own confirmed scope boundary; only the execution-level total is real data,
+// shown once in the Executions sidebar row instead of fabricated per node).
+function overlayStatusLabel(status: NodeExecutionStatus): string {
+  return status
+}
 
 export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const reg        = NODE_REGISTRY[data.type]
@@ -55,6 +86,19 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const edges    = useBuilderStore((s) => s.edges)
   const execInfo = useMemo(() => computeExecutionOrder(nodes, edges), [nodes, edges])
   const info     = execInfo.get(id)
+
+  // Execution overlay (FR-C5-007) — status/duration/message for this node in
+  // whichever past run is selected in the Executions sidebar. undefined
+  // means "no overlay active"; a node key absent from node_statuses means
+  // "overlay active, but this node was never reached" (dimmed, no badge).
+  const overlayExecution = useExecutionOverlayStore((s) => s.data)
+  const overlayActive    = overlayExecution != null
+  const nodeStatus: NodeExecutionStatus | undefined = overlayExecution?.node_statuses?.[id]
+  const nodeError                                   = overlayExecution?.node_errors?.[id]
+  const nodeMessage                                 = overlayExecution?.messages?.find((m) => m.node_id === id)
+  const reached          = overlayActive && nodeStatus !== undefined
+  const dimUnreached     = overlayActive && !reached
+  const [showOverlayNote, setShowOverlayNote] = useState(false)
 
   const isDraggingThis = draggingNodeId === id
   const showDropZones  = draggingNodeId !== null && draggingNodeId !== id
@@ -110,6 +154,9 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           : 'border-slate-200/80 shadow-sm hover:border-slate-300 hover:shadow-md',
         isDraggingThis ? 'opacity-40 scale-95' : '',
         dimForDrag ? 'opacity-40' : '',
+        // A node the selected execution never reached (e.g. a condition's
+        // untaken branch) recedes rather than showing a misleading badge.
+        dimUnreached ? 'opacity-35' : '',
       )}
     >
       {/* Drop zones — appear around the node while another node is dragged */}
@@ -155,6 +202,53 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           title={setupIssue}
         >
           <AlertTriangle size={11} strokeWidth={2.75} />
+        </div>
+      )}
+
+      {/* Execution overlay: status + duration badge (FR-C5-007) — bottom-right,
+          a corner distinct from the execution-order badge (top-left) and the
+          setup-issue badge (top-right). Only rendered for a node the
+          selected execution actually reached. */}
+      {reached && nodeStatus && (
+        <div
+          className={cn(
+            'absolute -bottom-2 -right-2 z-10 flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold shadow-md ring-2 ring-white',
+            overlayStatusStyle[nodeStatus],
+          )}
+          title={overlayStatusLabel(nodeStatus)}
+        >
+          {overlayStatusIcon[nodeStatus]}
+        </div>
+      )}
+
+      {/* Execution overlay: message/error icon (FR-C5-007) — bottom-left.
+          A show_message node's own published message, or (once populated by
+          the backend) a FAILED node's captured error text. Click opens a
+          popover with the full text since messages can run long. */}
+      {reached && (nodeMessage || nodeError) && (
+        <div className="absolute -bottom-2 -left-2 z-20">
+          <button
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowOverlayNote((v) => !v)
+            }}
+            className={cn(
+              'flex h-6 w-6 items-center justify-center rounded-full text-white shadow-md ring-2 ring-white transition-transform hover:scale-110 nodrag nopan',
+              nodeError || nodeMessage?.message_type === 'error' ? 'bg-red-500 shadow-red-500/30'
+                : nodeMessage?.message_type === 'info' ? 'bg-amber-500 shadow-amber-500/30'
+                : 'bg-emerald-500 shadow-emerald-500/30',
+            )}
+            title="View captured message"
+          >
+            <MessageCircle size={12} strokeWidth={2.5} />
+          </button>
+          {showOverlayNote && (
+            <div className="nodrag nopan absolute left-0 top-7 z-30 w-56 rounded-lg border border-slate-200 bg-white p-2.5 text-left text-[11px] leading-snug text-slate-600 shadow-xl">
+              {nodeError && <p className="font-mono text-red-600">{nodeError}</p>}
+              {!nodeError && nodeMessage && <p>{nodeMessage.message}</p>}
+            </div>
+          )}
         </div>
       )}
 

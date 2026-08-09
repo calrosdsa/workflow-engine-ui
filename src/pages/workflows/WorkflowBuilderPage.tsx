@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
-import { AlertCircle, AlertTriangle, ArrowLeft, Check, CheckCircle, Play, Save, Workflow } from 'lucide-react'
+import { AlertCircle, AlertTriangle, ArrowLeft, Braces, Check, CheckCircle, History, Play, Save, Workflow, X } from 'lucide-react'
 import { useWorkflow, useCreateWorkflow, useUpdateWorkflow } from '@/features/workflows/hooks'
-import { useTriggerExecution } from '@/features/executions/hooks'
+import { useTriggerExecution, useExecution } from '@/features/executions/hooks'
 import { useBuilderStore } from '@/features/workflows/builder/store'
+import { useExecutionOverlayStore } from '@/features/workflows/builder/execution-overlay-store'
 import { nodeSetupIssue } from '@/features/workflows/builder/node-validation'
 import { VariablesPanel } from '@/features/workflows/builder/VariablesPanel'
 import { NodeConfigPanel } from '@/features/workflows/builder/NodeConfigPanel'
+import { ExecutionsSidebar, statusDot } from '@/features/workflows/builder/ExecutionsSidebar'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
@@ -20,7 +23,8 @@ interface WorkflowBuilderPageProps {
 
 export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   const navigate = useNavigate()
-  const params   = useParams({ strict: false }) as { workflowId?: string }
+  const params   = useParams({ strict: false }) as { appId?: string; workflowId?: string }
+  const appId    = params.appId ?? ''
   const id       = mode === 'edit' ? (params.workflowId ?? '') : ''
 
   const { data: existing, isLoading } = useWorkflow(id)
@@ -28,16 +32,45 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   const {
     loadDefinition, seedNew, toDefinition, name, setName,
     isDirty, markSaved, nodes, selectNode,
+    executionsPanelOpen, toggleExecutionsPanel,
+    varsPanelOpen, toggleVarsPanel,
   } = useBuilderStore()
 
   const createMutation  = useCreateWorkflow()
   const updateMutation  = useUpdateWorkflow(id)
   const triggerMutation = useTriggerExecution()
 
-  const [saveError,    setSaveError]    = useState<string | null>(null)
-  const [triggeredId,  setTriggeredId]  = useState<string | null>(null)
-  const [initialised,  setInitialised]  = useState(false)
-  const [justSaved,    setJustSaved]    = useState(false)
+  const [saveError,   setSaveError]   = useState<string | null>(null)
+  const [triggeredId, setTriggeredId] = useState<string | null>(null)
+  const [initialised, setInitialised] = useState(false)
+  const [justSaved,   setJustSaved]   = useState(false)
+
+  const clearOverlay = useExecutionOverlayStore((s) => s.select)
+  const selectedExecutionId = useExecutionOverlayStore((s) => s.selectedExecutionId)
+  const setOverlayData = useExecutionOverlayStore((s) => s.setData)
+
+  // Selecting a different workflow (or leaving edit mode) must not carry a
+  // stale overlay selection over — it would silently reference node IDs on
+  // whatever graph happens to load next (FR-C5-007, edge case).
+  useEffect(() => {
+    clearOverlay(null)
+  }, [id, clearOverlay])
+
+  // Single fetch for whichever execution the sidebar has selected — resolved
+  // centrally here and pushed into the overlay store so every BaseNode/
+  // CustomEdge instance reads the same object instead of each independently
+  // polling the same endpoint (existing 2s-poll-until-terminal hook, unchanged).
+  const { data: overlayExecution } = useExecution(selectedExecutionId ?? '')
+  useEffect(() => {
+    // Defensive check (FR-C5-007 edge case): an execution belonging to a
+    // different workflow than the one currently open must never overlay
+    // mismatched node IDs onto this canvas.
+    if (selectedExecutionId && overlayExecution?.workflow_definition_id === id) {
+      setOverlayData(overlayExecution)
+    } else if (!selectedExecutionId) {
+      setOverlayData(null)
+    }
+  }, [selectedExecutionId, overlayExecution, id, setOverlayData])
 
   // Load existing definition into the store once
   useEffect(() => {
@@ -70,7 +103,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
       if (mode === 'new') {
         const created = await createMutation.mutateAsync(payload)
         markSaved()
-        navigate({ to: '/workflows/$workflowId', params: { workflowId: created.id } })
+        navigate({ to: '/applications/$appId/workflows/$workflowId', params: { appId, workflowId: created.id } })
       } else {
         await updateMutation.mutateAsync(payload)
         markSaved()
@@ -131,7 +164,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
 
   const handleBack = () => {
     if (isDirty && !window.confirm('You have unsaved changes. Leave without saving?')) return
-    navigate({ to: '/workflows' })
+    navigate({ to: '/applications/$appId/workflows', params: { appId } })
   }
 
   return (
@@ -189,7 +222,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
 
         {triggeredId && (
           <button
-            onClick={() => navigate({ to: '/executions/$executionId', params: { executionId: triggeredId } })}
+            onClick={() => navigate({ to: '/applications/$appId/executions/$executionId', params: { appId, executionId: triggeredId } })}
             className="flex items-center gap-1.5 rounded-md bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
           >
             <CheckCircle size={13} />Execution running
@@ -203,6 +236,47 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
           </Button>
         )}
 
+        <Button
+          variant={varsPanelOpen ? 'secondary' : 'outline'}
+          size="sm"
+          onClick={toggleVarsPanel}
+          title="View workflow variables"
+        >
+          <Braces size={13} />Variables
+        </Button>
+
+        {mode === 'edit' && (
+          <div className="flex items-center gap-1">
+            <Button
+              variant={executionsPanelOpen ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={toggleExecutionsPanel}
+              title="View execution history"
+            >
+              <History size={13} />Executions
+            </Button>
+
+            {/* Selected-execution chip — shows which run is overlaid on the
+                canvas even while the Executions sidebar itself is closed
+                (FR-C5-007's overlay deliberately survives the sidebar
+                closing, per FR-C5-008), with a one-click way to clear it
+                without reopening the sidebar. */}
+            {selectedExecutionId && (
+              <span className="flex items-center gap-1 rounded-full bg-slate-100 py-1 pl-2 pr-1 text-[11px] font-medium text-slate-600">
+                <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', overlayExecution ? statusDot[overlayExecution.status] : 'bg-slate-300')} />
+                <span className="font-mono">{selectedExecutionId.slice(0, 8)}</span>
+                <button
+                  onClick={() => clearOverlay(null)}
+                  className="flex h-4 w-4 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600"
+                  title="Clear selected execution"
+                >
+                  <X size={10} strokeWidth={2.75} />
+                </button>
+              </span>
+            )}
+          </div>
+        )}
+
         <Button size="sm" onClick={handleSave} disabled={isSaving} title="Save (Ctrl+S)">
           {isSaving ? <Spinner className="h-4 w-4" /> : justSaved ? <Check size={13} /> : <Save size={13} />}
           {mode === 'new' ? 'Create' : justSaved ? 'Saved' : 'Save'}
@@ -214,6 +288,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
         <VariablesPanel />
         <FlowLayout />
         <NodeConfigPanel />
+        {mode === 'edit' && <ExecutionsSidebar workflowId={id} />}
       </div>
     </div>
   )
