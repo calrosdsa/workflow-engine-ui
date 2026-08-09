@@ -1,5 +1,6 @@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { ExpressionField } from '@/features/form-builder/config/ExpressionField'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, IteratorConfig } from '../../types'
@@ -101,6 +102,23 @@ export function IteratorForm({ config, variables, nodeContext, onChange }: Itera
           onChange={(e) => set({ max_iters: e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0) })}
           placeholder="0 = unlimited"
           className="h-8 w-32 text-[12px]"
+        />
+      </div>
+
+      <div className="h-px bg-slate-100" />
+
+      {/* Continue on error */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-0.5">
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Continue on Error</Label>
+          <p className="text-[10px] text-slate-400">
+            If an item's body fails, skip it and keep going instead of stopping the loop. Failed items are listed on the iterator node.
+          </p>
+        </div>
+        <Switch
+          checked={config.continue_on_error ?? false}
+          onCheckedChange={(checked) => set({ continue_on_error: checked })}
+          className="mt-0.5 shrink-0"
         />
       </div>
     </div>

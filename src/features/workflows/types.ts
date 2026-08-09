@@ -304,6 +304,16 @@ export interface IteratorConfig {
   max_iters?: number
   /** The paired Loop End node id that closes the body. */
   loop_end_id: string
+  /** When true, a body failure on one item is recorded and the loop advances
+   *  to the next item instead of stopping. Default false (fail-fast). */
+  continue_on_error?: boolean
+}
+
+/** One item's body failure inside a continue_on_error loop. */
+export interface FailedItem {
+  index: number
+  item?: unknown
+  error: string
 }
 
 // ---------------------------------------------------------------------------

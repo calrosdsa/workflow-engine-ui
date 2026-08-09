@@ -1,7 +1,9 @@
 export type ExecutionStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED'
 
 // Per-node execution outcome, as recorded in graph.NodeStatus (backend).
-export type NodeExecutionStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'SKIPPED'
+// COMPLETED_WITH_ERRORS is iterator-only: a continue_on_error loop that ran
+// every item but had one or more per-item body failures (FR-B2-015).
+export type NodeExecutionStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'SKIPPED' | 'COMPLETED_WITH_ERRORS'
 
 // A show_message node's published output (engine.MessageOutput, backend).
 export interface ExecutionMessage {
@@ -10,6 +12,13 @@ export interface ExecutionMessage {
   is_html: boolean
   timeout_ms: number
   message_type: 'success' | 'error' | 'info'
+}
+
+// One item's body failure inside a continue_on_error iterator (FR-B2-015).
+export interface ExecutionFailedItem {
+  index: number
+  item?: unknown
+  error: string
 }
 
 export interface Execution {
@@ -23,6 +32,9 @@ export interface Execution {
   node_statuses?: Record<string, NodeExecutionStatus>
   // nodeID -> error text, only for FAILED nodes (FR-B2-012).
   node_errors?: Record<string, string>
+  // iterator nodeID -> per-item failures, only for continue_on_error
+  // iterators with at least one failed item (FR-B2-015).
+  iterator_failed_items?: Record<string, ExecutionFailedItem[]>
   messages?: ExecutionMessage[]
   error_message?: string
   created_at: string

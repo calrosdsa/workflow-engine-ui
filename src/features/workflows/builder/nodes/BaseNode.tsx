@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Handle, Position, type NodeProps, useStore } from '@xyflow/react'
-import { Plus, GripVertical, ArrowLeftRight, Trash2, GitBranchPlus, Copy, AlertTriangle, CheckCircle2, XCircle, MinusCircle, Loader2, MessageCircle } from 'lucide-react'
+import { Plus, GripVertical, ArrowLeftRight, Trash2, GitBranchPlus, Copy, Check, AlertTriangle, AlertCircle, CheckCircle2, XCircle, MinusCircle, Loader2, MessageCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NODE_REGISTRY } from '../node-registry'
 import { useBuilderStore, DUPLICABLE_NODE_TYPES, type FlowNode, type DropPosition } from '../store'
@@ -9,6 +9,7 @@ import { nodeSetupIssue } from '../node-validation'
 import { useExecutionOverlayStore } from '../execution-overlay-store'
 import type { NodeExecutionStatus } from '@/features/executions/types'
 import { DropZone } from './DropZone'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import type { SetVariableConfig, ConditionConfig, VariableAssignment, FetchRecordsConfig, FilterGroup, IteratorConfig, HttpRequestConfig, TriggerConfig, ShowMessageConfig, NotificationConfig } from '../../types'
 
 const DRAG_TRANSFER_KEY = 'application/workflow-node-reorder'
@@ -20,19 +21,23 @@ const DRAG_TRANSFER_KEY = 'application/workflow-node-reorder'
 // is actively running), but are included for completeness against the full
 // NodeExecutionStatus union.
 const overlayStatusStyle: Record<NodeExecutionStatus, string> = {
-  PENDING:   'bg-slate-100 text-slate-500',
-  RUNNING:   'bg-blue-100 text-blue-700',
-  COMPLETED: 'bg-emerald-100 text-emerald-700',
-  FAILED:    'bg-red-100 text-red-700',
-  SKIPPED:   'bg-slate-100 text-slate-400',
+  PENDING:                'bg-slate-100 text-slate-500',
+  RUNNING:                'bg-blue-100 text-blue-700',
+  COMPLETED:              'bg-emerald-100 text-emerald-700',
+  FAILED:                 'bg-red-100 text-red-700',
+  SKIPPED:                'bg-slate-100 text-slate-400',
+  // An iterator with continue_on_error that ran every item but had failures
+  // (FR-B2-015) — amber, distinct from both a clean COMPLETED and a FAILED.
+  COMPLETED_WITH_ERRORS:  'bg-amber-100 text-amber-700',
 }
 
 const overlayStatusIcon: Record<NodeExecutionStatus, React.ReactNode> = {
-  PENDING:   <Loader2 size={10} strokeWidth={3} />,
-  RUNNING:   <Loader2 size={10} strokeWidth={3} className="animate-spin" />,
-  COMPLETED: <CheckCircle2 size={10} strokeWidth={3} />,
-  FAILED:    <XCircle size={10} strokeWidth={3} />,
-  SKIPPED:   <MinusCircle size={10} strokeWidth={3} />,
+  PENDING:               <Loader2 size={10} strokeWidth={3} />,
+  RUNNING:               <Loader2 size={10} strokeWidth={3} className="animate-spin" />,
+  COMPLETED:             <CheckCircle2 size={10} strokeWidth={3} />,
+  FAILED:                <XCircle size={10} strokeWidth={3} />,
+  SKIPPED:               <MinusCircle size={10} strokeWidth={3} />,
+  COMPLETED_WITH_ERRORS: <AlertTriangle size={10} strokeWidth={3} />,
 }
 
 // No per-node duration is shown here — none is persisted anywhere (FR-B2-012's
@@ -96,9 +101,25 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const nodeStatus: NodeExecutionStatus | undefined = overlayExecution?.node_statuses?.[id]
   const nodeError                                   = overlayExecution?.node_errors?.[id]
   const nodeMessage                                 = overlayExecution?.messages?.find((m) => m.node_id === id)
+  const failedItems                                 = overlayExecution?.iterator_failed_items?.[id]
   const reached          = overlayActive && nodeStatus !== undefined
   const dimUnreached     = overlayActive && !reached
-  const [showOverlayNote, setShowOverlayNote] = useState(false)
+  const [overlayNoteOpen, setOverlayNoteOpen] = useState(false)
+  const [errorCopied, setErrorCopied] = useState(false)
+
+  const copyOverlayText = (text: string) => {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        setErrorCopied(true)
+        setTimeout(() => setErrorCopied(false), 1500)
+      })
+      .catch(() => {
+        // Clipboard access can be denied by the browser (permissions,
+        // an unfocused document) — fail silently rather than leaving an
+        // unhandled rejection; the popover's own selectable text is the
+        // fallback copy path in that case.
+      })
+  }
 
   const isDraggingThis = draggingNodeId === id
   const showDropZones  = draggingNodeId !== null && draggingNodeId !== id
@@ -221,35 +242,86 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
         </div>
       )}
 
-      {/* Execution overlay: message/error icon (FR-C5-007) — bottom-left.
-          A show_message node's own published message, or (once populated by
-          the backend) a FAILED node's captured error text. Click opens a
-          popover with the full text since messages can run long. */}
+      {/* Execution overlay: message/error popover (FR-C5-007) — bottom-left.
+          A show_message node's own published message, or a FAILED node's
+          captured error text (FR-B2-012/FR-B2-014). Uses the shared Popover
+          component (Radix, portalled) rather than a hand-positioned div so
+          long error text never clips against the canvas's zoom/pan
+          transform, gets its own scroll region, and closes on outside-click/
+          Escape for free. */}
       {reached && (nodeMessage || nodeError) && (
-        <div className="absolute -bottom-2 -left-2 z-20">
-          <button
+        <Popover open={overlayNoteOpen} onOpenChange={setOverlayNoteOpen}>
+          <PopoverTrigger asChild>
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              className={cn(
+                'absolute -bottom-2 -left-2 z-20 flex h-6 w-6 items-center justify-center rounded-full text-white shadow-md ring-2 ring-white transition-transform hover:scale-110 nodrag nopan',
+                nodeStatus === 'COMPLETED_WITH_ERRORS' ? 'bg-amber-500 shadow-amber-500/30'
+                  : nodeError || nodeMessage?.message_type === 'error' ? 'bg-red-500 shadow-red-500/30'
+                  : nodeMessage?.message_type === 'info' ? 'bg-amber-500 shadow-amber-500/30'
+                  : 'bg-emerald-500 shadow-emerald-500/30',
+              )}
+              title={failedItems?.length ? 'View failed items' : nodeError ? 'View error details' : 'View message'}
+            >
+              {nodeError ? <AlertCircle size={12} strokeWidth={2.5} /> : <MessageCircle size={12} strokeWidth={2.5} />}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="nodrag nopan w-80 p-0"
             onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation()
-              setShowOverlayNote((v) => !v)
-            }}
-            className={cn(
-              'flex h-6 w-6 items-center justify-center rounded-full text-white shadow-md ring-2 ring-white transition-transform hover:scale-110 nodrag nopan',
-              nodeError || nodeMessage?.message_type === 'error' ? 'bg-red-500 shadow-red-500/30'
-                : nodeMessage?.message_type === 'info' ? 'bg-amber-500 shadow-amber-500/30'
-                : 'bg-emerald-500 shadow-emerald-500/30',
-            )}
-            title="View captured message"
+            onClick={(e) => e.stopPropagation()}
           >
-            <MessageCircle size={12} strokeWidth={2.5} />
-          </button>
-          {showOverlayNote && (
-            <div className="nodrag nopan absolute left-0 top-7 z-30 w-56 rounded-lg border border-slate-200 bg-white p-2.5 text-left text-[11px] leading-snug text-slate-600 shadow-xl">
-              {nodeError && <p className="font-mono text-red-600">{nodeError}</p>}
-              {!nodeError && nodeMessage && <p>{nodeMessage.message}</p>}
+            <div className={cn(
+              'flex items-center justify-between gap-2 rounded-t-xl border-b px-3 py-2',
+              nodeStatus === 'COMPLETED_WITH_ERRORS' ? 'border-amber-100 bg-amber-50'
+                : nodeError ? 'border-red-100 bg-red-50'
+                : nodeMessage?.message_type === 'info' ? 'border-amber-100 bg-amber-50'
+                : 'border-emerald-100 bg-emerald-50',
+            )}>
+              <span className={cn(
+                'text-[11px] font-semibold uppercase tracking-wide',
+                nodeStatus === 'COMPLETED_WITH_ERRORS' ? 'text-amber-700'
+                  : nodeError ? 'text-red-700'
+                  : nodeMessage?.message_type === 'info' ? 'text-amber-700'
+                  : 'text-emerald-700',
+              )}>
+                {failedItems?.length ? `${failedItems.length} item${failedItems.length > 1 ? 's' : ''} failed` : nodeError ? 'Node error' : nodeMessage?.message_type}
+              </span>
+              <button
+                onClick={() => copyOverlayText(nodeError ?? nodeMessage?.message ?? '')}
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-500 transition-colors hover:bg-white/60"
+                title="Copy to clipboard"
+              >
+                {errorCopied ? <Check size={11} /> : <Copy size={11} />}
+                {errorCopied ? 'Copied' : 'Copy'}
+              </button>
             </div>
-          )}
-        </div>
+            <div className="max-h-64 overflow-y-auto px-3 py-2.5">
+              {failedItems && failedItems.length > 0 ? (
+                <ul className="space-y-2">
+                  {failedItems.map((fi) => (
+                    <li key={fi.index} className="rounded-lg bg-amber-50/60 px-2 py-1.5">
+                      <div className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-700">
+                        <span className="rounded bg-amber-100 px-1 py-0.5">index {fi.index}</span>
+                        {fi.item !== undefined && (
+                          <code className="truncate font-mono text-[10px] font-normal text-slate-500">
+                            {typeof fi.item === 'string' ? fi.item : JSON.stringify(fi.item)}
+                          </code>
+                        )}
+                      </div>
+                      <p className="mt-1 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-red-700">{fi.error}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : nodeError ? (
+                <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-red-700">{nodeError}</pre>
+              ) : nodeMessage ? (
+                <p className="whitespace-pre-wrap break-words text-[12px] leading-relaxed text-slate-700">{nodeMessage.message}</p>
+              ) : null}
+            </div>
+          </PopoverContent>
+        </Popover>
       )}
 
       {/* Quick-action toolbar — floats above the node on hover / selection */}
@@ -534,10 +606,11 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
             <span className="text-slate-400">in</span>
           </div>
           <code className="block truncate rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-600">{cfg.source_expr}</code>
-          {(cfg.filter_expr || cfg.stop_expr) && (
+          {(cfg.filter_expr || cfg.stop_expr || cfg.continue_on_error) && (
             <div className="flex gap-1 text-slate-400">
               {cfg.filter_expr && <span className="rounded bg-slate-100 px-1">filter</span>}
               {cfg.stop_expr && <span className="rounded bg-slate-100 px-1">stop</span>}
+              {cfg.continue_on_error && <span className="rounded bg-amber-50 px-1 text-amber-600">continue on error</span>}
             </div>
           )}
         </div>
