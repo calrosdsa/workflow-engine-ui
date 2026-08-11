@@ -352,8 +352,19 @@ export function defaultConfig(type: NodeType):
 // Node types available from the drag-and-drop palette (trigger/entry/exit and
 // loop_end are added automatically — loop_end is auto-paired when an iterator
 // is added; trigger/entry is seeded once when a new workflow is created).
+//
+// 'subflow' is deliberately excluded (FR-B2-003): it has no execution-time
+// dispatch in the backend at all — a saved workflow reaching that node used
+// to fail at runtime with a generic "unknown node type" error, and the
+// backend now hard-rejects it at save time (see internal/graph/configs.go's
+// SubflowConfig.Validate). Removed from the palette so a new workflow can't
+// add one in the first place; NODE_REGISTRY itself keeps the 'subflow' entry
+// so an already-saved workflow with one (impossible to create fresh now, but
+// nothing already re-validates old rows) still renders instead of crashing
+// the canvas — see node-validation.ts's nodeSetupIssue for the always-on
+// warning such a node shows.
 export const PALETTE_NODES: NodeType[] = [
   'set_variable', 'condition', 'fetch_records', 'upsert_records', 'update_records',
   'delete_records', 'transform', 'save_records', 'iterator', 'http_request', 'show_message',
-  'notification', 'knowledge_retrieval', 'knowledge_ingest', 'merge', 'subflow', 'debug',
+  'notification', 'knowledge_retrieval', 'knowledge_ingest', 'merge', 'debug',
 ]

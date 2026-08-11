@@ -8,7 +8,7 @@ import type { NodeType } from '../types'
 const CATEGORIES: { label: string; types: NodeType[] }[] = [
   { label: 'All',          types: PALETTE_NODES },
   { label: 'Data',         types: ['fetch_records', 'upsert_records', 'update_records', 'delete_records', 'transform', 'save_records', 'set_variable'] },
-  { label: 'Logic',        types: ['condition', 'iterator', 'merge', 'subflow'] },
+  { label: 'Logic',        types: ['condition', 'iterator', 'merge'] },
   { label: 'Integrations', types: ['http_request'] },
   { label: 'Notify',       types: ['show_message'] },
 ]
