@@ -109,6 +109,18 @@ export function RecordsTable({
     enabled: !!formId,
   })
 
+  // selectedRecord is a point-in-time snapshot of the clicked table row, so
+  // an in-drawer edit (RecordDetailPanel's own Edit button) updates the
+  // record but never that snapshot — the drawer title would keep showing
+  // the pre-edit title/id forever. Re-fetch the same record RecordDetailPanel
+  // shows so the title tracks its live data too; the snapshot still backs
+  // the title until this resolves, avoiding a flash back to "Record details".
+  const { data: selectedRecordLive } = useQuery({
+    queryKey: ['forms', formId, 'records', selectedRecord?.id],
+    queryFn: () => formsApi.getRecord(formId, selectedRecord!.id as string),
+    enabled: !!selectedRecord,
+  })
+
   // Both the form definition and the search results are fetched
   // independently, so each gets its own guard — the form definition drives
   // column labels/field types the table can't render without, so it blocks
@@ -247,7 +259,7 @@ export function RecordsTable({
         <DrawerContent size="lg" container={document.getElementById('runtime-root')}>
           <DrawerHeader className="flex flex-row items-center justify-between pr-10">
             <DrawerTitle className="truncate">
-              {(selectedRecord && resolveRecordTitle(form.fields, selectedRecord)) || 'Record details'}
+              {(selectedRecord && resolveRecordTitle(form.fields, selectedRecordLive ?? selectedRecord)) || 'Record details'}
             </DrawerTitle>
             {selectedRecord && onExpandRecord && (
               <Button
