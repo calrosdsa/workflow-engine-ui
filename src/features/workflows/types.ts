@@ -23,6 +23,7 @@ export type NodeType =
   | 'notification'
   | 'knowledge_retrieval'
   | 'knowledge_ingest'
+  | 'debug'
 
 export type PortKind = 'data' | 'control' | 'trigger'
 
@@ -520,4 +521,14 @@ export interface KnowledgeIngestConfig {
   file_name?: string
   file_name_expr?: string
   output_var: string
+}
+
+// ---------------------------------------------------------------------------
+// debug — mirrors internal/graph/configs_debug.go. A pass-through node that
+// captures a snapshot of the current variable state at its position in the
+// graph, for later inspection via the execution sidebar (FR-B2-013).
+// ---------------------------------------------------------------------------
+
+export interface DebugConfig {
+  label?: string
 }

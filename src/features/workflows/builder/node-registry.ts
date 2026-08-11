@@ -20,13 +20,14 @@ import {
   Bell,
   BookOpen,
   BookOpenCheck,
+  Bug,
   type LucideIcon,
 } from 'lucide-react'
 import type {
   NodeType, Port, VariableDecl, SetVariableConfig, ConditionConfig, FetchRecordsConfig, IteratorConfig,
   UpsertRecordsConfig, UpdateRecordsConfig, DeleteRecordsConfig, HttpRequestConfig,
   TriggerConfig, ShowMessageConfig, TransformConfig, SaveRecordsConfig, NotificationConfig,
-  KnowledgeRetrievalConfig, KnowledgeIngestConfig,
+  KnowledgeRetrievalConfig, KnowledgeIngestConfig, DebugConfig,
 } from '../types'
 import type { NodeOutputSchema } from './node-output-schema'
 import { TriggerForm, normaliseTriggerConfig } from './node-forms/TriggerForm'
@@ -45,6 +46,7 @@ import { HttpRequestForm, normaliseHttpRequestConfig } from './node-forms/HttpRe
 import { NotificationForm, normaliseNotificationConfig } from './node-forms/NotificationForm'
 import { KnowledgeRetrievalForm, normaliseKnowledgeRetrievalConfig } from './node-forms/KnowledgeRetrievalForm'
 import { KnowledgeIngestForm, normaliseKnowledgeIngestConfig } from './node-forms/KnowledgeIngestForm'
+import { DebugForm, normaliseDebugConfig } from './node-forms/DebugForm'
 import { NoAdditionalConfig, LoopEndNoConfig } from './node-forms/NoConfigNeeded'
 
 // The fixed prop shape every node type's config form receives — unused props
@@ -240,6 +242,14 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     form: KnowledgeIngestForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseKnowledgeIngestConfig(raw),
   },
+  debug: {
+    label: 'Debug', icon: Bug,
+    color: 'bg-lime-600', gradient: 'bg-gradient-to-br from-lime-600 to-green-700',
+    accent: '#65a30d', textColor: 'text-lime-700', ring: 'bg-lime-50',
+    description: 'Capture a variable snapshot at this point in the graph',
+    form: DebugForm as unknown as ComponentType<NodeFormProps>,
+    normalise: (raw) => normaliseDebugConfig(raw),
+  },
 }
 
 export function defaultLabel(type: NodeType): string {
@@ -278,7 +288,7 @@ export function defaultConfig(type: NodeType):
   | SetVariableConfig | ConditionConfig | FetchRecordsConfig | IteratorConfig
   | UpsertRecordsConfig | UpdateRecordsConfig | DeleteRecordsConfig | HttpRequestConfig
   | TriggerConfig | ShowMessageConfig | TransformConfig | SaveRecordsConfig | NotificationConfig
-  | KnowledgeRetrievalConfig | KnowledgeIngestConfig
+  | KnowledgeRetrievalConfig | KnowledgeIngestConfig | DebugConfig
   | Record<string, never> {
   switch (type) {
     case 'trigger':
@@ -332,6 +342,8 @@ export function defaultConfig(type: NodeType):
       return {
         kb_id: '', content_mode: 'static', content: '', file_name_mode: 'static', output_var: '',
       } satisfies KnowledgeIngestConfig
+    case 'debug':
+      return {} satisfies DebugConfig
     default:
       return {}
   }
@@ -343,5 +355,5 @@ export function defaultConfig(type: NodeType):
 export const PALETTE_NODES: NodeType[] = [
   'set_variable', 'condition', 'fetch_records', 'upsert_records', 'update_records',
   'delete_records', 'transform', 'save_records', 'iterator', 'http_request', 'show_message',
-  'notification', 'knowledge_retrieval', 'knowledge_ingest', 'merge', 'subflow',
+  'notification', 'knowledge_retrieval', 'knowledge_ingest', 'merge', 'subflow', 'debug',
 ]

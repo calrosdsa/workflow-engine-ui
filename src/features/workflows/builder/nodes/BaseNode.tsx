@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Handle, Position, type NodeProps, useStore } from '@xyflow/react'
-import { Plus, GripVertical, ArrowLeftRight, Trash2, GitBranchPlus, Copy, Check, AlertTriangle, AlertCircle, CheckCircle2, XCircle, MinusCircle, Loader2, MessageCircle } from 'lucide-react'
+import { Plus, GripVertical, ArrowLeftRight, Trash2, GitBranchPlus, Copy, Check, AlertTriangle, AlertCircle, CheckCircle2, XCircle, MinusCircle, Loader2, MessageCircle, Bug } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NODE_REGISTRY } from '../node-registry'
 import { useBuilderStore, DUPLICABLE_NODE_TYPES, type FlowNode, type DropPosition } from '../store'
@@ -10,7 +10,7 @@ import { useExecutionOverlayStore } from '../execution-overlay-store'
 import type { NodeExecutionStatus } from '@/features/executions/types'
 import { DropZone } from './DropZone'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
-import type { SetVariableConfig, ConditionConfig, VariableAssignment, FetchRecordsConfig, FilterGroup, IteratorConfig, HttpRequestConfig, TriggerConfig, ShowMessageConfig, NotificationConfig } from '../../types'
+import type { SetVariableConfig, ConditionConfig, VariableAssignment, FetchRecordsConfig, FilterGroup, IteratorConfig, HttpRequestConfig, TriggerConfig, ShowMessageConfig, NotificationConfig, DebugConfig } from '../../types'
 
 const DRAG_TRANSFER_KEY = 'application/workflow-node-reorder'
 
@@ -102,9 +102,11 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const nodeError                                   = overlayExecution?.node_errors?.[id]
   const nodeMessage                                 = overlayExecution?.messages?.find((m) => m.node_id === id)
   const failedItems                                 = overlayExecution?.iterator_failed_items?.[id]
+  const debugSnapshot                               = overlayExecution?.debug_snapshots?.[id]
   const reached          = overlayActive && nodeStatus !== undefined
   const dimUnreached     = overlayActive && !reached
   const [overlayNoteOpen, setOverlayNoteOpen] = useState(false)
+  const [debugPopoverOpen, setDebugPopoverOpen] = useState(false)
   const [errorCopied, setErrorCopied] = useState(false)
 
   const copyOverlayText = (text: string) => {
@@ -319,6 +321,53 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               ) : nodeMessage ? (
                 <p className="whitespace-pre-wrap break-words text-[12px] leading-relaxed text-slate-700">{nodeMessage.message}</p>
               ) : null}
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
+
+      {/* Execution overlay: debug snapshot popover (FR-B2-013) — right edge,
+          a corner none of the other overlay badges occupy. Only rendered for
+          a debug node the selected execution actually reached, since that's
+          the only node type that ever populates debug_snapshots. */}
+      {reached && debugSnapshot && (
+        <Popover open={debugPopoverOpen} onOpenChange={setDebugPopoverOpen}>
+          <PopoverTrigger asChild>
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute -right-2 top-1/2 z-20 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-lime-600 text-white shadow-md shadow-lime-600/30 ring-2 ring-white transition-transform hover:scale-110 nodrag nopan"
+              title="View captured snapshot"
+            >
+              <Bug size={12} strokeWidth={2.5} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="nodrag nopan w-80 p-0"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2 rounded-t-xl border-b border-lime-100 bg-lime-50 px-3 py-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-lime-700">
+                {debugSnapshot.label || 'Debug snapshot'}
+              </span>
+              <button
+                onClick={() => copyOverlayText(JSON.stringify(debugSnapshot.variables ?? {}, null, 2))}
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-500 transition-colors hover:bg-white/60"
+                title="Copy to clipboard"
+              >
+                {errorCopied ? <Check size={11} /> : <Copy size={11} />}
+                {errorCopied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+            <div className="max-h-64 overflow-y-auto px-3 py-2.5">
+              {debugSnapshot.variables && Object.keys(debugSnapshot.variables).length > 0 ? (
+                <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-slate-700">
+                  {JSON.stringify(debugSnapshot.variables, null, 2)}
+                </pre>
+              ) : (
+                <p className="text-[11px] italic text-slate-400">No workflow variables declared.</p>
+              )}
             </div>
           </PopoverContent>
         </Popover>
@@ -650,6 +699,14 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
             <span className="rounded bg-slate-100 px-1 text-slate-400">auth: {cfg.auth_type}</span>
           )}
         </div>
+      )
+    }
+    case 'debug': {
+      const cfg = data.configuration as DebugConfig | undefined
+      return (
+        <p className="text-[11px] text-slate-400">
+          {cfg?.label ? <span className="text-lime-600">{cfg.label}</span> : 'Captures a variable snapshot here'}
+        </p>
       )
     }
     default:

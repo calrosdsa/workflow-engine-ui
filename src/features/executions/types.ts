@@ -35,6 +35,8 @@ export interface Execution {
   // iterator nodeID -> per-item failures, only for continue_on_error
   // iterators with at least one failed item (FR-B2-015).
   iterator_failed_items?: Record<string, ExecutionFailedItem[]>
+  // debug nodeID -> captured variable snapshot (FR-B2-013).
+  debug_snapshots?: Record<string, { variables?: Record<string, unknown>; label?: string }>
   messages?: ExecutionMessage[]
   error_message?: string
   created_at: string
