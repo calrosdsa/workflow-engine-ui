@@ -62,7 +62,11 @@ export function IntegrationsSubsection() {
   )
 }
 
-const AUTH_MODE_LABELS: Record<IntegrationAuthMode, string> = { none: 'No SSO', signed_launch: 'Signed launch (SSO)' }
+const AUTH_MODE_LABELS: Record<IntegrationAuthMode, string> = {
+  none: 'No SSO',
+  signed_launch: 'Signed launch (SSO)',
+  oidc: 'OIDC silent sign-in',
+}
 
 function IntegrationRow({ integration, canWrite, onEdit, onDelete, deleting }: {
   integration: EmbeddedIntegration
@@ -82,6 +86,9 @@ function IntegrationRow({ integration, canWrite, onEdit, onDelete, deleting }: {
           {integration.base_url} · {AUTH_MODE_LABELS[integration.auth_mode]}
           {integration.auth_mode === 'signed_launch' && !integration.has_shared_secret && (
             <span className="ml-1 text-amber-600">· no secret configured</span>
+          )}
+          {integration.auth_mode === 'oidc' && (!integration.oidc_issuer_url || !integration.oidc_client_id) && (
+            <span className="ml-1 text-amber-600">· incomplete OIDC configuration</span>
           )}
         </p>
       </button>
@@ -112,12 +119,18 @@ function IntegrationFormDialog({ integration, onClose }: { integration?: Embedde
   const [claimName, setClaimName] = useState(integration?.claims.name ?? true)
   const [claimRoles, setClaimRoles] = useState(integration?.claims.roles ?? false)
   const [tokenTTL, setTokenTTL] = useState(integration?.token_ttl_secs ?? 300)
+  const [oidcIssuerUrl, setOidcIssuerUrl] = useState(integration?.oidc_issuer_url ?? '')
+  const [oidcClientId, setOidcClientId] = useState(integration?.oidc_client_id ?? '')
+  const [oidcClientSecret, setOidcClientSecret] = useState('')
+  const [oidcScopesText, setOidcScopesText] = useState((integration?.oidc_scopes ?? ['openid']).join(' '))
 
   const allowedOrigins = allowedOriginsText.split('\n').map((s) => s.trim()).filter(Boolean)
+  const oidcScopes = oidcScopesText.split(/\s+/).map((s) => s.trim()).filter(Boolean)
   const mutation = isEdit ? updateMutation : createMutation
 
   const canSave = name.trim() !== '' && baseUrl.trim() !== '' && allowedOrigins.length > 0 &&
-    (authMode === 'none' || isEdit || sharedSecret.trim() !== '')
+    (authMode === 'none' || isEdit || sharedSecret.trim() !== '' || authMode === 'oidc') &&
+    (authMode !== 'oidc' || (oidcIssuerUrl.trim() !== '' && oidcClientId.trim() !== ''))
 
   const handleSave = async () => {
     const payload: UpsertIntegrationPayload = {
@@ -133,6 +146,14 @@ function IntegrationFormDialog({ integration, onClose }: { integration?: Embedde
       // comment); on create, an omitted secret is only valid when
       // auth_mode is 'none' (canSave already enforces this).
       ...(sharedSecret.trim() ? { shared_secret: sharedSecret.trim() } : {}),
+      ...(authMode === 'oidc' ? {
+        oidc_issuer_url: oidcIssuerUrl.trim(),
+        oidc_client_id: oidcClientId.trim(),
+        oidc_scopes: oidcScopes.length > 0 ? oidcScopes : ['openid'],
+        // Same "omit when blank means leave alone" convention as
+        // shared_secret above.
+        ...(oidcClientSecret.trim() ? { oidc_client_secret: oidcClientSecret.trim() } : {}),
+      } : {}),
     }
     await mutation.mutateAsync(payload)
     onClose()
@@ -183,8 +204,55 @@ function IntegrationFormDialog({ integration, onClose }: { integration?: Embedde
             >
               <option value="none">No SSO — plain embed</option>
               <option value="signed_launch">Signed launch — pass through the current user's identity</option>
+              <option value="oidc">OIDC — silently sign in via an external identity provider</option>
             </select>
           </div>
+
+          {authMode === 'oidc' && (
+            <>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Issuer URL</label>
+                <Input
+                  value={oidcIssuerUrl}
+                  onChange={(e) => setOidcIssuerUrl(e.target.value)}
+                  placeholder="https://accounts.example.com"
+                  className="font-mono text-xs"
+                />
+                <p className="mt-1 text-[11px] text-gray-400">
+                  The endpoints are discovered automatically from {'"issuer"'}/.well-known/openid-configuration.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Client ID</label>
+                <Input value={oidcClientId} onChange={(e) => setOidcClientId(e.target.value)} className="font-mono text-xs" />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  Client secret {isEdit && '(leave blank to keep the current one)'}
+                </label>
+                <Input
+                  type="password"
+                  value={oidcClientSecret}
+                  onChange={(e) => setOidcClientSecret(e.target.value)}
+                  placeholder={isEdit && integration?.oidc_has_client_secret ? '••••••••' : 'optional for a public client'}
+                  className="font-mono text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Scopes</label>
+                <Input
+                  value={oidcScopesText}
+                  onChange={(e) => setOidcScopesText(e.target.value)}
+                  placeholder="openid email profile"
+                  className="font-mono text-xs"
+                />
+                <p className="mt-1 text-[11px] text-gray-400">Space-separated. {'"openid"'} is always required.</p>
+              </div>
+            </>
+          )}
 
           {authMode === 'signed_launch' && (
             <>
@@ -237,6 +305,15 @@ function IntegrationFormDialog({ integration, onClose }: { integration?: Embedde
               <ShieldCheck size={13} className="mt-px shrink-0 text-slate-400" />
               The token is short-lived and audience-scoped to this integration. It never carries more than the
               claims checked above.
+            </p>
+          )}
+
+          {authMode === 'oidc' && (
+            <p className="flex items-start gap-1.5 rounded-md bg-slate-50 p-2 text-[11px] text-slate-500">
+              <ShieldCheck size={13} className="mt-px shrink-0 text-slate-400" />
+              A hidden, invisible sign-in attempt runs when the widget loads. If the end user doesn't already have
+              an active session with this identity provider, the embed loads without SSO rather than showing an
+              interactive login prompt.
             </p>
           )}
         </div>

@@ -8,6 +8,7 @@ import type { EmbeddedIntegration } from '@/features/integrations/types'
 import type { WidgetRendererProps } from '../../widget-contract'
 import type { EmbedWidgetConfig } from './schema'
 import { useSsoHandshake } from './useSsoHandshake'
+import { useOidcHandshake } from './useOidcHandshake'
 
 // Lifted from features/menus/runtime/CustomMenuRuntime.tsx's EmbedFrame
 // (Phase 7 of docs/dashboard-system-plan.md) — same embed-check-before-render
@@ -19,6 +20,12 @@ import { useSsoHandshake } from './useSsoHandshake'
 // (mode A, "signed launch" — see docs/dashboard-system-plan.md section
 // 8.2) and (b) answers the Embed SDK's postMessage handshake for
 // subsequent/refreshed token requests (mode B) via useSsoHandshake.
+//
+// A third auth_mode, 'oidc' (FR-D3-008), reuses the SAME URL-fragment
+// delivery mechanism once useOidcHandshake's hidden-iframe silent-auth
+// attempt resolves — the only difference from signed_launch is HOW the
+// token is obtained (a real IdP round trip vs. one platform-signed JWT
+// mint), not how it's delivered to the visible iframe below.
 type EmbedStatus = 'checking' | 'embeddable' | 'blocked'
 
 export function EmbedRenderer({ config, mode }: WidgetRendererProps<EmbedWidgetConfig>) {
@@ -42,9 +49,33 @@ function EmbedFrame({ url, integration, builderMode }: { url: string; integratio
   // user (a broken embed is worse than an unauthenticated one), but the
   // person who configured SSO should be able to tell it isn't working.
   const [ssoFailed, setSsoFailed] = useState(false)
+  // True only while an oidc-mode silent-auth attempt is in flight — gates
+  // rendering the visible iframe at all (see the `oidcPending` early return
+  // below), so the tile shows a brief loading state instead of flashing the
+  // unauthenticated page before the (usually sub-second) hidden-iframe round
+  // trip completes. Starts true whenever the CURRENT integration is oidc-mode
+  // (computed directly from props, not an effect, so the very first render
+  // already knows to wait rather than briefly rendering the plain iframe).
+  const [oidcPending, setOidcPending] = useState(integration?.auth_mode === 'oidc')
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
 
   useSsoHandshake(iframeRef, integration)
+  useOidcHandshake(integration, (result) => {
+    if (result.ok && result.token) {
+      setLaunchUrl(`${url}#sso_token=${encodeURIComponent(result.token)}`)
+    } else {
+      setLaunchUrl(url) // silent auth failed — fall back to a plain, non-SSO launch, same UX as a signed_launch mint failure
+      setSsoFailed(true)
+    }
+    setOidcPending(false)
+  })
+
+  // Re-arms oidcPending on every new oidc-mode attempt (e.g. the widget's
+  // integration config changes) — mirrors the signed_launch effect's own
+  // setSsoFailed(false) reset at the top of its effect below.
+  useEffect(() => {
+    if (integration?.auth_mode === 'oidc') setOidcPending(true)
+  }, [integration])
 
   useEffect(() => {
     if (!url) return
@@ -73,8 +104,17 @@ function EmbedFrame({ url, integration, builderMode }: { url: string; integratio
   // Independent of useSsoHandshake's postMessage mode (B); an integration
   // can use either, or the partner page can ignore the fragment and just
   // call WorkflowEmbed.requestToken() instead.
+  //
+  // oidc mode is deliberately excluded from this effect (it falls through
+  // to the `return` below with launchUrl left untouched) — useOidcHandshake
+  // above is the SOLE writer of launchUrl for that mode. Setting
+  // launchUrl = url here first, then again once the silent-auth attempt
+  // resolves, would flash the unauthenticated page before the (usually
+  // sub-second) silent auth completes; oidc's own effect below shows a
+  // loading state instead of the bare iframe until useOidcHandshake settles.
   useEffect(() => {
     setSsoFailed(false)
+    if (integration?.auth_mode === 'oidc') return
     if (!integration || integration.auth_mode !== 'signed_launch') {
       setLaunchUrl(url)
       return
@@ -93,7 +133,7 @@ function EmbedFrame({ url, integration, builderMode }: { url: string; integratio
     return () => { cancelled = true }
   }, [url, integration])
 
-  if (status === 'checking') {
+  if (status === 'checking' || oidcPending) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 size={20} className="animate-spin text-gray-300" />
@@ -121,7 +161,9 @@ function EmbedFrame({ url, integration, builderMode }: { url: string; integratio
       {builderMode && ssoFailed && (
         <div className="flex shrink-0 items-center gap-1.5 border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] text-amber-700">
           <AlertTriangle size={12} className="shrink-0" />
-          Couldn't sign in automatically — loaded without SSO. Check the integration's shared secret.
+          {integration?.auth_mode === 'oidc'
+            ? "Couldn't sign in automatically — loaded without SSO. Check the integration's OIDC configuration, or the user may not have an active session with the identity provider."
+            : "Couldn't sign in automatically — loaded without SSO. Check the integration's shared secret."}
         </div>
       )}
       <iframe ref={iframeRef} key={launchUrl} src={launchUrl} title="Embedded page" className="h-full w-full flex-1 border-0" />

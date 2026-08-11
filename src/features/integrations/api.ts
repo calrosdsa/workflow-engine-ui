@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import type { EmbeddedIntegration, UpsertIntegrationPayload, SSOTokenResponse } from './types'
+import type { EmbeddedIntegration, UpsertIntegrationPayload, SSOTokenResponse, StartOIDCFlowResponse } from './types'
 
 export const integrationsApi = {
   list:   () => api.get('integrations').json<EmbeddedIntegration[]>(),
@@ -10,4 +10,9 @@ export const integrationsApi = {
     await api.delete(`integrations/${id}`)
   },
   mintSSOToken: (id: string) => api.post(`integrations/${id}/sso-token`).json<SSOTokenResponse>(),
+  // Begins an OIDC silent-auth attempt — returns the IdP's /authorize URL
+  // (prompt=none already attached) for useOidcHandshake to load in a hidden
+  // iframe. Not cacheable data (same reasoning as mintSSOToken), so this is
+  // consumed via a plain async call, not a useQuery hook.
+  startOidcFlow: (id: string) => api.post(`integrations/${id}/oidc/start`).json<StartOIDCFlowResponse>(),
 }
