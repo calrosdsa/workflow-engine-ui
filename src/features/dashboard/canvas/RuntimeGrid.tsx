@@ -5,14 +5,25 @@
 // builder-only chrome (no drag handles, no selection ring, no hover
 // toolbar, no keyboard move/resize). Widgets render with mode="runtime" so
 // they can navigate and poll for real.
-import { ReactGridLayout, WidthProvider, type Layout as RglLayout } from 'react-grid-layout/legacy'
+//
+// Responsive below the `sm` breakpoint (per docs/dashboard-system-plan.md
+// section 4.1): uses ResponsiveReactGridLayout (aliased `Responsive`) rather
+// than the plain ReactGridLayout GridCanvas.tsx uses, since the builder's
+// own canvas is deliberately desktop-only. The `sm` breakpoint's layout is
+// a single-column stack, computed from `schema.widgets` sorted by y then x
+// (schema.widgets carries no explicit ordering field of its own — the
+// authored x/y grid position IS the intended order at every breakpoint).
+import { Responsive, WidthProvider, type Layout as RglLayout } from 'react-grid-layout/legacy'
 import 'react-grid-layout/css/styles.css'
 import type { Menu } from '@/features/menus/types'
 import type { DashboardSchema } from '../schema'
 import { getWidget } from '../widget-registry'
 import { useIsVisible } from './useIsVisible'
 
-const GridLayoutWithWidth = WidthProvider(ReactGridLayout)
+const ResponsiveGridLayoutWithWidth = WidthProvider(Responsive)
+
+const BREAKPOINTS = { lg: 640, sm: 0 }
+const SINGLE_COLUMN_COLS = 1
 
 interface RuntimeGridProps {
   schema: DashboardSchema
@@ -23,7 +34,7 @@ interface RuntimeGridProps {
 }
 
 export function RuntimeGrid({ schema, clientId, appId, menus, onNavigate }: RuntimeGridProps) {
-  const rglLayout: RglLayout = schema.widgets.map((w) => ({
+  const wideLayout: RglLayout = schema.widgets.map((w) => ({
     i: w.id,
     x: w.layout.x,
     y: w.layout.y,
@@ -33,13 +44,26 @@ export function RuntimeGrid({ schema, clientId, appId, menus, onNavigate }: Runt
     minH: w.layout.minH,
   }))
 
+  const narrowLayout: RglLayout = [...schema.widgets]
+    .sort((a, b) => a.layout.y - b.layout.y || a.layout.x - b.layout.x)
+    .map((w, i) => ({
+      i: w.id,
+      x: 0,
+      y: i,
+      w: SINGLE_COLUMN_COLS,
+      h: w.layout.h,
+      minW: SINGLE_COLUMN_COLS,
+      minH: w.layout.minH,
+    }))
+
   return (
     <div className="h-full flex-1 overflow-auto bg-[hsl(var(--background))]">
       <div className="mx-auto w-full max-w-6xl p-6" style={{ maxWidth: schema.settings.maxWidth }}>
-        <GridLayoutWithWidth
+        <ResponsiveGridLayoutWithWidth
           className="dashboard-grid"
-          layout={rglLayout}
-          cols={schema.settings.cols}
+          layouts={{ lg: wideLayout, sm: narrowLayout }}
+          breakpoints={BREAKPOINTS}
+          cols={{ lg: schema.settings.cols, sm: SINGLE_COLUMN_COLS }}
           rowHeight={schema.settings.rowHeight}
           margin={[schema.settings.gap, schema.settings.gap]}
           compactType="vertical"
@@ -51,7 +75,7 @@ export function RuntimeGrid({ schema, clientId, appId, menus, onNavigate }: Runt
               <RuntimeTile instance={instance} clientId={clientId} appId={appId} menus={menus} onNavigate={onNavigate} />
             </div>
           ))}
-        </GridLayoutWithWidth>
+        </ResponsiveGridLayoutWithWidth>
       </div>
     </div>
   )
