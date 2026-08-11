@@ -6,9 +6,8 @@ export interface Role {
   permissions: string[]
   /** Per-form field mask ({"<form_id>": ["field1", ...]}) — fields this
    *  role's holders never see on any record read (view-only enforcement, no
-   *  write-side restriction). No editor UI yet; round-tripped so a role
-   *  fetched and re-saved through the existing editor doesn't silently drop
-   *  a mask set some other way (e.g. directly via the API). */
+   *  write-side restriction). Editable via RoleFormDrawer's "Hide fields
+   *  from this role" section (FR-C7-003). */
   hidden_fields?: Record<string, string[]>
   is_builtin: boolean
   created_at: string

@@ -6,8 +6,10 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 import { Spinner } from '@/components/ui/spinner'
+import { EyeOff } from 'lucide-react'
 import { useCreateRole, useUpdateRole } from '@/features/roles/hooks'
 import { usePermissionsCatalog } from '@/features/permissions/hooks'
+import { useForms } from '@/features/forms/hooks'
 import type { Role } from '@/features/roles/types'
 import type { PermissionDef } from '@/features/permissions/types'
 
@@ -38,14 +40,35 @@ interface RoleFormDrawerProps {
  *  with its own View/Create/Edit/Delete leaf checkboxes and indeterminate
  *  rollup — reflecting the app's actual per-form permission catalog
  *  (GET /permissions?app_id=…, see features/permissions). Every level reuses
- *  the same toggleOne/toggleGroup selection logic. */
+ *  the same toggleOne/toggleGroup selection logic.
+ *
+ *  A second, separate accordion below it (FR-C7-003's `hidden_fields`
+ *  editor) lets the same Super Admin mask individual fields on any form's
+ *  record reads for this role — a read-visibility restriction, distinct
+ *  from the permission tree above (which grants/denies whole actions, not
+ *  individual fields within an allowed action). Sourced from useForms()
+ *  (full field catalog, unfiltered by any role's own mask — see that hook's
+ *  call site comment) rather than the permission catalog, since masking
+ *  isn't itself a permission. */
 export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
   const { data: catalog } = usePermissionsCatalog(appId)
+  // Full, unmasked field catalog — GetForm/ListForms never apply a role's
+  // own hidden_fields mask to the form DEFINITION's field list, only to
+  // actual record VALUES on read (maskHiddenFields, api/forms/handler.go) —
+  // so this always shows every real field regardless of which role the
+  // caller (a Super Admin, per this screen's own access gate) happens to
+  // hold themselves.
+  const { data: forms } = useForms()
   const createMutation = useCreateRole(appId)
   const updateMutation = useUpdateRole(role?.id ?? '', appId)
 
   const [name, setName] = useState(role?.name ?? '')
   const [permissions, setPermissions] = useState<string[]>(role?.permissions ?? [])
+  // Keyed by form id, same wire shape as Role.hidden_fields — an empty array
+  // for a form is equivalent to the key being absent (see toggleHiddenField),
+  // so the payload never carries stale empty-array entries for a form whose
+  // last hidden field was just unchecked.
+  const [hiddenFields, setHiddenFields] = useState<Record<string, string[]>>(role?.hidden_fields ?? {})
   const [error, setError] = useState<string | null>(null)
 
   const isPending = createMutation.isPending || updateMutation.isPending
@@ -54,6 +77,15 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
   const grouped = groupByResource(staticDefs)
   const formsByForm = groupByFormId(formDefs)
   const canDesign = permissions.includes(APP_DESIGN_KEY)
+  // Every field on every form useForms() returns is offered — that list
+  // already excludes Line Items child forms (ListForms' own is_line_items
+  // filter; they're never standalone/independently-permissioned). No
+  // field-type restriction: maskHiddenFields (api/forms/handler.go) deletes
+  // any matching key from a record unconditionally, and CreateRole's own doc
+  // comment confirms field names aren't validated against the form's schema
+  // at all — so this list never needs to stay in lockstep with a backend
+  // allow-list.
+  const maskableForms = (forms ?? []).filter((f) => f.fields.length > 0)
 
   const toggleAppDesign = (checked: boolean) => {
     setPermissions((prev) => (checked ? [...new Set([...prev, APP_DESIGN_KEY])] : prev.filter((p) => p !== APP_DESIGN_KEY)))
@@ -68,6 +100,12 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
     setPermissions((prev) => (checked ? [...new Set([...prev, ...keys])] : prev.filter((p) => !keys.includes(p))))
   }
 
+  const toggleHiddenField = (formId: string, fieldName: string, checked: boolean) =>
+    setHiddenFields((prev) => withHiddenField(prev, formId, fieldName, checked))
+
+  const toggleHiddenFieldGroup = (formId: string, fieldNames: string[], checked: boolean) =>
+    setHiddenFields((prev) => withHiddenFieldGroup(prev, formId, fieldNames, checked))
+
   const handleSave = async () => {
     setError(null)
     if (!name.trim()) {
@@ -76,13 +114,9 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
     }
     try {
       if (role) {
-        // hidden_fields has no editor UI yet (see this file's header comment) —
-        // round-trip the existing value unchanged so saving a role through
-        // this drawer never silently wipes out a mask set some other way
-        // (e.g. directly via the API).
-        await updateMutation.mutateAsync({ app_id: appId, name, permissions, hidden_fields: role.hidden_fields })
+        await updateMutation.mutateAsync({ app_id: appId, name, permissions, hidden_fields: hiddenFields })
       } else {
-        await createMutation.mutateAsync({ app_id: appId, name, permissions })
+        await createMutation.mutateAsync({ app_id: appId, name, permissions, hidden_fields: hiddenFields })
       }
       onClose()
     } catch {
@@ -202,6 +236,53 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
             </Accordion>
           </div>
 
+          {maskableForms.length > 0 && (
+            <div>
+              <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                <EyeOff size={13} className="text-gray-400" />
+                Hide fields from this role
+              </p>
+              <p className="mb-2 text-[11px] text-gray-400">
+                Checked fields never appear on any record this role reads — the field itself, not just editing it, is hidden.
+              </p>
+              <Accordion type="multiple" className="rounded-md border border-gray-200">
+                {maskableForms.map((form) => {
+                  const hidden = hiddenFields[form.id] ?? []
+                  const allChecked = form.fields.length > 0 && hidden.length === form.fields.length
+                  const someChecked = hidden.length > 0 && !allChecked
+
+                  return (
+                    <AccordionItem key={form.id} value={form.id} className="border-b border-gray-100 px-3 last:border-b-0">
+                      <div className="flex items-center gap-2 py-1">
+                        <Checkbox
+                          checked={allChecked ? true : someChecked ? 'indeterminate' : false}
+                          onCheckedChange={(c) => toggleHiddenFieldGroup(form.id, form.fields.map((f) => f.name), c === true)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <AccordionTrigger className="py-2 normal-case tracking-normal text-sm font-medium text-gray-800">
+                          {form.name}
+                        </AccordionTrigger>
+                      </div>
+                      <AccordionContent>
+                        <div className="space-y-1.5 pl-6">
+                          {form.fields.map((field) => (
+                            <label key={field.name} className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                              <Checkbox
+                                checked={hidden.includes(field.name)}
+                                onCheckedChange={(c) => toggleHiddenField(form.id, field.name, c === true)}
+                              />
+                              {field.label}
+                            </label>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  )
+                })}
+              </Accordion>
+            </div>
+          )}
+
           {error && <p className="text-xs text-red-600">{error}</p>}
         </div>
 
@@ -215,6 +296,25 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
       </DrawerContent>
     </Drawer>
   )
+}
+
+// Pure so the "drop the key entirely once its last field is unchecked"
+// behavior (rather than leaving a stale empty array around) is directly
+// testable without mounting the component — see RoleFormDrawer.test.tsx.
+export function withHiddenField(
+  prev: Record<string, string[]>, formId: string, fieldName: string, checked: boolean,
+): Record<string, string[]> {
+  const current = prev[formId] ?? []
+  const next = checked ? [...new Set([...current, fieldName])] : current.filter((f) => f !== fieldName)
+  const { [formId]: _drop, ...rest } = prev
+  return next.length > 0 ? { ...rest, [formId]: next } : rest
+}
+
+export function withHiddenFieldGroup(
+  prev: Record<string, string[]>, formId: string, fieldNames: string[], checked: boolean,
+): Record<string, string[]> {
+  const { [formId]: _drop, ...rest } = prev
+  return checked ? { ...rest, [formId]: fieldNames } : rest
 }
 
 function groupByResource(defs: PermissionDef[]): Record<string, PermissionDef[]> {
