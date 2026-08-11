@@ -50,3 +50,12 @@ export interface TriggerResponse {
   workflow_definition_id: string
   created_at: string
 }
+
+// GET /executions' response envelope — mirrors SearchRecordsResponse
+// (features/forms/api.ts), this platform's established paginated-list shape.
+export interface ListExecutionsResponse {
+  executions: Execution[]
+  total: number
+  page: number
+  page_size: number
+}

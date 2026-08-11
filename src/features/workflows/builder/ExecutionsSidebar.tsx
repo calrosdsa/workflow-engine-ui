@@ -14,8 +14,17 @@ export const statusDot: Record<ExecutionStatus, string> = {
   CANCELLED: 'bg-slate-400',
 }
 
+// This sidebar is a compact, fixed-height scrollable list, not a full
+// browsing table — no page-navigation UI here by design. pageSize is
+// generous (well past what's ever visible without scrolling) rather than
+// paginated, matching the panel's pre-pagination "show me everything
+// recent" behavior as closely as possible.
+const SIDEBAR_PAGE_SIZE = 100
+
 export function ExecutionsSidebar({ workflowId }: { workflowId: string }) {
-  const { data: executions, isLoading } = useExecutions(workflowId)
+  const { data, isLoading } = useExecutions({ definitionId: workflowId, pageSize: SIDEBAR_PAGE_SIZE })
+  const executions = data?.executions
+  const total = data?.total ?? 0
   const selectedExecutionId = useExecutionOverlayStore((s) => s.selectedExecutionId)
   const select = useExecutionOverlayStore((s) => s.select)
   const open = useBuilderStore((s) => s.executionsPanelOpen)
@@ -51,8 +60,8 @@ export function ExecutionsSidebar({ workflowId }: { workflowId: string }) {
             <div className="flex items-center gap-2">
               <History size={14} className="text-slate-400" />
               <span className="text-[13px] font-semibold text-slate-700">Executions</span>
-              {executions && executions.length > 0 && (
-                <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">{executions.length}</span>
+              {total > 0 && (
+                <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">{total}</span>
               )}
             </div>
             {selectedExecutionId && (

@@ -1,20 +1,27 @@
 import { useWorkflows } from '@/features/workflows/hooks'
-import { useExecutions } from '@/features/executions/hooks'
+import { useExecutions, useExecutionCount } from '@/features/executions/hooks'
 import { useForms } from '@/features/forms/hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Workflow, Play, FileText, CheckCircle } from 'lucide-react'
 
+// The "Recent Executions" card only ever shows 5 rows, so a small page_size
+// is enough — the "Total"/"Completed" stat tiles read .total from their own
+// dedicated count queries below instead of this page's length, since
+// GET /executions is now paginated and this page's data is only ever one
+// page's worth of rows.
+const RECENT_EXECUTIONS_PAGE_SIZE = 5
+
 export function DashboardPage() {
   const { data: workflows } = useWorkflows()
-  const { data: executions } = useExecutions()
+  const { data: recent } = useExecutions({ pageSize: RECENT_EXECUTIONS_PAGE_SIZE })
+  const { data: totalExecutions } = useExecutionCount()
+  const { data: completed } = useExecutionCount('COMPLETED')
   const { data: forms } = useForms()
 
-  const completed = executions?.filter((e) => e.status === 'COMPLETED').length ?? 0
-
   const stats = [
-    { label: 'Workflow Definitions', value: workflows?.length ?? 0, icon: Workflow,    color: 'text-blue-600',   bg: 'bg-blue-50' },
-    { label: 'Total Executions',     value: executions?.length ?? 0, icon: Play,        color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Completed',            value: completed,                icon: CheckCircle, color: 'text-green-600',  bg: 'bg-green-50' },
+    { label: 'Workflow Definitions', value: workflows?.length ?? 0,   icon: Workflow,    color: 'text-blue-600',   bg: 'bg-blue-50' },
+    { label: 'Total Executions',     value: totalExecutions ?? 0,     icon: Play,        color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Completed',            value: completed ?? 0,           icon: CheckCircle, color: 'text-green-600',  bg: 'bg-green-50' },
     { label: 'Form Definitions',     value: forms?.length ?? 0,       icon: FileText,    color: 'text-orange-600', bg: 'bg-orange-50' },
   ]
 
@@ -43,14 +50,14 @@ export function DashboardPage() {
         ))}
       </div>
 
-      {executions && executions.length > 0 && (
+      {recent && recent.executions.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Recent Executions</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {executions.slice(0, 5).map((ex) => (
+              {recent.executions.map((ex) => (
                 <div key={ex.execution_id} className="flex items-center justify-between rounded-md border p-3 text-sm">
                   <span className="font-mono text-xs text-gray-500">{ex.execution_id.slice(0, 8)}…</span>
                   <StatusBadge status={ex.status} />
