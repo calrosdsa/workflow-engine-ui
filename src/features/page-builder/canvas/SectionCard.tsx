@@ -37,7 +37,7 @@ export function SectionCard({ section }: { section: PageSection }) {
     <div
       ref={setNodeRef}
       style={style}
-      onClick={() => selectSection(section.id)}
+      onClick={(e) => { e.stopPropagation(); selectSection(section.id) }}
       className={cn(
         'rounded-xl border bg-white shadow-sm transition-shadow',
         selected ? 'border-indigo-300 ring-2 ring-indigo-300/25' : 'border-slate-200',
