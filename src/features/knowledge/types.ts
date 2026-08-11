@@ -150,6 +150,7 @@ export interface QueryKnowledgeBasePayload {
   include_answer: boolean
   response_type?: string
   user_prompt?: string
+  enable_rerank?: boolean
 }
 
 export interface QueryKnowledgeBaseResponse {

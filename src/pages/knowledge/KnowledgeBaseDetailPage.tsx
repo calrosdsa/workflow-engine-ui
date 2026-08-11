@@ -18,6 +18,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import type { DocumentStatus, KnowledgeBase, KnowledgeDocument, KnowledgeQueryMode, StageState, StageStatus } from '@/features/knowledge/types'
@@ -437,11 +438,12 @@ const MODES: KnowledgeQueryMode[] = ['mix', 'hybrid', 'local', 'global', 'naive'
 function QueryPlayground({ kbId }: { kbId: string }) {
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<KnowledgeQueryMode>('mix')
+  const [enableRerank, setEnableRerank] = useState(false)
   const queryMutation = useQueryKnowledgeBase(kbId)
 
   const run = () => {
     if (!query.trim()) return
-    queryMutation.mutate({ query, mode, include_answer: true })
+    queryMutation.mutate({ query, mode, include_answer: true, enable_rerank: enableRerank })
   }
 
   return (
@@ -461,6 +463,13 @@ function QueryPlayground({ kbId }: { kbId: string }) {
             {m}
           </button>
         ))}
+      </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Rerank Results</Label>
+          <p className="text-[10px] text-gray-400">Reorders retrieved chunks by relevance before answering</p>
+        </div>
+        <Switch checked={enableRerank} onCheckedChange={setEnableRerank} />
       </div>
       <div className="flex gap-2">
         <Input
