@@ -40,26 +40,17 @@ const edgeTypes = {
   default: CustomEdge,
 };
 
-const nodeTypes = {
-  entry: BaseNode,
-  exit: BaseNode,
-  trigger: BaseNode,
-  set_variable: BaseNode,
-  condition: BaseNode,
-  subflow: BaseNode,
-  merge: BaseNode,
-  fetch_records: BaseNode,
-  upsert_records: BaseNode,
-  update_records: BaseNode,
-  delete_records: BaseNode,
-  iterator: BaseNode,
-  loop_end: BaseNode,
-  http_request: BaseNode,
-  show_message: BaseNode,
-  notification: BaseNode,
-  send_email: BaseNode,
-
-};
+// Every node type renders through the same BaseNode component (its body
+// switches on data.type internally — see BaseNode.tsx's NodeBody) — derived
+// from NODE_REGISTRY's own keys so a new node type can never go missing here
+// the way this map previously drifted out of sync by hand (missing several
+// real types, plus a stale 'send_email' entry for a type that no longer
+// exists), which made React Flow silently fall back to its generic 'default'
+// node renderer — no BaseNode, no data, no visible content — for any
+// omitted type.
+const nodeTypes = Object.fromEntries(
+  (Object.keys(NODE_REGISTRY) as NodeType[]).map((type) => [type, BaseNode]),
+) as Record<NodeType, typeof BaseNode>;
 
 const Flow = () => {
   const {

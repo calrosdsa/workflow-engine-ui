@@ -933,11 +933,17 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
           cfg = { assignments: [] }
         }
       }
+      // A node saved without inputs/outputs (e.g. created via a raw API call
+      // rather than the picker's makeNode, which always sets real ports) must
+      // still get real handle ids here — otherwise BaseNode renders zero
+      // <Handle> elements while def.edges still reference 'in'/'out', and
+      // React Flow silently drops every edge touching that node.
+      const ports = defaultPorts(gn.type)
       return {
         id:       gn.id,
         type:     gn.type,
         position: { x: gn.position.x, y: gn.position.y },
-        data:     { ...gn, configuration: cfg },
+        data:     { ...gn, configuration: cfg, inputs: gn.inputs ?? ports.inputs, outputs: gn.outputs ?? ports.outputs },
       }
     })
 
