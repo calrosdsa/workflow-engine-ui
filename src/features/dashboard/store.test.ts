@@ -163,4 +163,165 @@ describe('useDashboardStore', () => {
       expect(findWidget(useDashboardStore.getState().schema, id)!.layout).toEqual(findWidget(before, id)!.layout)
     })
   })
+
+  // FR-C3-009: undo/redo. Test names below map to the FR's own §7 TC-01
+  // through TC-04 where a direct correspondence exists.
+  describe('undo/redo', () => {
+    it('canUndo/canRedo are both false on a freshly reset store', () => {
+      expect(useDashboardStore.getState().canUndo).toBe(false)
+      expect(useDashboardStore.getState().canRedo).toBe(false)
+    })
+
+    it('TC-01: undo reverts a single mutation, redo re-applies it', () => {
+      const id = useDashboardStore.getState().addWidget('fake')
+      expect(useDashboardStore.getState().schema.widgets).toHaveLength(1)
+      expect(useDashboardStore.getState().canUndo).toBe(true)
+
+      useDashboardStore.getState().undo()
+      expect(useDashboardStore.getState().schema.widgets).toHaveLength(0)
+      expect(useDashboardStore.getState().canUndo).toBe(false)
+      expect(useDashboardStore.getState().canRedo).toBe(true)
+
+      useDashboardStore.getState().redo()
+      expect(useDashboardStore.getState().schema.widgets).toHaveLength(1)
+      expect(useDashboardStore.getState().schema.widgets[0].id).toBe(id)
+      expect(useDashboardStore.getState().canRedo).toBe(false)
+    })
+
+    it('undo restores prior field values exactly (title/chrome), not just widget count', () => {
+      const id = useDashboardStore.getState().addWidget('fake')
+      useDashboardStore.getState().updateWidgetTitle(id, 'Original')
+      // A distinct coalesce key (title vs chrome) means this opens its own
+      // new entry rather than folding into the title edit above.
+      useDashboardStore.getState().updateWidgetChrome(id, 'plain')
+
+      useDashboardStore.getState().undo()
+      expect(findWidget(useDashboardStore.getState().schema, id)!.chrome).toBe('card')
+      expect(findWidget(useDashboardStore.getState().schema, id)!.title).toBe('Original')
+
+      useDashboardStore.getState().undo()
+      expect(findWidget(useDashboardStore.getState().schema, id)!.title).toBeUndefined()
+    })
+
+    it('coalesces rapid same-key mutations (e.g. keystrokes) into a single undo step', () => {
+      const id = useDashboardStore.getState().addWidget('fake')
+      useDashboardStore.getState().updateWidgetTitle(id, 'H')
+      useDashboardStore.getState().updateWidgetTitle(id, 'He')
+      useDashboardStore.getState().updateWidgetTitle(id, 'Hel')
+      useDashboardStore.getState().updateWidgetTitle(id, 'Hell')
+      useDashboardStore.getState().updateWidgetTitle(id, 'Hello')
+      expect(findWidget(useDashboardStore.getState().schema, id)!.title).toBe('Hello')
+
+      // One undo should revert the WHOLE burst (title unset), not step back
+      // one keystroke at a time — confirms coalescing, not just correctness
+      // of the final state.
+      useDashboardStore.getState().undo()
+      expect(findWidget(useDashboardStore.getState().schema, id)!.title).toBeUndefined()
+    })
+
+    it('does not coalesce mutations targeting different widgets, even with the same mutation kind', () => {
+      const id1 = useDashboardStore.getState().addWidget('fake')
+      const id2 = useDashboardStore.getState().addWidget('fake')
+      useDashboardStore.getState().updateWidgetTitle(id1, 'First')
+      useDashboardStore.getState().updateWidgetTitle(id2, 'Second')
+
+      useDashboardStore.getState().undo()
+      expect(findWidget(useDashboardStore.getState().schema, id2)!.title).toBeUndefined()
+      expect(findWidget(useDashboardStore.getState().schema, id1)!.title).toBe('First')
+
+      useDashboardStore.getState().undo()
+      expect(findWidget(useDashboardStore.getState().schema, id1)!.title).toBeUndefined()
+    })
+
+    it('TC-02 (drag coalescing, store-level equivalent): one updateWidgetLayouts call is one undo step regardless of how many widgets it touches', () => {
+      const id1 = useDashboardStore.getState().addWidget('fake')
+      const id2 = useDashboardStore.getState().addWidget('fake')
+      const before1 = findWidget(useDashboardStore.getState().schema, id1)!.layout
+      const before2 = findWidget(useDashboardStore.getState().schema, id2)!.layout
+
+      useDashboardStore.getState().updateWidgetLayouts([
+        { id: id1, layout: { x: 5, y: 5, w: 4, h: 3 } },
+        { id: id2, layout: { x: 0, y: 8, w: 4, h: 3 } },
+      ])
+
+      useDashboardStore.getState().undo()
+      expect(findWidget(useDashboardStore.getState().schema, id1)!.layout).toEqual(before1)
+      expect(findWidget(useDashboardStore.getState().schema, id2)!.layout).toEqual(before2)
+    })
+
+    it('TC-03: a new mutation after undo clears the redo stack (branching history)', () => {
+      useDashboardStore.getState().addWidget('fake')
+      useDashboardStore.getState().addWidget('fake')
+      useDashboardStore.getState().undo()
+      useDashboardStore.getState().undo()
+      expect(useDashboardStore.getState().canRedo).toBe(true)
+
+      useDashboardStore.getState().addWidget('fake')
+      expect(useDashboardStore.getState().canRedo).toBe(false)
+
+      useDashboardStore.getState().redo()
+      expect(useDashboardStore.getState().schema.widgets).toHaveLength(1)
+    })
+
+    it('TC-04: undo is unavailable past the state as loaded (session boundary)', () => {
+      useDashboardStore.getState().addWidget('fake')
+      expect(useDashboardStore.getState().canUndo).toBe(true)
+
+      useDashboardStore.getState().undo()
+      expect(useDashboardStore.getState().canUndo).toBe(false)
+
+      const before = useDashboardStore.getState().schema
+      useDashboardStore.getState().undo()
+      expect(useDashboardStore.getState().schema).toBe(before)
+    })
+
+    it('redo is a no-op when the redo stack is empty', () => {
+      useDashboardStore.getState().addWidget('fake')
+      const before = useDashboardStore.getState().schema
+      useDashboardStore.getState().redo()
+      expect(useDashboardStore.getState().schema).toBe(before)
+    })
+
+    it('loadSchema clears undo/redo history (session-scoped only, per FR-C3-009 §8)', () => {
+      useDashboardStore.getState().addWidget('fake')
+      expect(useDashboardStore.getState().canUndo).toBe(true)
+
+      useDashboardStore.getState().loadSchema(useDashboardStore.getState().schema)
+      expect(useDashboardStore.getState().canUndo).toBe(false)
+      expect(useDashboardStore.getState().canRedo).toBe(false)
+    })
+
+    it('reset clears undo/redo history', () => {
+      useDashboardStore.getState().addWidget('fake')
+      useDashboardStore.getState().reset()
+      expect(useDashboardStore.getState().canUndo).toBe(false)
+      expect(useDashboardStore.getState().canRedo).toBe(false)
+    })
+
+    it('mutations with no coalesce key (add/duplicate/remove) always open a new entry', () => {
+      const id = useDashboardStore.getState().addWidget('fake')
+      useDashboardStore.getState().duplicateWidgetById(id)
+      expect(useDashboardStore.getState().schema.widgets).toHaveLength(2)
+
+      useDashboardStore.getState().undo()
+      expect(useDashboardStore.getState().schema.widgets).toHaveLength(1)
+
+      useDashboardStore.getState().undo()
+      expect(useDashboardStore.getState().schema.widgets).toHaveLength(0)
+    })
+
+    it('history is bounded (does not grow unbounded across a very long session)', () => {
+      // Distinct coalesce keys (or none) per call so each genuinely opens
+      // its own entry — otherwise this would test coalescing, not bounding.
+      for (let i = 0; i < 60; i++) {
+        useDashboardStore.getState().addWidget('fake')
+      }
+      let undoCount = 0
+      while (useDashboardStore.getState().canUndo) {
+        useDashboardStore.getState().undo()
+        undoCount++
+      }
+      expect(undoCount).toBeLessThanOrEqual(50)
+    })
+  })
 })

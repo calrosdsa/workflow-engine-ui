@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { AlertCircle, ArrowLeft, Check, LayoutDashboard, Save } from 'lucide-react'
+import { AlertCircle, ArrowLeft, Check, LayoutDashboard, Redo2, Save, Undo2 } from 'lucide-react'
 import '@/features/dashboard/widgets'
 import { useMenu, useUpdateMenu } from '@/features/menus/hooks'
 import { useDashboardStore } from '@/features/dashboard/store'
@@ -17,6 +17,19 @@ import type { DashboardMenuConfig } from '@/features/menus/types'
 interface DashboardEditorPageProps {
   appId: string
   menuId: string
+}
+
+// FR-C3-009: Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z must not hijack the browser's
+// own native undo/redo while the user is actually typing in a text field
+// (e.g. a widget title input, or a config panel's text input) — that would
+// discard the field's own edit history in favor of a dashboard-level jump,
+// a materially worse experience than just not having a shortcut at all.
+// Checked against the event's real target, not assumed from context, since
+// focus can be anywhere when the shortcut fires.
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  const tag = target.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable
 }
 
 // Full-screen dashboard editor — the same GridCanvas/DashboardToolbox/
@@ -42,6 +55,10 @@ export function DashboardEditorPage({ appId, menuId }: DashboardEditorPageProps)
   const markSaved = useDashboardStore((s) => s.markSaved)
   const dirty = useDashboardStore((s) => s.dirty)
   const addWidget = useDashboardStore((s) => s.addWidget)
+  const undo = useDashboardStore((s) => s.undo)
+  const redo = useDashboardStore((s) => s.redo)
+  const canUndo = useDashboardStore((s) => s.canUndo)
+  const canRedo = useDashboardStore((s) => s.canRedo)
 
   const [initialised, setInitialised] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -84,11 +101,32 @@ export function DashboardEditorPage({ appId, menuId }: DashboardEditorPageProps)
   const saveRef = useRef(handleSave)
   saveRef.current = handleSave
 
+  // FR-C3-009: Ctrl/Cmd+Z / Ctrl/Cmd+Shift+Z, alongside the existing Ctrl+S
+  // handler — bound once via refs to undo/redo (not included in this
+  // effect's dependency array) so the listener doesn't re-bind every time
+  // the undo/redo stacks change, same pattern saveRef already uses for
+  // handleSave. Guarded by isEditableTarget so the browser's own native
+  // undo inside a text field isn't hijacked.
+  const undoRef = useRef(undo)
+  undoRef.current = undo
+  const redoRef = useRef(redo)
+  redoRef.current = redo
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault()
         void saveRef.current()
+        return
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (isEditableTarget(e.target)) return
+        e.preventDefault()
+        if (e.shiftKey) {
+          redoRef.current()
+        } else {
+          undoRef.current()
+        }
       }
     }
     window.addEventListener('keydown', handler)
@@ -150,6 +188,29 @@ export function DashboardEditorPage({ appId, menuId }: DashboardEditorPageProps)
         </div>
 
         <div className="flex-1" />
+
+        <div className="flex items-center gap-0.5">
+          <Button
+            variant="ghost" size="icon"
+            className="h-8 w-8 text-slate-500 hover:text-slate-700 disabled:opacity-30"
+            onClick={undo}
+            disabled={!canUndo}
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo2 size={16} />
+          </Button>
+          <Button
+            variant="ghost" size="icon"
+            className="h-8 w-8 text-slate-500 hover:text-slate-700 disabled:opacity-30"
+            onClick={redo}
+            disabled={!canRedo}
+            title="Redo (Ctrl+Shift+Z)"
+          >
+            <Redo2 size={16} />
+          </Button>
+        </div>
+
+        <div className="h-5 w-px bg-slate-200" />
 
         {saveError && (
           <span className="flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-xs text-red-600">

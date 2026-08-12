@@ -15,7 +15,7 @@
 // behavioral gain.
 import { ReactGridLayout, WidthProvider, type Layout as RglLayout } from 'react-grid-layout/legacy'
 import 'react-grid-layout/css/styles.css'
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { LayoutGrid, Plus } from 'lucide-react'
 import { useDroppable } from '@dnd-kit/core'
 import { Button } from '@/components/ui/button'
@@ -60,7 +60,19 @@ export function GridCanvas({ clientId, appId, onAddFirstWidget }: GridCanvasProp
   const schemaRef = useRef(schema)
   schemaRef.current = schema
 
-  const handleLayoutChange = useCallback((layout: RglLayout) => {
+  // FR-C3-009: a drag/resize gesture must commit to the (undo-tracked) store
+  // exactly once, on gesture-complete — not once per intermediate frame,
+  // which is what onLayoutChange alone would produce (RGL fires it
+  // continuously during a drag; the tile's on-screen position during the
+  // gesture is RGL's own internal state, not driven by the `layout` prop, so
+  // nothing is lost visually by not committing every frame). `gestureActive`
+  // suppresses onLayoutChange's commits while true; onDragStop/onResizeStop
+  // do the one real commit and clear it. onLayoutChange stays wired for the
+  // one case a stop-event can't cover: RGL's own initial-mount/compaction
+  // pass, which fires with no drag/resize gesture around it at all.
+  const gestureActive = useRef(false)
+
+  const commitLayout = useCallback((layout: RglLayout) => {
     const current = schemaRef.current.widgets
     const unchanged = layout.every((item) => {
       const w = current.find((widget) => widget.id === item.i)
@@ -75,6 +87,34 @@ export function GridCanvas({ clientId, appId, onAddFirstWidget }: GridCanvasProp
       })),
     )
   }, [updateWidgetLayouts])
+
+  const handleLayoutChange = useCallback((layout: RglLayout) => {
+    if (gestureActive.current) return
+    commitLayout(layout)
+  }, [commitLayout])
+
+  const handleGestureStart = useCallback(() => {
+    gestureActive.current = true
+  }, [])
+
+  const handleGestureStop = useCallback((layout: RglLayout) => {
+    gestureActive.current = false
+    commitLayout(layout)
+  }, [commitLayout])
+
+  // FR-C3-009 §6: if a drag/resize is interrupted (tab loses focus, mouse-up
+  // lost outside the window) before onDragStop/onResizeStop fires,
+  // gestureActive would otherwise stay stuck `true`, silently suppressing
+  // onLayoutChange's own commits until the next successful gesture happens
+  // to reset it. A window-blur reset is a cheap, low-risk safety net for
+  // this specific scenario; it doesn't attempt to recover or commit the
+  // interrupted gesture's own in-progress change, only to stop it from
+  // wedging future ones.
+  useEffect(() => {
+    const onBlur = () => { gestureActive.current = false }
+    window.addEventListener('blur', onBlur)
+    return () => window.removeEventListener('blur', onBlur)
+  }, [])
 
   const rglLayout: RglLayout = schema.widgets.map((w) => ({
     i: w.id,
@@ -107,6 +147,10 @@ export function GridCanvas({ clientId, appId, onAddFirstWidget }: GridCanvasProp
             compactType="vertical"
             draggableHandle=".widget-drag-handle,.dashboard-grid-plain-handle"
             onLayoutChange={handleLayoutChange}
+            onDragStart={handleGestureStart}
+            onDragStop={handleGestureStop}
+            onResizeStart={handleGestureStart}
+            onResizeStop={handleGestureStop}
           >
             {schema.widgets.map((instance) => (
               <div key={instance.id} className="relative h-full">
