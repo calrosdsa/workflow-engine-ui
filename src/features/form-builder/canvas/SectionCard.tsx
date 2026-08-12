@@ -11,7 +11,7 @@ import {
 import {
   SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select-menu'
-import { useFormBuilderStore } from '../store'
+import { useFormBuilderStore, deleteSectionChecked } from '../store'
 import { COLUMN_LAYOUTS, type ColumnLayout, type FormSection } from '../schema'
 import { ColumnDropZone } from './ColumnDropZone'
 
@@ -19,7 +19,7 @@ export function SectionCard({ section }: { section: FormSection }) {
   const updateSection = useFormBuilderStore((s) => s.updateSection)
   const setLayout = useFormBuilderStore((s) => s.setSectionLayout)
   const duplicate = useFormBuilderStore((s) => s.duplicateSectionById)
-  const remove = useFormBuilderStore((s) => s.deleteSection)
+  const remove = deleteSectionChecked
   const toggleCollapsed = useFormBuilderStore((s) => s.toggleSectionCollapsed)
   const selectSection = useFormBuilderStore((s) => s.selectSection)
   const selectedSectionId = useFormBuilderStore((s) => s.selectedSectionId)

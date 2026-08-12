@@ -96,6 +96,31 @@ export function removeAccountSection() {
   })
 }
 
+/** Deletes a section, and — if it happens to be the tracked Account section
+ *  (CreateUserSettings.accountSectionId) — also clears CreateUserSettings,
+ *  exactly like removeAccountSection does. The canvas's ordinary "Delete
+ *  section" action (SectionCard's dropdown) goes through this wrapper
+ *  instead of the generic tree-store core's own deleteSection directly:
+ *  that core has no CreateUserSettings concept (page-builder, its other
+ *  consumer, shares nothing like it), so it can't and shouldn't clear it
+ *  itself — without this wrapper, deleting the Account section via the
+ *  ordinary per-section delete control left create_user_on_submit enabled
+ *  and pointing at name/email/role field keys that no longer existed on the
+ *  form, silently breaking account provisioning on every future submit. */
+export function deleteSectionChecked(id: string) {
+  const wasAccountSection = useFormBuilderStore.getState().schema.settings?.createUser?.accountSectionId === id
+  useFormBuilderStore.getState().deleteSection(id)
+  if (wasAccountSection) {
+    updateCreateUserSettings({
+      enabled: false,
+      accountSectionId: undefined,
+      nameFieldKey: undefined,
+      emailFieldKey: undefined,
+      roleFieldKey: undefined,
+    })
+  }
+}
+
 /** Prepends a single-field "Info" section containing a Form Reference field
  *  pointing at parentFormId/parentName. Called once, right after
  *  resetFormBuilder(), when a new form is opened via "Add Dependent Form" —
