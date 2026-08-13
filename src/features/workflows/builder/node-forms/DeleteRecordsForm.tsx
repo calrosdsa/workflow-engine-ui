@@ -43,8 +43,10 @@ export function DeleteRecordsForm({ config, variables, nodeContext, onChange }: 
       <div className="space-y-1.5">
         <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Match</Label>
         <MatchModeToggle mode={config.mode} onChange={(mode) => set({ mode })} accent="bg-red-500" />
-        {config.mode === 'one' && (
+        {config.mode === 'one' ? (
           <p className="text-[10px] text-slate-400">Fails if the filter matches more than one record.</p>
+        ) : (
+          <p className="text-[10px] text-amber-600">Every record matching the filter below will be deleted — double-check it isn't broader than intended.</p>
         )}
       </div>
 
