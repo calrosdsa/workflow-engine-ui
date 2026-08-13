@@ -179,6 +179,196 @@ describe('moveSection', () => {
   })
 })
 
+describe('undo/redo', () => {
+  it('canUndo/canRedo are both false on a freshly created store', () => {
+    const store = makeStore()
+    expect(store.getState().canUndo).toBe(false)
+    expect(store.getState().canRedo).toBe(false)
+  })
+
+  it('TC-01: undo reverts a single mutation, redo re-applies it', () => {
+    const store = makeStore()
+    store.getState().addSection()
+    expect(store.getState().schema.sections).toHaveLength(1)
+    expect(store.getState().canUndo).toBe(true)
+
+    store.getState().undo()
+    expect(store.getState().schema.sections).toHaveLength(0)
+    expect(store.getState().canUndo).toBe(false)
+    expect(store.getState().canRedo).toBe(true)
+
+    store.getState().redo()
+    expect(store.getState().schema.sections).toHaveLength(1)
+    expect(store.getState().canRedo).toBe(false)
+  })
+
+  it('undo restores prior field values exactly, not just section count', () => {
+    const store = makeStore()
+    store.getState().addSection()
+    const section = store.getState().schema.sections[0]
+    store.getState().updateSection(section.id, { title: 'Renamed' })
+
+    store.getState().undo()
+    expect(store.getState().schema.sections[0].title).toBe(section.title)
+
+    store.getState().undo()
+    expect(store.getState().schema.sections).toHaveLength(0)
+  })
+
+  it('coalesces rapid same-key mutations (e.g. keystrokes) into a single undo step', () => {
+    const store = makeStore()
+    store.getState().addSection()
+    const id = store.getState().schema.sections[0].id
+    store.getState().updateSection(id, { title: 'H' })
+    store.getState().updateSection(id, { title: 'He' })
+    store.getState().updateSection(id, { title: 'Hel' })
+    store.getState().updateSection(id, { title: 'Hello' })
+    expect(store.getState().schema.sections[0].title).toBe('Hello')
+
+    // One undo reverts the WHOLE burst (back to the pre-edit title from
+    // addSection), not one keystroke at a time — confirms coalescing.
+    const preEditTitle = 'Section 1'
+    store.getState().undo()
+    expect(store.getState().schema.sections[0].title).toBe(preEditTitle)
+  })
+
+  it('does not coalesce mutations targeting different sections, even with the same mutation kind', () => {
+    const store = makeStore()
+    store.getState().addSection()
+    store.getState().addSection()
+    const [id1, id2] = store.getState().schema.sections.map((s) => s.id)
+    store.getState().updateSection(id1, { title: 'First' })
+    store.getState().updateSection(id2, { title: 'Second' })
+
+    store.getState().undo()
+    const afterOneUndo = store.getState().schema.sections
+    expect(afterOneUndo.find((s) => s.id === id1)!.title).toBe('First')
+    expect(afterOneUndo.find((s) => s.id === id2)!.title).not.toBe('Second')
+  })
+
+  it('TC-03: a new mutation after undo clears the redo stack (branching history)', () => {
+    const store = makeStore()
+    store.getState().addSection()
+    store.getState().addSection()
+    store.getState().undo()
+    store.getState().undo()
+    expect(store.getState().canRedo).toBe(true)
+
+    store.getState().addSection()
+    expect(store.getState().canRedo).toBe(false)
+
+    store.getState().redo()
+    expect(store.getState().schema.sections).toHaveLength(1)
+  })
+
+  it('TC-04: undo is unavailable past the state as created (session boundary)', () => {
+    const store = makeStore()
+    store.getState().addSection()
+    expect(store.getState().canUndo).toBe(true)
+
+    store.getState().undo()
+    expect(store.getState().canUndo).toBe(false)
+
+    const before = store.getState().schema
+    store.getState().undo()
+    expect(store.getState().schema).toBe(before)
+  })
+
+  it('redo is a no-op when the redo stack is empty', () => {
+    const store = makeStore()
+    store.getState().addSection()
+    const before = store.getState().schema
+    store.getState().redo()
+    expect(store.getState().schema).toBe(before)
+  })
+
+  it('loadSchema clears undo/redo history', () => {
+    const store = makeStore()
+    store.getState().addSection()
+    expect(store.getState().canUndo).toBe(true)
+
+    store.getState().loadSchema(store.getState().schema)
+    expect(store.getState().canUndo).toBe(false)
+    expect(store.getState().canRedo).toBe(false)
+  })
+
+  it('reset clears undo/redo history', () => {
+    const store = makeStore()
+    store.getState().addSection()
+    store.getState().reset()
+    expect(store.getState().canUndo).toBe(false)
+    expect(store.getState().canRedo).toBe(false)
+  })
+
+  it('undo resets selection state', () => {
+    const store = makeStore()
+    store.getState().addSection()
+    const section = store.getState().schema.sections[0]
+    store.getState().selectSection(section.id)
+    expect(store.getState().selectedSectionId).toBe(section.id)
+
+    store.getState().undo()
+    expect(store.getState().selectedSectionId).toBeNull()
+  })
+
+  it('undo/redo triggers onMutate, same as any other content mutation', () => {
+    let mutations = 0
+    const store = createTreeStore<FakeSchema, FakeSection, FakeColumn, FakeItem, string, FakeSection['layout']>({
+      emptySchema,
+      createSection: (title) => makeSection(title),
+      duplicateSection,
+      relayoutSection,
+      createItem: (label: string) => makeItem(label),
+      duplicateItem: (item) => ({ ...structuredClone(item), id: freshId('item') }),
+      accessors,
+      onMutate: () => { mutations += 1 },
+    })
+
+    store.getState().addSection()
+    expect(mutations).toBe(1)
+
+    store.getState().undo()
+    expect(mutations).toBe(2)
+
+    store.getState().redo()
+    expect(mutations).toBe(3)
+  })
+
+  it('deleteSection/deleteItem are undoable', () => {
+    const store = makeStore()
+    store.getState().addSection()
+    const section = store.getState().schema.sections[0]
+    store.getState().addItem('a', section.id, section.columns[0].id)
+    expect(store.getState().schema.sections[0].columns[0].items).toHaveLength(1)
+
+    store.getState().deleteItem(store.getState().schema.sections[0].columns[0].items[0].id)
+    expect(store.getState().schema.sections[0].columns[0].items).toHaveLength(0)
+    store.getState().undo()
+    expect(store.getState().schema.sections[0].columns[0].items).toHaveLength(1)
+
+    store.getState().deleteSection(section.id)
+    expect(store.getState().schema.sections).toHaveLength(0)
+    store.getState().undo()
+    expect(store.getState().schema.sections).toHaveLength(1)
+  })
+
+  it('history is capped at 50 entries', () => {
+    const store = makeStore()
+    for (let i = 0; i < 60; i++) store.getState().addSection()
+    expect(store.getState().schema.sections).toHaveLength(60)
+
+    let undoCount = 0
+    while (store.getState().canUndo) {
+      store.getState().undo()
+      undoCount++
+    }
+    // Capped at HISTORY_LIMIT (50): only the most recent 50 mutations are
+    // undoable, leaving the earliest 10 sections permanently applied.
+    expect(undoCount).toBe(50)
+    expect(store.getState().schema.sections).toHaveLength(10)
+  })
+})
+
 describe('onMutate hook', () => {
   it('fires after every content mutation, not on selection-only changes', () => {
     let mutations = 0

@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import {
-  ArrowLeft, Save, FilePlus2, Eye, AlertCircle, FileText, Loader2, Table2,
+  ArrowLeft, Save, FilePlus2, Eye, AlertCircle, FileText, Loader2, Table2, Redo2, Undo2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,6 +24,17 @@ interface FormBuilderPageProps {
   mode: 'new' | 'edit'
 }
 
+// Mirrors dashboard/DashboardEditorPage.tsx's own isEditableTarget (FR-C3-009):
+// Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z must not hijack the browser's native
+// undo/redo while the user is typing in a text field (a section title, a
+// config panel input) — checked against the event's real target, not
+// assumed from context, since focus can be anywhere when the shortcut fires.
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  const tag = target.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable
+}
+
 export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   const navigate = useNavigate()
   const params = useParams({ strict: false }) as { appId?: string; formId?: string }
@@ -38,6 +49,10 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   const updateMutation = useUpdateForm(formId ?? '')
 
   const schema = useFormBuilderStore((s) => s.schema)
+  const undo = useFormBuilderStore((s) => s.undo)
+  const redo = useFormBuilderStore((s) => s.redo)
+  const canUndo = useFormBuilderStore((s) => s.canUndo)
+  const canRedo = useFormBuilderStore((s) => s.canRedo)
   const {
     name, slug, description, isDirty,
     setName, setSlug, markSaved,
@@ -142,6 +157,32 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
     }
   }
 
+  // Ctrl/Cmd+Z / Ctrl/Cmd+Shift+Z — bound once via refs to undo/redo (not in
+  // this effect's dependency array) so the listener doesn't re-bind every
+  // time the undo/redo stacks change. Guarded by isEditableTarget so the
+  // browser's own native undo inside a text field isn't hijacked. Mirrors
+  // DashboardEditorPage.tsx's identical wiring (FR-C3-009).
+  const undoRef = useRef(undo)
+  undoRef.current = undo
+  const redoRef = useRef(redo)
+  redoRef.current = redo
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (isEditableTarget(e.target)) return
+        e.preventDefault()
+        if (e.shiftKey) {
+          redoRef.current()
+        } else {
+          undoRef.current()
+        }
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
   const saving = createMutation.isPending || updateMutation.isPending
   const parentForm = parentFormId ? allForms?.find((f) => f.id === parentFormId) : undefined
 
@@ -197,6 +238,27 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
         )}
 
         {isDirty && <span className="rounded-full bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-600">Unsaved</span>}
+
+        <div className="flex items-center gap-0.5">
+          <Button
+            variant="ghost" size="icon"
+            className="h-8 w-8 text-slate-500 hover:text-slate-700 disabled:opacity-30"
+            onClick={undo}
+            disabled={!canUndo}
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo2 size={16} />
+          </Button>
+          <Button
+            variant="ghost" size="icon"
+            className="h-8 w-8 text-slate-500 hover:text-slate-700 disabled:opacity-30"
+            onClick={redo}
+            disabled={!canRedo}
+            title="Redo (Ctrl+Shift+Z)"
+          >
+            <Redo2 size={16} />
+          </Button>
+        </div>
 
         <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)} className="gap-1.5">
           <Eye size={14} /> Preview
