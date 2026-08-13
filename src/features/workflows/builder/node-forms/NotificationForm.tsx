@@ -3,6 +3,7 @@ import { Bell } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ExpressionField } from '@/features/form-builder/config/ExpressionField'
+import { UserSelect } from '@/features/form-builder/config/UserSelect'
 import { cn } from '@/lib/utils'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, NotificationConfig, NotificationSeverity, ValueMode } from '../../types'
@@ -74,15 +75,13 @@ export function NotificationForm({ config, variables, nodeContext, onChange }: N
             label="Recipient"
           />
         ) : (
-          <Input
+          <UserSelect
             value={config.recipient_user_id ?? ''}
-            onChange={(e) => set({ recipient_user_id: e.target.value })}
-            placeholder="user id"
-            className="h-8 font-mono text-[12px]"
+            onChange={(userId) => set({ recipient_user_id: userId })}
           />
         )}
         <p className="text-[10px] text-slate-400">
-          Who receives this notification — a literal user id, or an expression resolving to one (e.g. a record's assigned user).
+          Who receives this notification — a specific person, or an expression resolving to a user id (e.g. a record's assigned user).
         </p>
       </div>
 

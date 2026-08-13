@@ -1,0 +1,146 @@
+// A searchable single-user combobox — the single-select counterpart to
+// UserMultiSelect.tsx, built on the same shadcn Popover + cmdk Command
+// pattern, and mirroring FormReferenceSelect.tsx's stale/broken-value
+// handling (a stored user id whose user no longer exists — left, revoked,
+// or simply not visible to this app's membership list — is preserved, not
+// silently dropped, with a warning shown instead of a confusing blank).
+
+import { useMemo, useState } from 'react'
+import { Check, ChevronsUpDown, X, AlertTriangle, Loader2, User } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from '@/components/ui/popover'
+import {
+  Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
+} from '@/components/ui/command'
+import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth'
+import { useTeamUsers } from '@/features/users/hooks'
+import type { TeamUser } from '@/features/users/types'
+
+function userLabel(u: TeamUser): string {
+  const name = `${u.first_name} ${u.last_name}`.trim()
+  return name || u.email
+}
+
+interface UserSelectProps {
+  /** The currently selected user id (or empty string when none). */
+  value: string
+  /** Emits the selected user id, or '' when cleared. */
+  onChange: (userId: string) => void
+  /** Which app's members to list. Defaults to the active membership's app. */
+  appId?: string
+}
+
+export function UserSelect({ value, onChange, appId: appIdProp }: UserSelectProps) {
+  const activeAppId = useAuthStore((s) => s.activeMembership?.app_id) ?? ''
+  const appId = appIdProp ?? activeAppId
+  const { data: users, isLoading } = useTeamUsers()
+  const [open, setOpen] = useState(false)
+
+  const options = useMemo(
+    () => (users ?? []).filter((u) => !appId || u.memberships.some((m) => m.app_id === appId)),
+    [users, appId],
+  )
+
+  // Selected user may not be in `options` (a different app's member, or a
+  // stale/revoked id) — look it up against the full user list first so a
+  // valid-but-out-of-scope id still displays a name, not just an id.
+  const selected = useMemo(
+    () => (users ?? []).find((u) => u.id === value),
+    [users, value],
+  )
+
+  const isBroken = !!value && !isLoading && !selected
+
+  return (
+    <div className="space-y-1.5">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className={cn(
+              'h-8 w-full justify-between gap-2 px-2.5 text-[13px] font-normal',
+              !value && 'text-slate-400',
+              isBroken && 'border-amber-300',
+            )}
+          >
+            <span className="flex min-w-0 items-center gap-1.5">
+              <User size={13} className="shrink-0 text-slate-400" />
+              <span className="truncate">
+                {isLoading && !selected
+                  ? 'Loading users…'
+                  : selected
+                    ? userLabel(selected)
+                    : isBroken
+                      ? 'Unavailable user'
+                      : 'Select User'}
+              </span>
+            </span>
+            <ChevronsUpDown size={13} className="shrink-0 text-slate-400" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command
+            filter={(itemValue, search) =>
+              itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+            }
+          >
+            <CommandInput placeholder="Search people…" />
+            <CommandList>
+              {isLoading ? (
+                <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-slate-400">
+                  <Loader2 size={13} className="animate-spin" /> Loading users…
+                </div>
+              ) : (
+                <>
+                  <CommandEmpty>No users found.</CommandEmpty>
+                  <CommandGroup>
+                    {options.map((u) => (
+                      <CommandItem
+                        key={u.id}
+                        value={`${userLabel(u)} ${u.email}`}
+                        onSelect={() => {
+                          onChange(u.id === value ? '' : u.id)
+                          setOpen(false)
+                        }}
+                      >
+                        <Check size={14} className={cn('shrink-0', u.id === value ? 'opacity-100 text-indigo-600' : 'opacity-0')} />
+                        <span className="flex min-w-0 flex-col">
+                          <span className="truncate">{userLabel(u)}</span>
+                          <span className="truncate text-[10px] text-slate-400">{u.email}</span>
+                        </span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+
+      {isBroken && (
+        <p className="text-[10px] text-amber-600 flex items-center gap-1">
+          <AlertTriangle size={11} className="shrink-0" />
+          The stored user (<span className="font-mono">{value}</span>) no longer matches a visible user.
+          It's preserved until you pick a new one.
+        </p>
+      )}
+      {value && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-600"
+          >
+            <X size={10} /> Clear
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
