@@ -153,7 +153,20 @@ export interface QueryKnowledgeBasePayload {
   enable_rerank?: boolean
 }
 
+export interface QueryResponseChunk {
+  content: string
+  file_path: string
+  reference_id: number
+}
+
+export interface QueryResponseReference {
+  reference_id: number
+  file_path: string
+}
+
 export interface QueryKnowledgeBaseResponse {
   answer: string
   context: string
+  chunks: QueryResponseChunk[]
+  references: QueryResponseReference[]
 }

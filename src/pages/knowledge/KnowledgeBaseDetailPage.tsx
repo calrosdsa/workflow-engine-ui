@@ -488,6 +488,20 @@ function QueryPlayground({ kbId }: { kbId: string }) {
         <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
           <Label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-400">Answer</Label>
           <p className="whitespace-pre-wrap text-sm text-gray-800">{queryMutation.data.answer || '(no context found)'}</p>
+          {queryMutation.data.references.length > 0 && (
+            <div className="mt-3 border-t border-gray-200 pt-2">
+              <Label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-400">Sources</Label>
+              <ul className="space-y-1">
+                {queryMutation.data.references.map((ref) => (
+                  <li key={ref.reference_id} className="flex items-center gap-1.5 text-xs text-gray-600">
+                    <FileText size={11} className="shrink-0 text-gray-400" />
+                    <span className="font-mono text-[10px] text-gray-400">[{ref.reference_id}]</span>
+                    <span className="truncate">{ref.file_path}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
       {queryMutation.isError && (
