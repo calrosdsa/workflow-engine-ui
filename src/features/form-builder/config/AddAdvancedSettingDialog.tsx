@@ -15,7 +15,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select-menu'
-import { RoleSelect } from './RoleSelect'
+import { RoleMultiSelect } from './RoleMultiSelect'
 import { UserMultiSelect } from './UserMultiSelect'
 import { AdvancedSettingConditionBuilder } from './AdvancedSettingConditionBuilder'
 import {
@@ -68,7 +68,7 @@ export function AddAdvancedSettingDialog({
     patch({
       appliesTo,
       userIds: appliesTo === 'specific_people' ? (draft.userIds ?? []) : undefined,
-      roleId: appliesTo === 'specific_role' ? draft.roleId : undefined,
+      roleIds: appliesTo === 'specific_role' ? (draft.roleIds ?? []) : undefined,
     })
   }
 
@@ -79,7 +79,7 @@ export function AddAdvancedSettingDialog({
 
   const canSave = draft.name.trim().length > 0
     && (draft.appliesTo !== 'specific_people' || (draft.userIds?.length ?? 0) > 0)
-    && (draft.appliesTo !== 'specific_role' || !!draft.roleId)
+    && (draft.appliesTo !== 'specific_role' || (draft.roleIds?.length ?? 0) > 0)
 
   const handleSave = () => {
     if (!canSave) return
@@ -125,7 +125,7 @@ export function AddAdvancedSettingDialog({
               <UserMultiSelect value={draft.userIds ?? []} onChange={(userIds) => patch({ userIds })} />
             )}
             {draft.appliesTo === 'specific_role' && (
-              <RoleSelect value={draft.roleId} onChange={(roleId) => patch({ roleId })} />
+              <RoleMultiSelect value={draft.roleIds ?? []} onChange={(roleIds) => patch({ roleIds })} />
             )}
           </div>
 

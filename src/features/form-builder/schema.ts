@@ -228,8 +228,8 @@ export interface AdvancedSetting {
   appliesTo: AdvancedSettingAudience
   /** User ids — set when appliesTo === 'specific_people'. */
   userIds?: string[]
-  /** Role id — set when appliesTo === 'specific_role'. */
-  roleId?: string
+  /** Role ids — set when appliesTo === 'specific_role'. */
+  roleIds?: string[]
   when: AdvancedSettingGroup
   actions: AdvancedSettingAction[]
 }
