@@ -39,11 +39,18 @@ export interface ParentMenuConfig {
  *  via features/page-builder) or a single embedded external webpage. `mode`
  *  selects which of schema/embedUrl is active; the other is left populated
  *  (not cleared) when switching modes in the builder, so toggling back and
- *  forth doesn't lose work. */
+ *  forth doesn't lose work. When `mode === 'embed'`, `integrationId` may
+ *  reference a `signed_launch` Embedded Integration (features/integrations)
+ *  — same optional SSO pass-through as the Dashboard embed widget
+ *  (features/dashboard/widgets/embed/schema.ts), scoped to signed_launch
+ *  only here (no oidc/postMessage handshake for this simpler surface).
+ *  Unset = a plain, unauthenticated iframe, same as before this field
+ *  existed. */
 export interface CustomMenuConfig {
   mode: 'page' | 'embed'
   schema?: PageSchema
   embedUrl?: string
+  integrationId?: string
 }
 
 /** Drives a Dashboard menu — a grid canvas of plugin-registered widget tiles

@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { ExternalLink, Loader2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { checkEmbeddable } from '@/lib/api'
-import { useIntegrations } from '@/features/integrations/hooks'
+import { useIntegrationRuntimeInfo } from '@/features/integrations/hooks'
 import { integrationsApi } from '@/features/integrations/api'
-import type { EmbeddedIntegration } from '@/features/integrations/types'
+import type { IntegrationHandshakeInfo } from '@/features/integrations/types'
 import type { WidgetRendererProps } from '../../widget-contract'
 import type { EmbedWidgetConfig } from './schema'
 import { useSsoHandshake } from './useSsoHandshake'
@@ -26,20 +26,32 @@ import { useOidcHandshake } from './useOidcHandshake'
 // attempt resolves — the only difference from signed_launch is HOW the
 // token is obtained (a real IdP round trip vs. one platform-signed JWT
 // mint), not how it's delivered to the visible iframe below.
+//
+// Uses useIntegrationRuntimeInfo (menus:read-gated, one integration) rather
+// than useIntegrations (credentials:read-gated, the full admin list) — this
+// widget renders for ordinary runtime end users viewing a published
+// dashboard, most of whom hold menus:read but not credentials:read. Using
+// the admin-list hook here would silently and permanently disable SSO for
+// exactly that audience (see IntegrationHandshakeInfo's doc comment).
 type EmbedStatus = 'checking' | 'embeddable' | 'blocked'
 
 export function EmbedRenderer({ config, mode }: WidgetRendererProps<EmbedWidgetConfig>) {
-  const { data: integrations } = useIntegrations()
-  const integration = config.integrationId ? integrations?.find((i) => i.id === config.integrationId) : undefined
+  const { data: integration } = useIntegrationRuntimeInfo(config.integrationId)
 
   if (!config.url) {
     return <div className="flex h-full items-center justify-center p-3 text-xs text-slate-400">No webpage URL has been configured yet.</div>
   }
 
-  return <EmbedFrame url={config.url} integration={integration} builderMode={mode === 'builder'} />
+  return (
+    <EmbedFrame
+      url={config.url}
+      integration={integration && config.integrationId ? { id: config.integrationId, ...integration } : undefined}
+      builderMode={mode === 'builder'}
+    />
+  )
 }
 
-function EmbedFrame({ url, integration, builderMode }: { url: string; integration: EmbeddedIntegration | undefined; builderMode: boolean }) {
+function EmbedFrame({ url, integration, builderMode }: { url: string; integration: IntegrationHandshakeInfo | undefined; builderMode: boolean }) {
   const [status, setStatus] = useState<EmbedStatus>('checking')
   const [reason, setReason] = useState<string | undefined>()
   const [launchUrl, setLaunchUrl] = useState(url)

@@ -4,10 +4,27 @@ import type { UpsertIntegrationPayload } from './types'
 
 export const integrationKeys = {
   list: () => ['integrations'] as const,
+  runtimeInfo: (id: string) => ['integrations', id, 'runtime-info'] as const,
 }
 
 export function useIntegrations() {
   return useQuery({ queryKey: integrationKeys.list(), queryFn: integrationsApi.list })
+}
+
+// Runtime-session-safe counterpart to useIntegrations — fetches only
+// auth_mode + allowed_origins for ONE integration via the menus:read-gated
+// runtime-info endpoint, rather than the credentials:read-gated full list a
+// typical end-user viewing a published app won't have permission for. Use
+// this (not useIntegrations) from any component that renders in the actual
+// runtime (not the design-time builder) and needs an integration's
+// handshake-relevant fields — see Renderer.tsx (Dashboard embed widget) and
+// CustomMenuRuntime.tsx (Custom menu embed mode) for the two call sites.
+export function useIntegrationRuntimeInfo(id: string | undefined) {
+  return useQuery({
+    queryKey: integrationKeys.runtimeInfo(id ?? ''),
+    queryFn: () => integrationsApi.getRuntimeInfo(id!),
+    enabled: !!id,
+  })
 }
 
 export function useCreateIntegration() {

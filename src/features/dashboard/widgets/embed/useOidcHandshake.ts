@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { integrationsApi } from '@/features/integrations/api'
-import type { EmbeddedIntegration } from '@/features/integrations/types'
+import type { IntegrationHandshakeInfo } from '@/features/integrations/types'
 
 // OIDC silent-auth mode (FR-D3-008) — a sibling to useSsoHandshake's
 // signed_launch flow, but structurally different: signed_launch mints a
@@ -31,7 +31,7 @@ export interface OidcHandshakeResult {
 }
 
 export function useOidcHandshake(
-  integration: EmbeddedIntegration | undefined,
+  integration: IntegrationHandshakeInfo | undefined,
   onResult: (result: OidcHandshakeResult) => void,
 ) {
   const hiddenFrameRef = useRef<HTMLIFrameElement | null>(null)

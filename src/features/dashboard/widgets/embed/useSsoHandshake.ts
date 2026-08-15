@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { integrationsApi } from '@/features/integrations/api'
-import type { EmbeddedIntegration } from '@/features/integrations/types'
+import type { IntegrationHandshakeInfo } from '@/features/integrations/types'
 
 // Parent (dashboard) side of the Embed SDK handshake — public/embed-sdk.js
 // is the child (partner-page) side; see docs/dashboard-system-plan.md
@@ -22,7 +22,7 @@ import type { EmbeddedIntegration } from '@/features/integrations/types'
 //   - `wf:sso:logout` is broadcast to every mounted embed iframe on
 //     platform logout (see broadcastLogoutToAllEmbeds below), each still
 //     targetOrigin-scoped individually.
-export function useSsoHandshake(iframeRef: React.RefObject<HTMLIFrameElement | null>, integration: EmbeddedIntegration | undefined) {
+export function useSsoHandshake(iframeRef: React.RefObject<HTMLIFrameElement | null>, integration: IntegrationHandshakeInfo | undefined) {
   // Re-entered on every message event without staleness, since the handler
   // itself is re-registered whenever `integration` changes (see the effect
   // below) — a ref isn't needed here the way it would be for a handler that

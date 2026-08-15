@@ -67,6 +67,30 @@ export interface SSOTokenResponse {
   expires_in: number
 }
 
+// GET /integrations/{id}/runtime-info's response — the menus:read-gated,
+// non-admin subset of EmbeddedIntegration an ordinary runtime session (any
+// signed-in end user viewing a published app, not just a builder/admin) can
+// fetch to drive an embed's client-side SSO handshake. Deliberately NOT a
+// Pick<EmbeddedIntegration, ...> alias -- keeping it a separate type makes
+// it a compile error to accidentally pass a full EmbeddedIntegration where
+// this narrower shape was the point, and keeps this file the one place that
+// needs updating if the backend's runtimeInfoResponse ever changes shape.
+export interface IntegrationRuntimeInfo {
+  auth_mode: IntegrationAuthMode
+  allowed_origins: string[]
+}
+
+// The minimal shape useSsoHandshake/useOidcHandshake actually destructure —
+// `id` + IntegrationRuntimeInfo's two fields. A full EmbeddedIntegration
+// satisfies this structurally (no cast needed at call sites that already
+// have one, e.g. the config-time picker), and so does an
+// IntegrationRuntimeInfo + the id the caller already knows from
+// config.integrationId (the runtime Renderer.tsx path, which never fetches
+// a full EmbeddedIntegration at all). Keeping the handshake hooks' param
+// type this narrow, rather than the full EmbeddedIntegration, is what makes
+// it possible for a menus:read-only runtime session to use them at all.
+export type IntegrationHandshakeInfo = Pick<EmbeddedIntegration, 'id' | 'auth_mode' | 'allowed_origins'>
+
 // StartOIDCFlowResponse is what POST /integrations/{id}/oidc/start returns —
 // the IdP's /authorize URL (with prompt=none already attached) for the
 // frontend to load in a hidden iframe. See useOidcHandshake.ts.

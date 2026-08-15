@@ -49,6 +49,7 @@ export function CustomMenuConfigPanel({ menu, onChange }: CustomMenuConfigPanelP
 
   const setMode = (m: CustomMenuConfig['mode']) => onChange({ ...config, mode: m })
   const setEmbedUrl = (url: string) => onChange({ ...config, embedUrl: url })
+  const setIntegrationId = (integrationId: string | undefined) => onChange({ ...config, integrationId })
 
   const createMutation = useCreateMenu()
   const [convertState, setConvertState] = useState<'idle' | 'done' | 'error'>('idle')
@@ -105,7 +106,12 @@ export function CustomMenuConfigPanel({ menu, onChange }: CustomMenuConfigPanelP
       </div>
 
       {mode === 'embed' ? (
-        <EmbedConfigPanel value={config.embedUrl ?? ''} onChange={setEmbedUrl} />
+        <EmbedConfigPanel
+          value={config.embedUrl ?? ''}
+          onChange={setEmbedUrl}
+          integrationId={config.integrationId}
+          onIntegrationChange={setIntegrationId}
+        />
       ) : (
         // CompactToolbox (horizontal chip-row) stacked ABOVE a full-width
         // canvas, properties panel as an inline expansion below — confirmed
