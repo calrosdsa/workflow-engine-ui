@@ -64,6 +64,11 @@ export interface NodeFormProps {
   onChange: (c: unknown) => void
 }
 
+// Node picker category tabs. Only meaningful for PALETTE_NODES members —
+// non-addable types (entry/trigger/exit/loop_end/subflow) leave `category`
+// unset since they never appear in the picker.
+export type NodeCategory = 'Data' | 'Logic' | 'Integrations' | 'Notify' | 'Knowledge' | 'Debug'
+
 export interface NodeRegistryEntry {
   label: string
   icon: LucideIcon
@@ -79,6 +84,11 @@ export interface NodeRegistryEntry {
    *  type's well-formed shape. Identity for types whose config shape has
    *  been stable since the DAG redesign (condition/subflow/iterator). */
   normalise: (raw: unknown) => unknown
+  /** Node picker tab this type appears under. Required for every
+   *  PALETTE_NODES member (enforced by a startup assertion below) so the
+   *  picker's category tabs can never drift out of sync with the palette
+   *  the way they once did (FR-C5-012). */
+  category?: NodeCategory
 }
 
 export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
@@ -113,6 +123,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Assign a variable value',
     form: SetVariableForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseSetVariableConfig(raw),
+    category: 'Data',
   },
   condition: {
     label: 'Condition', icon: GitBranch,
@@ -121,6 +132,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Branch on a boolean expression',
     form: ConditionForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseConditionConfig(raw),
+    category: 'Logic',
   },
   subflow: {
     label: 'Subflow', icon: Box,
@@ -137,6 +149,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Join parallel branches',
     form: NoAdditionalConfig as ComponentType<NodeFormProps>,
     normalise: (raw) => raw,
+    category: 'Logic',
   },
   fetch_records: {
     label: 'Fetch Records', icon: Database,
@@ -145,6 +158,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Query records from a form',
     form: FetchRecordsForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseFetchRecordsConfig(raw),
+    category: 'Data',
   },
   upsert_records: {
     label: 'Upsert Record', icon: DatabaseZap,
@@ -153,6 +167,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Create or update a record by its unique fields',
     form: UpsertRecordsForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseUpsertRecordsConfig(raw),
+    category: 'Data',
   },
   update_records: {
     label: 'Update Records', icon: Pencil,
@@ -161,6 +176,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Update record(s) matching a filter',
     form: UpdateRecordsForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseUpdateRecordsConfig(raw),
+    category: 'Data',
   },
   delete_records: {
     label: 'Delete Records', icon: Trash2,
@@ -169,6 +185,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Delete record(s) matching a filter',
     form: DeleteRecordsForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseDeleteRecordsConfig(raw),
+    category: 'Data',
   },
   iterator: {
     label: 'Iterator', icon: Repeat,
@@ -177,6 +194,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Loop over a list, running the body per item',
     form: IteratorForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseIteratorConfig(raw),
+    category: 'Logic',
   },
   loop_end: {
     label: 'Loop End', icon: FlagOff,
@@ -193,6 +211,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Make an outbound HTTP call',
     form: HttpRequestForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseHttpRequestConfig(raw),
+    category: 'Integrations',
   },
   show_message: {
     label: 'Show Message', icon: MessageSquare,
@@ -201,6 +220,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Publish a success/error/info message',
     form: ShowMessageForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseShowMessageConfig(raw),
+    category: 'Notify',
   },
   transform: {
     label: 'Transform', icon: Wand2,
@@ -209,6 +229,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Map a source list into a target form’s schema',
     form: TransformForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseTransformConfig(raw),
+    category: 'Data',
   },
   save_records: {
     label: 'Save Records', icon: Save,
@@ -217,6 +238,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Bulk upsert a list of records at once',
     form: SaveRecordsForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseSaveRecordsConfig(raw),
+    category: 'Data',
   },
   notification: {
     label: 'Notification', icon: Bell,
@@ -225,6 +247,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Notify a user — appears in their notification center',
     form: NotificationForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseNotificationConfig(raw),
+    category: 'Notify',
   },
   knowledge_retrieval: {
     label: 'Knowledge Retrieval', icon: BookOpenCheck,
@@ -233,6 +256,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Query a knowledge base for context or a grounded answer',
     form: KnowledgeRetrievalForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseKnowledgeRetrievalConfig(raw),
+    category: 'Knowledge',
   },
   knowledge_ingest: {
     label: 'Knowledge Ingest', icon: BookOpen,
@@ -241,6 +265,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Insert text into a knowledge base for asynchronous indexing',
     form: KnowledgeIngestForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseKnowledgeIngestConfig(raw),
+    category: 'Knowledge',
   },
   debug: {
     label: 'Debug', icon: Bug,
@@ -249,6 +274,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Capture a variable snapshot at this point in the graph',
     form: DebugForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseDebugConfig(raw),
+    category: 'Debug',
   },
 }
 
@@ -367,4 +393,27 @@ export const PALETTE_NODES: NodeType[] = [
   'set_variable', 'condition', 'fetch_records', 'upsert_records', 'update_records',
   'delete_records', 'transform', 'save_records', 'iterator', 'http_request', 'show_message',
   'notification', 'knowledge_retrieval', 'knowledge_ingest', 'merge', 'debug',
+]
+
+// Node picker category tabs, derived from each PALETTE_NODES member's own
+// `category` field — cannot drift out of sync with the palette the way the
+// picker's tabs once did as a separately hand-maintained list (FR-C5-012).
+// Every PALETTE_NODES member must carry a `category`; a missing one is a
+// registry authoring bug, not a runtime condition to degrade gracefully
+// from, so it throws immediately at module load rather than silently
+// omitting that type from every tab.
+const CATEGORY_ORDER: NodeCategory[] = ['Data', 'Logic', 'Integrations', 'Notify', 'Knowledge', 'Debug']
+
+export const NODE_CATEGORIES: { label: string; types: NodeType[] }[] = [
+  { label: 'All', types: PALETTE_NODES },
+  ...CATEGORY_ORDER.map((category) => ({
+    label: category,
+    types: PALETTE_NODES.filter((type) => {
+      const entry = NODE_REGISTRY[type]
+      if (!entry.category) {
+        throw new Error(`node-registry: PALETTE_NODES member "${type}" has no category`)
+      }
+      return entry.category === category
+    }),
+  })).filter((c) => c.types.length > 0),
 ]

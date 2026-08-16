@@ -1,19 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Search, X } from 'lucide-react'
-import { NODE_REGISTRY, PALETTE_NODES } from './node-registry'
+import { NODE_REGISTRY, PALETTE_NODES, NODE_CATEGORIES } from './node-registry'
 import { cn } from '@/lib/utils'
 import type { NodeType } from '../types'
-
-// Groups shown in the picker tabs
-const CATEGORIES: { label: string; types: NodeType[] }[] = [
-  { label: 'All',          types: PALETTE_NODES },
-  { label: 'Data',         types: ['fetch_records', 'upsert_records', 'update_records', 'delete_records', 'transform', 'save_records', 'set_variable'] },
-  { label: 'Logic',        types: ['condition', 'iterator', 'merge'] },
-  { label: 'Integrations', types: ['http_request'] },
-  { label: 'Notify',       types: ['show_message', 'notification'] },
-  { label: 'Knowledge',    types: ['knowledge_retrieval', 'knowledge_ingest'] },
-  { label: 'Debug',        types: ['debug'] },
-]
 
 interface NodePickerModalProps {
   onSelect: (type: NodeType) => void
@@ -41,7 +30,7 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
         NODE_REGISTRY[t].label.toLowerCase().includes(search.toLowerCase()) ||
         NODE_REGISTRY[t].description.toLowerCase().includes(search.toLowerCase())
       )
-    : CATEGORIES[activeTab].types
+    : NODE_CATEGORIES[activeTab].types
 
   return (
     // Backdrop
@@ -79,7 +68,7 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
         {/* Category tabs — only show when not searching */}
         {!search && (
           <div className="flex gap-1 px-4 pt-3">
-            {CATEGORIES.map((cat, i) => (
+            {NODE_CATEGORIES.map((cat, i) => (
               <button
                 key={cat.label}
                 onClick={() => setActiveTab(i)}
