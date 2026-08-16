@@ -1,8 +1,9 @@
-import { Plus, Trash2, ChevronLeft, ChevronRight, Braces } from 'lucide-react'
+import { Plus, Trash2, ChevronLeft, ChevronRight, Braces, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 import { useBuilderStore } from './store'
 import type { VariableDecl } from '../types'
 
@@ -18,6 +19,15 @@ export function VariablesPanel() {
 
   const update = (i: number, patch: Partial<VariableDecl>) =>
     setVariables(variables.map((v, idx) => (idx === i ? { ...v, ...patch } : v)))
+
+  // A later duplicate silently overwrites an earlier declaration's default
+  // in the runtime state map (keyed by name) — flag every name that isn't
+  // unique so the collision is visible before it causes a silent data loss.
+  const nameCounts = variables.reduce<Record<string, number>>((acc, v) => {
+    if (v.name) acc[v.name] = (acc[v.name] ?? 0) + 1
+    return acc
+  }, {})
+  const isDuplicate = (name: string) => name !== '' && nameCounts[name] > 1
 
   return (
     <aside
@@ -83,7 +93,17 @@ export function VariablesPanel() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[10px] text-slate-500">Name</Label>
-                  <Input value={v.name} onChange={(e) => update(i, { name: e.target.value })} className="h-7 text-xs" />
+                  <Input
+                    value={v.name}
+                    onChange={(e) => update(i, { name: e.target.value })}
+                    className={cn('h-7 text-xs', isDuplicate(v.name) && 'border-red-300 focus-visible:ring-red-300')}
+                  />
+                  {isDuplicate(v.name) && (
+                    <p className="flex items-center gap-1 text-[10px] text-red-600">
+                      <AlertCircle size={10} className="shrink-0" />
+                      Already used by another variable — one will silently overwrite the other at runtime.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[10px] text-slate-500">Type</Label>

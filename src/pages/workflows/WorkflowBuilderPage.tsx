@@ -15,6 +15,17 @@ import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { FlowLayout } from '../test/Layout'
 
+// True when the event originates inside a text-entry control.
+function isEditableTarget(t: EventTarget | null): boolean {
+  if (!(t instanceof HTMLElement)) return false
+  return (
+    t.tagName === 'INPUT' ||
+    t.tagName === 'TEXTAREA' ||
+    t.tagName === 'SELECT' ||
+    t.isContentEditable
+  )
+}
+
 export type BuilderMode = 'new' | 'edit'
 
 interface WorkflowBuilderPageProps {
@@ -121,11 +132,16 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   const saveRef = useRef(handleSave)
   saveRef.current = handleSave
 
-  // Ctrl+S / Cmd+S saves from anywhere in the builder.
+  // Ctrl+S / Cmd+S saves from anywhere in the builder. Still intercepts the
+  // browser's native save-page shortcut even while typing (that dialog is
+  // more disruptive than a no-op keystroke), but only triggers our own save
+  // outside editable targets, matching the sibling undo/redo/delete handler's
+  // guard (Layout.tsx) instead of firing mid-keystroke in a text field.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault()
+        if (isEditableTarget(e.target)) return
         void saveRef.current()
       }
     }
