@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, ChevronRight, ChevronDown, ArrowUp, ArrowDown, GripVertical, Trash2, Loader2, AlertCircle } from 'lucide-react'
+import { Plus, ChevronRight, ChevronDown, ArrowUp, ArrowDown, GripVertical, Trash2, Loader2, AlertCircle, EyeOff, Eye } from 'lucide-react'
 import {
   DndContext, DragOverlay, PointerSensor, KeyboardSensor,
   useSensor, useSensors, pointerWithin, rectIntersection,
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Spinner } from '@/components/ui/spinner'
-import { useMenus, useCreateMenu, useUpdateMenu, useDeleteMenu, useReorderMenus, useMoveMenu } from '@/features/menus/hooks'
+import { useMenus, useCreateMenu, useUpdateMenu, useDeleteMenu, useReorderMenus, useMoveMenu, useSetHiddenFromNav } from '@/features/menus/hooks'
 import { buildMenuTree } from '@/features/menus/tree'
 import { MENU_TYPE_REGISTRY } from '@/features/menus/menu-registry'
 import { usePermission } from '@/features/auth/permissions'
@@ -25,6 +25,7 @@ import type { Menu, MenuType, MenuTreeNode, PermissionMode } from '@/features/me
 import type { SearchMenuConfig, AddMenuConfig } from '@/features/menus/types'
 
 const ROOT_DROP_ZONE_ID = '__menu-tree-root-drop-zone__'
+const HIDDEN_ZONE_ID = '__menu-tree-hidden-drop-zone__'
 
 interface MenusSectionProps {
   appId: string
@@ -38,12 +39,20 @@ export function MenusSection({ appId }: MenusSectionProps) {
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Spinner /></div>
 
-  const tree = buildMenuTree(menus ?? [])
+  // Menus flagged hidden_from_nav (dropped into the Hidden tray below, or an
+  // auto-paired Add menu — see ensurePairedAddMenu) never appear in the main
+  // tree; buildMenuTree itself stays unfiltered (it's also reused by the
+  // runtime's nav-tree builder, which needs the raw structure to still find
+  // hidden nodes when navigated to directly), so the split happens here,
+  // once, right before handing each half to its own section of the panel.
+  const visibleMenus = (menus ?? []).filter((m) => !m.hidden_from_nav)
+  const hiddenMenus = (menus ?? []).filter((m) => m.hidden_from_nav)
+  const tree = buildMenuTree(visibleMenus)
   const selected = (menus ?? []).find((m) => m.id === selectedId) ?? null
 
   return (
     <div className="flex h-full">
-      <div className="w-72 shrink-0 space-y-3 border-r p-4">
+      <div className="w-72 shrink-0 space-y-3 overflow-y-auto border-r p-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Menus</h3>
           <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => { setPickerParentId(null); setPickerOpen(true) }}>
@@ -51,19 +60,14 @@ export function MenusSection({ appId }: MenusSectionProps) {
           </Button>
         </div>
 
-        {tree.length === 0 ? (
-          <p className="rounded-md border border-dashed border-gray-200 p-4 text-center text-xs text-gray-400">
-            No menus yet. Add one to build your navigation.
-          </p>
-        ) : (
-          <MenuTree
-            tree={tree}
-            allMenus={menus ?? []}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            onAddChild={(parentId) => { setPickerParentId(parentId); setPickerOpen(true) }}
-          />
-        )}
+        <MenuTree
+          tree={tree}
+          hiddenMenus={hiddenMenus}
+          allMenus={menus ?? []}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          onAddChild={(parentId) => { setPickerParentId(parentId); setPickerOpen(true) }}
+        />
       </div>
 
       <div className="min-w-0 flex-1 overflow-y-auto">
@@ -144,8 +148,9 @@ function findNode(tree: MenuTreeNode[], id: string): MenuTreeNode | null {
   return null
 }
 
-function MenuTree({ tree, allMenus, selectedId, onSelect, onAddChild }: {
+export function MenuTree({ tree, hiddenMenus, allMenus, selectedId, onSelect, onAddChild }: {
   tree: MenuTreeNode[]
+  hiddenMenus: Menu[]
   allMenus: Menu[]
   selectedId: string | null
   onSelect: (id: string) => void
@@ -153,12 +158,13 @@ function MenuTree({ tree, allMenus, selectedId, onSelect, onAddChild }: {
 }) {
   const reorderMutation = useReorderMenus()
   const moveMutation = useMoveMenu()
+  const hideMutation = useSetHiddenFromNav()
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [activeId, setActiveId] = useState<string | null>(null)
 
   const siblingGroups = groupByParent(allMenus)
   const rows = flattenVisible(tree, collapsed)
-  const rowIds = [...rows.map((r) => r.node.id), ROOT_DROP_ZONE_ID]
+  const rowIds = [...rows.map((r) => r.node.id), ROOT_DROP_ZONE_ID, ...hiddenMenus.map((m) => m.id), HIDDEN_ZONE_ID]
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -187,14 +193,59 @@ function MenuTree({ tree, allMenus, selectedId, onSelect, onAddChild }: {
 
   const handleDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id))
 
+  // Shared by both the drag-out-of-the-tray case and the tray row's own
+  // restore-icon click — unhides a menu and lands it at the root level
+  // rather than trying to infer a nested position from wherever it happened
+  // to be dropped (or wasn't dropped at all, for the icon-click case).
+  // Simplest predictable behavior for "bring this back"; it can be
+  // dragged/reordered from there like any other menu afterward.
+  const restoreToRoot = (menu: Menu) => {
+    hideMutation.mutate(
+      { menu, hidden_from_nav: false },
+      {
+        onSuccess: () => {
+          // siblingGroups is built from allMenus (includes hidden ones), and
+          // a hidden menu's own parent_id is untouched while hidden — so if
+          // it was already root-parented, it can already be sitting in its
+          // own "root siblings" group here. Exclude it before appending, or
+          // restoring a root-parented hidden menu would send it twice.
+          const rootIds = (siblingGroups.get(null) ?? []).map((s) => s.id).filter((id) => id !== menu.id)
+          reorderMutation.mutate({ ordered_ids: [...rootIds, menu.id] })
+        },
+      },
+    )
+  }
+
   const handleDragEnd = (e: DragEndEvent) => {
     setActiveId(null)
     const { active, over } = e
     if (!over || active.id === over.id) return
 
-    const activeNode = findNode(tree, String(active.id))
-    if (!activeNode) return
     const overId = String(over.id)
+    const activeId_ = String(active.id)
+    const draggedHidden = hiddenMenus.find((m) => m.id === activeId_)
+
+    // A hidden-tray item is a flat Menu, not a MenuTreeNode (it isn't part
+    // of `tree` at all — see MenusSection's visibleMenus/hiddenMenus split),
+    // so it gets its own short-circuit before the tree-node lookups below,
+    // which would otherwise never find it.
+    if (draggedHidden) {
+      if (overId === HIDDEN_ZONE_ID) return // already hidden; nothing to do
+      restoreToRoot(draggedHidden)
+      return
+    }
+
+    const activeNode = findNode(tree, activeId_)
+    if (!activeNode) return
+
+    // Dropped into the Hidden tray → flag it hidden_from_nav, leaving its
+    // parent_id/sort_order untouched (restoring it later drops it back at
+    // root rather than needing to remember where it used to live, but
+    // there's no reason to also churn its other fields here).
+    if (overId === HIDDEN_ZONE_ID) {
+      hideMutation.mutate({ menu: activeNode, hidden_from_nav: true })
+      return
+    }
 
     // Dropped on the root strip → become a root-level sibling, appended last.
     if (overId === ROOT_DROP_ZONE_ID) {
@@ -270,7 +321,13 @@ function MenuTree({ tree, allMenus, selectedId, onSelect, onAddChild }: {
     )
   }
 
-  const activeRow = activeId ? rows.find((r) => r.node.id === activeId) : null
+  const activeVisible = activeId ? rows.find((r) => r.node.id === activeId) : null
+  const activeHidden = activeId ? hiddenMenus.find((m) => m.id === activeId) : null
+  const activeOverlay = activeVisible
+    ? { name: activeVisible.node.name, menuType: activeVisible.node.menu_type }
+    : activeHidden
+      ? { name: activeHidden.name, menuType: activeHidden.menu_type }
+      : null
 
   return (
     <DndContext
@@ -282,36 +339,44 @@ function MenuTree({ tree, allMenus, selectedId, onSelect, onAddChild }: {
     >
       <SortableContext items={rowIds} strategy={verticalListSortingStrategy}>
         <div className="space-y-0.5">
-          {rows.map(({ node, depth, hasChildren }) => {
-            const siblings = siblingGroups.get(node.parent_id) ?? []
-            const index = siblings.findIndex((s) => s.id === node.id)
-            const isCollapsed = collapsed.has(node.id)
-            return (
-              <MenuRow
-                key={node.id}
-                node={node}
-                depth={depth}
-                index={index}
-                siblingCount={siblings.length}
-                selected={selectedId === node.id}
-                hasChildren={hasChildren}
-                isCollapsed={isCollapsed}
-                onSelect={() => onSelect(node.id)}
-                onToggleCollapsed={() => setCollapsed((s) => { const n = new Set(s); n.has(node.id) ? n.delete(node.id) : n.add(node.id); return n })}
-                onMove={(dir) => move(node, dir)}
-                onAddChild={() => onAddChild(node.id)}
-              />
-            )
-          })}
+          {tree.length === 0 ? (
+            <p className="rounded-md border border-dashed border-gray-200 p-4 text-center text-xs text-gray-400">
+              No menus yet. Add one to build your navigation.
+            </p>
+          ) : (
+            rows.map(({ node, depth, hasChildren }) => {
+              const siblings = siblingGroups.get(node.parent_id) ?? []
+              const index = siblings.findIndex((s) => s.id === node.id)
+              const isCollapsed = collapsed.has(node.id)
+              return (
+                <MenuRow
+                  key={node.id}
+                  node={node}
+                  depth={depth}
+                  index={index}
+                  siblingCount={siblings.length}
+                  selected={selectedId === node.id}
+                  hasChildren={hasChildren}
+                  isCollapsed={isCollapsed}
+                  onSelect={() => onSelect(node.id)}
+                  onToggleCollapsed={() => setCollapsed((s) => { const n = new Set(s); n.has(node.id) ? n.delete(node.id) : n.add(node.id); return n })}
+                  onMove={(dir) => move(node, dir)}
+                  onAddChild={() => onAddChild(node.id)}
+                />
+              )
+            })
+          )}
           <RootDropZone />
         </div>
+
+        <HiddenTray menus={hiddenMenus} selectedId={selectedId} onSelect={onSelect} onRestore={restoreToRoot} />
       </SortableContext>
 
       <DragOverlay dropAnimation={{ duration: 150, easing: 'cubic-bezier(0.2,0,0,1)' }}>
-        {activeRow && (
+        {activeOverlay && (
           <div className="flex items-center gap-1.5 rounded-md border border-indigo-300 bg-white px-2 py-1 text-[13px] font-medium text-slate-700 shadow-lg">
-            {(() => { const Icon = MENU_TYPE_REGISTRY[activeRow.node.menu_type].icon; return <Icon size={13} className="shrink-0 text-indigo-500" /> })()}
-            {activeRow.node.name}
+            {(() => { const Icon = MENU_TYPE_REGISTRY[activeOverlay.menuType].icon; return <Icon size={13} className="shrink-0 text-indigo-500" /> })()}
+            {activeOverlay.name}
           </div>
         )}
       </DragOverlay>
@@ -334,6 +399,108 @@ function RootDropZone() {
       )}
     >
       Drop here to move to top level
+    </div>
+  )
+}
+
+/** A collapsible "Hidden" section beneath the main tree — drag any menu here
+ *  to set hidden_from_nav (excluded from the runtime nav sidebar, but still
+ *  reachable by slug and fully editable, per Menu.hidden_from_nav's doc
+ *  comment) without deleting it; drag a hidden item back onto the tree or
+ *  root zone, or click its restore icon, to bring it back. Always rendered
+ *  (not only when non-empty) so the drop target exists whether or not
+ *  anything's hidden yet — collapsed by default once something IS hidden,
+ *  since an established app will mostly want this out of the way after the
+ *  first setup pass. */
+function HiddenTray({ menus, selectedId, onSelect, onRestore }: {
+  menus: Menu[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+  onRestore: (menu: Menu) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const { setNodeRef, isOver } = useDroppable({ id: HIDDEN_ZONE_ID })
+
+  return (
+    <div className="mt-3 border-t pt-3">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500"
+      >
+        {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        <EyeOff size={12} />
+        Hidden
+        {menus.length > 0 && <span className="font-normal normal-case text-gray-400">({menus.length})</span>}
+      </button>
+
+      {open && (
+        <div
+          ref={setNodeRef}
+          className={cn(
+            'mt-2 min-h-[2.25rem] space-y-0.5 rounded-md border border-dashed p-1 transition-colors',
+            isOver ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200',
+          )}
+        >
+          {menus.length === 0 ? (
+            <p className="p-2 text-center text-[11px] text-gray-300">Drag a menu here to hide it from the sidebar.</p>
+          ) : (
+            menus.map((menu) => (
+              <HiddenMenuRow
+                key={menu.id}
+                menu={menu}
+                selected={selectedId === menu.id}
+                onSelect={() => onSelect(menu.id)}
+                onRestore={() => onRestore(menu)}
+              />
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function HiddenMenuRow({ menu, selected, onSelect, onRestore }: {
+  menu: Menu
+  selected: boolean
+  onSelect: () => void
+  onRestore: () => void
+}) {
+  const Icon = MENU_TYPE_REGISTRY[menu.menu_type].icon
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: menu.id })
+
+  const style = { transform: CSS.Translate.toString(transform), transition }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'group flex items-center gap-1 rounded-md px-1.5 py-1 text-[13px]',
+        selected ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50',
+        isDragging && 'opacity-50',
+      )}
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        title="Drag back onto the tree to restore"
+        className="shrink-0 cursor-grab touch-none rounded p-0.5 text-gray-300 hover:text-gray-500 active:cursor-grabbing"
+      >
+        <GripVertical size={12} />
+      </button>
+      <span className="w-3 shrink-0" />
+      <button onClick={onSelect} className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-left">
+        <Icon size={13} className="shrink-0" />
+        <span className="truncate">{menu.name}</span>
+      </button>
+      <button
+        title="Restore to the sidebar"
+        onClick={onRestore}
+        className="hidden shrink-0 rounded p-0.5 text-gray-400 hover:text-gray-700 group-hover:block"
+      >
+        <Eye size={12} />
+      </button>
     </div>
   )
 }

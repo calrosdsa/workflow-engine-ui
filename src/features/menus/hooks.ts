@@ -80,3 +80,31 @@ export function useMoveMenu() {
     },
   })
 }
+
+/** Toggles hidden_from_nav (drag into/out of the Menus builder's Hidden
+ *  tray). Same "take the full current Menu row, change one field, round-trip
+ *  the rest as-is" shape as useMoveMenu, for the same reason —
+ *  UpdateMenuPayload requires the complete mutable shape. */
+export function useSetHiddenFromNav() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ menu, hidden_from_nav }: { menu: Menu; hidden_from_nav: boolean }) =>
+      menusApi.update(menu.id, {
+        parent_id: menu.parent_id,
+        menu_type: menu.menu_type,
+        slug: menu.slug,
+        name: menu.name,
+        icon: menu.icon,
+        sort_order: menu.sort_order,
+        config: menu.config,
+        required_permission: menu.required_permission,
+        permission_mode: menu.permission_mode,
+        required_role_ids: menu.required_role_ids,
+        hidden_from_nav,
+      }),
+    onSuccess: (_data, { menu }) => {
+      qc.invalidateQueries({ queryKey: menuKeys.all })
+      qc.invalidateQueries({ queryKey: menuKeys.detail(menu.id) })
+    },
+  })
+}
