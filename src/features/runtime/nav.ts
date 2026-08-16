@@ -17,19 +17,27 @@ export function toMenu(item: MenuSnapshotItem): Menu {
 
 /** Builds the runtime nav tree from a published snapshot's flat menu list,
  *  filtering out any node (and its whole subtree) that canViewMenu rejects —
- *  the "hide" half of role-based menu visibility. Reuses buildMenuTree from
- *  features/menus/tree.ts, written once and imported by both the builder's
- *  tree view and this. */
+ *  the "hide" half of role-based menu visibility — and separately dropping
+ *  any node flagged hidden_from_nav (e.g. an Add menu auto-paired with a
+ *  Search menu, meant to be reached only via that Search menu's "Create"
+ *  button, never as its own nav entry). hidden_from_nav is intentionally
+ *  NOT folded into canViewMenu: canViewMenu also gates direct/deep-linked
+ *  access to a menu (see RuntimeAppShell.tsx), and a hidden-from-nav menu
+ *  must still be directly navigable by slug — only its nav *entry* is
+ *  suppressed, unlike a permission/role failure which blocks access
+ *  entirely. Reuses buildMenuTree from features/menus/tree.ts, written once
+ *  and imported by both the builder's tree view and this. */
 export function buildRuntimeNavTree(menus: MenuSnapshotItem[], roleId: string | undefined, permissions: string[]): MenuTreeNode[] {
   const tree = buildMenuTree(menus.map(toMenu))
-  return filterByPermission(tree, roleId, permissions)
+  return filterNavTree(tree, roleId, permissions)
 }
 
-function filterByPermission(nodes: MenuTreeNode[], roleId: string | undefined, permissions: string[]): MenuTreeNode[] {
+function filterNavTree(nodes: MenuTreeNode[], roleId: string | undefined, permissions: string[]): MenuTreeNode[] {
   const out: MenuTreeNode[] = []
   for (const node of nodes) {
+    if (node.hidden_from_nav) continue
     if (!canViewMenu(node, roleId, permissions)) continue
-    out.push({ ...node, children: filterByPermission(node.children, roleId, permissions) })
+    out.push({ ...node, children: filterNavTree(node.children, roleId, permissions) })
   }
   return out
 }

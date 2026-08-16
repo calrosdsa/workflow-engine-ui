@@ -438,6 +438,7 @@ function MenuTypePickerDialog({ open, onClose, parentId, onCreated }: {
         config: entry.createDefaultConfig(),
         permission_mode: 'all',
         required_role_ids: [],
+        hidden_from_nav: false,
       })
       onCreated(menu.id)
     } catch {
@@ -482,15 +483,66 @@ function MenuTypePickerDialog({ open, onClose, parentId, onCreated }: {
 }
 
 // ---------------------------------------------------------------------------
+// Search → Add auto-pairing
+// ---------------------------------------------------------------------------
+
+/** A user shouldn't have to manually build a matching Add menu just so a
+ *  Search menu's "Create" button has something to link to (previously it
+ *  stayed permanently disabled with a "No Add page is configured for this
+ *  form" tooltip until someone built one by hand). Called from
+ *  MenuDetail.handleSave whenever a Search menu is saved with a form
+ *  selected: creates a paired Add menu for that same form if one doesn't
+ *  already exist. The pair is matched by form_id, not by any explicit link
+ *  field, mirroring SearchMenuRuntime.tsx's own lookup
+ *  (`m.menu_type === 'add' && config.form_id === searchConfig.form_id`) —
+ *  reusing that exact matching rule means this stays consistent with
+ *  whatever "linked" already means at runtime, with nothing new to keep in
+ *  sync. The paired menu is created with hidden_from_nav: true (see
+ *  Menu.hidden_from_nav's doc comment) so it doesn't clutter the sidebar as
+ *  its own nav entry — it's only ever reached via the Search menu's Create
+ *  button. Permission/role settings are copied from the Search menu so the
+ *  Add menu is gated the same way (a viewer who can't see the Search menu
+ *  shouldn't be able to deep-link into creating records for it either). */
+export async function ensurePairedAddMenu({ allMenus, searchMenu, formId, permissionMode, requiredRoleIds, createMutation }: {
+  allMenus: Menu[]
+  searchMenu: Menu
+  formId: string
+  permissionMode: PermissionMode
+  requiredRoleIds: string[]
+  createMutation: ReturnType<typeof useCreateMenu>
+}) {
+  const alreadyPaired = allMenus.some(
+    (m) => m.menu_type === 'add' && (m.config as AddMenuConfig).form_id === formId,
+  )
+  if (alreadyPaired) return
+
+  const addDefaults = MENU_TYPE_REGISTRY.add.createDefaultConfig() as AddMenuConfig
+  await createMutation.mutateAsync({
+    parent_id: searchMenu.parent_id,
+    menu_type: 'add',
+    slug: `${searchMenu.slug}-add`,
+    name: `Add ${searchMenu.name}`,
+    sort_order: searchMenu.sort_order,
+    config: { ...addDefaults, form_id: formId },
+    required_permission: searchMenu.required_permission,
+    permission_mode: permissionMode,
+    required_role_ids: permissionMode === 'role' ? requiredRoleIds : [],
+    hidden_from_nav: true,
+  })
+}
+
+// ---------------------------------------------------------------------------
 // Detail / config panel
 // ---------------------------------------------------------------------------
 
 function MenuDetail({ menu, appId, onDeleted }: { menu: Menu; appId: string; onDeleted: () => void }) {
   const updateMutation = useUpdateMenu(menu.id)
+  const createMutation = useCreateMenu()
   const deleteMutation = useDeleteMenu()
   const canWrite = usePermission('menus:write')
   const { data: permissionsCatalog } = usePermissionsCatalog()
   const { data: roles } = useRoles(appId)
+  const { data: allMenus } = useMenus()
 
   const [name, setName] = useState(menu.name)
   const [slug, setSlug] = useState(menu.slug)
@@ -535,6 +587,12 @@ function MenuDetail({ menu, appId, onDeleted }: { menu: Menu; appId: string; onD
         permission_mode: permissionMode,
         required_role_ids: permissionMode === 'role' ? requiredRoleIds : [],
       })
+      if (menu.menu_type === 'search' && resourceFormId) {
+        await ensurePairedAddMenu({
+          allMenus: allMenus ?? [], searchMenu: menu, formId: resourceFormId,
+          permissionMode, requiredRoleIds, createMutation,
+        })
+      }
       setSaved(true)
     } catch {
       setError('Could not save — slug may already exist.')

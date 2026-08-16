@@ -73,6 +73,7 @@ export function CustomMenuConfigPanel({ menu, onChange }: CustomMenuConfigPanelP
         config: { schema: pageSchemaToDashboard(schema) },
         permission_mode: 'all',
         required_role_ids: [],
+        hidden_from_nav: false,
       })
       setConvertState('done')
     } catch {

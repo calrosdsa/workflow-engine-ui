@@ -85,6 +85,14 @@ export interface Menu {
   required_permission?: string
   permission_mode: PermissionMode
   required_role_ids: string[]
+  /** Excludes this menu from the runtime nav tree/sidebar while leaving it
+   *  fully reachable by slug (deep link, or another menu's onNavigate) and
+   *  fully visible/editable in the App Design builder's own menu tree. Set
+   *  on an Add menu auto-paired with a Search menu at creation time — it's
+   *  only ever meant to be reached via that Search menu's "Create" button,
+   *  not as its own nav entry. Independent of permission_mode/
+   *  required_role_ids, which gate identity, not structural nav placement. */
+  hidden_from_nav: boolean
   created_at: string
   updated_at: string
 }

@@ -72,6 +72,7 @@ export function useMoveMenu() {
         required_permission: menu.required_permission,
         permission_mode: menu.permission_mode,
         required_role_ids: menu.required_role_ids,
+        hidden_from_nav: menu.hidden_from_nav,
       }),
     onSuccess: (_data, { menu }) => {
       qc.invalidateQueries({ queryKey: menuKeys.all })

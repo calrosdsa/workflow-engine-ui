@@ -22,6 +22,7 @@ export interface MenuSnapshotItem {
   required_permission?: string
   permission_mode: PermissionMode
   required_role_ids: string[]
+  hidden_from_nav: boolean
 }
 
 export interface AppSnapshot {
