@@ -10,7 +10,9 @@ const CATEGORIES: { label: string; types: NodeType[] }[] = [
   { label: 'Data',         types: ['fetch_records', 'upsert_records', 'update_records', 'delete_records', 'transform', 'save_records', 'set_variable'] },
   { label: 'Logic',        types: ['condition', 'iterator', 'merge'] },
   { label: 'Integrations', types: ['http_request'] },
-  { label: 'Notify',       types: ['show_message'] },
+  { label: 'Notify',       types: ['show_message', 'notification'] },
+  { label: 'Knowledge',    types: ['knowledge_retrieval', 'knowledge_ingest'] },
+  { label: 'Debug',        types: ['debug'] },
 ]
 
 interface NodePickerModalProps {
