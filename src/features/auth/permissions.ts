@@ -45,7 +45,14 @@ export type ViewableMenu = Pick<
  *  all must pass:
  *   - required_permission: gates any menu type on a specific permission key.
  *   - permission_mode 'role': visible only to members whose current role is
- *     in required_role_ids ('all' skips this gate entirely).
+ *     in required_role_ids ('all' skips this gate entirely). A member
+ *     holding the global "*" permission (client-wide Super Admin) always
+ *     satisfies this gate regardless of required_role_ids, the same way
+ *     hasPermission already treats "*" as matching any required_permission
+ *     below — otherwise Super Admin's roleId is always the builtin
+ *     super_admin role's own ID (see ResolveMembership in the Go backend),
+ *     which can never appear in an app-scoped menu's required_role_ids, so
+ *     role-gated menus would stay invisible even to Super Admin.
  *   - Search/Add menus additionally require the per-form permission for
  *     that menu's own form (view for Search, create for Add) — independent
  *     of permission_mode, since a menu can be visible to a role but still
@@ -58,7 +65,12 @@ export type ViewableMenu = Pick<
  *  a hidden menu 403s instead of silently rendering). */
 export function canViewMenu(menu: ViewableMenu, roleId: string | undefined, permissions: string[]): boolean {
   if (menu.required_permission && !hasPermission(permissions, menu.required_permission)) return false
-  if (menu.permission_mode === 'role' && !(roleId && menu.required_role_ids.includes(roleId))) return false
+  if (
+    menu.permission_mode === 'role' &&
+    !hasPermission(permissions, '*') &&
+    !(roleId && menu.required_role_ids.includes(roleId))
+  )
+    return false
 
   const action = RESOURCE_ACTION_BY_MENU_TYPE[menu.menu_type]
   if (action) {

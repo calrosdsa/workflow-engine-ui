@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { hasPermission } from './permissions'
+import { hasPermission, canViewMenu, type ViewableMenu } from './permissions'
 
 // This fixture table is intentionally duplicated in
 // workflow-engine/internal/auth/rbac_parity_test.go — keep both in sync.
@@ -30,4 +30,51 @@ describe('hasPermission parity with Go HasPermission', () => {
       expect(hasPermission(perms, need)).toBe(want)
     })
   }
+})
+
+describe('canViewMenu role-gating', () => {
+  const roleGatedMenu: ViewableMenu = {
+    menu_type: 'parent',
+    required_permission: undefined,
+    permission_mode: 'role',
+    required_role_ids: ['admin-role-id'],
+    config: {},
+  }
+
+  it('is visible to a member whose role is in required_role_ids', () => {
+    expect(canViewMenu(roleGatedMenu, 'admin-role-id', [])).toBe(true)
+  })
+
+  it('is hidden from a member whose role is not in required_role_ids', () => {
+    expect(canViewMenu(roleGatedMenu, 'standard-role-id', [])).toBe(false)
+  })
+
+  it('is hidden when roleId is undefined', () => {
+    expect(canViewMenu(roleGatedMenu, undefined, [])).toBe(false)
+  })
+
+  // Regression for the bug where a client-wide Super Admin (permissions
+  // ["*"]) could not see any role-gated menu: their roleId always resolves
+  // to the builtin super_admin role's own ID (see ResolveMembership in the
+  // Go backend), which can never appear in an app-scoped menu's
+  // required_role_ids -- so the identity check alone always failed them,
+  // even though "*" already bypasses every required_permission check.
+  it('is visible to a holder of the global "*" permission regardless of role identity', () => {
+    expect(canViewMenu(roleGatedMenu, 'super-admin-builtin-role-id', ['*'])).toBe(true)
+  })
+
+  it('"*" does not bypass required_permission', () => {
+    const permissionGatedMenu: ViewableMenu = {
+      ...roleGatedMenu,
+      permission_mode: 'all',
+      required_permission: 'users:write',
+    }
+    expect(canViewMenu(permissionGatedMenu, undefined, ['*'])).toBe(true)
+    expect(canViewMenu(permissionGatedMenu, undefined, ['workflows:read'])).toBe(false)
+  })
+
+  it("permission_mode 'all' skips the role gate entirely", () => {
+    const openMenu: ViewableMenu = { ...roleGatedMenu, permission_mode: 'all' }
+    expect(canViewMenu(openMenu, undefined, [])).toBe(true)
+  })
 })
