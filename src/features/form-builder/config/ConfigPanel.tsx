@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { SlidersHorizontal, Layers } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -8,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select-menu'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection } from '../store'
@@ -586,7 +588,7 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
 // Line Items config (General / Layout / Behavior / Columns)
 // ---------------------------------------------------------------------------
 
-function LineItemsConfigTabs({ element, formId, onChange }: {
+export function LineItemsConfigTabs({ element, formId, onChange }: {
   element: FormElement
   formId: string | null
   onChange: (patch: Partial<FormElement>) => void
@@ -594,7 +596,27 @@ function LineItemsConfigTabs({ element, formId, onChange }: {
   const cfg: LineItemsConfig = element.lineItemConfig ?? {}
   const setConfig = (patch: Partial<LineItemsConfig>) => onChange({ lineItemConfig: { ...cfg, ...patch } })
 
+  // Switching sourceMode while a generated child form (childFormId) already
+  // exists silently strands it: syncLineItemsChildren skips 'existing'-mode
+  // elements entirely (generate→adopt orphans the old child form with no
+  // cleanup path), and switching back to 'generated' later would UPDATE that
+  // same stale childFormId rather than treating it as gone (FR-C1-004). Warn
+  // before applying the switch rather than letting either happen silently —
+  // there's no undo for a child form once it's synced to the backend.
+  const [pendingSourceMode, setPendingSourceMode] = useState<'generated' | 'existing' | null>(null)
+  const currentMode = element.sourceMode ?? 'generated'
+
+  const applySourceMode = (sourceMode: 'generated' | 'existing') => {
+    if (sourceMode === currentMode) return
+    if (element.childFormId) {
+      setPendingSourceMode(sourceMode)
+      return
+    }
+    onChange({ sourceMode })
+  }
+
   return (
+    <>
     <Tabs defaultValue="general" className="flex min-h-0 flex-1 flex-col">
       <div className="border-b border-slate-100 px-3 pb-2 pt-2.5">
         <TabsList className="w-full">
@@ -623,8 +645,8 @@ function LineItemsConfigTabs({ element, formId, onChange }: {
               <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Data Source</p>
               <Field label="Source" hint="Existing form: the grid becomes a filtered view into a normal, independently-visible form — it keeps its own workflows/permissions/standalone page. Generated: the original behavior — a hidden child form owned entirely by this grid.">
                 <SelectMenu
-                  value={element.sourceMode ?? 'generated'}
-                  onValueChange={(sourceMode) => onChange({ sourceMode: sourceMode as 'generated' | 'existing' })}
+                  value={currentMode}
+                  onValueChange={(sourceMode) => applySourceMode(sourceMode as 'generated' | 'existing')}
                 >
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue />
@@ -750,6 +772,23 @@ function LineItemsConfigTabs({ element, formId, onChange }: {
         </div>
       </ScrollArea>
     </Tabs>
+    <ConfirmDialog
+      open={pendingSourceMode !== null}
+      onOpenChange={(open) => { if (!open) setPendingSourceMode(null) }}
+      title={pendingSourceMode === 'existing' ? 'Switch to an existing form?' : 'Switch to a generated form?'}
+      description={
+        pendingSourceMode === 'existing'
+          ? 'This grid currently owns an auto-generated child form. Switching to an existing form will NOT delete or migrate it — the generated form (and any rows already in it) will stay behind, no longer linked to this field. You can find and manage it directly from the Forms list.'
+          : 'This grid was previously linked to a generated child form (from before it was switched to an existing form). Switching back to Generated will reuse and OVERWRITE that old form\'s columns rather than creating a fresh one — if it still holds rows from that earlier configuration, they\'ll remain, now under the new column layout.'
+      }
+      confirmLabel="Switch anyway"
+      destructive
+      onConfirm={() => {
+        if (pendingSourceMode) onChange({ sourceMode: pendingSourceMode })
+        setPendingSourceMode(null)
+      }}
+    />
+    </>
   )
 }
 
