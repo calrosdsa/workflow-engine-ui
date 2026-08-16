@@ -39,17 +39,20 @@ export function SearchMenuRuntime({ menu, menus, onNavigate }: MenuRuntimeRender
         title={menu.name}
         onExpandRecord={(r: FormRecord) => onNavigate?.(`${menu.slug}/${r.id as string}`)}
         headerActions={
-          <PermissionGate need={`forms:${config.form_id}:create`}>
-            <Button
-              size="sm"
-              className="gap-1.5"
-              disabled={!addMenu}
-              title={addMenu ? undefined : 'No Add page is configured for this form'}
-              onClick={() => addMenu && onNavigate?.(addMenu.slug)}
-            >
-              <Plus size={14} />{createLabel}
-            </Button>
-          </PermissionGate>
+          // No disabled button with a tooltip explaining why — if there's
+          // genuinely nothing to link to (an Add menu was deleted after
+          // this Search menu was built, or a form built before Add menus
+          // auto-paired), offering a button that can never do anything is
+          // worse than not offering one at all; a viewer who has create
+          // access on the form still can't act on a button they can't
+          // click, so hiding it is strictly clearer.
+          addMenu && (
+            <PermissionGate need={`forms:${config.form_id}:create`}>
+              <Button size="sm" className="gap-1.5" onClick={() => onNavigate?.(addMenu.slug)}>
+                <Plus size={14} />{createLabel}
+              </Button>
+            </PermissionGate>
+          )
         }
       />
     </div>
