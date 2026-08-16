@@ -74,10 +74,29 @@ const runtimeRootRoute = createRootRoute({ component: () => <Outlet /> })
 const runtimeAppRoute = createRoute({
   getParentRoute: () => runtimeRootRoute,
   path: '/$clientId/$appId',
-  beforeLoad: async () => {
+  beforeLoad: async ({ params }) => {
     try {
       const me = await authApi.me()
       useAuthStore.getState().setSession(me)
+      // Sync activeMembership to the URL's $clientId/$appId — lib/api.ts's
+      // X-Client-ID/X-App-ID headers are derived from activeMembership
+      // alone, not from these route params, and activeMembership persists
+      // across sessions/tabs (zustand persist). Without this, every runtime
+      // API call after navigating/refreshing straight onto a published app's
+      // URL keeps sending whatever app was last active elsewhere (the
+      // builder, a different published app), scoping every form/record
+      // fetch to the WRONG app and surfacing as spurious 403s or, worse,
+      // silently wrong data — same fix as applicationShellRoute's identical
+      // beforeLoad sync in router.tsx, needed here for the same reason.
+      const membership = (me.memberships ?? []).find(
+        (m) => m.client_id === params.clientId && m.app_id === params.appId,
+      )
+      if (membership) {
+        const current = useAuthStore.getState().activeMembership
+        if (current?.client_id !== membership.client_id || current?.app_id !== membership.app_id) {
+          useAuthStore.getState().setActiveMembership(membership)
+        }
+      }
     } catch {
       // No session — proceed anonymously.
     }
