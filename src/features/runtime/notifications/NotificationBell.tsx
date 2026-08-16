@@ -61,6 +61,7 @@ export function NotificationBell({ clientId, appId }: NotificationBellProps) {
       <PopoverContent
         align="end"
         className="w-80 border-[hsl(var(--border))] bg-[hsl(var(--popover))] p-0 text-[hsl(var(--popover-foreground))]"
+        container={document.getElementById('runtime-root') ?? document.body}
       >
         <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-3 py-2">
           <span className="text-xs font-semibold">Notifications</span>

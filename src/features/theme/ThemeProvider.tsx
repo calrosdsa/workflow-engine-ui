@@ -85,6 +85,13 @@ export function ThemeProvider({ theme, scopeElement, children }: ThemeProviderPr
     el.style.setProperty('--foreground', pickForeground(colors.background))
     el.style.setProperty('--card', colors.surface)
     el.style.setProperty('--card-foreground', pickForeground(colors.surface))
+    // Popover/dropdown/select-menu content (Popover, DropdownMenu, Command,
+    // SelectContent — see their doc comments) reads --popover the same way
+    // dialogs read --background and cards read --card, so a portaled
+    // dropdown's surface tracks this app's configured theme instead of
+    // silently falling back to index.css's static light/dark default.
+    el.style.setProperty('--popover', colors.surface)
+    el.style.setProperty('--popover-foreground', pickForeground(colors.surface))
     el.style.setProperty('--radius', theme.radius)
     el.style.setProperty('--ring', colors.primary)
     if (theme.typography.fontFamily) el.style.setProperty('font-family', theme.typography.fontFamily)
@@ -106,6 +113,8 @@ export function ThemeProvider({ theme, scopeElement, children }: ThemeProviderPr
         el.style.removeProperty('--foreground')
         el.style.removeProperty('--card')
         el.style.removeProperty('--card-foreground')
+        el.style.removeProperty('--popover')
+        el.style.removeProperty('--popover-foreground')
         el.style.removeProperty('--radius')
         el.style.removeProperty('--ring')
         el.style.removeProperty('font-family')

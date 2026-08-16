@@ -102,16 +102,20 @@ export function ReferenceFieldAutocomplete({ el, field, disabled }: ReferenceFie
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className={cn('h-9 w-full justify-between gap-2 px-2.5 text-[13px] font-normal', !currentValue && 'text-slate-400')}
+          className={cn('h-9 w-full justify-between gap-2 px-2.5 text-[13px] font-normal', !currentValue && 'text-[hsl(var(--muted-foreground))]')}
         >
           <span className="flex min-w-0 items-center gap-1.5">
-            <FileText size={13} className="shrink-0 text-slate-400" />
+            <FileText size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
             <span className="truncate">{selectedLabel ?? 'Search…'}</span>
           </span>
-          <ChevronsUpDown size={13} className="shrink-0 text-slate-400" />
+          <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent
+        className="w-[--radix-popover-trigger-width] p-0"
+        align="start"
+        container={document.getElementById('runtime-root') ?? document.body}
+      >
         <Command shouldFilter={false}>
           <CommandInput
             placeholder={searchField ? 'Type to search…' : 'Search unavailable — showing first page'}
@@ -121,7 +125,7 @@ export function ReferenceFieldAutocomplete({ el, field, disabled }: ReferenceFie
           />
           <CommandList>
             {isLoading ? (
-              <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-slate-400">
+              <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
                 <Loader2 size={13} className="animate-spin" /> Searching…
               </div>
             ) : (
@@ -139,7 +143,7 @@ export function ReferenceFieldAutocomplete({ el, field, disabled }: ReferenceFie
                           setOpen(false)
                         }}
                       >
-                        <Check size={14} className={cn('shrink-0', id === currentValue ? 'opacity-100 text-indigo-600' : 'opacity-0')} />
+                        <Check size={14} className={cn('shrink-0', id === currentValue ? 'opacity-100 text-[hsl(var(--primary))]' : 'opacity-0')} />
                         <span className="truncate">{resolveReferenceLabel(targetForm?.fields, r, el.displayField)}</span>
                       </CommandItem>
                     )
@@ -150,12 +154,12 @@ export function ReferenceFieldAutocomplete({ el, field, disabled }: ReferenceFie
           </CommandList>
         </Command>
         {currentValue && (
-          <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-2.5 py-1.5">
-            <span className="truncate text-[11px] text-slate-500">{selectedLabel}</span>
+          <div className="flex items-center justify-between gap-2 border-t border-[hsl(var(--border))] px-2.5 py-1.5">
+            <span className="truncate text-[11px] text-[hsl(var(--muted-foreground))]">{selectedLabel}</span>
             <button
               type="button"
               onClick={() => field.onChange(null)}
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))]"
               title="Clear selection"
             >
               <X size={12} />

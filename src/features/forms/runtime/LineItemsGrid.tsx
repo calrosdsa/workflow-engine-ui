@@ -1279,7 +1279,11 @@ function ReferenceFieldInput({ column, value, disabled, onChange }: {
           <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent
+        className="w-[--radix-popover-trigger-width] p-0"
+        align="start"
+        container={document.getElementById('runtime-root') ?? document.body}
+      >
         <Command shouldFilter={false}>
           <CommandInput placeholder="Type to search…" value={search} onValueChange={setSearch} />
           <CommandList>

@@ -30,6 +30,7 @@ export function ProfileMenu({ session }: ProfileMenuProps) {
       <DropdownMenuContent
         align="end"
         className="w-56 border-[hsl(var(--border))] bg-[hsl(var(--popover))] text-[hsl(var(--popover-foreground))]"
+        container={document.getElementById('runtime-root') ?? document.body}
       >
         <div className="px-2 py-1.5">
           <p className="truncate text-[13px] font-medium">{name}</p>
