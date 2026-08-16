@@ -518,6 +518,10 @@ function MenuDetail({ menu, appId, onDeleted }: { menu: Menu; appId: string; onD
       setError('Select at least one role, or switch back to "For All".')
       return
     }
+    if (isResourceBacked && !resourceFormId) {
+      setError('Select a form before saving.')
+      return
+    }
     try {
       await updateMutation.mutateAsync({
         parent_id: menu.parent_id,

@@ -41,7 +41,7 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
     setPublishError(null)
     try {
       await publishMutation.mutateAsync()
-      window.location.href = `/${app.client_id}/${app.id}`
+      window.open(`/${app.client_id}/${app.id}`, '_blank', 'noopener,noreferrer')
     } catch (e) {
       const { issues, message } = await extractPublishError(e)
       if (issues) setPublishIssues(issues)
