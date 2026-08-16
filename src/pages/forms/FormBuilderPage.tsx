@@ -292,6 +292,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
         onClose={() => setPreviewOpen(false)}
         name={name}
         schema={schema}
+        formId={formId}
       />
     </div>
   )
