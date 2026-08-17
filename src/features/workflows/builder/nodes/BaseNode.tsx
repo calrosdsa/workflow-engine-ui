@@ -56,15 +56,35 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   // Show + button below this node only if it's a leaf (no outgoing edges) and not exit
   const outgoingEdges   = useStore((s) => s.edges.filter((e) => e.source === id))
   const hasOutgoingEdge = outgoingEdges.length > 0
-  const showAddButton   = hasOutputs && !hasOutgoingEdge && data.type !== 'exit'
+
+  // A node is "at the tail of a loop body" when its one outgoing edge points
+  // straight at a Loop End it doesn't itself own — true for a freshly-made,
+  // empty-bodied Iterator (wired straight to its own loop_end by
+  // makeIteratorPair) AND for whatever node currently sits last inside a
+  // non-empty body (its edge points at that same loop_end). Both cases need
+  // identical treatment: the node LOOKS like a leaf's plain "+" case, not a
+  // branch point, even though it technically has an outgoing edge — clicking
+  // "+" here means "extend the loop body," which addConnectedNode now
+  // splices onto the tail→loop_end edge rather than forking a sibling. A
+  // node with 2+ children (a real second branch, deliberately added via the
+  // branch toolbar) is excluded — that's a genuine fork, handled normally.
+  const allNodes  = useStore((s) => s.nodes)
+  const loopEndIds = useMemo(
+    () => new Set(allNodes.filter((n) => n.data.type === 'loop_end').map((n) => n.id)),
+    [allNodes],
+  )
+  const isLoopBodyTail = outgoingEdges.length === 1 && loopEndIds.has(outgoingEdges[0].target) && !loopEndIds.has(id)
+  const showAddButton  = hasOutputs && data.type !== 'exit' && (!hasOutgoingEdge || isLoopBodyTail)
 
   // This node is a "branch point" once it fans out to 2+ children off the same
   // handle (parallel siblings) — matches the reference builder's fork toolbar.
+  // A loop-body-tail node's single edge to its loop_end doesn't count as a
+  // branch (see isLoopBodyTail above) — it needs the plain leaf "+" instead.
   const branchChildIds = useMemo(
     () => Array.from(new Set(outgoingEdges.map((e) => e.target))),
     [outgoingEdges],
   )
-  const isBranchPoint = branchChildIds.length > 1
+  const isBranchPoint = !isLoopBodyTail && branchChildIds.length > 1
   const [branchToolbarOpen, setBranchToolbarOpen] = useState(false)
 
   const openPicker          = useBuilderStore((s) => s.openPicker)
@@ -103,10 +123,12 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const nodeMessage                                 = overlayExecution?.messages?.find((m) => m.node_id === id)
   const failedItems                                 = overlayExecution?.iterator_failed_items?.[id]
   const debugSnapshot                               = overlayExecution?.debug_snapshots?.[id]
+  const nodeWarning                                 = overlayExecution?.node_warnings?.[id]
   const reached          = overlayActive && nodeStatus !== undefined
   const dimUnreached     = overlayActive && !reached
   const [overlayNoteOpen, setOverlayNoteOpen] = useState(false)
   const [debugPopoverOpen, setDebugPopoverOpen] = useState(false)
+  const [warningPopoverOpen, setWarningPopoverOpen] = useState(false)
   const [errorCopied, setErrorCopied] = useState(false)
 
   const copyOverlayText = (text: string) => {
@@ -368,6 +390,48 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               ) : (
                 <p className="text-[11px] italic text-slate-400">No workflow variables declared.</p>
               )}
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
+
+      {/* Execution overlay: node warning popover — top-left, the one corner
+          none of the other overlay badges occupy (bottom-left: message/
+          error; bottom-right: status; right-middle: debug snapshot). A
+          warning is non-fatal and doesn't change NodeStatus (still
+          COMPLETED here) — today populated only by an Iterator that
+          processed zero items, so it needs its own visible signal or it's
+          silently indistinguishable from a loop that ran normally. */}
+      {reached && nodeWarning && (
+        <Popover open={warningPopoverOpen} onOpenChange={setWarningPopoverOpen}>
+          <PopoverTrigger asChild>
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute -left-2 -top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-white shadow-md shadow-amber-500/30 ring-2 ring-white transition-transform hover:scale-110 nodrag nopan"
+              title="View warning"
+            >
+              <AlertTriangle size={12} strokeWidth={2.5} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="nodrag nopan w-80 p-0"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2 rounded-t-xl border-b border-amber-100 bg-amber-50 px-3 py-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">Warning</span>
+              <button
+                onClick={() => copyOverlayText(nodeWarning)}
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-500 transition-colors hover:bg-white/60"
+                title="Copy to clipboard"
+              >
+                {errorCopied ? <Check size={11} /> : <Copy size={11} />}
+                {errorCopied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+            <div className="max-h-64 overflow-y-auto px-3 py-2.5">
+              <p className="whitespace-pre-wrap break-words text-[12px] leading-relaxed text-slate-700">{nodeWarning}</p>
             </div>
           </PopoverContent>
         </Popover>

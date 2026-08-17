@@ -37,6 +37,10 @@ export interface Execution {
   iterator_failed_items?: Record<string, ExecutionFailedItem[]>
   // debug nodeID -> captured variable snapshot (FR-B2-013).
   debug_snapshots?: Record<string, { variables?: Record<string, unknown>; label?: string }>
+  // nodeID -> non-fatal warning text, independent of node_statuses/node_errors
+  // (still COMPLETED — a warning flags what DIDN'T happen, not a failure).
+  // Today populated only by an Iterator that processed zero items.
+  node_warnings?: Record<string, string>
   messages?: ExecutionMessage[]
   error_message?: string
   created_at: string

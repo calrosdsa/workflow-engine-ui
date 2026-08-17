@@ -518,6 +518,51 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
       return
     }
 
+    // "+ Add next node" on whatever currently sits at the TAIL of a loop
+    // body — the iterator itself (empty body, still wired straight to its
+    // own loop_end by makeIteratorPair) or the last node already inside a
+    // non-empty body (its one outgoing edge points at that same loop_end) —
+    // must land the new node INSIDE the loop, not fork a dead-end sibling
+    // branch off it. A plain linkEdge here would give the tail node two
+    // children (loop_end, plus this new node going nowhere) — structurally
+    // legal (multi-branch fan-out is a real, supported feature for every
+    // node type, incl. iterators — see the branch toolbar's own "add a new
+    // branch" action, still reachable when a node already has 2+ children)
+    // but never what a plain "+" click on a loop-body tail is asking for.
+    // Splice the new node onto the tail→loop_end edge instead — the same
+    // rewiring insertNodeOnEdge does for "insert here" on an arbitrary edge,
+    // just triggered from the source-node side. Both the frontend's own
+    // loop-body inference (BaseNode.tsx's isLoopBodyTail, computed the same
+    // way) and the backend's (graph.DAG.LoopBody, walked purely from edges)
+    // agree that "inside the loop" = topologically between iterator and
+    // loop_end, so this is enough to make the node genuinely part of the
+    // loop, not just visually near it.
+    const loopEndNodeIds = new Set(s.nodes.filter((n) => n.data.type === 'loop_end').map((n) => n.id))
+    const sourceOutgoing = s.edges.filter((e) => e.source === sourceNodeId)
+    const tailEdge = sourceOutgoing.length === 1 && loopEndNodeIds.has(sourceOutgoing[0].target)
+      ? sourceOutgoing[0]
+      : undefined
+    if (tailEdge) {
+      const newNode = makeNode(type, position)
+      const edgeToNew: FlowEdge = {
+        id: nanoid(), source: sourceNodeId, target: newNode.id,
+        sourceHandle: tailEdge.sourceHandle ?? 'out', targetHandle: 'in',
+        data: { condition: '' }, animated: false, style: { strokeWidth: 2 },
+      }
+      const edgeToLoopEnd: FlowEdge = {
+        id: nanoid(), source: newNode.id, target: tailEdge.target,
+        sourceHandle: 'out', targetHandle: tailEdge.targetHandle ?? 'in',
+        data: { condition: '' }, animated: false, style: { strokeWidth: 2 },
+      }
+      set((st) => ({
+        nodes:          [...st.nodes, newNode],
+        edges:          [...st.edges.filter((e) => e.id !== tailEdge.id), edgeToNew, edgeToLoopEnd],
+        selectedNodeId: newNode.id,
+        isDirty:        true,
+      }))
+      return
+    }
+
     const newNode = makeNode(type, position)
     set((st) => ({
       nodes:          [...st.nodes, newNode],
@@ -534,8 +579,6 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
     if (!edge) return
     pushHistory()
 
-    const id = nanoid()
-    const { inputs, outputs } = defaultPorts(type)
     const sourceNode = s.nodes.find((n) => n.id === edge.source)
     const targetNode = s.nodes.find((n) => n.id === edge.target)
     const position = sourceNode && targetNode
@@ -545,6 +588,38 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
         }
       : { x: 300, y: 200 }
 
+    // An Iterator inserted mid-edge needs its paired Loop End auto-created
+    // right along with it, same as addNode/addConnectedNode already do for
+    // every other iterator-creation entry point — otherwise "insert here"
+    // on an edge is the one remaining way to end up with a genuinely
+    // invalid Iterator (loop_end_id pointing nowhere), which the backend
+    // only catches at save/publish time as a confusing validation error.
+    // Splits the edge into source→iterator→loopEnd→target instead of the
+    // usual source→node→target, so the loop body starts out empty exactly
+    // like a freshly-dropped iterator's does.
+    if (type === 'iterator') {
+      const { iterator, loopEnd, edge: iterToLoopEnd } = makeIteratorPair(position)
+      const edgeToIterator: FlowEdge = {
+        id: nanoid(), source: edge.source, target: iterator.id,
+        sourceHandle: edge.sourceHandle ?? 'out', targetHandle: 'in',
+        data: { condition: '' }, animated: false, style: { strokeWidth: 2 },
+      }
+      const edgeFromLoopEnd: FlowEdge = {
+        id: nanoid(), source: loopEnd.id, target: edge.target,
+        sourceHandle: 'out', targetHandle: edge.targetHandle ?? 'in',
+        data: { condition: '' }, animated: false, style: { strokeWidth: 2 },
+      }
+      set((st) => ({
+        nodes: [...st.nodes, iterator, loopEnd],
+        edges: [...st.edges.filter((e) => e.id !== edgeId), edgeToIterator, iterToLoopEnd, edgeFromLoopEnd],
+        selectedNodeId: iterator.id,
+        isDirty: true,
+      }))
+      return
+    }
+
+    const id = nanoid()
+    const { inputs, outputs } = defaultPorts(type)
     const newNode: FlowNode = {
       id, type, position,
       data: {
