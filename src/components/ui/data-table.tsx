@@ -1,4 +1,12 @@
-import { ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import { ArrowUp, ArrowDown, ArrowUpDown, GripVertical } from 'lucide-react'
+import {
+  DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors, closestCenter,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext, horizontalListSortingStrategy, useSortable, arrayMove, sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@/lib/utils'
 
 export interface DataTableColumn {
@@ -25,40 +33,54 @@ export interface DataTableProps {
    *  consumer (search lists, audit/linked-record tabs) share one loading
    *  treatment instead of each hand-rolling a "Loading…" string. */
   loading?: boolean
+  /** Opt-in drag handle on each header cell, letting the viewer reorder
+   *  columns by dragging — omitted entirely (no handle rendered, no drag
+   *  behavior) for every consumer that doesn't pass it, so this stays a
+   *  no-op for existing callers (dashboard table widget, audit/linked-record
+   *  tabs). Used by RecordsTable's saved-view "List" layout (FR-D2-014) to
+   *  let a viewer reorder a saved view's columns; onReorder receives the
+   *  full new column-key order. */
+  onColumnsReorder?: (newColumnKeys: string[]) => void
 }
 
 // A plain native <table>, not a Radix primitive — there's no accessible-
 // primitives gap to fill for tabular data (same reasoning select.tsx's
 // native <select> variant already demonstrates elsewhere in this codebase).
-export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortChange, onRowClick, emptyMessage, loading }: DataTableProps) {
+export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortChange, onRowClick, emptyMessage, loading, onColumnsReorder }: DataTableProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e
+    if (!over || active.id === over.id || !onColumnsReorder) return
+    const oldIndex = columns.findIndex((c) => c.key === active.id)
+    const newIndex = columns.findIndex((c) => c.key === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+    onColumnsReorder(arrayMove(columns, oldIndex, newIndex).map((c) => c.key))
+  }
+
+  const headerRow = (
+    <tr className="border-b" style={{ borderColor: 'hsl(var(--border))' }}>
+      {columns.map((col) => (
+        <DataTableHeaderCell key={col.key} col={col} sortField={sortField} sortDir={sortDir} onSortChange={onSortChange} draggable={!!onColumnsReorder} />
+      ))}
+    </tr>
+  )
+
   return (
     <table className="w-full border-collapse text-sm">
       <thead>
-        <tr className="border-b" style={{ borderColor: 'hsl(var(--border))' }}>
-          {columns.map((col) => (
-            <th
-              key={col.key}
-              className={cn('px-3 py-2 font-medium', col.align === 'right' ? 'text-right' : 'text-left')}
-              style={{ color: 'hsl(var(--muted-foreground))' }}
-            >
-              {col.sortable ? (
-                <button
-                  onClick={() => onSortChange?.(col.key)}
-                  className="flex items-center gap-1 hover:opacity-80"
-                >
-                  {col.label}
-                  {sortField === col.key ? (
-                    sortDir === 'desc' ? <ArrowDown size={12} /> : <ArrowUp size={12} />
-                  ) : (
-                    <ArrowUpDown size={12} className="opacity-30" />
-                  )}
-                </button>
-              ) : (
-                col.label
-              )}
-            </th>
-          ))}
-        </tr>
+        {onColumnsReorder ? (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={columns.map((c) => c.key)} strategy={horizontalListSortingStrategy}>
+              {headerRow}
+            </SortableContext>
+          </DndContext>
+        ) : (
+          headerRow
+        )}
       </thead>
       <tbody>
         {loading ? (
@@ -98,6 +120,48 @@ export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortC
         )}
       </tbody>
     </table>
+  )
+}
+
+function DataTableHeaderCell({ col, sortField, sortDir, onSortChange, draggable }: {
+  col: DataTableColumn
+  sortField?: string
+  sortDir?: 'asc' | 'desc'
+  onSortChange?: (field: string) => void
+  draggable: boolean
+}) {
+  // useSortable is always called (rules of hooks) but its drag wiring is only
+  // spread onto the element when draggable — an undraggable header stays a
+  // plain <th> with zero @dnd-kit-attributable behavior or DOM attributes.
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: col.key })
+  const style = draggable ? { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 } : undefined
+
+  return (
+    <th
+      ref={draggable ? setNodeRef : undefined}
+      style={{ color: 'hsl(var(--muted-foreground))', ...style }}
+      className={cn('px-3 py-2 font-medium', col.align === 'right' ? 'text-right' : 'text-left')}
+    >
+      <div className={cn('flex items-center gap-1', col.align === 'right' && 'justify-end')}>
+        {draggable && (
+          <span {...attributes} {...listeners} className="cursor-grab touch-none text-slate-300 hover:text-slate-500 active:cursor-grabbing">
+            <GripVertical size={12} />
+          </span>
+        )}
+        {col.sortable ? (
+          <button onClick={() => onSortChange?.(col.key)} className="flex items-center gap-1 hover:opacity-80">
+            {col.label}
+            {sortField === col.key ? (
+              sortDir === 'desc' ? <ArrowDown size={12} /> : <ArrowUp size={12} />
+            ) : (
+              <ArrowUpDown size={12} className="opacity-30" />
+            )}
+          </button>
+        ) : (
+          col.label
+        )}
+      </div>
+    </th>
   )
 }
 

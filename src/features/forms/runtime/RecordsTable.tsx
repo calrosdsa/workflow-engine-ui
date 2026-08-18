@@ -15,8 +15,12 @@ import { RecordDetailPanel } from './RecordDetailPanel'
 import { resolveRecordTitle } from './record-title'
 import { RecordReferenceLink } from './RecordReferenceLink'
 import { parseLayout } from '@/features/form-builder/serialize'
+import { CardLayout } from '@/features/menus/saved-views/layouts/CardLayout'
+import { CalendarLayout } from '@/features/menus/saved-views/layouts/CalendarLayout'
+import { KanbanLayout } from '@/features/menus/saved-views/layouts/KanbanLayout'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
 import type { FormRecord } from '@/features/forms/types'
+import type { ViewLayout, CardLayoutConfig, CalendarLayoutConfig, KanbanLayoutConfig } from '@/features/menus/saved-views/types'
 
 export interface RecordsTableProps {
   formId: string
@@ -56,6 +60,18 @@ export interface RecordsTableProps {
    *  own "{menu.name}" heading. Omitted for tile contexts where the
    *  dashboard widget's own tile chrome already shows a title. */
   title?: string
+  /** FR-D2-014: which presentation to render this same filtered/sorted
+   *  record set as. Defaults to 'list' (today's DataTable, unchanged) for
+   *  every existing caller that doesn't pass this. Card/Calendar/Kanban
+   *  reuse the identical searchRecords query and record-detail drawer —
+   *  only the results' presentation differs. */
+  layout?: ViewLayout
+  layoutConfig?: CardLayoutConfig | CalendarLayoutConfig | KanbanLayoutConfig
+  /** Lets the viewer drag-reorder the List layout's columns — omitted (no
+   *  drag handles, unchanged behavior) unless the caller is rendering a
+   *  saved view that supports persisting column order (SearchMenuRuntime,
+   *  once a saved view is active). */
+  onColumnsReorder?: (newColumnKeys: string[]) => void
 }
 
 // Extracted from features/menus/runtime/SearchMenuRuntime.tsx (Phase 4 of
@@ -69,6 +85,7 @@ export interface RecordsTableProps {
 export function RecordsTable({
   formId, columns: columnKeys, defaultFilter, defaultSort, pageSize: pageSizeProp,
   allowFilter = false, allowSearch = false, rowClick = true, headerActions, onExpandRecord, title,
+  layout = 'list', layoutConfig, onColumnsReorder,
 }: RecordsTableProps) {
   const { data: form, isLoading: isFormLoading, isError: isFormError } = useFormDef(formId)
 
@@ -136,6 +153,13 @@ export function RecordsTable({
   if (isFormError || !form) {
     return <RecordsTableMessage icon={AlertCircle} text="Couldn't load this form. It may have been deleted." tone="error" />
   }
+
+  // §6's named edge case: a saved view's Calendar/Kanban layout_config names
+  // a field that was later deleted/renamed on the form — falls back to List
+  // with a visible notice rather than a broken/silent render (see below).
+  const calendarFieldMissing = layout === 'calendar' && (!layoutConfig || !form.fields.some((f) => f.name === (layoutConfig as CalendarLayoutConfig).dateField))
+  const kanbanFieldMissing = layout === 'kanban' && (!layoutConfig || !form.fields.some((f) => f.name === (layoutConfig as KanbanLayoutConfig).groupField))
+  const effectiveLayout: ViewLayout = layout === 'calendar' && calendarFieldMissing ? 'list' : layout === 'kanban' && kanbanFieldMissing ? 'list' : layout
 
   const visibleColumns = columnKeys && columnKeys.length > 0 ? columnKeys : form.fields.map((f) => f.name)
   const dataTableColumns = visibleColumns.map((key) => {
@@ -228,18 +252,41 @@ export function RecordsTable({
         </>
       )}
 
+      {calendarFieldMissing && layoutConfig && (
+        <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          This view's Calendar field no longer exists — showing as a list.
+        </p>
+      )}
+      {kanbanFieldMissing && layoutConfig && (
+        <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          This view's Kanban field no longer exists — showing as a list.
+        </p>
+      )}
+
       <div ref={scrollRef} className="overflow-x-auto overflow-y-hidden rounded-lg border" style={{ borderColor: 'hsl(var(--border))' }}>
-        <DataTable
-          columns={dataTableColumns}
-          rows={results?.records ?? []}
-          getRowId={(r) => r.id as string}
-          sortField={sort[0]?.field}
-          sortDir={sort[0]?.dir as 'asc' | 'desc' | undefined}
-          onSortChange={toggleSort}
-          onRowClick={rowClick ? openRecord : undefined}
-          loading={isLoading}
-          emptyMessage={isSearchError ? "Couldn't load records — try again." : undefined}
-        />
+        {effectiveLayout === 'card' && (
+          <CardLayout records={results?.records ?? []} fields={form.fields} config={(layoutConfig as CardLayoutConfig) ?? {}} onOpenRecord={openRecord} loading={isLoading} />
+        )}
+        {effectiveLayout === 'calendar' && (
+          <CalendarLayout records={results?.records ?? []} fields={form.fields} config={layoutConfig as CalendarLayoutConfig} onOpenRecord={openRecord} loading={isLoading} />
+        )}
+        {effectiveLayout === 'kanban' && (
+          <KanbanLayout records={results?.records ?? []} fields={form.fields} config={layoutConfig as KanbanLayoutConfig} onOpenRecord={openRecord} loading={isLoading} />
+        )}
+        {effectiveLayout === 'list' && (
+          <DataTable
+            columns={dataTableColumns}
+            rows={results?.records ?? []}
+            getRowId={(r) => r.id as string}
+            sortField={sort[0]?.field}
+            sortDir={sort[0]?.dir as 'asc' | 'desc' | undefined}
+            onSortChange={toggleSort}
+            onRowClick={rowClick ? openRecord : undefined}
+            loading={isLoading}
+            emptyMessage={isSearchError ? "Couldn't load records — try again." : undefined}
+            onColumnsReorder={onColumnsReorder}
+          />
+        )}
       </div>
 
       <div className="mt-3 flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:justify-between" style={{ color: 'hsl(var(--muted-foreground))' }}>
