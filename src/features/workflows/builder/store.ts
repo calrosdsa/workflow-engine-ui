@@ -281,6 +281,10 @@ export interface BuilderState {
   toggleVarsPanel:  () => void
   toggleConfigPanel:() => void
   toggleExecutionsPanel: () => void
+  /** Idempotent open (unlike toggleExecutionsPanel) — for programmatic opens
+   *  (e.g. a Run completing) where flipping an already-open panel closed
+   *  would be wrong. */
+  openExecutionsPanel: () => void
   toggleConfigPanelWide: () => void
   closeActiveSidebar: () => void
 
@@ -426,6 +430,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
     const next = s.activeSidebar === 'executions' ? null : 'executions'
     return { activeSidebar: next, varsPanelOpen: next === 'variables', configPanelOpen: next === 'config', executionsPanelOpen: next === 'executions' }
   }),
+  openExecutionsPanel: () => set({ activeSidebar: 'executions', varsPanelOpen: false, configPanelOpen: false, executionsPanelOpen: true }),
   toggleConfigPanelWide: () => set((s) => ({ configPanelWide: !s.configPanelWide })),
   closeActiveSidebar: () => set({ activeSidebar: null, varsPanelOpen: false, configPanelOpen: false, executionsPanelOpen: false }),
 

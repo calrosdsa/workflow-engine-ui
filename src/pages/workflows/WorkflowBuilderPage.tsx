@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
-import { AlertCircle, AlertTriangle, ArrowLeft, Braces, Check, CheckCircle, History, Play, Save, Workflow, X } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { AlertCircle, AlertTriangle, ArrowLeft, Braces, Check, History, Play, Save, Workflow, X } from 'lucide-react'
 import { useWorkflow, useCreateWorkflow, useUpdateWorkflow } from '@/features/workflows/hooks'
 import { useTriggerExecution, useExecution } from '@/features/executions/hooks'
 import { useBuilderStore } from '@/features/workflows/builder/store'
@@ -34,6 +35,7 @@ interface WorkflowBuilderPageProps {
 
 export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const params   = useParams({ strict: false }) as { appId?: string; workflowId?: string }
   const appId    = params.appId ?? ''
   const id       = mode === 'edit' ? (params.workflowId ?? '') : ''
@@ -43,7 +45,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   const {
     loadDefinition, seedNew, toDefinition, name, setName,
     isDirty, markSaved, nodes, selectNode,
-    executionsPanelOpen, toggleExecutionsPanel,
+    executionsPanelOpen, toggleExecutionsPanel, openExecutionsPanel,
     varsPanelOpen, toggleVarsPanel,
   } = useBuilderStore()
 
@@ -57,6 +59,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   const [justSaved,   setJustSaved]   = useState(false)
 
   const clearOverlay = useExecutionOverlayStore((s) => s.select)
+  const selectOverlay = useExecutionOverlayStore((s) => s.setSelected)
   const selectedExecutionId = useExecutionOverlayStore((s) => s.selectedExecutionId)
   const setOverlayData = useExecutionOverlayStore((s) => s.setData)
 
@@ -82,6 +85,31 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
       setOverlayData(null)
     }
   }, [selectedExecutionId, overlayExecution, id, setOverlayData])
+
+  // Tracks the run just triggered from this page's own Run button —
+  // independent of selectedExecutionId (the sidebar/overlay's own, possibly
+  // unrelated, selection). Polls in the background (useExecution's existing
+  // 2s-until-terminal behavior) without blocking the canvas; only once it
+  // reaches COMPLETED or FAILED does the Executions sidebar auto-open,
+  // selected on that run, so a long-running workflow never traps the user
+  // behind a loader — they keep editing, and the sidebar surfaces the result
+  // when it's actually ready.
+  const { data: triggeredExecution } = useExecution(triggeredId ?? '')
+  const isTriggeredRunning = !!triggeredId && (!triggeredExecution || triggeredExecution.status === 'PENDING' || triggeredExecution.status === 'RUNNING')
+  useEffect(() => {
+    if (!triggeredId || !triggeredExecution) return
+    if (triggeredExecution.status === 'COMPLETED' || triggeredExecution.status === 'FAILED') {
+      // The sidebar's own row list (useExecutions) isn't on a poll — it was
+      // last fetched when the run started (still PENDING/RUNNING then), so
+      // without this it would keep showing this row as running indefinitely
+      // even though the individual useExecution(triggeredId) poll above
+      // already knows the real terminal status.
+      qc.invalidateQueries({ queryKey: ['executions'] })
+      selectOverlay(triggeredId)
+      openExecutionsPanel()
+      setTriggeredId(null)
+    }
+  }, [triggeredId, triggeredExecution, selectOverlay, openExecutionsPanel, qc])
 
   // Load existing definition into the store once
   useEffect(() => {
@@ -186,7 +214,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-50">
       {/* ── Header ───────────────────────────────────────────────────── */}
-      <header className="z-20 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-3 shadow-sm">
+      <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-3 shadow-sm">
         <Button
           variant="ghost" size="icon"
           className="h-8 w-8 text-slate-500 hover:text-slate-700"
@@ -236,13 +264,22 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
           </button>
         )}
 
-        {triggeredId && (
-          <button
-            onClick={() => navigate({ to: '/applications/$appId/executions/$executionId', params: { appId, executionId: triggeredId } })}
-            className="flex items-center gap-1.5 rounded-md bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
-          >
-            <CheckCircle size={13} />Execution running
-          </button>
+        {/* Small, dismissible, non-blocking — the canvas stays fully
+            editable while this run is in flight. It clears itself once the
+            run reaches COMPLETED/FAILED (the effect above opens the
+            Executions sidebar at that point instead), so this chip only
+            shows for genuinely in-progress runs, not finished ones. */}
+        {isTriggeredRunning && (
+          <span className="flex items-center gap-1.5 rounded-md bg-blue-50 py-1.5 pl-2.5 pr-1.5 text-xs font-medium text-blue-700">
+            <Spinner className="h-3 w-3" />Running…
+            <button
+              onClick={() => setTriggeredId(null)}
+              className="flex h-4 w-4 items-center justify-center rounded-full text-blue-400 transition-colors hover:bg-blue-100 hover:text-blue-600"
+              title="Dismiss"
+            >
+              <X size={10} strokeWidth={2.75} />
+            </button>
+          </span>
         )}
 
         {mode === 'edit' && (
@@ -253,7 +290,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
         )}
 
         <Button
-          variant={varsPanelOpen ? 'secondary' : 'outline'}
+          variant={varsPanelOpen ? "default" : 'outline'}
           size="sm"
           onClick={toggleVarsPanel}
           title="View workflow variables"
@@ -264,7 +301,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
         {mode === 'edit' && (
           <div className="flex items-center gap-1">
             <Button
-              variant={executionsPanelOpen ? 'secondary' : 'outline'}
+              variant={executionsPanelOpen ? "default" : 'outline'}
               size="sm"
               onClick={toggleExecutionsPanel}
               title="View execution history"

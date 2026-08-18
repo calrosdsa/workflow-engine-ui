@@ -15,6 +15,11 @@ interface ExecutionOverlayState {
   selectedExecutionId: string | null
   data: Execution | null
   select: (executionId: string | null) => void
+  /** Unconditional set — unlike select(), never toggles off when the id is
+   *  already selected. For programmatic selection (e.g. a just-completed
+   *  Run being surfaced) where the caller genuinely wants "this one, for
+   *  sure," not "toggle whatever's there." */
+  setSelected: (executionId: string | null) => void
   setData: (data: Execution | null) => void
 }
 
@@ -25,5 +30,6 @@ export const useExecutionOverlayStore = create<ExecutionOverlayState>((set) => (
     selectedExecutionId: s.selectedExecutionId === executionId ? null : executionId,
     data: null,
   })),
+  setSelected: (executionId) => set({ selectedExecutionId: executionId, data: null }),
   setData: (data) => set({ data }),
 }))

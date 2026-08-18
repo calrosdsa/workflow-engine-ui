@@ -252,7 +252,13 @@ const Flow = () => {
           selectNode(null)
           closeActiveSidebar()
         }}
-        nodesDraggable
+        // Free-form node dragging is disabled — position/order changes only
+        // happen through BaseNode's own grip-handle "Drag to reorder"
+        // mechanism (native HTML5 DnD, independent of React Flow's drag),
+        // which re-splices the node into the graph and re-runs the auto
+        // layout, rather than leaving nodes at arbitrary manually-dragged
+        // coordinates.
+        nodesDraggable={false}
         elevateEdgesOnSelect
         fitView
         // fitViewOptions={{ padding: 0.3 }}
