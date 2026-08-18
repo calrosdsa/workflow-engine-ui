@@ -191,9 +191,9 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-screen flex-col overflow-hidden">
       {/* Header */}
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4">
+      <header className="sticky top-0 z-20  flex h-14 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4">
         <button
           onClick={() => navigate({ to: '/applications/$appId/forms', params: { appId } })}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"

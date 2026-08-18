@@ -23,18 +23,36 @@ const NAV_ITEMS = [
   { to: '/applications/$appId/settings', label: 'Settings', icon: KeyRound, exact: false },
 ] as const
 
+// The Workflow Builder (/applications/$appId/workflows/$workflowId) owns its
+// own fixed header and manages the full viewport height itself — stacking
+// this shell's header above it doubles the chrome and breaks its h-screen
+// layout math. Match on the segment rather than a full path so both the
+// "new" and "edit" workflow routes are covered.
+function isWorkflowEditRoute(pathname: string, appId: string): boolean {
+  const escapedAppId = appId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`^/applications/${escapedAppId}/workflows/[^/]+/?$`).test(pathname)
+}
+  // path: '/forms/$formId',
+function isFormEditRoute(pathname: string, appId: string): boolean {
+  const escapedAppId = appId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`^/applications/${escapedAppId}/forms/[^/]+/?$`).test(pathname)
+}
+
 export function ApplicationDesignShell({ appId }: { appId: string }) {
   const navigate = useNavigate()
   const { data: app, isLoading } = useApplication()
   const publishMutation = usePublishApplication()
   const canPublish = usePermission('application:publish')
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const hideShellChrome = isWorkflowEditRoute(pathname, appId) || isFormEditRoute(pathname, appId)
 
   const [publishIssues, setPublishIssues] = useState<ValidationIssue[] | null>(null)
   const [publishError, setPublishError] = useState<string | null>(null)
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Spinner /></div>
   if (!app) return null
+
+  if (hideShellChrome) return <Outlet />
 
   const handlePublish = async () => {
     setPublishIssues(null)
