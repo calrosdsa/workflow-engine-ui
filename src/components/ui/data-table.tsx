@@ -69,15 +69,13 @@ export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortC
     </tr>
   )
 
-  return (
+  const table = (
     <table className="w-full border-collapse text-sm">
       <thead>
         {onColumnsReorder ? (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={columns.map((c) => c.key)} strategy={horizontalListSortingStrategy}>
-              {headerRow}
-            </SortableContext>
-          </DndContext>
+          <SortableContext items={columns.map((c) => c.key)} strategy={horizontalListSortingStrategy}>
+            {headerRow}
+          </SortableContext>
         ) : (
           headerRow
         )}
@@ -120,6 +118,22 @@ export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortC
         )}
       </tbody>
     </table>
+  )
+
+  // DndContext renders its own accessibility DOM (screen-reader description
+  // + focus-restore helpers) as real children, not portaled — nesting it
+  // INSIDE <thead> (as an earlier version of this component did) put those
+  // divs as siblings of <tr>, which is invalid HTML a <thead> can't contain
+  // and triggers a React hydration-mismatch warning. Wrapping the whole
+  // <table> instead keeps DndContext's own output outside every table
+  // element, while SortableContext (a context provider with no DOM output
+  // of its own) still wraps just the header row.
+  return onColumnsReorder ? (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      {table}
+    </DndContext>
+  ) : (
+    table
   )
 }
 
