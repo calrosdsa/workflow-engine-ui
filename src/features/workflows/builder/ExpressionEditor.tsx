@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils'
 import { validateExpression, type ExpressionValidateResult } from '@/lib/api'
 import { exprAssist } from './expr-autocomplete'
 import {
-  EXPR_FUNCTIONS, FUNCTION_CATEGORIES, EXPR_ROOTS, CONTEXT_ENTRIES, type ExprFunction,
+  EXPR_FUNCTIONS, FUNCTION_CATEGORIES, EXPR_ROOTS, CONTEXT_ENTRIES, CURRENT_USER_ENTRIES, type ExprFunction,
 } from './expr-meta'
 import { outputFieldPath, type NodeOutputSchema, type OutputField } from './node-output-schema'
 import type { VariableDecl } from '../types'
@@ -380,6 +380,13 @@ export function ExpressionEditor({ open, onClose, value, onChange, variables, no
                     {/* Context roots */}
                     <VarGroup icon={<Database size={11} />} title="Context" count={CONTEXT_ENTRIES!.length}>
                       {CONTEXT_ENTRIES!.map((e) => (
+                        <InsertRow key={e.insert} mono={e.label} sub={e.insert} onClick={() => insert(e.insert)} />
+                      ))}
+                    </VarGroup>
+
+                    {/* Current user (Search-menu filters only, FR-D2-013) */}
+                    <VarGroup icon={<Database size={11} />} title="Current User (Search filters)" count={CURRENT_USER_ENTRIES!.length}>
+                      {CURRENT_USER_ENTRIES!.map((e) => (
                         <InsertRow key={e.insert} mono={e.label} sub={e.insert} onClick={() => insert(e.insert)} />
                       ))}
                     </VarGroup>

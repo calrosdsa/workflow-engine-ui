@@ -46,6 +46,8 @@ export const EXPR_FUNCTIONS: ExprFunction[] = [
   { name: 'RegexFindGroup',  signature: 'RegexFindGroup(s, pattern, n) string',description: 'Returns nth capture group',       example: 'RegexFindGroup(Vars["s"], `(\\w+)`, 1)',     category: 'Regex' },
   { name: 'RegexReplace',    signature: 'RegexReplace(s, pat, repl) string',   description: 'Replace first match',             example: 'RegexReplace(Vars["s"], `\\s+`, "_")',       category: 'Regex' },
   { name: 'RegexReplaceAll', signature: 'RegexReplaceAll(s, pat, repl) string',description: 'Replace all matches',             example: 'RegexReplaceAll(Vars["s"], `\\s+`, "_")',    category: 'Regex' },
+  // Current user (Search-menu filter resolution only — see FR-D2-013)
+  { name: 'ResolveCurrentUserRecord', signature: 'ResolveCurrentUserRecord(formId) string', description: "Linked record ID on formId belonging to the current user, or \"\" if none (Search filters only)", example: 'ResolveCurrentUserRecord("employee_form_id")', category: 'String' },
 ]
 
 // Top-level identifiers available in the expression environment.
@@ -82,4 +84,11 @@ export const CONTEXT_ENTRIES: VariableCategory['entries'] = [
   { insert: 'Context["run_id"]',          label: 'run_id',          hint: 'Current execution run ID' },
   { insert: 'Context["task_queue"]',      label: 'task_queue',      hint: 'Temporal task queue name' },
   { insert: 'Context["trigger_user_id"]', label: 'trigger_user_id', hint: 'User who created/updated/deleted the triggering record (before/after/after_async triggers only)' },
+]
+
+// Populated only when resolving a Search menu's filter (FR-D2-013) — absent
+// (empty string) in every other Expr call site, since workflow execution has
+// no HTTP session to source a user ID from.
+export const CURRENT_USER_ENTRIES: VariableCategory['entries'] = [
+  { insert: 'Vars["_CurrentUser"]', label: '_CurrentUser', hint: "Logged-in user's ID as a plain string; \"\" if anonymous (Search filters only)" },
 ]
