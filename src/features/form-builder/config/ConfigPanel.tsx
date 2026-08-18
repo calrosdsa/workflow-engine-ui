@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { SlidersHorizontal, Layers } from 'lucide-react'
+import { SlidersHorizontal, Layers, FileText } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection } from '../store'
 import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable } from '../component-registry'
-import { slugifyKey } from '../factory'
+import { slugifyKey, isParentLinkElement } from '../factory'
 import {
   type FormElement, type FormSchema, type VisibilityMode, type RequiredMode, type ReadOnlyMode,
   type ElementValidation, type ElementBehavior, type ElementAppearance, type BindingSource,
@@ -200,6 +200,8 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
   const isNumeric = element.component === 'number'
   const isTextual = ['text', 'textarea', 'email', 'url', 'password', 'phone'].includes(element.component)
   const isFormRef = element.component === 'form'
+  const parentFormId = useFormMetaStore((s) => s.parentFormId)
+  const isParentLink = isFormRef && isParentLinkElement(element, parentFormId)
   const isLineItems = element.component === 'line_items'
   const isLineItemCount = element.component === 'line_item_count'
   const canBeUnique = supportsUnique(element.component)
@@ -316,13 +318,21 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                   {isFormRef && (
                     <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
                       <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Form Reference</p>
-                      <Field label="Referenced Form" hint="Stores the form's id; displays its name.">
-                        <FormReferenceSelect
-                          value={element.formRef}
-                          excludeId={formId ?? undefined}
-                          onChange={(formRef) => onChange({ formRef, displayField: undefined })}
-                        />
-                      </Field>
+                      {isParentLink ? (
+                        <Field label="Referenced Form" hint="This field links the form to its parent — use “Unlink Dependent Form” from the form list to change or remove this relationship.">
+                          <div className="flex h-8 items-center gap-1.5 rounded-md border border-slate-200 bg-slate-100 px-2.5 text-[13px] text-slate-500">
+                            <ParentFormName formId={element.formRef} />
+                          </div>
+                        </Field>
+                      ) : (
+                        <Field label="Referenced Form" hint="Stores the form's id; displays its name.">
+                          <FormReferenceSelect
+                            value={element.formRef}
+                            excludeId={formId ?? undefined}
+                            onChange={(formRef) => onChange({ formRef, displayField: undefined })}
+                          />
+                        </Field>
+                      )}
                       <Field label="Display Field" hint="Which field of the referenced form to show in the dropdown and use for search.">
                         <DisplayFieldSelect
                           formId={element.formRef}
@@ -818,6 +828,20 @@ function AdoptedColumnsPreview({ formId }: { formId?: string }) {
         </div>
       ))}
     </div>
+  )
+}
+
+/** Read-only name lookup for the locked "Referenced Form" display on a
+ *  parent-link field (see isParentLinkElement) — the actual FormReferenceSelect
+ *  combobox isn't rendered there at all, just this label, so there's no
+ *  affordance to repoint the reference away from the parent. */
+function ParentFormName({ formId }: { formId?: string }) {
+  const { data: form, isLoading } = useFormDef(formId ?? '')
+  return (
+    <>
+      <FileText size={13} className="shrink-0 text-slate-400" />
+      <span className="truncate">{isLoading ? 'Loading…' : form?.name ?? formId}</span>
+    </>
   )
 }
 

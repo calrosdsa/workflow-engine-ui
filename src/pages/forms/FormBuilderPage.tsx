@@ -54,7 +54,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   const canUndo = useFormBuilderStore((s) => s.canUndo)
   const canRedo = useFormBuilderStore((s) => s.canRedo)
   const {
-    name, slug, description, isDirty,
+    name, slug, description, isDirty, parentFormId: loadedParentFormId,
     setName, setSlug, markSaved,
   } = useFormMetaStore()
 
@@ -67,7 +67,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   useEffect(() => {
     if (mode === 'edit' && loaded) {
       const b = toBuilder(loaded)
-      loadFormIntoStores({ id: loaded.id, name: b.name, slug: b.slug, description: b.description, schema: b.schema })
+      loadFormIntoStores({ id: loaded.id, name: b.name, slug: b.slug, description: b.description, parentFormId: loaded.parent_form_id, schema: b.schema })
       setSlugTouched(true) // existing slug is locked anyway
     } else if (mode === 'new') {
       resetFormBuilder()
@@ -144,10 +144,18 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
         navigate({ to: '/applications/$appId/forms/$formId', params: { appId, formId: created.id } })
       } else if (formId) {
         const { changed, schema: syncedSchema } = await syncLineItemsChildren(schema, formId, slug)
+        // toPayload() never carries parent_form_id (it's not part of the
+        // builder's own schema/name/slug/description shape) — re-attach it
+        // from the meta store's loaded value on every save, the same way the
+        // 'new' branch above re-attaches it from the URL param. Without this,
+        // ANY save of an existing dependent child form (even one that never
+        // touches the parent-link field) silently clears parent_form_id,
+        // since an update payload with no key for it is treated as "unset".
+        const withParent = loadedParentFormId ? { ...payload, parent_form_id: loadedParentFormId } : payload
         if (changed) {
-          await updateMutation.mutateAsync({ ...payload, layout: syncedSchema })
+          await updateMutation.mutateAsync({ ...withParent, layout: syncedSchema })
         } else {
-          await updateMutation.mutateAsync(payload)
+          await updateMutation.mutateAsync(withParent)
         }
         markSaved()
       }

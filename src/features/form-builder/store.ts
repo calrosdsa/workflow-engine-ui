@@ -133,7 +133,11 @@ export function insertParentReferenceField(parentFormId: string, parentName: str
   useFormBuilderStore.setState((s) => ({
     schema: { ...s.schema, sections: [section, ...s.schema.sections] },
   }))
-  useFormMetaStore.getState().markDirty()
+  // Also record parentFormId on the meta store itself — not just embedded on
+  // the injected field — so the canvas/config panel can recognize this
+  // specific element as the guarded parent link (see FormMetaState.parentFormId's
+  // doc comment) the same way an existing form loaded via loadForm() does.
+  useFormMetaStore.setState({ parentFormId, isDirty: true })
 }
 
 // ---------------------------------------------------------------------------
@@ -147,12 +151,25 @@ interface FormMetaState {
   name: string
   slug: string
   description: string
-  isDirty: boolean
+  /** The parent form this one is a dependent/child of ("Add Dependent Form"),
+   *  or undefined for a form with no such relationship. Loaded read-only from
+   *  FormDefinition.parent_form_id — the builder never writes this itself
+   *  (AddDependentFormDialog/unlinkDependentForm own that via their own API
+   *  calls). Exists here purely so the canvas/config panel can recognize
+   *  which Form Reference element is the auto-injected parent link (see
+   *  isParentLinkElement in factory.ts) and guard it against being deleted
+   *  or repointed — before this field existed, that element was
+   *  indistinguishable from any ordinary reference field, so deleting it and
+   *  saving would silently strip the reference value from every existing
+   *  record (the column backing it gets dropped/recreated) while
+   *  parent_form_id itself was left dangling, pointing at a relationship the
+   *  form no longer actually carries data for. */
+  parentFormId?: string
 
   setName: (name: string) => void
   setSlug: (slug: string) => void
   setDescription: (d: string) => void
-  loadForm: (args: { id: string | null; name: string; slug: string; description: string }) => void
+  loadForm: (args: { id: string | null; name: string; slug: string; description: string; parentFormId?: string }) => void
   reset: () => void
   markSaved: () => void
   markDirty: () => void
@@ -164,16 +181,17 @@ export const useFormMetaStore = create<FormMetaState>((set) => ({
   slug: '',
   description: '',
   isDirty: false,
+  parentFormId: undefined,
 
   setName: (name) => set({ name, isDirty: true }),
   setSlug: (slug) => set({ slug, isDirty: true }),
   setDescription: (description) => set({ description, isDirty: true }),
 
-  loadForm: ({ id, name, slug, description }) =>
-    set({ formId: id, name, slug, description, isDirty: false }),
+  loadForm: ({ id, name, slug, description, parentFormId }) =>
+    set({ formId: id, name, slug, description, parentFormId, isDirty: false }),
 
   reset: () =>
-    set({ formId: null, name: 'Untitled Form', slug: '', description: '', isDirty: false }),
+    set({ formId: null, name: 'Untitled Form', slug: '', description: '', parentFormId: undefined, isDirty: false }),
 
   markSaved: () => set({ isDirty: false }),
   markDirty: () => set({ isDirty: true }),
@@ -185,7 +203,7 @@ export const useFormMetaStore = create<FormMetaState>((set) => ({
  *  calls land in the same synchronous tick, so React 19's automatic
  *  batching flushes them in one render — no frame observes metadata
  *  cleared but the schema not yet loaded, or vice versa. */
-export function loadForm(args: { id: string | null; name: string; slug: string; description: string; schema: FormSchema }) {
+export function loadForm(args: { id: string | null; name: string; slug: string; description: string; parentFormId?: string; schema: FormSchema }) {
   useFormMetaStore.getState().loadForm(args)
   useFormBuilderStore.getState().loadSchema(args.schema)
 }

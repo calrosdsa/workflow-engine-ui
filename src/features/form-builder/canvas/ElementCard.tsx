@@ -1,10 +1,11 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Copy, Trash2, Asterisk } from 'lucide-react'
+import { GripVertical, Copy, Trash2, Asterisk, Link2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useFormBuilderStore } from '../store'
+import { useFormBuilderStore, useFormMetaStore } from '../store'
 import { COMPONENT_REGISTRY } from '../component-registry'
 import { ElementPreview } from '../ElementPreview'
+import { isParentLinkElement } from '../factory'
 import type { FormElement } from '../schema'
 
 interface ElementCardProps {
@@ -18,10 +19,19 @@ export function ElementCard({ element, sectionId, columnId }: ElementCardProps) 
   const selectElement = useFormBuilderStore((s) => s.selectItem)
   const duplicate = useFormBuilderStore((s) => s.duplicateItemById)
   const remove = useFormBuilderStore((s) => s.deleteItem)
+  const parentFormId = useFormMetaStore((s) => s.parentFormId)
 
   const selected = selectedId === element.id
   const reg = COMPONENT_REGISTRY[element.component]
   const Icon = reg.icon
+  // The auto-injected "link back to parent" field (see isParentLinkElement's
+  // doc comment) — deletable via this card's own trash icon like any other
+  // element, but doing so used to silently strip the reference value from
+  // every existing record while leaving the form's parent_form_id dangling.
+  // Locked here instead of just warning, since there's no legitimate reason
+  // to delete this specific field short of unlinking the dependent-form
+  // relationship entirely, which has its own dedicated action.
+  const isParentLink = isParentLinkElement(element, parentFormId)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: element.id,
@@ -65,13 +75,15 @@ export function ElementCard({ element, sectionId, columnId }: ElementCardProps) 
         >
           <Copy size={12} />
         </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); remove(element.id) }}
-          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-500"
-          title="Delete"
-        >
-          <Trash2 size={12} />
-        </button>
+        {!isParentLink && (
+          <button
+            onClick={(e) => { e.stopPropagation(); remove(element.id) }}
+            className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-500"
+            title="Delete"
+          >
+            <Trash2 size={12} />
+          </button>
+        )}
       </div>
 
       {/* Type tag */}
@@ -79,6 +91,14 @@ export function ElementCard({ element, sectionId, columnId }: ElementCardProps) 
         <Icon size={11} className="text-slate-400" />
         <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">{reg.label}</span>
         {element.behavior.required === 'always' && <Asterisk size={8} className="text-red-400" />}
+        {isParentLink && (
+          <span
+            className="flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-[9px] font-medium text-indigo-600"
+            title="Links this form to its parent — use “Unlink Dependent Form” from the form list to remove the relationship instead"
+          >
+            <Link2 size={9} />parent link
+          </span>
+        )}
         {element.behavior.visibility !== 'always' && (
           <span className="ml-auto rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-medium text-amber-600">conditional</span>
         )}

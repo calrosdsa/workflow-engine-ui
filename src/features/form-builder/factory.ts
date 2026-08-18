@@ -139,12 +139,13 @@ export function relayoutSection(section: FormSection, layout: ColumnLayout): For
 }
 
 /** Builds the "Form Reference" field pointing back at a dependent form's
- *  parent (e.g. Punch -> Employee) — a real, fully-editable field,
- *  indistinguishable from one manually dragged in from the toolbox. Used when
- *  a new form is created via "Add Dependent Form" so the child never starts
- *  out silently missing the link back to its parent record. Required by
- *  default since a dependent record without its parent rarely makes sense,
- *  but the user is free to change that afterward. */
+ *  parent (e.g. Punch -> Employee). Used when a new form is created via "Add
+ *  Dependent Form" so the child never starts out silently missing the link
+ *  back to its parent record. Required by default since a dependent record
+ *  without its parent rarely makes sense. Otherwise a real, ordinary
+ *  reference element — what makes it a protected "parent link" specifically
+ *  is FormMetaState.parentFormId matching this element's formRef (see
+ *  isParentLinkElement below), not anything stored on the element itself. */
 export function createParentReferenceField(parentFormId: string, parentName: string): FormElement {
   const base = createElement('form')
   return {
@@ -154,6 +155,23 @@ export function createParentReferenceField(parentFormId: string, parentName: str
     formRef: parentFormId,
     behavior: { ...base.behavior, required: 'always' },
   }
+}
+
+/** True when `el` is THE Form Reference field representing a dependent
+ *  form's link back to its parent (as opposed to an ordinary reference field
+ *  a user added by hand, even one that happens to also point at the same
+ *  parent form). Guards against a real, previously-shipped bug: this field
+ *  used to be a plain, fully-editable/deletable reference field with nothing
+ *  marking it as structural — deleting it and saving would drop its backing
+ *  column, silently wiping the reference value from every existing record,
+ *  while the form's own parent_form_id was left dangling (pointing at a
+ *  relationship the form no longer actually carries data for). Callers use
+ *  this to hide/disable the delete action and lock "Referenced Form" for
+ *  this specific element, without restricting ordinary reference fields at
+ *  all (including ones a user manually re-points at the same parent form —
+ *  only the ORIGINAL auto-injected field, matched by formRef, is guarded). */
+export function isParentLinkElement(el: FormElement, parentFormId: string | undefined): boolean {
+  return !!parentFormId && el.component === 'form' && el.formRef === parentFormId
 }
 
 /** Builds the "Account" section injected when the "Create user with each
