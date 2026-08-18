@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { Menu as MenuIcon, X, ArrowLeft } from 'lucide-react'
 import { runtimeRouter } from '@/runtime-router'
-import { ThemeProvider } from '@/features/theme/ThemeProvider'
-import { mergeTheme } from '@/features/theme/default-theme'
 import { useAuthStore } from '@/stores/auth'
 import { usePermission } from '@/features/auth/permissions'
 import { buildRuntimeNavTree } from './nav'
@@ -47,10 +45,12 @@ export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recor
   const { data: form } = useFormDef(formId)
   const { data: record } = useRecordDetail(formId, recordId)
   const recordTitle = resolveRecordTitle(form?.fields, record)
-  const theme = mergeTheme(snapshot.theme)
 
   return (
-    <ThemeProvider theme={theme} scopeElement={document.getElementById('runtime-root')}>
+    // Theming is provided once by the shared ThemeProvider in
+    // runtime-router.tsx's RuntimeAppRouteComponent — see that file's
+    // comment for why this page doesn't own its own instance.
+    <>
       <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'hsl(var(--background))', color: 'hsl(var(--foreground))' }}>
         <div className="hidden md:block">
           <RuntimeSidebar appName={snapshot.app.name} navTree={navTree} clientId={clientId} appId={appId} activeMenuId="" />
@@ -123,6 +123,6 @@ export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recor
           </main>
         </div>
       </div>
-    </ThemeProvider>
+    </>
   )
 }

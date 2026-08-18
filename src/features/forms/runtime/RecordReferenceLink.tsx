@@ -50,13 +50,19 @@ export function RecordReferenceLink({ formId, recordId, displayField }: RecordRe
   if (!formId || !activeMembership?.client_id || !activeMembership?.app_id) return <>{label}</>
 
   return (
-    // stopPropagation on the wrapper's capture phase, not RuntimeLink's own
-    // onClick prop — that prop only fires on the subset of clicks RuntimeLink
-    // itself intercepts (a plain left-click), so a modified click (middle-
-    // click/ctrl/cmd, opening a new tab) would otherwise still bubble up to
+    // stopPropagation on the wrapper's BUBBLE phase (plain onClick), not
+    // capture (onClickCapture) and not RuntimeLink's own onClick prop.
+    // Capture flows outside-in, so a capture-phase stop on this span would
+    // fire before the event ever reaches the child <a> — pre-empting
+    // RuntimeLink's own onClick/preventDefault entirely and leaving the
+    // browser to fall through to a full-page native <a href> navigation
+    // (this was a real, reproduced bug: every click hard-reloaded the page).
+    // A bubble-phase stop here runs AFTER RuntimeLink's handler already ran,
+    // so it still reaches every click (including modified ones RuntimeLink
+    // itself doesn't intercept) while only blocking further propagation to
     // an ancestor row's own onClick (e.g. RecordsTable's row-opens-drawer
-    // handler) even though this link handled it in its own tab.
-    <span onClickCapture={(e) => e.stopPropagation()}>
+    // handler) once RuntimeLink/the browser has already handled it.
+    <span onClick={(e) => e.stopPropagation()}>
       <RuntimeLink
         to={`/${activeMembership.client_id}/${activeMembership.app_id}/forms/${formId}/${id}`}
         className="text-[hsl(var(--primary))] underline-offset-2 hover:underline"

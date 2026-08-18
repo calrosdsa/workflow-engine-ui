@@ -10,6 +10,8 @@ import { z } from 'zod'
 import { authApi } from '@/features/auth/api'
 import { useAuthStore } from '@/stores/auth'
 import { runtimeApi } from '@/features/runtime/api'
+import { ThemeProvider } from '@/features/theme/ThemeProvider'
+import { mergeTheme } from '@/features/theme/default-theme'
 import { RuntimeAppShell } from '@/features/runtime/RuntimeAppShell'
 import { RuntimeRecordPage } from '@/features/runtime/RuntimeRecordPage'
 import { RuntimeFormRecordPage } from '@/features/runtime/RuntimeFormRecordPage'
@@ -118,9 +120,22 @@ function RuntimeAppRouteComponent() {
   // Inferred locally from THIS route's own `loader` return type above —
   // correct without needing the global Register.
   const snapshot = runtimeAppRoute.useLoaderData()
+  const theme = mergeTheme(snapshot.theme)
   return (
     <RuntimeSnapshotContext.Provider value={snapshot}>
-      <Outlet />
+      {/* Single shared ThemeProvider for the whole runtime session, scoped
+          here rather than in each leaf page (RuntimeAppShell/RuntimeRecordPage/
+          RuntimeFormRecordPage). Those three are separate route matches, so
+          navigating between them (e.g. a reference-field link from a Search
+          menu to a form's own detail page) unmounts one leaf and mounts the
+          next — if each owned its own ThemeProvider, the outgoing instance's
+          cleanup strips .dark/CSS vars from #runtime-root a tick before the
+          incoming instance's effect re-applies them, producing a visible
+          light/dark flash on every such navigation. One provider that
+          outlives all of them removes that gap entirely. */}
+      <ThemeProvider theme={theme} scopeElement={document.getElementById('runtime-root')}>
+        <Outlet />
+      </ThemeProvider>
     </RuntimeSnapshotContext.Provider>
   )
 }

@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { Menu as MenuIcon, X, PencilRuler } from 'lucide-react'
 import { runtimeRouter } from '@/runtime-router'
-import { ThemeProvider } from '@/features/theme/ThemeProvider'
-import { mergeTheme } from '@/features/theme/default-theme'
 import { useAuthStore } from '@/stores/auth'
 import { canViewMenu, hasPermission } from '@/features/auth/permissions'
 import { buildRuntimeNavTree, runtimeAncestors, toMenu } from './nav'
@@ -44,19 +42,15 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
 
   const canViewCurrent = canViewMenu(currentMenu, roleId, permissions)
 
-  const theme = mergeTheme(snapshot.theme)
   const RuntimeRenderer = MENU_TYPE_REGISTRY[currentMenu.menu_type].runtimeRenderer
 
   return (
-    // Scoped to #runtime-root (runtime.html's mount node, guaranteed to
-    // exist before this renders) rather than the default
-    // document.documentElement. Otherwise the runtime's theme — including
-    // its dark class and inline --foreground/--background — writes onto
-    // <html>, which is shared with the builder's index.html DOM whenever
-    // both are visited in the same tab, silently breaking the builder's own
-    // (unthemed) text contrast. Same leak the preview pane in
-    // ThemeSection.tsx already guards against for the same reason.
-    <ThemeProvider theme={theme} scopeElement={document.getElementById('runtime-root')}>
+    // Theming (dark class + CSS vars on #runtime-root) is provided once by
+    // the shared ThemeProvider in runtime-router.tsx's RuntimeAppRouteComponent
+    // — not here — so navigating between this shell and sibling leaf routes
+    // (RuntimeRecordPage, RuntimeFormRecordPage) doesn't unmount/remount the
+    // provider and cause a light/dark flash. See that file's comment for why.
+    <>
       <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'hsl(var(--background))', color: 'hsl(var(--foreground))' }}>
         {/* Desktop sidebar */}
         <div className="hidden md:block">
@@ -139,6 +133,6 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
           </main>
         </div>
       </div>
-    </ThemeProvider>
+    </>
   )
 }
