@@ -13,7 +13,7 @@ import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuil
 import { nanoid } from '@/features/workflows/builder/nanoid'
 import { RecordDetailPanel } from './RecordDetailPanel'
 import { resolveRecordTitle } from './record-title'
-import { ReferenceValueLabel } from './ReferenceValueLabel'
+import { RecordReferenceLink } from './RecordReferenceLink'
 import { parseLayout } from '@/features/form-builder/serialize'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
 import type { FormRecord } from '@/features/forms/types'
@@ -146,7 +146,7 @@ export function RecordsTable({
       label: field?.label ?? key,
       sortable: true,
       render: isReference
-        ? (row: FormRecord) => <ReferenceValueLabel formId={field.reference_table} recordId={row[key]} displayField={field.display_field} />
+        ? (row: FormRecord) => <RecordReferenceLink formId={field.reference_table} recordId={row[key]} displayField={field.display_field} />
         : undefined,
     }
   })

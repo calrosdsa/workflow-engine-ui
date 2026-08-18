@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/auth'
 import { runtimeApi } from '@/features/runtime/api'
 import { RuntimeAppShell } from '@/features/runtime/RuntimeAppShell'
 import { RuntimeRecordPage } from '@/features/runtime/RuntimeRecordPage'
+import { RuntimeFormRecordPage } from '@/features/runtime/RuntimeFormRecordPage'
 import { RuntimeLoginPage } from '@/features/runtime/RuntimeLoginPage'
 import { NotFoundPage } from '@/features/runtime/NotFoundPage'
 import type { AppSnapshot } from '@/features/runtime/types'
@@ -227,6 +228,32 @@ const runtimeRecordRoute = createRoute({
   component: RuntimeRecordRoute,
 })
 
+// Reachable for ANY form's record regardless of whether a Search menu is
+// built for it — the destination every reference-field link in the runtime
+// points to (RecordReferenceLink), rather than a menu-scoped URL. Declared
+// under a literal "forms/" segment specifically so it can never collide
+// with a real menu slug (a menu is free to be named "forms" without
+// shadowing this route, since this one requires a further /$formId/$recordId
+// beneath it that a bare menu-slug route never matches). Always the SAME
+// destination for a given (formId, recordId), independent of how many (zero,
+// one, or several) Search menus happen to expose that form — see the
+// alternative that was considered and rejected: preferring a menu's own
+// /$menuSlug/$recordId URL when one exists is ambiguous the moment more than
+// one Search menu targets the same form, with no principled way to pick one.
+function RuntimeFormRecordRoute() {
+  const snapshot = useRuntimeSnapshotContext()
+  const { clientId, appId } = runtimeAppRoute.useParams()
+  const { formId, recordId } = runtimeFormRecordRoute.useParams()
+
+  return <RuntimeFormRecordPage snapshot={snapshot} clientId={clientId} appId={appId} formId={formId} recordId={recordId} />
+}
+
+const runtimeFormRecordRoute = createRoute({
+  getParentRoute: () => runtimeAppRoute,
+  path: '/forms/$formId/$recordId',
+  component: RuntimeFormRecordRoute,
+})
+
 const runtimeCatchAllRoute = createRoute({
   getParentRoute: () => runtimeRootRoute,
   path: '$',
@@ -238,9 +265,15 @@ const runtimeRouteTree = runtimeRootRoute.addChildren([
     runtimeLoginRoute,
     runtimeIndexRoute,
     // More-specific-before-less-specific (matching /login's own ordering
-    // rationale above): '/$menuSlug/$recordId' must be tried before the
-    // single-segment '/$menuSlug' so a record URL doesn't get swallowed as
-    // an (invalid) menu slug lookup first.
+    // rationale above): '/forms/$formId/$recordId' and '/$menuSlug/$recordId'
+    // must both be tried before the single-segment '/$menuSlug' so neither
+    // gets swallowed as an (invalid) menu slug lookup first. '/forms/...'
+    // itself doesn't need to precede '/$menuSlug/$recordId' — TanStack
+    // Router already prefers the literal "forms" segment match over the
+    // dynamic $menuSlug one regardless of declaration order — but it's
+    // listed first here to read in the same most-specific-first order as
+    // the rest of this list.
+    runtimeFormRecordRoute,
     runtimeRecordRoute,
     runtimeMenuRoute,
   ]),

@@ -28,6 +28,19 @@ const BUILDER_ROUTE_PREFIXES = [
 // serve runtime.html instead. Production hosting needs the equivalent rule
 // at the web-server/CDN layer (route /{clientId}/{appId}/* to runtime.html,
 // everything else to index.html) — this only covers `npm run dev`.
+//
+// 4-5 segments deep, with a literal "forms" third segment, is ALSO a
+// runtime URL: /{clientId}/{appId}/forms/{formId}/{recordId}
+// (runtime-router.tsx's runtimeFormRecordRoute — the reference-field
+// detail-link target, reachable regardless of whether a Search menu points
+// at that form). This is intentionally checked as its own separate case
+// rather than folded into looksLikeRuntimePath's segment-count range,
+// since a bare "widen the range to 2-5" would also start swallowing any
+// future *builder* route that happens to be 4-5 segments deep (e.g. a
+// hypothetical /applications/{appId}/forms/{formId}/{x}/{y}) — segments[0]
+// (the BUILDER_ROUTE_PREFIXES check) can't distinguish those from a runtime
+// URL the way this shape-specific check can, since a runtime URL's first
+// segment is a client/app UUID, never one of BUILDER_ROUTE_PREFIXES.
 function runtimeDevFallback(): Plugin {
   return {
     name: 'runtime-dev-fallback',
@@ -35,13 +48,16 @@ function runtimeDevFallback(): Plugin {
       server.middlewares.use((req, _res, next) => {
         const url = req.url?.split('?')[0] ?? ''
         const segments = url.split('/').filter(Boolean)
+        const isExcluded =
+          url.startsWith('/api') ||
+          url.startsWith('/@') ||
+          url.startsWith('/node_modules') ||
+          url.includes('.') ||
+          BUILDER_ROUTE_PREFIXES.includes(segments[0])
         const looksLikeRuntimePath =
-          (segments.length === 2 || segments.length === 3) &&
-          !url.startsWith('/api') &&
-          !url.startsWith('/@') &&
-          !url.startsWith('/node_modules') &&
-          !url.includes('.') &&
-          !BUILDER_ROUTE_PREFIXES.includes(segments[0])
+          !isExcluded &&
+          ((segments.length === 2 || segments.length === 3) ||
+            (segments.length === 5 && segments[2] === 'forms'))
         if (looksLikeRuntimePath) {
           req.url = '/runtime.html'
         }
