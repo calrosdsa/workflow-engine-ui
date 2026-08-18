@@ -15,6 +15,7 @@ import { mergeTheme } from '@/features/theme/default-theme'
 import { RuntimeAppShell } from '@/features/runtime/RuntimeAppShell'
 import { RuntimeRecordPage } from '@/features/runtime/RuntimeRecordPage'
 import { RuntimeFormRecordPage } from '@/features/runtime/RuntimeFormRecordPage'
+import { RuntimeFormCreatePage } from '@/features/runtime/RuntimeFormCreatePage'
 import { RuntimeLoginPage } from '@/features/runtime/RuntimeLoginPage'
 import { NotFoundPage } from '@/features/runtime/NotFoundPage'
 import type { AppSnapshot } from '@/features/runtime/types'
@@ -269,6 +270,29 @@ const runtimeFormRecordRoute = createRoute({
   component: RuntimeFormRecordRoute,
 })
 
+// The formId-keyed counterpart to AddMenuRuntime — reachable for ANY form
+// regardless of whether an Add menu is built for it, same rationale as
+// runtimeFormRecordRoute above (a form can have zero, one, or several Add
+// menus, with no principled way to prefer one). A literal "new" segment
+// under /forms/$formId/, sibling to (and matched BEFORE, per this route
+// tree's own more-specific-before-less-specific convention) the dynamic
+// /forms/$formId/$recordId — otherwise "new" would be swallowed as a
+// $recordId lookup and 404 inside RuntimeFormRecordRoute instead of
+// reaching this route at all.
+function RuntimeFormCreateRoute() {
+  const snapshot = useRuntimeSnapshotContext()
+  const { clientId, appId } = runtimeAppRoute.useParams()
+  const { formId } = runtimeFormCreateRoute.useParams()
+
+  return <RuntimeFormCreatePage snapshot={snapshot} clientId={clientId} appId={appId} formId={formId} />
+}
+
+const runtimeFormCreateRoute = createRoute({
+  getParentRoute: () => runtimeAppRoute,
+  path: '/forms/$formId/new',
+  component: RuntimeFormCreateRoute,
+})
+
 const runtimeCatchAllRoute = createRoute({
   getParentRoute: () => runtimeRootRoute,
   path: '$',
@@ -287,7 +311,12 @@ const runtimeRouteTree = runtimeRootRoute.addChildren([
     // Router already prefers the literal "forms" segment match over the
     // dynamic $menuSlug one regardless of declaration order — but it's
     // listed first here to read in the same most-specific-first order as
-    // the rest of this list.
+    // the rest of this list. Within '/forms/$formId/*', the literal 'new'
+    // route is listed before the dynamic '$recordId' one for the same
+    // reason — TanStack Router already prefers literal over dynamic
+    // segments regardless of order, but the explicit ordering documents
+    // the intent.
+    runtimeFormCreateRoute,
     runtimeFormRecordRoute,
     runtimeRecordRoute,
     runtimeMenuRoute,

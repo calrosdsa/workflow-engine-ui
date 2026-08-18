@@ -2,6 +2,7 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PermissionGate } from '@/features/auth/PermissionGate'
 import { RecordsTable } from '@/features/forms/runtime/RecordsTable'
+import { RuntimeLink } from '@/features/runtime/RuntimeLink'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import type { MenuRuntimeRendererProps } from '../menu-registry'
 import type { SearchMenuConfig, AddMenuConfig } from '../types'
@@ -12,11 +13,19 @@ import type { FormRecord } from '@/features/forms/types'
 // filterable table of records for a form" lives there now, shared with the
 // dashboard's table widget. What's left here is Search-menu-specific:
 // the page heading, the filter toggle being on by default, the "Create
-// Record" button gated on the sibling Add menu existing, and expanding a
-// record to its own full page via onNavigate.
-export function SearchMenuRuntime({ menu, menus, onNavigate }: MenuRuntimeRendererProps) {
+// Record" button, and expanding a record to its own full page via onNavigate.
+export function SearchMenuRuntime({ menu, menus, clientId, appId, onNavigate }: MenuRuntimeRendererProps) {
   const config = menu.config as SearchMenuConfig
 
+  // Prefer a sibling Add menu when one exists (keeps any Add-menu-specific
+  // config — success message, redirect-after-save — in play), but a Search
+  // menu shouldn't have no "Create" button just because nobody built an Add
+  // menu for the same form. Falls back to the formId-keyed create route
+  // (RuntimeFormCreatePage), the same way RecordReferenceLink falls back to
+  // the formId-keyed detail route instead of requiring a Search menu to
+  // exist for the target form — see that component's own reasoning for why
+  // there's no principled way to prefer one Add menu over another once more
+  // than one exists, which is also why this only looks for the first match.
   const addMenu = menus?.find((m) => m.menu_type === 'add' && (m.config as AddMenuConfig).form_id === config.form_id)
   // Same query RecordsTable itself makes for this formId — React Query
   // dedupes both calls under the shared cache key, so this costs no extra
@@ -39,20 +48,19 @@ export function SearchMenuRuntime({ menu, menus, onNavigate }: MenuRuntimeRender
         title={menu.name}
         onExpandRecord={(r: FormRecord) => onNavigate?.(`${menu.slug}/${r.id as string}`)}
         headerActions={
-          // No disabled button with a tooltip explaining why — if there's
-          // genuinely nothing to link to (an Add menu was deleted after
-          // this Search menu was built, or a form built before Add menus
-          // auto-paired), offering a button that can never do anything is
-          // worse than not offering one at all; a viewer who has create
-          // access on the form still can't act on a button they can't
-          // click, so hiding it is strictly clearer.
-          addMenu && (
-            <PermissionGate need={`forms:${config.form_id}:create`}>
+          <PermissionGate need={`forms:${config.form_id}:create`}>
+            {addMenu ? (
               <Button size="sm" className="gap-1.5" onClick={() => onNavigate?.(addMenu.slug)}>
                 <Plus size={14} />{createLabel}
               </Button>
-            </PermissionGate>
-          )
+            ) : (
+              <RuntimeLink to={`/${clientId}/${appId}/forms/${config.form_id}/new`}>
+                <Button size="sm" className="gap-1.5">
+                  <Plus size={14} />{createLabel}
+                </Button>
+              </RuntimeLink>
+            )}
+          </PermissionGate>
         }
       />
     </div>
