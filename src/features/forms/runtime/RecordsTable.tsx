@@ -13,14 +13,16 @@ import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuil
 import { nanoid } from '@/features/workflows/builder/nanoid'
 import { RecordDetailPanel } from './RecordDetailPanel'
 import { resolveRecordTitle } from './record-title'
+import { formatSystemDatetime } from './format-value'
 import { RecordReferenceLink } from './RecordReferenceLink'
 import { parseLayout } from '@/features/form-builder/serialize'
 import { CardLayout } from '@/features/menus/saved-views/layouts/CardLayout'
 import { CalendarLayout } from '@/features/menus/saved-views/layouts/CalendarLayout'
 import { KanbanLayout } from '@/features/menus/saved-views/layouts/KanbanLayout'
+import { SYSTEM_FIELDS } from '@/features/menus/saved-views/types'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
 import type { FormRecord } from '@/features/forms/types'
-import type { ViewLayout, CardLayoutConfig, CalendarLayoutConfig, KanbanLayoutConfig } from '@/features/menus/saved-views/types'
+import type { ViewLayout, CalendarLayoutConfig, KanbanLayoutConfig } from '@/features/menus/saved-views/types'
 
 export interface RecordsTableProps {
   formId: string
@@ -66,7 +68,7 @@ export interface RecordsTableProps {
    *  reuse the identical searchRecords query and record-detail drawer —
    *  only the results' presentation differs. */
   layout?: ViewLayout
-  layoutConfig?: CardLayoutConfig | CalendarLayoutConfig | KanbanLayoutConfig
+  layoutConfig?: CalendarLayoutConfig | KanbanLayoutConfig
   /** Lets the viewer drag-reorder the List layout's columns — omitted (no
    *  drag handles, unchanged behavior) unless the caller is rendering a
    *  saved view that supports persisting column order (SearchMenuRuntime,
@@ -154,23 +156,36 @@ export function RecordsTable({
     return <RecordsTableMessage icon={AlertCircle} text="Couldn't load this form. It may have been deleted." tone="error" />
   }
 
+  // Created At / Last Modified — every record already carries these two
+  // audit columns (selectCols(), internal/forms/store/records.go), so
+  // they're always pickable/sortable/displayable alongside the form's own
+  // fields, without needing a backend change. Only affects lookups that
+  // resolve a column KEY to its field metadata (label, type) — the
+  // no-explicit-columns fallback below deliberately stays real-fields-only,
+  // so a saved view with no columns picked doesn't silently gain two new
+  // columns nobody asked for.
+  const fieldsWithSystem = [...form.fields, ...SYSTEM_FIELDS]
+
   // §6's named edge case: a saved view's Calendar/Kanban layout_config names
   // a field that was later deleted/renamed on the form — falls back to List
   // with a visible notice rather than a broken/silent render (see below).
-  const calendarFieldMissing = layout === 'calendar' && (!layoutConfig || !form.fields.some((f) => f.name === (layoutConfig as CalendarLayoutConfig).dateField))
+  const calendarFieldMissing = layout === 'calendar' && (!layoutConfig || !fieldsWithSystem.some((f) => f.name === (layoutConfig as CalendarLayoutConfig).dateField))
   const kanbanFieldMissing = layout === 'kanban' && (!layoutConfig || !form.fields.some((f) => f.name === (layoutConfig as KanbanLayoutConfig).groupField))
   const effectiveLayout: ViewLayout = layout === 'calendar' && calendarFieldMissing ? 'list' : layout === 'kanban' && kanbanFieldMissing ? 'list' : layout
 
   const visibleColumns = columnKeys && columnKeys.length > 0 ? columnKeys : form.fields.map((f) => f.name)
   const dataTableColumns = visibleColumns.map((key) => {
-    const field = form.fields.find((f) => f.name === key)
+    const field = fieldsWithSystem.find((f) => f.name === key)
     const isReference = field?.type === 'reference'
+    const isSystemDatetime = key === 'created_at' || key === 'updated_at'
     return {
       key,
       label: field?.label ?? key,
       sortable: true,
       render: isReference
         ? (row: FormRecord) => <RecordReferenceLink formId={field.reference_table} recordId={row[key]} displayField={field.display_field} />
+        : isSystemDatetime
+        ? (row: FormRecord) => formatSystemDatetime(row[key])
         : undefined,
     }
   })
@@ -238,12 +253,12 @@ export function RecordsTable({
 
       {allowFilter && (
         <>
-          <ActiveFiltersBar filter={filter} fields={form.fields} onRemoveCondition={removeTopLevelCondition} onResetAll={resetFilter} />
+          <ActiveFiltersBar filter={filter} fields={fieldsWithSystem} onRemoveCondition={removeTopLevelCondition} onResetAll={resetFilter} />
           {filterOpen && (
             <div className="mb-4">
               <FilterBuilder
                 group={filter}
-                fields={form.fields}
+                fields={fieldsWithSystem}
                 variables={[]}
                 onChange={(g) => { setFilter(g); setPage(1) }}
               />
@@ -265,10 +280,10 @@ export function RecordsTable({
 
       <div ref={scrollRef} className="overflow-x-auto overflow-y-hidden rounded-lg border" style={{ borderColor: 'hsl(var(--border))' }}>
         {effectiveLayout === 'card' && (
-          <CardLayout records={results?.records ?? []} fields={form.fields} config={(layoutConfig as CardLayoutConfig) ?? {}} onOpenRecord={openRecord} loading={isLoading} />
+          <CardLayout records={results?.records ?? []} fields={fieldsWithSystem} columns={visibleColumns} onOpenRecord={openRecord} loading={isLoading} />
         )}
         {effectiveLayout === 'calendar' && (
-          <CalendarLayout records={results?.records ?? []} fields={form.fields} config={layoutConfig as CalendarLayoutConfig} onOpenRecord={openRecord} loading={isLoading} />
+          <CalendarLayout records={results?.records ?? []} fields={fieldsWithSystem} config={layoutConfig as CalendarLayoutConfig} onOpenRecord={openRecord} loading={isLoading} />
         )}
         {effectiveLayout === 'kanban' && (
           <KanbanLayout records={results?.records ?? []} fields={form.fields} config={layoutConfig as KanbanLayoutConfig} onOpenRecord={openRecord} loading={isLoading} />

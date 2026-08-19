@@ -2,16 +2,27 @@
 // SavedViewRow (internal/menus/store/saved_views.go) and savedViewResponse
 // (api/menus/saved_views.go) exactly.
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
+import type { FieldDef } from '@/features/forms/types'
+
+// Every form record already carries these two audit columns — selectCols()
+// (internal/forms/store/records.go) appends them, unaliased, to every
+// SELECT for every form, so no backend change was needed to expose them;
+// this is purely a frontend addition making them pickable/sortable/
+// displayable alongside a form's own fields. Modeled as synthetic FieldDefs
+// (not real form.fields entries) so ColumnsPicker/CardLayout/SortRuleList
+// can all treat them identically to a real field without special-casing.
+// "Created by (Account)" was investigated and deliberately NOT added here —
+// no created-by column exists on any record; only a separate audit-log
+// table (internal/audit) tracks the actor per action, not currently exposed
+// through the search endpoint records use. Flagged as separate, larger
+// follow-up work, not bundled into this pass.
+export const SYSTEM_FIELDS: FieldDef[] = [
+  { name: 'created_at', label: 'Created At', type: 'datetime' },
+  { name: 'updated_at', label: 'Last Modified', type: 'datetime' },
+]
 
 export type SavedViewVisibility = 'private' | 'public' | 'role'
 export type ViewLayout = 'list' | 'card' | 'calendar' | 'kanban'
-
-export interface CardLayoutConfig {
-  titleField?: string
-  subtitleField?: string
-  imageField?: string
-  bodyFields?: string[]
-}
 
 export interface CalendarLayoutConfig {
   dateField: string
@@ -21,12 +32,15 @@ export interface KanbanLayoutConfig {
   groupField: string
 }
 
+// Card has no layout_config of its own — it renders the view's own visible
+// columns (ColumnsPicker) as body rows under the record's resolved title,
+// so nothing Card-specific needs to be picked or stored separately.
 export interface SavedViewConfig {
   filter: FilterGroup
   sort: SortRule[]
   columns: string[]
   layout: ViewLayout
-  layout_config?: CardLayoutConfig | CalendarLayoutConfig | KanbanLayoutConfig
+  layout_config?: CalendarLayoutConfig | KanbanLayoutConfig
 }
 
 export interface SavedView {

@@ -3,7 +3,9 @@ import { LayoutList, LayoutGrid, CalendarDays, Columns3 } from 'lucide-react'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Spinner } from '@/components/ui/spinner'
 import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuilder'
 import { nanoid } from '@/features/workflows/builder/nanoid'
@@ -12,9 +14,10 @@ import { useRoles } from '@/features/roles/hooks'
 import { ColumnsPicker } from './ColumnsPicker'
 import type { FieldDef } from '@/features/forms/types'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
+import { SYSTEM_FIELDS } from './types'
 import type {
   SavedView, SavedViewConfig, SavedViewVisibility, ViewLayout,
-  CardLayoutConfig, CalendarLayoutConfig, KanbanLayoutConfig,
+  CalendarLayoutConfig, KanbanLayoutConfig,
 } from './types'
 
 const LAYOUTS: { value: ViewLayout; label: string; icon: typeof LayoutList }[] = [
@@ -67,9 +70,12 @@ interface SaveViewDialogProps {
 // View-switcher UI element row). Visibility/role/default fields mirror the
 // menu editor's own Permission section conventions (permission_mode 'role'
 // + required_role_ids) so this reads as the same mechanism, not a new one.
-// Built as a Drawer (not a small centered Dialog) to match this app's other
-// record-editing surfaces — see pages/team/components/RoleFormDrawer.tsx,
-// whose padding/spacing/label conventions this mirrors directly.
+// Built as a Drawer (not a small centered Dialog) for record-editing-surface
+// consistency, but themed via hsl(var(--...)) tokens throughout (matching
+// RecordDetailPanel.tsx/RecordsTable.tsx's own runtime-drawer convention),
+// NOT the App Builder shell's light-only gray-scale classes (e.g.
+// RoleFormDrawer.tsx) — this drawer renders inside the runtime app, which is
+// themeable (light/dark), unlike the builder shell.
 export function SaveViewDialog({ open, onClose, appId, fields, config, editing, onSave, saving }: SaveViewDialogProps) {
   const seed = editing?.config ?? config
   const [name, setName] = useState(editing?.name ?? '')
@@ -88,7 +94,12 @@ export function SaveViewDialog({ open, onClose, appId, fields, config, editing, 
   )
   const { data: roles } = useRoles(appId)
 
-  const dateFields = fields.filter((f) => f.type === 'date' || f.type === 'datetime')
+  // Created At / Last Modified are pickable everywhere a real form field
+  // is — columns, filter, sort, and (since both are datetimes) Calendar's
+  // own date-field picker — without the form needing a real date field of
+  // its own.
+  const fieldsWithSystem = [...fields, ...SYSTEM_FIELDS]
+  const dateFields = fieldsWithSystem.filter((f) => f.type === 'date' || f.type === 'datetime')
   const groupFields = fields.filter((f) => f.type === 'enum' || f.type === 'reference')
 
   const layoutNeedsField = layout === 'calendar' ? !dateField : layout === 'kanban' ? !groupField : false
@@ -112,7 +123,7 @@ export function SaveViewDialog({ open, onClose, appId, fields, config, editing, 
 
   return (
     <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
-      <DrawerContent size="lg">
+      <DrawerContent size="lg" container={document.getElementById('runtime-root')}>
         <DrawerHeader>
           <DrawerTitle>{editing ? 'Edit view' : 'Save current as new view'}</DrawerTitle>
           <DrawerDescription>
@@ -124,15 +135,16 @@ export function SaveViewDialog({ open, onClose, appId, fields, config, editing, 
 
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-6">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Name this view *</label>
+            <FieldLabel>Name this view *</FieldLabel>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. My open tasks" maxLength={100} autoFocus />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-gray-600">Layout</label>
+            <FieldLabel>Layout</FieldLabel>
             <div className="grid grid-cols-4 gap-1.5">
               {LAYOUTS.map((l) => {
                 const disabled = (l.value === 'calendar' && dateFields.length === 0) || (l.value === 'kanban' && groupFields.length === 0)
+                const selected = !disabled && layout === l.value
                 return (
                   <button
                     key={l.value}
@@ -142,10 +154,14 @@ export function SaveViewDialog({ open, onClose, appId, fields, config, editing, 
                     title={disabled ? `No ${l.value === 'calendar' ? 'date/datetime' : 'enum/reference'} field on this form` : undefined}
                     className={cn(
                       'flex flex-col items-center gap-1 rounded-md border px-2 py-2 text-xs transition-colors',
-                      disabled && 'cursor-not-allowed border-gray-200 opacity-40',
-                      !disabled && layout === l.value && 'border-indigo-400 bg-indigo-50 text-indigo-700',
-                      !disabled && layout !== l.value && 'border-gray-200 text-gray-600 hover:bg-gray-50',
+                      disabled && 'cursor-not-allowed opacity-40',
+                      !disabled && !selected && 'hover:bg-[hsl(var(--accent))]',
                     )}
+                    style={{
+                      borderColor: selected ? 'hsl(var(--primary))' : 'hsl(var(--border))',
+                      backgroundColor: selected ? 'hsl(var(--accent))' : 'transparent',
+                      color: selected ? 'hsl(var(--primary))' : 'hsl(var(--foreground))',
+                    }}
                   >
                     <l.icon size={16} />
                     {l.label}
@@ -156,59 +172,56 @@ export function SaveViewDialog({ open, onClose, appId, fields, config, editing, 
           </div>
 
           {layout === 'calendar' && (
-            <div className="rounded-md border border-gray-200 p-2">
+            <div className="rounded-md border p-2" style={{ borderColor: 'hsl(var(--border))' }}>
               <FieldPicker label="Date field" fields={dateFields} value={dateField} onChange={(v) => setDateField(v ?? '')} required />
             </div>
           )}
 
           {layout === 'kanban' && (
-            <div className="rounded-md border border-gray-200 p-2">
+            <div className="rounded-md border p-2" style={{ borderColor: 'hsl(var(--border))' }}>
               <FieldPicker label="Group by field" fields={groupFields} value={groupField} onChange={(v) => setGroupField(v ?? '')} required />
             </div>
           )}
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-gray-600">Columns</label>
-            <ColumnsPicker fields={fields} columns={columns} onChange={setColumns} />
+            <FieldLabel>Columns</FieldLabel>
+            <ColumnsPicker fields={fieldsWithSystem} columns={columns} onChange={setColumns} />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-gray-600">Filter</label>
-            <FilterBuilder group={filter} fields={fields} variables={[]} onChange={setFilter} />
+            <FieldLabel>Filter</FieldLabel>
+            <FilterBuilder group={filter} fields={fieldsWithSystem} variables={[]} onChange={setFilter} />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-gray-600">Sort</label>
+            <FieldLabel>Sort</FieldLabel>
             <SortRuleList
               rules={sort}
-              fields={fields.map((f) => ({ name: f.name, label: f.label }))}
+              fields={fieldsWithSystem.map((f) => ({ name: f.name, label: f.label }))}
               onChange={setSort}
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-gray-600">Visibility</label>
-            <div className="space-y-2">
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
-                <input type="radio" name="visibility" checked={visibility === 'private'} onChange={() => setVisibility('private')} />
-                Private — only you see this view
+            <FieldLabel>Visibility</FieldLabel>
+            <RadioGroup value={visibility} onValueChange={(v) => setVisibility(v as SavedViewVisibility)} className="flex flex-col gap-2">
+              <label className="flex cursor-pointer items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}>
+                <RadioGroupItem value="private" /> Private — only you see this view
               </label>
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
-                <input type="radio" name="visibility" checked={visibility === 'public'} onChange={() => setVisibility('public')} />
-                Public — every viewer of this menu sees this view
+              <label className="flex cursor-pointer items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}>
+                <RadioGroupItem value="public" /> Public — every viewer of this menu sees this view
               </label>
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
-                <input type="radio" name="visibility" checked={visibility === 'role'} onChange={() => setVisibility('role')} />
-                Specific roles — only members holding these roles see this view
+              <label className="flex cursor-pointer items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}>
+                <RadioGroupItem value="role" /> Specific roles — only members holding these roles see this view
               </label>
-            </div>
+            </RadioGroup>
           </div>
 
           {visibility === 'role' && (
-            <div className="space-y-1.5 rounded-md border border-gray-200 p-2">
-              {(roles ?? []).length === 0 && <p className="text-xs text-gray-400">No roles found for this app.</p>}
+            <div className="space-y-1.5 rounded-md border p-2" style={{ borderColor: 'hsl(var(--border))' }}>
+              {(roles ?? []).length === 0 && <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No roles found for this app.</p>}
               {(roles ?? []).map((r) => (
-                <label key={r.id} className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                <label key={r.id} className="flex cursor-pointer items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}>
                   <Checkbox checked={roleIds.includes(r.id)} onCheckedChange={() => toggleRole(r.id)} />
                   {r.name}
                 </label>
@@ -216,7 +229,7 @@ export function SaveViewDialog({ open, onClose, appId, fields, config, editing, 
             </div>
           )}
 
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+          <label className="flex cursor-pointer items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}>
             <Checkbox checked={isDefault} onCheckedChange={(c) => setIsDefault(!!c)} />
             Make this the default view {visibility === 'private' ? '(for you)' : visibility === 'role' ? '(for these roles)' : '(for everyone)'}
           </label>
@@ -234,6 +247,10 @@ export function SaveViewDialog({ open, onClose, appId, fields, config, editing, 
   )
 }
 
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <label className="mb-1.5 block text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>{children}</label>
+}
+
 function FieldPicker({ label, fields, value, onChange, required }: {
   label: string
   fields: FieldDef[]
@@ -243,17 +260,17 @@ function FieldPicker({ label, fields, value, onChange, required }: {
 }) {
   return (
     <div>
-      <label className="mb-1 block text-[11px] font-medium text-gray-500">{label}</label>
-      <select
+      <label className="mb-1 block text-[11px] font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>{label}</label>
+      <Select
         value={value ?? '__none__'}
         onChange={(e) => onChange(e.target.value === '__none__' ? undefined : e.target.value)}
-        className="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700"
+        className="h-8 text-xs"
       >
         {!required && <option value="__none__">None</option>}
         {fields.map((f) => (
           <option key={f.name} value={f.name}>{f.label || f.name}</option>
         ))}
-      </select>
+      </Select>
     </div>
   )
 }
@@ -272,27 +289,20 @@ function SortRuleList({ rules, fields, onChange }: {
     <div className="space-y-1.5">
       {rules.map((r) => (
         <div key={r.id} className="flex items-center gap-1.5">
-          <select
-            value={r.field}
-            onChange={(e) => updateRule(r.id, { field: e.target.value })}
-            className="min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-1.5 py-1 text-[11px] text-gray-700"
-          >
+          <Select value={r.field} onChange={(e) => updateRule(r.id, { field: e.target.value })} className="h-8 min-w-0 flex-1 text-[11px]">
             {fields.map((f) => (
               <option key={f.name} value={f.name}>{f.label || f.name}</option>
             ))}
-          </select>
-          <select
-            value={r.dir}
-            onChange={(e) => updateRule(r.id, { dir: e.target.value as 'asc' | 'desc' })}
-            className="shrink-0 rounded-md border border-gray-200 bg-white px-1.5 py-1 text-[11px] text-gray-700"
-          >
+          </Select>
+          <Select value={r.dir} onChange={(e) => updateRule(r.id, { dir: e.target.value as 'asc' | 'desc' })} className="h-8 w-auto shrink-0 text-[11px]">
             <option value="asc">Ascending</option>
             <option value="desc">Descending</option>
-          </select>
+          </Select>
           <button
             type="button"
             onClick={() => removeRule(r.id)}
-            className="shrink-0 rounded px-1.5 py-1 text-[11px] text-gray-400 hover:text-red-500"
+            className="shrink-0 rounded px-1.5 py-1 text-[11px] hover:text-red-500"
+            style={{ color: 'hsl(var(--muted-foreground))' }}
           >
             ✕
           </button>
@@ -301,7 +311,8 @@ function SortRuleList({ rules, fields, onChange }: {
       <button
         type="button"
         onClick={addRule}
-        className="w-full rounded-md border border-dashed border-gray-200 py-1 text-[11px] text-gray-500 hover:border-gray-300"
+        className="w-full rounded-md border border-dashed py-1 text-[11px] transition-colors hover:bg-[hsl(var(--accent))]"
+        style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}
       >
         + Sort rule
       </button>

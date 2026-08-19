@@ -53,12 +53,12 @@ export function ColumnsPicker({ fields, columns, onChange }: ColumnsPickerProps)
   return (
     <div className="grid grid-cols-2 gap-3">
       <div>
-        <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600">
-          <Eye size={12} className="text-gray-400" />
+        <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          <Eye size={12} />
           Visible columns
         </p>
-        <div className="min-h-[3rem] space-y-1 rounded-md border border-gray-200 p-1.5">
-          {visible.length === 0 && <p className="px-1.5 py-2 text-[11px] text-gray-400">No visible columns.</p>}
+        <div className="min-h-[3rem] space-y-1 rounded-md border p-1.5" style={{ borderColor: 'hsl(var(--border))' }}>
+          {visible.length === 0 && <p className="px-1.5 py-2 text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>No visible columns.</p>}
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleVisibleDragEnd}>
             <SortableContext items={visibleNames} strategy={verticalListSortingStrategy}>
               {visible.map((f) => (
@@ -70,12 +70,12 @@ export function ColumnsPicker({ fields, columns, onChange }: ColumnsPickerProps)
       </div>
 
       <div>
-        <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600">
-          <EyeOff size={12} className="text-gray-400" />
+        <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          <EyeOff size={12} />
           Hidden columns
         </p>
-        <div className="min-h-[3rem] space-y-1 rounded-md border border-gray-200 p-1.5">
-          {hidden.length === 0 && <p className="px-1.5 py-2 text-[11px] text-gray-400">No hidden columns.</p>}
+        <div className="min-h-[3rem] space-y-1 rounded-md border p-1.5" style={{ borderColor: 'hsl(var(--border))' }}>
+          {hidden.length === 0 && <p className="px-1.5 py-2 text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>No hidden columns.</p>}
           {hidden.map((f) => (
             <ColumnRow key={f.name} field={f} onAction={() => show(f.name)} actionIcon={Eye} actionTitle="Show column" />
           ))}
@@ -93,27 +93,30 @@ function ColumnRow({ field, draggable, onAction, actionIcon: ActionIcon, actionT
   actionTitle: string
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.name, disabled: !draggable })
-  const style = draggable ? { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 } : undefined
+  const style = {
+    backgroundColor: 'hsl(var(--muted))',
+    ...(draggable ? { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 } : {}),
+  }
 
   return (
     <div
       ref={draggable ? setNodeRef : undefined}
       style={style}
-      className="flex items-center gap-1.5 rounded bg-white px-1.5 py-1 text-[12px] text-gray-700"
+      className="flex items-center gap-1.5 rounded px-1.5 py-1 text-[12px]"
     >
       {draggable ? (
-        <span {...attributes} {...listeners} className="cursor-grab touch-none text-gray-300 hover:text-gray-500 active:cursor-grabbing">
+        <span {...attributes} {...listeners} className="cursor-grab touch-none opacity-60 hover:opacity-100 active:cursor-grabbing">
           <GripVertical size={12} />
         </span>
       ) : (
         <span className="w-3" />
       )}
-      <span className="flex-1 truncate">{field.label || field.name}</span>
+      <span className="flex-1 truncate" style={{ color: 'hsl(var(--foreground))' }}>{field.label || field.name}</span>
       <button
         type="button"
         onClick={onAction}
         title={actionTitle}
-        className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+        className="shrink-0 rounded p-0.5 opacity-60 hover:bg-[hsl(var(--accent))] hover:opacity-100"
       >
         <ActionIcon size={12} />
       </button>
