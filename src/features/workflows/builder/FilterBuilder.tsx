@@ -182,6 +182,16 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
   const needsValue = opNeedsValue(condition.op)
   const ignoresField = opIgnoresField(condition.op)
   const isExpr = condition.value_mode === 'expression'
+  const selectedField = fields.find((f) => f.name === condition.field)
+  // An enum field's Value input becomes a picker of its real enum_values —
+  // previously a plain text box regardless of field type, so choosing e.g.
+  // "Status = active" required typing the raw stored value from memory with
+  // no indication of what the valid values even were (enum_values IS the
+  // display text here; this codebase's enum fields have no separate
+  // label/value pair — see FieldDef.enum_values, string[]). "in list" keeps
+  // the existing comma-separated text input since a single <select> can't
+  // express a multi-value list.
+  const isEnumValue = selectedField?.type === 'enum' && !!selectedField.enum_values?.length && condition.op !== 'in'
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-2">
@@ -257,6 +267,17 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
                 <Code2 size={12} />
               </button>
             </div>
+          ) : isEnumValue ? (
+            <select
+              value={condition.value == null ? '' : String(condition.value)}
+              onChange={(e) => onChange({ value: e.target.value })}
+              className="h-7 w-full rounded-md border border-slate-200 bg-white px-1.5 text-[12px] text-slate-700 focus:border-rose-400 focus:outline-none"
+            >
+              <option value="">select value…</option>
+              {selectedField!.enum_values!.map((v) => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
           ) : (
             <Input
               value={condition.value == null ? '' : String(condition.value)}
