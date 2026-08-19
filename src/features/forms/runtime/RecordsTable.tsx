@@ -16,6 +16,7 @@ import { resolveRecordTitle } from './record-title'
 import { formatSystemDatetime } from './format-value'
 import { RecordReferenceLink } from './RecordReferenceLink'
 import { RoleValueLabel } from './RoleValueLabel'
+import { buildEnumLabels, resolveEnumLabel } from './enum-labels'
 import { parseLayout } from '@/features/form-builder/serialize'
 import { CardLayout } from '@/features/menus/saved-views/layouts/CardLayout'
 import { CalendarLayout } from '@/features/menus/saved-views/layouts/CalendarLayout'
@@ -167,6 +168,18 @@ export function RecordsTable({
   // columns nobody asked for.
   const fieldsWithSystem = [...form.fields, ...SYSTEM_FIELDS]
 
+  // A select/radio/multiselect field's real option LABELS ("Active") only
+  // exist in the form's rich builder layout — FieldDef.enum_values is
+  // deliberately value-only (form-builder/projection.ts's own comment: "the
+  // CHECK constraint set"), so a read-only render of an enum value with
+  // nothing else falls back to the raw stored string ("active"). Editing
+  // already shows real labels (FieldRenderer.tsx reads el.options directly);
+  // this recovers the same labels for List/Card's read-only display. Reuses
+  // the same parseLayout(form.layout) call the record-detail drawer below
+  // already makes, rather than a second, redundant parse.
+  const formSchema = parseLayout(form.layout)
+  const enumLabels = buildEnumLabels(formSchema)
+
   // §6's named edge case: a saved view's Calendar/Kanban layout_config names
   // a field that was later deleted/renamed on the form — falls back to List
   // with a visible notice rather than a broken/silent render (see below).
@@ -186,6 +199,7 @@ export function RecordsTable({
     // already resolves it correctly (FieldRenderer.tsx's RoleFieldInput);
     // this is the read-only List-column counterpart.
     const isRoleField = key === form.create_user_role_field
+    const isEnum = field?.type === 'enum'
     return {
       key,
       label: field?.label ?? key,
@@ -196,6 +210,8 @@ export function RecordsTable({
         ? (row: FormRecord) => <RoleValueLabel roleId={row[key]} />
         : isSystemDatetime
         ? (row: FormRecord) => formatSystemDatetime(row[key])
+        : isEnum
+        ? (row: FormRecord) => resolveEnumLabel(enumLabels, key, row[key])
         : undefined,
     }
   })
@@ -290,7 +306,7 @@ export function RecordsTable({
 
       <div ref={scrollRef} className="overflow-x-auto overflow-y-hidden rounded-lg border" style={{ borderColor: 'hsl(var(--border))' }}>
         {effectiveLayout === 'card' && (
-          <CardLayout records={results?.records ?? []} fields={fieldsWithSystem} columns={visibleColumns} roleField={form.create_user_role_field} onOpenRecord={openRecord} loading={isLoading} />
+          <CardLayout records={results?.records ?? []} fields={fieldsWithSystem} columns={visibleColumns} roleField={form.create_user_role_field} enumLabels={enumLabels} onOpenRecord={openRecord} loading={isLoading} />
         )}
         {effectiveLayout === 'calendar' && (
           <CalendarLayout records={results?.records ?? []} fields={fieldsWithSystem} config={layoutConfig as CalendarLayoutConfig} onOpenRecord={openRecord} loading={isLoading} />
@@ -349,7 +365,7 @@ export function RecordsTable({
               formId={formId}
               recordId={selectedRecord.id as string}
               fields={form.fields}
-              schema={parseLayout(form.layout)}
+              schema={formSchema}
               onDeleted={closeRecord}
             />
           )}

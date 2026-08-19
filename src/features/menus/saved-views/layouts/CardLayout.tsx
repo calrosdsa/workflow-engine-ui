@@ -1,6 +1,7 @@
 import { resolveRecordTitle } from '@/features/forms/runtime/record-title'
 import { formatValue, formatSystemDatetime } from '@/features/forms/runtime/format-value'
 import { RoleValueLabel } from '@/features/forms/runtime/RoleValueLabel'
+import { resolveEnumLabel } from '@/features/forms/runtime/enum-labels'
 import type { FieldDef, FormRecord } from '@/features/forms/types'
 
 interface CardLayoutProps {
@@ -17,6 +18,10 @@ interface CardLayoutProps {
    *  instead of showing the raw UUID (mirrors RecordsTable's List-column
    *  handling — see RoleValueLabel's own doc comment). */
   roleField?: string
+  /** field name -> (stored value -> display label), for enum-typed fields —
+   *  see enum-labels.ts's own doc comment for why this can't be derived
+   *  from FieldDef.enum_values alone. */
+  enumLabels?: Map<string, Map<string, string>>
   onOpenRecord: (r: FormRecord) => void
   loading?: boolean
 }
@@ -27,7 +32,7 @@ interface CardLayoutProps {
 // title and subtitle section"). Every column the view's own Columns picker
 // marks visible renders as a labeled body row, so Card shows the same data
 // List does, just presented as cards instead of table rows.
-export function CardLayout({ records, fields, columns, roleField, onOpenRecord, loading }: CardLayoutProps) {
+export function CardLayout({ records, fields, columns, roleField, enumLabels, onOpenRecord, loading }: CardLayoutProps) {
   const bodyFields = columns
     .map((name) => fields.find((f) => f.name === name))
     .filter((f): f is FieldDef => !!f)
@@ -61,6 +66,8 @@ export function CardLayout({ records, fields, columns, roleField, onOpenRecord, 
                         ? formatSystemDatetime(r[f.name])
                         : f.name === roleField
                         ? <RoleValueLabel roleId={r[f.name]} />
+                        : f.type === 'enum'
+                        ? resolveEnumLabel(enumLabels ?? new Map(), f.name, r[f.name])
                         : formatValue(r[f.name])}
                     </span>
                   </div>
