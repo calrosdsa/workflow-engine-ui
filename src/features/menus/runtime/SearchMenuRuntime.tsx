@@ -70,6 +70,21 @@ export function SearchMenuRuntime({ menu, menus, clientId, appId, onNavigate }: 
   return (
     <div className="p-6">
       <RecordsTable
+        // RecordsTable seeds its internal filter/sort/columns state from
+        // defaultFilter/defaultSort/columns only once, on mount (useState
+        // initializers, not effects) — so switching the active saved view,
+        // OR editing the currently-active view's own filter/sort/columns,
+        // must force a fresh mount, or the table silently keeps showing the
+        // stale pre-switch/pre-edit state even though currentConfig (and the
+        // network requests) are already correct. Found live-testing FR-D2-014's
+        // new Filter/Sort sections: editing "My Test View"'s filter/sort and
+        // saving updated the backend and the view-switcher's own list
+        // correctly, but the table itself never re-filtered/re-sorted until
+        // this key existed. updated_at (not just id) is required in the key
+        // so an in-place EDIT of the currently active view also remounts —
+        // switching to a DIFFERENT view already changes `id` on its own, but
+        // editing the same view doesn't.
+        key={liveActiveView ? `${liveActiveView.id}:${liveActiveView.updated_at}` : 'ad-hoc'}
         formId={config.form_id}
         columns={currentConfig.columns}
         defaultFilter={currentConfig.filter}
