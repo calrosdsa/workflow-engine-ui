@@ -15,6 +15,7 @@ import { RecordDetailPanel } from './RecordDetailPanel'
 import { resolveRecordTitle } from './record-title'
 import { formatSystemDatetime } from './format-value'
 import { RecordReferenceLink } from './RecordReferenceLink'
+import { RoleValueLabel } from './RoleValueLabel'
 import { parseLayout } from '@/features/form-builder/serialize'
 import { CardLayout } from '@/features/menus/saved-views/layouts/CardLayout'
 import { CalendarLayout } from '@/features/menus/saved-views/layouts/CalendarLayout'
@@ -178,12 +179,21 @@ export function RecordsTable({
     const field = fieldsWithSystem.find((f) => f.name === key)
     const isReference = field?.type === 'reference'
     const isSystemDatetime = key === 'created_at' || key === 'updated_at'
+    // The Account section's Role field (form-builder/factory.ts's
+    // createAccountSection) stores a role ID as a plain string — no field
+    // type distinguishes it from any other text field, so without this
+    // check it renders the raw UUID instead of the role's name. Editing
+    // already resolves it correctly (FieldRenderer.tsx's RoleFieldInput);
+    // this is the read-only List-column counterpart.
+    const isRoleField = key === form.create_user_role_field
     return {
       key,
       label: field?.label ?? key,
       sortable: true,
       render: isReference
         ? (row: FormRecord) => <RecordReferenceLink formId={field.reference_table} recordId={row[key]} displayField={field.display_field} />
+        : isRoleField
+        ? (row: FormRecord) => <RoleValueLabel roleId={row[key]} />
         : isSystemDatetime
         ? (row: FormRecord) => formatSystemDatetime(row[key])
         : undefined,
@@ -280,7 +290,7 @@ export function RecordsTable({
 
       <div ref={scrollRef} className="overflow-x-auto overflow-y-hidden rounded-lg border" style={{ borderColor: 'hsl(var(--border))' }}>
         {effectiveLayout === 'card' && (
-          <CardLayout records={results?.records ?? []} fields={fieldsWithSystem} columns={visibleColumns} onOpenRecord={openRecord} loading={isLoading} />
+          <CardLayout records={results?.records ?? []} fields={fieldsWithSystem} columns={visibleColumns} roleField={form.create_user_role_field} onOpenRecord={openRecord} loading={isLoading} />
         )}
         {effectiveLayout === 'calendar' && (
           <CalendarLayout records={results?.records ?? []} fields={fieldsWithSystem} config={layoutConfig as CalendarLayoutConfig} onOpenRecord={openRecord} loading={isLoading} />

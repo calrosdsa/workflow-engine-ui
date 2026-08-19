@@ -1,5 +1,6 @@
 import { resolveRecordTitle } from '@/features/forms/runtime/record-title'
 import { formatValue, formatSystemDatetime } from '@/features/forms/runtime/format-value'
+import { RoleValueLabel } from '@/features/forms/runtime/RoleValueLabel'
 import type { FieldDef, FormRecord } from '@/features/forms/types'
 
 interface CardLayoutProps {
@@ -11,6 +12,11 @@ interface CardLayoutProps {
    *  title is always the record's own resolved title (FR-C1-005), never
    *  one of the body columns, so nothing needs to be picked twice. */
   columns: string[]
+  /** form.create_user_role_field — the Account section's Role field key, if
+   *  this form has one, so its stored role ID resolves to a real role name
+   *  instead of showing the raw UUID (mirrors RecordsTable's List-column
+   *  handling — see RoleValueLabel's own doc comment). */
+  roleField?: string
   onOpenRecord: (r: FormRecord) => void
   loading?: boolean
 }
@@ -21,7 +27,7 @@ interface CardLayoutProps {
 // title and subtitle section"). Every column the view's own Columns picker
 // marks visible renders as a labeled body row, so Card shows the same data
 // List does, just presented as cards instead of table rows.
-export function CardLayout({ records, fields, columns, onOpenRecord, loading }: CardLayoutProps) {
+export function CardLayout({ records, fields, columns, roleField, onOpenRecord, loading }: CardLayoutProps) {
   const bodyFields = columns
     .map((name) => fields.find((f) => f.name === name))
     .filter((f): f is FieldDef => !!f)
@@ -51,7 +57,11 @@ export function CardLayout({ records, fields, columns, onOpenRecord, loading }: 
                   <div key={f.name} className="flex items-center justify-between gap-2 text-xs">
                     <span className="shrink-0" style={{ color: 'hsl(var(--muted-foreground))' }}>{f.label}</span>
                     <span className="truncate text-right" style={{ color: 'hsl(var(--foreground))' }}>
-                      {f.name === 'created_at' || f.name === 'updated_at' ? formatSystemDatetime(r[f.name]) : formatValue(r[f.name])}
+                      {f.name === 'created_at' || f.name === 'updated_at'
+                        ? formatSystemDatetime(r[f.name])
+                        : f.name === roleField
+                        ? <RoleValueLabel roleId={r[f.name]} />
+                        : formatValue(r[f.name])}
                     </span>
                   </div>
                 ))}
