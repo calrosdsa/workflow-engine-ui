@@ -8,6 +8,7 @@ import { DataTable } from '@/components/ui/data-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { ActiveFiltersBar } from '@/components/ui/active-filters-bar'
 import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuilder'
 import { nanoid } from '@/features/workflows/builder/nanoid'
@@ -71,11 +72,27 @@ export interface RecordsTableProps {
    *  only the results' presentation differs. */
   layout?: ViewLayout
   layoutConfig?: CalendarLayoutConfig | KanbanLayoutConfig
-  /** Lets the viewer drag-reorder the List layout's columns — omitted (no
-   *  drag handles, unchanged behavior) unless the caller is rendering a
-   *  saved view that supports persisting column order (SearchMenuRuntime,
-   *  once a saved view is active). */
-  onColumnsReorder?: (newColumnKeys: string[]) => void
+  /** Lets the viewer drag-reorder the List layout's columns AND (once
+   *  Kanban's own onColumnOrderChange fires) the Kanban board's columns —
+   *  omitted (no drag handles on either layout, unchanged behavior) unless
+   *  the caller is rendering a saved view that supports persisting layout
+   *  changes. Distinct from onLiveConfigChange below: this flag only
+   *  controls whether drag HANDLES render at all; onLiveConfigChange is
+   *  what actually receives the resulting change once a drag (or any other
+   *  live edit — filter, sort, List's Columns picker) happens. */
+  columnDragEnabled?: boolean
+  /** Fired on every live change to this table's own filter/sort/columns/
+   *  layoutConfig state — a saved-view-driven caller (SearchMenuRuntime)
+   *  uses this to detect "the live table no longer matches the active
+   *  view's saved config" and show an unsaved-changes prompt, rather than
+   *  any of these changes auto-persisting on their own (this used to be
+   *  onColumnsReorder's job for List's own column drag specifically, firing
+   *  straight into an instant, silent auto-save with no prompt — folded
+   *  into this single, consistent mechanism instead, covering every kind of
+   *  live change the same way). Omitted for callers that don't track a
+   *  saved view at all (the dashboard table widget), which simply never
+   *  offers a way to persist a live change back anywhere. */
+  onLiveConfigChange?: (patch: { columns?: string[]; filter?: FilterGroup; sort?: SortRule[]; layoutConfig?: CalendarLayoutConfig | KanbanLayoutConfig }) => void
 }
 
 // Extracted from features/menus/runtime/SearchMenuRuntime.tsx (Phase 4 of
@@ -87,9 +104,9 @@ export interface RecordsTableProps {
 // table widget both become thin callers supplying only what differs between
 // them (title, header actions, filter UI toggle, expand navigation).
 export function RecordsTable({
-  formId, columns: columnKeys, defaultFilter, defaultSort, pageSize: pageSizeProp,
+  formId, columns: columnsProp, defaultFilter, defaultSort, pageSize: pageSizeProp,
   allowFilter = false, allowSearch = false, rowClick = true, headerActions, onExpandRecord, title,
-  layout = 'list', layoutConfig, onColumnsReorder,
+  layout = 'list', layoutConfig: layoutConfigProp, columnDragEnabled = false, onLiveConfigChange,
 }: RecordsTableProps) {
   const { data: form, isLoading: isFormLoading, isError: isFormError } = useFormDef(formId)
 
@@ -98,7 +115,38 @@ export function RecordsTable({
     (defaultSort ?? []).map((s) => ({ ...s, id: s.id ?? nanoid() })),
   )
   const [filter, setFilter] = useState<FilterGroup>(defaultFilter ?? newGroup())
+  // columns was a plain pass-through prop until Kanban/List's column
+  // drag-reorder needed something to mutate — now local state (seeded once
+  // from the prop, same convention filter/sort already use), so a drag
+  // updates what's rendered immediately, with onLiveConfigChange (below)
+  // telling the caller a live edit happened for its own unsaved-changes
+  // tracking. layoutConfig has no such mutator right now (Kanban's own
+  // column drag-reorder is disabled — see that KanbanLayout call site's own
+  // comment), so it stays a plain destructured prop rather than state that
+  // nothing ever sets; re-promote it to useState alongside a restored
+  // applyLayoutConfig if live column drag comes back.
+  const [columns, setColumns] = useState<string[] | undefined>(columnsProp)
+  const layoutConfig = layoutConfigProp
   const [filterOpen, setFilterOpen] = useState(false)
+  // The filter popover edits a local draft, not `filter` directly — every
+  // FilterBuilder edit used to call applyFilter (and therefore re-run the
+  // search query) on every keystroke/selection, which also meant a change
+  // was already live even if the viewer closed the popover by clicking
+  // away without ever meaning to commit it. draftFilter is seeded from the
+  // real `filter` each time the popover opens (not on every render — see
+  // handleFilterOpenChange below) and only reaches applyFilter when Apply
+  // is clicked; Cancel/click-outside/Escape just closes the popover with
+  // the draft discarded.
+  const [draftFilter, setDraftFilter] = useState<FilterGroup>(filter)
+  const handleFilterOpenChange = (open: boolean) => {
+    if (open) setDraftFilter(filter)
+    setFilterOpen(open)
+  }
+  const applyDraftFilter = () => {
+    applyFilter(draftFilter)
+    setPage(1)
+    setFilterOpen(false)
+  }
   const [searchInput, setSearchInput] = useState('')
   const [query, setQuery] = useState('')
   const [selectedRecord, setSelectedRecord] = useState<FormRecord | null>(null)
@@ -124,10 +172,15 @@ export function RecordsTable({
     return () => clearTimeout(id)
   }, [searchInput])
 
+  // Kanban owns its own per-column queries entirely (KanbanLayout/
+  // useKanbanColumn — see that file's top comment for why a flat page/
+  // pageSize over the WHOLE result set can't express "the next page of just
+  // one column"), so this shared List/Card/Calendar query would be pure
+  // waste when Kanban is active — disabled rather than fetched and ignored.
   const { data: results, isLoading, isError: isSearchError } = useQuery({
     queryKey: ['forms', formId, 'search', filter, sort, page, pageSize, canSearch ? query : ''],
     queryFn: () => formsApi.searchRecords(formId, { filter, sort, page, page_size: pageSize, query: (canSearch && query) || undefined }),
-    enabled: !!formId,
+    enabled: !!formId && layout !== 'kanban',
   })
 
   // selectedRecord is a point-in-time snapshot of the clicked table row, so
@@ -184,10 +237,14 @@ export function RecordsTable({
   // a field that was later deleted/renamed on the form — falls back to List
   // with a visible notice rather than a broken/silent render (see below).
   const calendarFieldMissing = layout === 'calendar' && (!layoutConfig || !fieldsWithSystem.some((f) => f.name === (layoutConfig as CalendarLayoutConfig).dateField))
-  const kanbanFieldMissing = layout === 'kanban' && (!layoutConfig || !form.fields.some((f) => f.name === (layoutConfig as KanbanLayoutConfig).groupField))
+  // Kanban is enum-only ("just consider select fields" — see KanbanLayout's
+  // top comment) — a view whose groupField was later changed to a
+  // non-enum type, or removed entirely, falls back to List the same way a
+  // deleted field already does, rather than rendering a broken board.
+  const kanbanFieldMissing = layout === 'kanban' && (!layoutConfig || !form.fields.some((f) => f.name === (layoutConfig as KanbanLayoutConfig).groupField && f.type === 'enum'))
   const effectiveLayout: ViewLayout = layout === 'calendar' && calendarFieldMissing ? 'list' : layout === 'kanban' && kanbanFieldMissing ? 'list' : layout
 
-  const visibleColumns = columnKeys && columnKeys.length > 0 ? columnKeys : form.fields.map((f) => f.name)
+  const visibleColumns = columns && columns.length > 0 ? columns : form.fields.map((f) => f.name)
   const dataTableColumns = visibleColumns.map((key) => {
     const field = fieldsWithSystem.find((f) => f.name === key)
     const isReference = field?.type === 'reference'
@@ -216,14 +273,41 @@ export function RecordsTable({
     }
   })
 
+  // Every one of these wraps the underlying setState call with an
+  // onLiveConfigChange notification — the single mechanism SearchMenuRuntime
+  // uses to detect "the live table no longer matches the active view's
+  // saved config" and offer to save it (see onLiveConfigChange's own doc
+  // comment for why this replaced the old onColumnsReorder auto-save).
+  // No applyLayoutConfig here — its only caller was Kanban's column
+  // drag-reorder, currently disabled (see the layoutConfig-setting KanbanLayout
+  // call site's own comment); layoutConfig itself stays local state since
+  // Calendar/Kanban's own config still needs to remount cleanly on
+  // save/discard the same way filter/sort/columns do.
+  const applySort = (next: SortRule[]) => {
+    setSort(next)
+    onLiveConfigChange?.({ sort: next })
+  }
+  const applyFilter = (next: FilterGroup) => {
+    setFilter(next)
+    // Keeps draftFilter from ever trailing behind a real commit that
+    // happened from OUTSIDE the popover's own Apply button — the chip bar's
+    // per-condition remove/Reset all buttons call this directly, and if the
+    // popover happened to be open at the time with its own unsaved edits,
+    // leaving draftFilter pointed at the pre-chip-removal state would mean
+    // clicking Apply next resurrects a condition the chip bar just removed.
+    setDraftFilter(next)
+    onLiveConfigChange?.({ filter: next })
+  }
+  const applyColumns = (next: string[]) => {
+    setColumns(next)
+    onLiveConfigChange?.({ columns: next })
+  }
+
   const toggleSort = (field: string) => {
     setPage(1)
-    setSort((prev) => {
-      const existing = prev.find((s) => s.field === field)
-      if (!existing) return [{ id: nanoid(), field, dir: 'asc' }]
-      if (existing.dir === 'asc') return [{ ...existing, dir: 'desc' }]
-      return []
-    })
+    const existing = sort.find((s) => s.field === field)
+    const next = !existing ? [{ id: nanoid(), field, dir: 'asc' as const }] : existing.dir === 'asc' ? [{ ...existing, dir: 'desc' as const }] : []
+    applySort(next)
   }
 
   const total = results?.total ?? 0
@@ -242,11 +326,11 @@ export function RecordsTable({
   }
 
   const removeTopLevelCondition = (index: number) => {
-    setFilter((f) => ({ ...f, conditions: f.conditions.filter((_, i) => i !== index) }))
+    applyFilter({ ...filter, conditions: filter.conditions.filter((_, i) => i !== index) })
     setPage(1)
   }
   const resetFilter = () => {
-    setFilter(newGroup())
+    applyFilter(newGroup())
     setPage(1)
   }
 
@@ -268,9 +352,44 @@ export function RecordsTable({
               </div>
             )}
             {allowFilter && (
-              <Button variant="outline" size="sm" onClick={() => setFilterOpen((o) => !o)} className="gap-1.5">
-                <FilterIcon size={14} />Filter
-              </Button>
+              <Popover open={filterOpen} onOpenChange={handleFilterOpenChange}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    <FilterIcon size={14} />Filter
+                  </Button>
+                </PopoverTrigger>
+                {/* Anchored to the Filter button, not a centered/backdropped
+                   Dialog — a filter panel is a quick, in-context adjustment,
+                   not something that needs to interrupt the whole page the
+                   way a modal does. Wider than PopoverContent's own w-72
+                   default (the Reference-value picker/date inputs need more
+                   room than a typical popover menu), and its own scroll
+                   area caps how tall the panel gets as conditions/groups are
+                   added, rather than growing without bound. Nested groups
+                   indent further right each level, so the inner content
+                   also scrolls horizontally rather than clipping or
+                   squeezing condition rows once they exceed the panel's
+                   width. */}
+                <PopoverContent
+                  align="end"
+                  className="w-[32rem] max-w-[calc(100vw-2rem)] p-0"
+                  container={document.getElementById('runtime-root')}
+                >
+                  <div className="max-h-[70vh] overflow-y-auto overflow-x-auto p-3">
+                    <FilterBuilder
+                      group={draftFilter}
+                      fields={fieldsWithSystem}
+                      variables={[]}
+                      onChange={setDraftFilter}
+                      hideExpressions
+                    />
+                  </div>
+                  <div className="flex items-center justify-end gap-1.5 border-t p-2" style={{ borderColor: 'hsl(var(--border))' }}>
+                    <Button variant="ghost" size="sm" onClick={() => setFilterOpen(false)}>Cancel</Button>
+                    <Button size="sm" onClick={applyDraftFilter}>Apply</Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             )}
             {headerActions}
           </div>
@@ -278,19 +397,7 @@ export function RecordsTable({
       )}
 
       {allowFilter && (
-        <>
-          <ActiveFiltersBar filter={filter} fields={fieldsWithSystem} onRemoveCondition={removeTopLevelCondition} onResetAll={resetFilter} />
-          {filterOpen && (
-            <div className="mb-4">
-              <FilterBuilder
-                group={filter}
-                fields={fieldsWithSystem}
-                variables={[]}
-                onChange={(g) => { setFilter(g); setPage(1) }}
-              />
-            </div>
-          )}
-        </>
+        <ActiveFiltersBar filter={filter} fields={fieldsWithSystem} onRemoveCondition={removeTopLevelCondition} onResetAll={resetFilter} />
       )}
 
       {calendarFieldMissing && layoutConfig && (
@@ -312,7 +419,25 @@ export function RecordsTable({
           <CalendarLayout records={results?.records ?? []} fields={fieldsWithSystem} config={layoutConfig as CalendarLayoutConfig} onOpenRecord={openRecord} loading={isLoading} />
         )}
         {effectiveLayout === 'kanban' && (
-          <KanbanLayout records={results?.records ?? []} fields={form.fields} config={layoutConfig as KanbanLayoutConfig} onOpenRecord={openRecord} loading={isLoading} />
+          <KanbanLayout
+            formId={formId}
+            fields={form.fields}
+            config={layoutConfig as KanbanLayoutConfig}
+            filter={filter}
+            sort={sort}
+            columns={visibleColumns}
+            roleField={form.create_user_role_field}
+            enumLabels={enumLabels}
+            onOpenRecord={openRecord}
+            // Column drag-reorder is disabled for now (card drag between/
+            // within columns stays on) — omitting onColumnOrderChange
+            // entirely means KanbanLayout renders no grip handle at all,
+            // same as before this prop existed. Column order/visibility is
+            // still configurable through the Edit View drawer's own picker
+            // (KanbanColumnsPicker); only the live-board drag affordance is
+            // off. Re-enable by restoring the columnDragEnabled-gated
+            // callback this replaced if/when live column drag comes back.
+          />
         )}
         {effectiveLayout === 'list' && (
           <DataTable
@@ -322,26 +447,32 @@ export function RecordsTable({
             sortField={sort[0]?.field}
             sortDir={sort[0]?.dir as 'asc' | 'desc' | undefined}
             onSortChange={toggleSort}
-            onRowClick={rowClick ? openRecord : undefined}
+            onRowDoubleClick={rowClick ? (onExpandRecord ?? openRecord) : undefined}
             loading={isLoading}
             emptyMessage={isSearchError ? "Couldn't load records — try again." : undefined}
-            onColumnsReorder={onColumnsReorder}
+            onColumnsReorder={columnDragEnabled ? applyColumns : undefined}
           />
         )}
       </div>
 
-      <div className="mt-3 flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:justify-between" style={{ color: 'hsl(var(--muted-foreground))' }}>
-        <span>{total} record{total === 1 ? '' : 's'}</span>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="h-7 gap-1 px-2">
-            <ChevronLeft size={12} />Prev
-          </Button>
-          <span>Page {page} of {totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="h-7 gap-1 px-2">
-            Next<ChevronRight size={12} />
-          </Button>
+      {effectiveLayout !== 'kanban' && (
+        // Kanban paginates per-column (each KanbanColumn's own infinite
+        // scroll) rather than one flat page over the whole result set, so
+        // this footer — driven by the now-disabled outer search query — has
+        // nothing meaningful to show while it's active.
+        <div className="mt-3 flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:justify-between" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          <span>{total} record{total === 1 ? '' : 's'}</span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="h-7 gap-1 px-2">
+              <ChevronLeft size={12} />Prev
+            </Button>
+            <span>Page {page} of {totalPages}</span>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="h-7 gap-1 px-2">
+              Next<ChevronRight size={12} />
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       <Drawer open={!!selectedRecord} onOpenChange={(o) => !o && closeRecord()}>
         <DrawerContent size="lg" container={document.getElementById('runtime-root')}>

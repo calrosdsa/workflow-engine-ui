@@ -1,17 +1,41 @@
 import { useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, Save, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PermissionGate } from '@/features/auth/PermissionGate'
 import { RecordsTable } from '@/features/forms/runtime/RecordsTable'
 import { RuntimeLink } from '@/features/runtime/RuntimeLink'
 import { useForm as useFormDef } from '@/features/forms/hooks'
+import { buildEnumLabels } from '@/features/forms/runtime/enum-labels'
+import { parseLayout } from '@/features/form-builder/serialize'
 import { useSavedViews, useUpdateSavedView } from '@/features/menus/saved-views/hooks'
 import { ViewSwitcher } from '@/features/menus/saved-views/ViewSwitcher'
 import { resolveDefaultView } from '@/features/menus/saved-views/types'
 import type { MenuRuntimeRendererProps } from '../menu-registry'
 import type { SearchMenuConfig, AddMenuConfig } from '../types'
 import type { FormRecord } from '@/features/forms/types'
-import type { SavedView, SavedViewConfig } from '@/features/menus/saved-views/types'
+import type { FilterGroup, SortRule } from '@/features/workflows/types'
+import type { SavedView, SavedViewConfig, CalendarLayoutConfig, KanbanLayoutConfig } from '@/features/menus/saved-views/types'
+
+// Strips the UI-only `id` keys FilterBuilder/SortRuleList generate (list-
+// rendering keys, never sent to or stored by the backend — see
+// ensureGroupIds/ensureSortIds's own comments) before comparing a live
+// filter/sort against the saved view's own config, which the backend always
+// returns id-less. Comparing WITH ids would show a spurious diff on every
+// single load, even with zero real changes, since RecordsTable regenerates
+// fresh ids for whatever seeded it — id-less is the only representation both
+// sides can agree on.
+function stripFilterIds(g: FilterGroup): unknown {
+  return { combinator: g.combinator, conditions: g.conditions.map((c) => ({ field: c.field, op: c.op, value_mode: c.value_mode, value: c.value, expression: c.expression })), groups: g.groups.map(stripFilterIds) }
+}
+function stripSortIds(s: SortRule[]): unknown {
+  return s.map((r) => ({ field: r.field, dir: r.dir }))
+}
+
+/** The live-edit shape SearchMenuRuntime tracks for the unsaved-changes
+ *  banner — a subset of SavedViewConfig, since name/visibility/is_default
+ *  aren't editable from the live table (only through the Edit View drawer,
+ *  which has its own explicit Save button and needs no banner). */
+type LivePatch = { columns?: string[]; filter?: FilterGroup; sort?: SortRule[]; layoutConfig?: CalendarLayoutConfig | KanbanLayoutConfig }
 
 // Thin wrapper around features/forms/runtime/RecordsTable.tsx (Phase 4 of
 // docs/dashboard-system-plan.md) — everything that's actually "a live,
@@ -45,6 +69,17 @@ export function SearchMenuRuntime({ menu, menus, clientId, appId, onNavigate }: 
   // stop pointing at a stale object once the list refetches.
   const liveActiveView = activeView && savedViews?.find((v) => v.id === activeView.id)
 
+  // Whatever RecordsTable's own live filter/sort/columns/layoutConfig state
+  // currently is, reported via onLiveConfigChange on every edit (a filter
+  // change, a column drag, a Kanban board drag) — undefined means "nothing's
+  // been touched since the view was loaded," the common case. Reset to
+  // undefined by RecordsTable's own key-driven remount (see that prop's
+  // comment below) whenever the active view switches or is saved, so a
+  // stale pending patch from a previous view can never leak into a new one.
+  const [pendingPatch, setPendingPatch] = useState<LivePatch | undefined>(undefined)
+
+  const savingView = updateSavedView.isPending
+
   // Prefer a sibling Add menu when one exists (keeps any Add-menu-specific
   // config — success message, redirect-after-save — in play), but a Search
   // menu shouldn't have no "Create" button just because nobody built an Add
@@ -62,29 +97,90 @@ export function SearchMenuRuntime({ menu, menus, clientId, appId, onNavigate }: 
   // access" case; this is just a label, so it degrades quietly).
   const { data: form } = useFormDef(config.form_id)
   const createLabel = form?.name ? `Create ${form.name}` : 'Create Record'
+  // Real Select-option display labels ("Active," not "active") for
+  // ViewSwitcher's Edit View drawer's Kanban column picker — the same
+  // parseLayout(form.layout)/buildEnumLabels(schema) pair RecordsTable
+  // computes for the board itself; recomputed here rather than threaded
+  // down as a prop since RecordsTable owns its own instance and there's no
+  // existing plumbing to share one between this component and it.
+  const enumLabels = buildEnumLabels(parseLayout(form?.layout))
 
   const currentConfig: SavedViewConfig = liveActiveView
     ? liveActiveView.config
     : { filter: config.default_filter ?? { combinator: 'and', conditions: [], groups: [] }, sort: config.default_sort ?? [], columns: config.columns, layout: 'list' }
 
+  // Real diff check, not just "has pendingPatch fired at all" — RecordsTable
+  // fires onLiveConfigChange on every keystroke-settled filter edit and
+  // every drag, including ones that land back where they started (e.g. a
+  // column dragged one slot over and immediately back), so this recomputes
+  // whether the CURRENT merged patch actually differs from what's saved,
+  // id-stripped on both filter/sort sides (see stripFilterIds/stripSortIds).
+  const mergedLive: SavedViewConfig = { ...currentConfig, ...pendingPatch }
+  const hasUnsavedChanges = !!liveActiveView && !!pendingPatch && (
+    JSON.stringify(mergedLive.columns ?? []) !== JSON.stringify(liveActiveView.config.columns ?? []) ||
+    JSON.stringify(stripFilterIds(mergedLive.filter)) !== JSON.stringify(stripFilterIds(liveActiveView.config.filter)) ||
+    JSON.stringify(stripSortIds(mergedLive.sort)) !== JSON.stringify(stripSortIds(liveActiveView.config.sort)) ||
+    JSON.stringify(mergedLive.layout_config ?? null) !== JSON.stringify(liveActiveView.config.layout_config ?? null)
+  )
+
+  const saveChanges = () => {
+    if (!liveActiveView) return
+    const updated: SavedViewConfig = { ...liveActiveView.config, ...pendingPatch }
+    updateSavedView.mutate(
+      { id: liveActiveView.id, payload: { name: liveActiveView.name, visibility: liveActiveView.visibility, visible_role_ids: liveActiveView.visible_role_ids, is_default: liveActiveView.is_default, config: updated } },
+      {
+        onSuccess: (saved) => {
+          setActiveView(saved)
+          setPendingPatch(undefined)
+        },
+      },
+    )
+  }
+  // Discarding must force RecordsTable back to currentConfig, not just stop
+  // tracking the pending patch — RecordsTable's own filter/sort/columns/
+  // layoutConfig are local state it already applied live (that's the whole
+  // point: the board/table updates immediately as you drag/edit, before any
+  // save). Clearing pendingPatch alone would un-track the change without
+  // un-applying it, leaving the table visibly showing the discarded edit.
+  // discardKey (folded into RecordsTable's key below) forces exactly the
+  // same remount-to-currentConfig that switching views or saving already
+  // relies on.
+  const [discardKey, setDiscardKey] = useState(0)
+  const discardChanges = () => {
+    setPendingPatch(undefined)
+    setDiscardKey((k) => k + 1)
+  }
+
   return (
     <div className="p-6">
+      {hasUnsavedChanges && liveActiveView.can_manage && (
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-xs" style={{ borderColor: 'hsl(var(--primary) / 0.4)', backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--foreground))' }}>
+          <span>“{liveActiveView.name}” has unsaved changes.</span>
+          <div className="flex items-center gap-1.5">
+            <Button variant="ghost" size="sm" className="h-7 gap-1 px-2" onClick={discardChanges} disabled={savingView}>
+              <X size={12} />Discard
+            </Button>
+            <Button size="sm" className="h-7 gap-1 px-2" onClick={saveChanges} disabled={savingView}>
+              <Save size={12} />{savingView ? 'Saving…' : 'Save changes'}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <RecordsTable
-        // RecordsTable seeds its internal filter/sort/columns state from
-        // defaultFilter/defaultSort/columns only once, on mount (useState
-        // initializers, not effects) — so switching the active saved view,
-        // OR editing the currently-active view's own filter/sort/columns,
-        // must force a fresh mount, or the table silently keeps showing the
-        // stale pre-switch/pre-edit state even though currentConfig (and the
-        // network requests) are already correct. Found live-testing FR-D2-014's
-        // new Filter/Sort sections: editing "My Test View"'s filter/sort and
-        // saving updated the backend and the view-switcher's own list
-        // correctly, but the table itself never re-filtered/re-sorted until
-        // this key existed. updated_at (not just id) is required in the key
-        // so an in-place EDIT of the currently active view also remounts —
-        // switching to a DIFFERENT view already changes `id` on its own, but
-        // editing the same view doesn't.
-        key={liveActiveView ? `${liveActiveView.id}:${liveActiveView.updated_at}` : 'ad-hoc'}
+        // RecordsTable seeds its internal filter/sort/columns/layoutConfig
+        // state from defaultFilter/defaultSort/columns/layoutConfig only
+        // once, on mount (useState initializers, not effects) — so
+        // switching the active saved view, OR saving/discarding a pending
+        // change, must force a fresh mount, or the table silently keeps
+        // showing stale state even though currentConfig (and the network
+        // requests) are already correct. updated_at (not just id) is
+        // required in the key so an in-place SAVE of the currently active
+        // view also remounts, resetting pendingPatch's downstream effect
+        // (RecordsTable's own local state) back to the just-saved config —
+        // switching to a DIFFERENT view already changes `id` on its own,
+        // but saving the same view doesn't.
+        key={(liveActiveView ? `${liveActiveView.id}:${liveActiveView.updated_at}` : 'ad-hoc') + `:${discardKey}`}
         formId={config.form_id}
         columns={currentConfig.columns}
         defaultFilter={currentConfig.filter}
@@ -96,23 +192,15 @@ export function SearchMenuRuntime({ menu, menus, clientId, appId, onNavigate }: 
         allowSearch
         title={menu.name}
         onExpandRecord={(r: FormRecord) => onNavigate?.(`${menu.slug}/${r.id as string}`)}
-        onColumnsReorder={
-          liveActiveView?.can_manage
-            ? (newColumnKeys) => {
-                const updated: SavedViewConfig = { ...liveActiveView.config, columns: newColumnKeys }
-                updateSavedView.mutate(
-                  { id: liveActiveView.id, payload: { name: liveActiveView.name, visibility: liveActiveView.visibility, visible_role_ids: liveActiveView.visible_role_ids, is_default: liveActiveView.is_default, config: updated } },
-                  { onSuccess: (saved) => setActiveView(saved) },
-                )
-              }
-            : undefined
-        }
+        columnDragEnabled={!!liveActiveView?.can_manage}
+        onLiveConfigChange={liveActiveView?.can_manage ? (patch) => setPendingPatch((prev) => ({ ...prev, ...patch })) : undefined}
         headerActions={
           <>
             <ViewSwitcher
               appId={appId}
               menuId={menu.id}
               fields={form?.fields ?? []}
+              enumLabels={enumLabels}
               views={savedViews ?? []}
               activeView={liveActiveView}
               onSelect={setActiveView}
