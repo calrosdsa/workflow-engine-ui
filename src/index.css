@@ -12,6 +12,30 @@
 @keyframes accordion-up   { from { height: var(--radix-accordion-content-height); } to { height: 0; } }
 
 @layer utilities {
+  /* MentionEditor (FR-D2-016 v0.6) — a contentEditable comment compose/edit
+     box. Native placeholder text (a browser-drawn ::before on the empty
+     state) since contentEditable has no `placeholder` attribute of its own;
+     mention-editor-empty is toggled by MentionEditor whenever its content is
+     genuinely empty (not by CSS :empty alone, since a lone <br> the browser
+     inserts on some backspace sequences would otherwise still count as
+     "not empty" and hide the placeholder incorrectly). */
+  .mention-editor-empty:before {
+    content: attr(data-placeholder);
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
+  }
+  /* One shared chip style for both the LIVE editor (MentionEditor) and the
+     read-only render (CommentRow) — kept in one place so a mention always
+     looks identical whether you're composing it or reading it back. */
+  .mention-chip {
+    display: inline-block;
+    border-radius: 0.25rem;
+    padding: 0 0.25rem;
+    font-weight: 500;
+    background-color: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+    user-select: none;
+  }
   .animate-in  { animation-duration: 150ms; animation-fill-mode: both; animation-timing-function: ease-out; }
   .animate-out { animation-duration: 150ms; animation-fill-mode: both; animation-timing-function: ease-in; }
   .fade-in-0   { animation-name: fade-in;  }

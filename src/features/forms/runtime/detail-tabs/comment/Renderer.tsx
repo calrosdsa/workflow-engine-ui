@@ -2,18 +2,18 @@
 // embed or duplicate "History" content (a separate, relabeled `audit` tab —
 // see Document Control v0.2's decision for two independent tabs, not one
 // tab with an internal toggle).
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { MessageSquare, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { usePermission } from '@/features/auth/permissions'
 import { useComments, useCreateComment, useUpdateComment, useDeleteComment } from '../../record-detail-hooks'
 import { useUsersBasic } from '@/features/users/hooks'
 import { CommentRow } from './CommentRow'
+import { MentionEditor, type MentionEditorHandle } from './MentionEditor'
 import { MentionAutocomplete } from './MentionAutocomplete'
-import { useMentionCompose } from './useMentionCompose'
+import { useMentionEditor } from './useMentionEditor'
 import { parseMentionedUserIds } from './mentions'
 import { useAuthStore } from '@/stores/auth'
 import type { DetailTabRendererProps } from '../contract'
@@ -45,27 +45,26 @@ export function CommentTabRenderer({ formId, recordId }: DetailTabRendererProps<
 
   const [draft, setDraft] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
-  const mention = useMentionCompose(draft, setDraft)
+  const editorHandleRef = useRef<MentionEditorHandle>(null)
+  const mention = useMentionEditor(() => editorHandleRef.current?.element ?? null, setDraft)
 
   const submit = async () => {
     const body = draft.trim()
     if (!body) return
     await createComment.mutateAsync(body)
-    setDraft('')
+    editorHandleRef.current?.clear()
+    mention.resetAfterSubmit()
   }
 
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Textarea
-          ref={mention.textareaRef}
-          value={draft}
-          onChange={(e) => { setDraft(e.target.value); mention.onTextareaChange() }}
-          onKeyDown={(e) => { mention.onTextareaKeyDown(e) }}
+        <MentionEditor
+          ref={editorHandleRef}
+          onInput={mention.onEditorInput}
+          onKeyDown={(e) => { mention.onEditorKeyDown(e) }}
           placeholder={canComment ? 'Write a comment… (type @ to mention someone)' : 'You do not have permission to comment on this record.'}
           disabled={!canComment || createComment.isPending}
-          title={canComment ? undefined : 'You do not have permission to comment on this record.'}
-          rows={3}
           className="text-sm"
         />
         <MentionAutocomplete

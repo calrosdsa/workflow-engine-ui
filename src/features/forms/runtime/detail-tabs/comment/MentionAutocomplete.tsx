@@ -1,11 +1,13 @@
 // FR-D2-016 v0.6 — the @mention autocomplete popover, anchored to the caret
-// inside the compose box's plain <textarea> (caret-position.ts's mirror-div
-// technique). Deliberately NOT built on cmdk's Command (used by
-// UserMultiSelect/FormReferenceSelect elsewhere in this codebase) — those
-// pickers own a real <input> themselves, but here the <textarea> must keep
-// focus while the user types past the `@`, so this list owns only rendering
-// + mouse selection; arrow/Enter/Escape are handled by the compose box's own
-// onKeyDown (see Renderer.tsx) forwarding into onNavigate/onSelect below.
+// inside MentionEditor's contentEditable compose box (mention-caret.ts's
+// Selection/Range-based coordinate lookup — see useMentionEditor.ts).
+// Deliberately NOT built on cmdk's Command (used by UserMultiSelect/
+// FormReferenceSelect elsewhere in this codebase) — those pickers own a
+// real <input> themselves, but here the editor itself must keep focus/
+// selection while the user types past the `@`, so this list owns only
+// rendering + mouse selection; arrow/Enter/Escape are handled by the
+// compose box's own onKeyDown (see Renderer.tsx) forwarding into
+// onSelect below.
 import { useEffect } from 'react'
 import { Loader2, User } from 'lucide-react'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
