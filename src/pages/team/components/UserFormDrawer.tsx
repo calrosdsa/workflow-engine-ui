@@ -13,6 +13,7 @@ import {
   useGrantSuperAdmin,
   useRevokeSuperAdmin,
   useUpdateUserAppRole,
+  useUpdateUserProfile,
 } from '@/features/users/hooks'
 import type { AppSummary } from '@/features/applications/types'
 import type { InvitationGrant } from '@/features/invitations/types'
@@ -44,9 +45,12 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
   const grantSuperAdminMutation = useGrantSuperAdmin()
   const revokeSuperAdminMutation = useRevokeSuperAdmin()
   const updateAppRoleMutation = useUpdateUserAppRole()
+  const updateProfileMutation = useUpdateUserProfile()
 
   const existingAppIds = new Set((existingUser?.memberships ?? []).map((m) => m.app_id))
 
+  const [firstName, setFirstName] = useState(existingUser?.first_name ?? '')
+  const [lastName, setLastName] = useState(existingUser?.last_name ?? '')
   const [email, setEmail] = useState('')
   const [selectedAppIds, setSelectedAppIds] = useState<string[]>([])
   const [roleByApp, setRoleByApp] = useState<Record<string, string>>({})
@@ -57,8 +61,12 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
 
   const isManageAccess = mode === 'manage-access' && !!existingUser
   const superAdminChanged = isManageAccess && grantingSuperAdmin !== (existingUser?.is_super_admin ?? false)
+  const nameChanged = isManageAccess
+    && (firstName.trim() !== (existingUser?.first_name ?? '') || lastName.trim() !== (existingUser?.last_name ?? ''))
 
   const reset = () => {
+    setFirstName(existingUser?.first_name ?? '')
+    setLastName(existingUser?.last_name ?? '')
     setEmail('')
     setSelectedAppIds([])
     setRoleByApp({})
@@ -94,10 +102,14 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
     setError(null)
 
     if (isManageAccess && existingUser) {
-      // Manage-access mode commits every pending change together: the Super
-      // Admin toggle, any in-place role reassignments on existing
-      // memberships, and any newly selected app+role grants — Save should
-      // mean "apply everything shown in this drawer," not just one of them.
+      // Manage-access mode commits every pending change together: name
+      // edits, the Super Admin toggle, any in-place role reassignments on
+      // existing memberships, and any newly selected app+role grants — Save
+      // should mean "apply everything shown in this drawer," not just one.
+      if (nameChanged && (!firstName.trim() || !lastName.trim())) {
+        setError('First and last name are required.')
+        return
+      }
       if (!grantingSuperAdmin) {
         const missingRole = selectedAppIds.find((id) => !roleByApp[id])
         if (missingRole) {
@@ -106,6 +118,9 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
         }
       }
       try {
+        if (nameChanged) {
+          await updateProfileMutation.mutateAsync({ userId: existingUser.id, firstName: firstName.trim(), lastName: lastName.trim() })
+        }
         if (superAdminChanged) {
           if (grantingSuperAdmin) await grantSuperAdminMutation.mutateAsync(existingUser.id)
           else await revokeSuperAdminMutation.mutateAsync(existingUser.id)
@@ -158,7 +173,8 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
     createMutation.isPending ||
     grantSuperAdminMutation.isPending ||
     revokeSuperAdminMutation.isPending ||
-    updateAppRoleMutation.isPending
+    updateAppRoleMutation.isPending ||
+    updateProfileMutation.isPending
 
   return (
     <Drawer open={open} onOpenChange={(o) => !o && handleClose()}>
@@ -182,6 +198,19 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-600">Email address *</label>
                 <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter user's email address." />
+              </div>
+            )}
+
+            {isManageAccess && existingUser && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">First name</label>
+                  <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First name" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">Last name</label>
+                  <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last name" />
+                </div>
               </div>
             )}
 

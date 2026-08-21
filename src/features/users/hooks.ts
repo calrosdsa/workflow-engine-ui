@@ -7,6 +7,15 @@ export function useTeamUsers() {
   return useQuery({ queryKey: userKeys.all, queryFn: usersApi.list })
 }
 
+export function useUpdateUserProfile() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ userId, firstName, lastName }: { userId: string; firstName: string; lastName: string }) =>
+      usersApi.updateProfile(userId, firstName, lastName),
+    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.all }),
+  })
+}
+
 export function useRevokeUserAccess() {
   const qc = useQueryClient()
   return useMutation({
