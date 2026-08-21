@@ -1,0 +1,129 @@
+// FR-D2-016 — the "Comments" tab. Renders only the comment thread; does not
+// embed or duplicate "History" content (a separate, relabeled `audit` tab —
+// see Document Control v0.2's decision for two independent tabs, not one
+// tab with an internal toggle).
+import { useState } from 'react'
+import { MessageSquare, Send } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { usePermission } from '@/features/auth/permissions'
+import { useComments, useCreateComment, useUpdateComment, useDeleteComment } from '../../record-detail-hooks'
+import { useUsersBasic } from '@/features/users/hooks'
+import { CommentRow } from './CommentRow'
+import { useAuthStore } from '@/stores/auth'
+import type { DetailTabRendererProps } from '../contract'
+import type { CommentTabConfig } from './schema'
+
+const PAGE_SIZE = 25
+
+export function CommentTabRenderer({ formId, recordId }: DetailTabRendererProps<CommentTabConfig>) {
+  const [page, setPage] = useState(1)
+  const { data, isLoading } = useComments(formId, recordId, page, PAGE_SIZE)
+  const currentUserId = useAuthStore((s) => s.session?.user_id)
+  const canComment = usePermission(`forms:${formId}:comment`)
+
+  const entries = data?.entries ?? []
+  const total = data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  const authorIds = [...new Set(entries.map((e) => e.author_user_id))]
+  const { data: authors } = useUsersBasic(authorIds)
+  const authorById = new Map((authors ?? []).map((a) => [a.id, a]))
+
+  const createComment = useCreateComment(formId, recordId)
+  const updateComment = useUpdateComment(formId, recordId)
+  const deleteComment = useDeleteComment(formId, recordId)
+
+  const [draft, setDraft] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+
+  const submit = async () => {
+    const body = draft.trim()
+    if (!body) return
+    await createComment.mutateAsync(body)
+    setDraft('')
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <Textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder={canComment ? 'Write a comment…' : 'You do not have permission to comment on this record.'}
+          disabled={!canComment || createComment.isPending}
+          title={canComment ? undefined : 'You do not have permission to comment on this record.'}
+          rows={3}
+          className="text-sm"
+        />
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            className="gap-1.5"
+            onClick={submit}
+            disabled={!canComment || createComment.isPending || !draft.trim()}
+            title={canComment ? undefined : 'You do not have permission to comment on this record.'}
+          >
+            <Send size={12} />
+            {createComment.isPending ? 'Posting…' : 'Comment'}
+          </Button>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+      ) : entries.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-10 text-center" style={{ borderColor: 'hsl(var(--border))' }}>
+          <MessageSquare size={20} style={{ color: 'hsl(var(--muted-foreground))' }} />
+          <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>No comments yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {entries.map((entry) => (
+            <CommentRow
+              key={entry.id}
+              entry={entry}
+              author={authorById.get(entry.author_user_id)}
+              isOwn={!!currentUserId && entry.author_user_id === currentUserId}
+              saving={updateComment.isPending}
+              onEdit={(body) => updateComment.mutateAsync({ commentId: entry.id, body })}
+              onDelete={() => setDeleteTarget(entry.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          <span>Page {page} of {totalPages}</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="h-7 px-2">Prev</Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="h-7 px-2">Next</Button>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete this comment?"
+        description="This action can't be undone."
+        confirmLabel="Delete"
+        destructive
+        loading={deleteComment.isPending}
+        onConfirm={async () => {
+          if (!deleteTarget) return
+          await deleteComment.mutateAsync(deleteTarget)
+          setDeleteTarget(null)
+        }}
+        container={document.getElementById('runtime-root')}
+      />
+    </div>
+  )
+}

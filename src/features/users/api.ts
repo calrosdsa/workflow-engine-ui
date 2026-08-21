@@ -1,8 +1,15 @@
 import { api } from '@/lib/api'
-import type { TeamUser } from './types'
+import type { TeamUser, BasicUser } from './types'
 
 export const usersApi = {
   list:             () => api.get('users').json<TeamUser[]>(),
+  // FR-D2-016 — lower-privilege than list() above (no Super Admin gate);
+  // resolves a batch of ids to display name/email, e.g. for comment authors.
+  // An empty ids array is a no-op (matches the backend's own early-return).
+  getBasic:         (ids: string[]) =>
+    ids.length === 0
+      ? Promise.resolve<BasicUser[]>([])
+      : api.get('users/basic', { searchParams: { ids: ids.join(',') } }).json<BasicUser[]>(),
   updateProfile:    (userId: string, firstName: string, lastName: string) =>
     api.patch(`users/${userId}`, { json: { first_name: firstName, last_name: lastName } }),
   revokeAccess:     (userId: string) => api.delete(`users/${userId}`),

@@ -8,3 +8,5 @@
 import './built-in'
 import './related-form'
 import './custom'
+import './comment'
+import './group'

@@ -17,6 +17,16 @@ import type { LucideIcon } from 'lucide-react'
 import type { FormSchema } from '@/features/form-builder/schema'
 import type { FieldDef, FormRecord } from '@/features/forms/types'
 
+/** Shared cycle-protection cap for any tab type that can nest another
+ *  DetailTabList inside itself (currently 'group' and 'details' — a
+ *  Details' own childTabs, or a group's own tabs, can each contain the
+ *  other, or another instance of the same type). Nothing in the registry/
+ *  schema prevents an admin from configuring a self-referential nesting;
+ *  this caps it at a depth no legitimate layout would ever need instead of
+ *  recursing until the browser tab crashes. One shared constant so both
+ *  types agree on the same limit rather than drifting independently. */
+export const MAX_GROUP_DEPTH = 4
+
 export interface DetailTabRendererProps<TConfig> {
   formId: string
   recordId: string
@@ -49,6 +59,13 @@ export interface DetailTabRendererProps<TConfig> {
    *  resolve before any tab-specific data fetch happens. Every other tab
    *  type ignores this — optional and unused, same as the edit-mode props. */
   onEmptyResolved?: (empty: boolean) => void
+  /** group-only: how many `group` levels deep this Renderer call is — 0 at
+   *  the top level, incremented once per nested group. Lets the group type
+   *  refuse to recurse past a sane depth cap rather than stack-overflow on
+   *  a config cycle (a group containing itself, directly or via several
+   *  groups) nothing in the registry/schema otherwise prevents. Every other
+   *  tab type ignores this — optional and unused, same as onEmptyResolved. */
+  groupDepth?: number
 }
 
 export interface DetailTabConfigPanelProps<TConfig> {

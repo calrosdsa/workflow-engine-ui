@@ -130,6 +130,30 @@ export interface AuditLogResponse {
   page_size: number
 }
 
+// FR-D2-016 — a record's comment thread, modeled directly on AuditLogEntry's
+// shape above (same tenant scoping, same bare form_id/record_id), differing
+// only where it must: comments are user-editable/deletable, audit entries
+// aren't.
+export interface CommentEntry {
+  id: string
+  client_id: string
+  app_id?: string
+  form_id: string
+  record_id: string
+  author_user_id: string
+  body: string
+  edited: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CommentsResponse {
+  entries: CommentEntry[]
+  total: number
+  page: number
+  page_size: number
+}
+
 export interface LinkedRecordGroup {
   form_id: string
   form_name: string

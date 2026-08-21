@@ -7,7 +7,6 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Pencil, Trash2, Workflow as WorkflowIcon, User as UserIcon,
   RotateCw, XCircle, UserPlus, History,
 } from 'lucide-react'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { DataTable } from '@/components/ui/data-table'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -32,11 +31,11 @@ import { Badge } from '@/components/ui/badge'
 import { useTeamUsers } from '@/features/users/hooks'
 import type { TeamUser } from '@/features/users/types'
 import { useForm as useFormDef } from '@/features/forms/hooks'
-import { resolveDetailTabs, getDetailTab } from './detail-tabs/registry'
-import { useCurrentViewer, isTabVisible } from './detail-tabs/useTabVisible'
-import { useExpressionRuntimeState, schemaToVariableDecls } from './expression-context'
+import { resolveDetailTabs } from './detail-tabs/registry'
+import { DetailTabList } from './detail-tabs/DetailTabList'
+import { MAX_GROUP_DEPTH } from './detail-tabs/contract'
 import './detail-tabs'
-import type { FormSchema } from '@/features/form-builder/schema'
+import type { FormSchema, DetailTabConfig } from '@/features/form-builder/schema'
 import type { FieldDef, AuditLogEntry, AuditFieldChange, FormRecord, LinkedRecordGroup } from '@/features/forms/types'
 
 export { formatValue }
@@ -77,37 +76,7 @@ export function RecordDetailPanel({ formId, recordId, fields, schema, onNavigate
   const removeAccess = useRemoveRecordAccess(formId, recordId)
   const enableAccess = useEnableRecordAccess(formId, recordId)
 
-  const viewer = useCurrentViewer()
-  const configuredTabs = resolveDetailTabs(schema?.settings?.detailTabs).filter(
-    (t) => !t.hidden && isTabVisible(t.visibility, viewer),
-  )
-  const variables = schema ? schemaToVariableDecls(schema) : []
-  const renderIfExpressions = configuredTabs
-    .filter((t) => t.renderIf?.mode === 'expression' && !!t.renderIf.expressionWhen)
-    .map((t) => ({ key: t.id, kind: 'visibleWhen' as const, expr: t.renderIf!.expressionWhen }))
-  const renderIfResolved = useExpressionRuntimeState(renderIfExpressions, variables, record ?? {})
-  // Deliberately `?? false`, not useExpressionRuntimeState's own field-level
-  // DEFAULT_STATE.visible=true — a whole tab flashing in/out during the
-  // 250ms debounce window (or staying visible on an invalid expression) is
-  // more disruptive than a single field's visibility flickering, so a tab's
-  // renderIf fails closed (hidden) until a real, resolved `true` comes back,
-  // per FR-D2-015 §6's edge-case row for this exact scenario.
-  const renderableTabs = configuredTabs.filter((t) => {
-    if (t.renderIf?.mode !== 'expression' || !t.renderIf.expressionWhen) return true
-    return renderIfResolved[t.id]?.visible ?? false
-  })
-
-  // hideWhenEmpty (related_form only, FR-D2-015 §3) can only resolve AFTER
-  // that tab's own Renderer has fetched its data — unlike visibility/
-  // renderIf, which are known before any tab-specific content mounts. Every
-  // tab renders optimistically at first; a related_form tab configured with
-  // hideWhenEmpty reports back via onEmptyResolved once its own existence
-  // check settles, and is retroactively dropped from BOTH the trigger list
-  // and the content below — a brief flash-then-hide, not a permanent gap,
-  // and the only tradeoff of not being able to know "is it empty" before
-  // that tab's own Renderer has had a chance to ask.
-  const [emptyTabIds, setEmptyTabIds] = useState<Set<string>>(new Set())
-  const visibleTabs = renderableTabs.filter((t) => !emptyTabIds.has(t.id))
+  const configuredTabs = resolveDetailTabs(schema?.settings?.detailTabs)
 
   // Reacts to the mutation's own settled state via an effect rather than a
   // mutate()-call callback or an awaited mutateAsync() continuation — traced
@@ -137,70 +106,23 @@ export function RecordDetailPanel({ formId, recordId, fields, schema, onNavigate
 
   return (
     <div className="flex h-full flex-col">
-      {/* Keyed on the resolved visible-tab-id list, not just formId — if a
-         renderIf expression resolves AFTER first paint (the debounced
-         backend round-trip) and changes which tabs are visible, the
-         underlying Radix Tabs' own internal "which value is active" state
-         needs a fresh mount to re-derive a valid defaultValue, or it can end
-         up pointed at a tab that no longer exists in the list. */}
-      <Tabs key={visibleTabs.map((t) => t.id).join(',') || 'empty'} defaultValue={visibleTabs[0]?.id} className="flex min-h-0 flex-1 flex-col">
-        <div className="border-b px-6 py-2" style={{ borderColor: 'hsl(var(--border))' }}>
-          <TabsList>
-            {visibleTabs.map((t) => {
-              const def = getDetailTab(t.type)
-              return (
-                <TabsTrigger key={t.id} value={t.id}>
-                  {t.label || def?.label || t.type}
-                </TabsTrigger>
-              )
-            })}
-          </TabsList>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-6">
-          {/* Every renderableTab mounts its Renderer (not just visibleTabs)
-             so a hideWhenEmpty related_form tab's own existence-check query
-             keeps running even while its trigger/content chrome is hidden —
-             the moment new data makes it non-empty, it reappears without a
-             second, separate polling mechanism. Chrome visibility
-             (TabsTrigger above, and the wrapper div's display here) is the
-             ONLY thing emptiness affects; the Renderer itself always mounts. */}
-          {renderableTabs.map((t) => {
-            const def = getDetailTab(t.type)
-            if (!def) return null
-            const config = def.parseConfig(t.config)
-            const isVisible = !emptyTabIds.has(t.id)
-            return (
-              <TabsContent key={t.id} value={t.id} forceMount style={isVisible ? undefined : { display: 'none' }}>
-                <def.Renderer
-                  formId={formId}
-                  recordId={recordId}
-                  fields={fields}
-                  schema={schema}
-                  config={config}
-                  onNavigateToRecord={onNavigateToRecord}
-                  editing={editing && canEdit}
-                  onStartEdit={() => setEditing(true)}
-                  onSubmitEdit={async (values) => {
-                    await updateRecord.mutateAsync({ recordId, data: values })
-                    setEditing(false)
-                  }}
-                  onCancelEdit={() => setEditing(false)}
-                  submittingEdit={updateRecord.isPending}
-                  onEmptyResolved={(empty) => {
-                    setEmptyTabIds((prev) => {
-                      if (empty === prev.has(t.id)) return prev
-                      const next = new Set(prev)
-                      if (empty) next.add(t.id)
-                      else next.delete(t.id)
-                      return next
-                    })
-                  }}
-                />
-              </TabsContent>
-            )
-          })}
-        </div>
-      </Tabs>
+      <DetailTabList
+        formId={formId}
+        recordId={recordId}
+        fields={fields}
+        schema={schema}
+        record={record}
+        tabConfigs={configuredTabs}
+        onNavigateToRecord={onNavigateToRecord}
+        editing={editing && canEdit}
+        onStartEdit={() => setEditing(true)}
+        onSubmitEdit={async (values) => {
+          await updateRecord.mutateAsync({ recordId, data: values })
+          setEditing(false)
+        }}
+        onCancelEdit={() => setEditing(false)}
+        submittingEdit={updateRecord.isPending}
+      />
 
       {canEdit && !editing && (
         <div className="flex items-center justify-end gap-2 border-t px-6 py-3" style={{ borderColor: 'hsl(var(--border))' }}>
@@ -285,7 +207,10 @@ export function RecordDetailPanel({ formId, recordId, fields, schema, onNavigate
   )
 }
 
-export function DetailsTab({ formId, recordId, fields, schema, editing, onStartEdit, onSubmit, onCancelEdit, submitting }: {
+export function DetailsTab({
+  formId, recordId, fields, schema, editing, onStartEdit, onSubmit, onCancelEdit, submitting,
+  childTabs, onNavigateToRecord, groupDepth,
+}: {
   formId: string
   recordId: string
   fields: FieldDef[]
@@ -295,11 +220,19 @@ export function DetailsTab({ formId, recordId, fields, schema, editing, onStartE
   onSubmit: (values: FormRecord) => void | Promise<void>
   onCancelEdit: () => void
   submitting: boolean
+  /** Optional tabs (e.g. "Comments" / "History") rendered as a nested
+   *  sub-tab-bar below the fields — see built-in/schema.ts's DetailsTabConfig. */
+  childTabs?: DetailTabConfig[]
+  onNavigateToRecord?: (formId: string, recordId: string) => void
+  groupDepth?: number
 }) {
   const { data: record, isLoading } = useRecordDetail(formId, recordId)
   if (isLoading) return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading…</p>
   if (!record) return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Record not found.</p>
 
+  // Editing swaps the entire tab body for the edit form — child tabs
+  // (Comments/History) don't make sense mid-edit, same as they're absent
+  // from the plain-fields-fallback render path below.
   if (editing && schema && schema.sections.length > 0) {
     return (
       <div className="space-y-3">
@@ -309,67 +242,94 @@ export function DetailsTab({ formId, recordId, fields, schema, editing, onStartE
     )
   }
 
+  // Same cycle-protection as GroupTabRenderer — 'details' is itself pickable
+  // inside a Tab Group (or another Details' own childTabs), so nothing stops
+  // an admin nesting Details inside Details inside Details indefinitely
+  // without this cap.
+  const childTabList = childTabs && childTabs.length > 0 ? (
+    (groupDepth ?? 0) >= MAX_GROUP_DEPTH ? (
+      <p className="mt-6 border-t pt-4 text-sm" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--destructive))' }}>
+        Nested too deeply (possibly a group containing itself) — stopped rendering further.
+      </p>
+    ) : (
+      <div className="mt-6 border-t pt-4" style={{ borderColor: 'hsl(var(--border))' }}>
+        <DetailTabList
+          formId={formId}
+          recordId={recordId}
+          fields={fields}
+          schema={schema}
+          record={record}
+          tabConfigs={childTabs}
+          onNavigateToRecord={onNavigateToRecord}
+          nested
+          groupDepth={(groupDepth ?? 0) + 1}
+        />
+      </div>
+    )
+  ) : null
+
   if (schema && schema.sections.length > 0) {
     return (
-      <div className="space-y-6">
-        {schema.sections.map((section) => (
-          <div key={section.id}>
-            {section.title && <h3 className="mb-3 text-sm font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{section.title}</h3>}
-            {section.description && <p className="mb-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{section.description}</p>}
-            <div className="flex gap-4">
-              {section.columns.map((column) => {
-                const ratios = COLUMN_LAYOUTS[section.layout]?.ratios ?? [1]
-                const idx = section.columns.indexOf(column)
-                // A 'line_items' element is data-bearing ONLY in adopted mode
-                // (see projection.ts's elementToField) — COMPONENT_REGISTRY's
-                // dataBearing flag is per-component-type and can't see a
-                // specific element's sourceMode, so it's always false for
-                // 'line_items' and this filter has to special-case it here,
-                // the same way elementToField does on the write side.
-                // Without this, an adopted Line Items grid's section renders
-                // with a heading and nothing else in read-only view.
-                const visibleElements = column.elements.filter((el) => {
-                  if (el.component === 'hidden') return false
-                  if (el.component === 'line_items') return el.sourceMode === 'existing'
-                  return COMPONENT_REGISTRY[el.component].dataBearing
-                })
-                return (
-                  <div key={column.id} className="space-y-3" style={{ flex: ratios[idx] ?? 1 }}>
-                    {visibleElements.map((el) => (
-                      <div key={el.id} className="group text-sm">
-                        <div className="mb-1 flex items-center gap-1.5 text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                          {el.label}
-                          {el.component !== 'line_items' && (
-                            <PermissionGate need={`forms:${formId}:edit`}>
-                              <button
-                                type="button"
-                                onClick={onStartEdit}
-                                className="opacity-0 transition-opacity hover:text-[hsl(var(--foreground))] group-hover:opacity-100 focus-visible:opacity-100"
-                                aria-label={`Edit ${el.label}`}
-                              >
-                                <Pencil size={11} />
-                              </button>
-                            </PermissionGate>
-                          )}
-                        </div>
-                        {el.component === 'line_items' ? (
-                          <LineItemsGrid el={el} field={{ value: record[el.key], onChange: () => {} }} parentFormId={formId} disabled />
-                        ) : el.component === 'form' ? (
-                          <div style={{ color: 'hsl(var(--foreground))' }}>
-                            <ReferenceValueLabel formId={el.formRef} recordId={record[el.key]} displayField={el.displayField} />
-                          </div>
-                        ) : (
-                          <div style={{ color: 'hsl(var(--foreground))' }}>{formatValue(record[el.key])}</div>
+    <div className="space-y-6">
+      {schema.sections.map((section) => (
+        <div key={section.id}>
+          {section.title && <h3 className="mb-3 text-sm font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{section.title}</h3>}
+          {section.description && <p className="mb-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{section.description}</p>}
+          <div className="flex gap-4">
+            {section.columns.map((column) => {
+              const ratios = COLUMN_LAYOUTS[section.layout]?.ratios ?? [1]
+              const idx = section.columns.indexOf(column)
+              // A 'line_items' element is data-bearing ONLY in adopted mode
+              // (see projection.ts's elementToField) — COMPONENT_REGISTRY's
+              // dataBearing flag is per-component-type and can't see a
+              // specific element's sourceMode, so it's always false for
+              // 'line_items' and this filter has to special-case it here,
+              // the same way elementToField does on the write side.
+              // Without this, an adopted Line Items grid's section renders
+              // with a heading and nothing else in read-only view.
+              const visibleElements = column.elements.filter((el) => {
+                if (el.component === 'hidden') return false
+                if (el.component === 'line_items') return el.sourceMode === 'existing'
+                return COMPONENT_REGISTRY[el.component].dataBearing
+              })
+              return (
+                <div key={column.id} className="space-y-3" style={{ flex: ratios[idx] ?? 1 }}>
+                  {visibleElements.map((el) => (
+                    <div key={el.id} className="group text-sm">
+                      <div className="mb-1 flex items-center gap-1.5 text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                        {el.label}
+                        {el.component !== 'line_items' && (
+                          <PermissionGate need={`forms:${formId}:edit`}>
+                            <button
+                              type="button"
+                              onClick={onStartEdit}
+                              className="opacity-0 transition-opacity hover:text-[hsl(var(--foreground))] group-hover:opacity-100 focus-visible:opacity-100"
+                              aria-label={`Edit ${el.label}`}
+                            >
+                              <Pencil size={11} />
+                            </button>
+                          </PermissionGate>
                         )}
                       </div>
-                    ))}
-                  </div>
-                )
-              })}
-            </div>
+                      {el.component === 'line_items' ? (
+                        <LineItemsGrid el={el} field={{ value: record[el.key], onChange: () => {} }} parentFormId={formId} disabled />
+                      ) : el.component === 'form' ? (
+                        <div style={{ color: 'hsl(var(--foreground))' }}>
+                          <ReferenceValueLabel formId={el.formRef} recordId={record[el.key]} displayField={el.displayField} />
+                        </div>
+                      ) : (
+                        <div style={{ color: 'hsl(var(--foreground))' }}>{formatValue(record[el.key])}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )
+            })}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
+      {childTabList}
+    </div>
     )
   }
 
@@ -387,6 +347,7 @@ export function DetailsTab({ formId, recordId, fields, schema, editing, onStartE
           </div>
         </div>
       ))}
+      {childTabList}
     </div>
   )
 }

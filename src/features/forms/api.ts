@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import type { FormDefinition, CreateFormPayload, UpdateFormPayload, FormRecord, AuditLogResponse, LinkedRecordsResponse } from './types'
+import type { FormDefinition, CreateFormPayload, UpdateFormPayload, FormRecord, AuditLogResponse, LinkedRecordsResponse, CommentEntry, CommentsResponse } from './types'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
 
 export interface SearchRecordsRequest {
@@ -106,6 +106,16 @@ export const formsApi = {
     api.get(`forms/${formId}/records/${recordId}/audit`, { searchParams: params }).json<AuditLogResponse>(),
   getLinkedRecords: (formId: string, recordId: string, params: { page: number; page_size: number }) =>
     api.get(`forms/${formId}/records/${recordId}/linked`, { searchParams: params }).json<LinkedRecordsResponse>(),
+
+  // --- comments (FR-D2-016) ---
+  getComments: (formId: string, recordId: string, params: { page: number; page_size: number }) =>
+    api.get(`forms/${formId}/records/${recordId}/comments`, { searchParams: params }).json<CommentsResponse>(),
+  createComment: (formId: string, recordId: string, body: string) =>
+    api.post(`forms/${formId}/records/${recordId}/comments`, { json: { body } }).json<CommentEntry>(),
+  updateComment: (formId: string, recordId: string, commentId: string, body: string) =>
+    api.put(`forms/${formId}/records/${recordId}/comments/${commentId}`, { json: { body } }),
+  deleteComment: (formId: string, recordId: string, commentId: string) =>
+    api.delete(`forms/${formId}/records/${recordId}/comments/${commentId}`),
 
   // --- record-detail account actions (create_user_on_submit forms) ---
   getRecordAccountStatus: (formId: string, recordId: string) =>

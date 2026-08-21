@@ -32,11 +32,19 @@ interface DetailPageConfigSectionProps {
   formId: string
   detailTabs: DetailTabConfig[] | undefined
   onChange: (next: DetailTabConfig[]) => void
+  /** false for the group tab type's own ConfigPanel (nested use) — an empty
+   *  group's config.tabs is genuinely empty, not "fall back to the fixed
+   *  Details/Audit Log/Linked Records default," which only makes sense for
+   *  a FORM's top-level detailTabs (resolveDetailTabs' own doc comment).
+   *  Also disables the "at least one tab must stay visible" exclusivity
+   *  guard, which is a real constraint on a form's detail page but not on a
+   *  group — an empty or fully-hidden group is a valid, if unhelpful, state. */
+  applyDefault?: boolean
 }
 
-export function DetailPageConfigSection({ formId, detailTabs, onChange }: DetailPageConfigSectionProps) {
-  const tabs = resolveDetailTabs(detailTabs)
-  const visibleCount = tabs.filter((t) => !t.hidden).length
+export function DetailPageConfigSection({ formId, detailTabs, onChange, applyDefault = true }: DetailPageConfigSectionProps) {
+  const tabs = applyDefault ? resolveDetailTabs(detailTabs) : (detailTabs ?? [])
+  const visibleCount = applyDefault ? tabs.filter((t) => !t.hidden).length : Infinity
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
 

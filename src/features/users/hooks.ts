@@ -7,6 +7,20 @@ export function useTeamUsers() {
   return useQuery({ queryKey: userKeys.all, queryFn: usersApi.list })
 }
 
+// FR-D2-016 — resolves a batch of user ids to display name/email (e.g.
+// comment authors), lower-privilege than useTeamUsers()/GET /users. Sorted +
+// deduped before use as a query key so an equivalent-but-differently-ordered
+// ids array (a re-render with the same authors in a new Set iteration order)
+// doesn't trigger a spurious refetch.
+export function useUsersBasic(ids: string[]) {
+  const key = [...new Set(ids)].sort()
+  return useQuery({
+    queryKey: ['users', 'basic', key],
+    queryFn: () => usersApi.getBasic(key),
+    enabled: key.length > 0,
+  })
+}
+
 export function useUpdateUserProfile() {
   const qc = useQueryClient()
   return useMutation({

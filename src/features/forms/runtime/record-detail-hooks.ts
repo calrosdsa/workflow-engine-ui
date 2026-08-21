@@ -27,6 +27,51 @@ export function useLinkedRecords(formId: string, recordId: string | null, page: 
   })
 }
 
+// --- comments (FR-D2-016) ---
+
+const commentsKey = (formId: string, recordId: string | null, page: number, pageSize: number) =>
+  ['forms', formId, 'records', recordId, 'comments', page, pageSize]
+
+export function useComments(formId: string, recordId: string | null, page: number, pageSize: number) {
+  return useQuery({
+    queryKey: commentsKey(formId, recordId, page, pageSize),
+    queryFn: () => formsApi.getComments(formId, recordId!, { page, page_size: pageSize }),
+    enabled: !!recordId,
+  })
+}
+
+/** Invalidates every page of this record's comment list — simpler than
+ *  patching the paginated cache in place, and comment threads are small
+ *  enough that a refetch is cheap. */
+function invalidateComments(qc: ReturnType<typeof useQueryClient>, formId: string, recordId: string) {
+  qc.invalidateQueries({ queryKey: ['forms', formId, 'records', recordId, 'comments'] })
+}
+
+export function useCreateComment(formId: string, recordId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: string) => formsApi.createComment(formId, recordId, body),
+    onSuccess: () => invalidateComments(qc, formId, recordId),
+  })
+}
+
+export function useUpdateComment(formId: string, recordId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ commentId, body }: { commentId: string; body: string }) =>
+      formsApi.updateComment(formId, recordId, commentId, body),
+    onSuccess: () => invalidateComments(qc, formId, recordId),
+  })
+}
+
+export function useDeleteComment(formId: string, recordId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (commentId: string) => formsApi.deleteComment(formId, recordId, commentId),
+    onSuccess: () => invalidateComments(qc, formId, recordId),
+  })
+}
+
 // --- record-detail account actions (create_user_on_submit forms) ---
 
 const accountStatusKey = (formId: string, recordId: string | null) => ['forms', formId, 'records', recordId, 'account']

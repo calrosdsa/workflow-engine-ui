@@ -14,3 +14,14 @@ export interface TeamUser {
   is_super_admin: boolean
   memberships: UserMembership[]
 }
+
+// FR-D2-016 — the narrow shape GET /users/basic returns. Deliberately
+// smaller than TeamUser (no memberships/status/is_super_admin) — this is a
+// lower-privilege lookup any tenant-scoped caller may use, not the
+// Super-Admin-only GET /users surface TeamUser backs.
+export interface BasicUser {
+  id: string
+  first_name?: string
+  last_name?: string
+  email: string
+}

@@ -7,17 +7,20 @@
 import { FileText, History, Link2 } from 'lucide-react'
 import { registerDetailTab } from '../registry'
 import { DetailsTab, AuditLogTab, LinkedRecordsTab } from '../../RecordDetailPanel'
+import { parseDetailsTabConfig, emptyDetailsTabConfig } from './schema'
+import { DetailsTabConfigPanel } from './ConfigPanel'
 import type { DetailTabRendererProps } from '../contract'
+import type { DetailsTabConfig } from './schema'
 
 registerDetailTab({
   type: 'details',
   label: 'Details',
   icon: FileText,
-  description: "The record's own fields, laid out per the form's section/column design.",
+  description: "The record's own fields, laid out per the form's section/column design. Can hold child tabs (e.g. Comments, History) below the fields.",
   builtin: true,
-  parseConfig: () => ({}),
-  createDefaultConfig: () => ({}),
-  Renderer: (props: DetailTabRendererProps<unknown>) => (
+  parseConfig: parseDetailsTabConfig,
+  createDefaultConfig: emptyDetailsTabConfig,
+  Renderer: (props: DetailTabRendererProps<DetailsTabConfig>) => (
     <DetailsTab
       formId={props.formId}
       recordId={props.recordId}
@@ -28,8 +31,12 @@ registerDetailTab({
       onSubmit={props.onSubmitEdit ?? (() => {})}
       onCancelEdit={props.onCancelEdit ?? (() => {})}
       submitting={!!props.submittingEdit}
+      childTabs={props.config.childTabs}
+      onNavigateToRecord={props.onNavigateToRecord}
+      groupDepth={props.groupDepth}
     />
   ),
+  ConfigPanel: DetailsTabConfigPanel,
 })
 
 registerDetailTab({
