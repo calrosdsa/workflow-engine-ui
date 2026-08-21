@@ -121,6 +121,18 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
           <main className="min-h-0 flex-1 overflow-y-auto">
             {canViewCurrent ? (
               <RuntimeRenderer
+                // Keyed by menu id so navigating between two menus of the
+                // SAME type (e.g. two Search menus) always remounts the
+                // renderer instead of updating it in place. Without this,
+                // React reuses the same SearchMenuRuntime/RecordsTable
+                // instance across the navigation — RecordsTable seeds its
+                // filter/sort/columns from props only on mount (see its own
+                // key comment in SearchMenuRuntime.tsx), so an in-place
+                // update left it rendering the PREVIOUS menu's field/column
+                // state (raw internal field keys instead of labels, blank
+                // cells) even though the new menu's data had already loaded
+                // correctly over the network.
+                key={currentMenu.id}
                 menu={toMenu(currentMenu)}
                 clientId={clientId}
                 appId={appId}
