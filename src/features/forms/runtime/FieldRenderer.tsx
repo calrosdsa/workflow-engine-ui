@@ -5,6 +5,8 @@ import { Select } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { DatePicker, DateTimePicker } from '@/components/ui/date-time-picker'
+import { TimePicker } from '@/components/ui/time-picker'
 import { ReferenceFieldAutocomplete } from './ReferenceFieldAutocomplete'
 import { LineItemsGrid } from './LineItemsGrid'
 import { useAuthStore } from '@/stores/auth'
@@ -92,31 +94,25 @@ function FieldInput({ el, field, formId, disabled }: {
 
     case 'date':
       return (
-        <Input
-          type="date"
+        <DatePicker
           value={(field.value as string) ?? ''}
-          onChange={(e) => field.onChange(e.target.value)}
-          onBlur={field.onBlur}
+          onChange={(v) => { field.onChange(v); field.onBlur() }}
           disabled={disabled}
         />
       )
     case 'time':
       return (
-        <Input
-          type="time"
+        <TimePicker
           value={(field.value as string) ?? ''}
-          onChange={(e) => field.onChange(e.target.value)}
-          onBlur={field.onBlur}
+          onChange={(v) => { field.onChange(v); field.onBlur() }}
           disabled={disabled}
         />
       )
     case 'datetime':
       return (
-        <Input
-          type="datetime-local"
+        <DateTimePicker
           value={(field.value as string) ?? ''}
-          onChange={(e) => field.onChange(e.target.value)}
-          onBlur={field.onBlur}
+          onChange={(v) => { field.onChange(v); field.onBlur() }}
           disabled={disabled}
         />
       )

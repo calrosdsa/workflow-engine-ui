@@ -30,6 +30,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '@/components/ui/drawer'
+import { DatePicker, DateTimePicker } from '@/components/ui/date-time-picker'
+import { TimePicker } from '@/components/ui/time-picker'
 import { cn } from '@/lib/utils'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useForm as useFormDef, useUpdateRecord } from '@/features/forms/hooks'
@@ -1178,11 +1180,11 @@ function RowFieldInput({ column, value, disabled, parentFormId, onChange }: {
     case 'switch':
       return <Checkbox checked={!!value} onCheckedChange={(v) => onChange(v === true)} disabled={disabled} />
     case 'date':
-      return <Input type="date" value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
+      return <DatePicker value={(value as string) ?? ''} onChange={onChange} disabled={disabled} />
     case 'time':
-      return <Input type="time" value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
+      return <TimePicker value={(value as string) ?? ''} onChange={onChange} disabled={disabled} />
     case 'datetime':
-      return <Input type="datetime-local" value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
+      return <DateTimePicker value={(value as string) ?? ''} onChange={onChange} disabled={disabled} />
     case 'select':
     case 'radio':
       return (
