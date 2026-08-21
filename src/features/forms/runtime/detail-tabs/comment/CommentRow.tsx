@@ -6,6 +6,9 @@ import { Pencil, Trash2, Check, X } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { MentionAutocomplete } from './MentionAutocomplete'
+import { useMentionCompose } from './useMentionCompose'
+import { splitMentionSegments } from './mentions'
 import type { CommentEntry } from '@/features/forms/types'
 import type { BasicUser } from '@/features/users/types'
 
@@ -15,8 +18,15 @@ function commentAuthorName(entry: CommentEntry, author: BasicUser | undefined): 
   return name || author.email
 }
 
+function mentionDisplayName(userId: string, usersById: Map<string, BasicUser>): string {
+  const u = usersById.get(userId)
+  if (!u) return `User ${userId.slice(0, 8)}`
+  const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim()
+  return name || u.email
+}
+
 export function CommentRow({
-  entry, author, isOwn, onEdit, onDelete, saving,
+  entry, author, isOwn, onEdit, onDelete, saving, usersById,
 }: {
   entry: CommentEntry
   author: BasicUser | undefined
@@ -24,9 +34,13 @@ export function CommentRow({
   onEdit: (body: string) => void | Promise<void>
   onDelete: () => void
   saving?: boolean
+  /** Resolves both author AND mentioned-user ids to display names (FR-D2-016
+   *  v0.6) — the same batched GET /users/basic map CommentTabRenderer builds. */
+  usersById: Map<string, BasicUser>
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.body)
+  const mention = useMentionCompose(draft, setDraft)
   const name = commentAuthorName(entry, author)
 
   const startEdit = () => {
@@ -53,7 +67,24 @@ export function CommentRow({
         </div>
         {editing ? (
           <div className="space-y-1.5">
-            <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={3} className="text-sm" autoFocus />
+            <Textarea
+              ref={mention.textareaRef}
+              value={draft}
+              onChange={(e) => { setDraft(e.target.value); mention.onTextareaChange() }}
+              onKeyDown={(e) => { mention.onTextareaKeyDown(e) }}
+              rows={3}
+              className="text-sm"
+              autoFocus
+            />
+            <MentionAutocomplete
+              open={mention.mentionOpen}
+              query={mention.mentionQuery}
+              anchor={mention.mentionAnchor}
+              highlightedIndex={mention.mentionHighlighted}
+              onResultsChange={mention.onMentionResultsChange}
+              onSelect={mention.onMentionSelect}
+              container={document.getElementById('runtime-root')}
+            />
             <div className="flex items-center gap-1.5">
               <Button size="sm" className="h-7 gap-1 px-2" onClick={submitEdit} disabled={saving || !draft.trim()}>
                 <Check size={12} />Save
@@ -64,7 +95,21 @@ export function CommentRow({
             </div>
           </div>
         ) : (
-          <p className="whitespace-pre-wrap text-[13px]" style={{ color: 'hsl(var(--foreground))' }}>{entry.body}</p>
+          <p className="whitespace-pre-wrap text-[13px]" style={{ color: 'hsl(var(--foreground))' }}>
+            {splitMentionSegments(entry.body).map((seg, i) =>
+              seg.type === 'mention' ? (
+                <span
+                  key={i}
+                  className="rounded px-1 py-0.5 font-medium"
+                  style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
+                >
+                  @{mentionDisplayName(seg.userId!, usersById)}
+                </span>
+              ) : (
+                <span key={i}>{seg.text}</span>
+              ),
+            )}
+          </p>
         )}
         {isOwn && !editing && (
           <div className="flex items-center gap-1">

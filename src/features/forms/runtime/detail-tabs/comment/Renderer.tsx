@@ -12,6 +12,9 @@ import { usePermission } from '@/features/auth/permissions'
 import { useComments, useCreateComment, useUpdateComment, useDeleteComment } from '../../record-detail-hooks'
 import { useUsersBasic } from '@/features/users/hooks'
 import { CommentRow } from './CommentRow'
+import { MentionAutocomplete } from './MentionAutocomplete'
+import { useMentionCompose } from './useMentionCompose'
+import { parseMentionedUserIds } from './mentions'
 import { useAuthStore } from '@/stores/auth'
 import type { DetailTabRendererProps } from '../contract'
 import type { CommentTabConfig } from './schema'
@@ -28,7 +31,11 @@ export function CommentTabRenderer({ formId, recordId }: DetailTabRendererProps<
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  const authorIds = [...new Set(entries.map((e) => e.author_user_id))]
+  // Batches BOTH author ids and mentioned-user ids (FR-D2-016 §4 step 2c)
+  // into the same GET /users/basic call — CommentRow needs a real display
+  // name for a mention span, not just for the author line.
+  const mentionedIds = entries.flatMap((e) => parseMentionedUserIds(e.body))
+  const authorIds = [...new Set([...entries.map((e) => e.author_user_id), ...mentionedIds])]
   const { data: authors } = useUsersBasic(authorIds)
   const authorById = new Map((authors ?? []).map((a) => [a.id, a]))
 
@@ -38,6 +45,7 @@ export function CommentTabRenderer({ formId, recordId }: DetailTabRendererProps<
 
   const [draft, setDraft] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const mention = useMentionCompose(draft, setDraft)
 
   const submit = async () => {
     const body = draft.trim()
@@ -50,13 +58,24 @@ export function CommentTabRenderer({ formId, recordId }: DetailTabRendererProps<
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Textarea
+          ref={mention.textareaRef}
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder={canComment ? 'Write a comment…' : 'You do not have permission to comment on this record.'}
+          onChange={(e) => { setDraft(e.target.value); mention.onTextareaChange() }}
+          onKeyDown={(e) => { mention.onTextareaKeyDown(e) }}
+          placeholder={canComment ? 'Write a comment… (type @ to mention someone)' : 'You do not have permission to comment on this record.'}
           disabled={!canComment || createComment.isPending}
           title={canComment ? undefined : 'You do not have permission to comment on this record.'}
           rows={3}
           className="text-sm"
+        />
+        <MentionAutocomplete
+          open={mention.mentionOpen}
+          query={mention.mentionQuery}
+          anchor={mention.mentionAnchor}
+          highlightedIndex={mention.mentionHighlighted}
+          onResultsChange={mention.onMentionResultsChange}
+          onSelect={mention.onMentionSelect}
+          container={document.getElementById('runtime-root')}
         />
         <div className="flex justify-end">
           <Button
@@ -90,6 +109,7 @@ export function CommentTabRenderer({ formId, recordId }: DetailTabRendererProps<
               key={entry.id}
               entry={entry}
               author={authorById.get(entry.author_user_id)}
+              usersById={authorById}
               isOwn={!!currentUserId && entry.author_user_id === currentUserId}
               saving={updateComment.isPending}
               onEdit={(body) => updateComment.mutateAsync({ commentId: entry.id, body })}

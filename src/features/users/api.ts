@@ -10,6 +10,12 @@ export const usersApi = {
     ids.length === 0
       ? Promise.resolve<BasicUser[]>([])
       : api.get('users/basic', { searchParams: { ids: ids.join(',') } }).json<BasicUser[]>(),
+  // FR-D2-016 v0.6 — @mention autocomplete. App-scoped (not client-scoped
+  // like getBasic above), search-by-substring (not resolve-by-known-id).
+  searchMentionable: (query: string) =>
+    query.trim() === ''
+      ? Promise.resolve<BasicUser[]>([])
+      : api.get('users/mentionable', { searchParams: { q: query } }).json<BasicUser[]>(),
   updateProfile:    (userId: string, firstName: string, lastName: string) =>
     api.patch(`users/${userId}`, { json: { first_name: firstName, last_name: lastName } }),
   revokeAccess:     (userId: string) => api.delete(`users/${userId}`),

@@ -21,6 +21,19 @@ export function useUsersBasic(ids: string[]) {
   })
 }
 
+// FR-D2-016 v0.6 — @mention autocomplete search, app-scoped. Caller is
+// expected to debounce `query` itself (the compose box does this at ~250ms);
+// this hook just turns a debounced query into a request, disabled while
+// empty so no request fires before the user has typed anything after `@`.
+export function useMentionableUsers(query: string) {
+  const trimmed = query.trim()
+  return useQuery({
+    queryKey: ['users', 'mentionable', trimmed],
+    queryFn: () => usersApi.searchMentionable(trimmed),
+    enabled: trimmed.length > 0,
+  })
+}
+
 export function useUpdateUserProfile() {
   const qc = useQueryClient()
   return useMutation({
