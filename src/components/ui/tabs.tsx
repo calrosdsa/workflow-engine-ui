@@ -10,7 +10,8 @@ const TabsList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
-    className={cn('inline-flex items-center gap-0.5 rounded-lg bg-[hsl(var(--accent))] p-1', className)}
+    className={cn('inline-flex items-center gap-1 border-b', className)}
+    style={{ borderColor: 'hsl(var(--border))' }}
     {...props}
   />
 ))
@@ -23,11 +24,12 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-all',
-      'text-[hsl(var(--muted-foreground))] ring-offset-[hsl(var(--background))]',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2',
+      'relative inline-flex items-center justify-center whitespace-nowrap px-3 py-2.5 text-sm font-medium transition-colors',
+      '-mb-px border-b-2 border-transparent',
+      'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:rounded-sm',
       'disabled:pointer-events-none disabled:opacity-50',
-      'data-[state=active]:bg-[hsl(var(--background))] data-[state=active]:text-[hsl(var(--foreground))] data-[state=active]:shadow-sm',
+      'data-[state=active]:border-[hsl(var(--primary))] data-[state=active]:text-[hsl(var(--foreground))]',
       className,
     )}
     {...props}
@@ -41,7 +43,11 @@ const TabsContent = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.Content
     ref={ref}
-    className={cn('focus-visible:outline-none', className)}
+    className={cn(
+      'mt-4 focus-visible:outline-none',
+      'data-[state=inactive]:hidden',
+      className,
+    )}
     {...props}
   />
 ))
