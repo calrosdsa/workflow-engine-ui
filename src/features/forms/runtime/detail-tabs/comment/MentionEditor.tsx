@@ -93,7 +93,19 @@ export const MentionEditor = forwardRef<MentionEditorHandle, MentionEditorProps>
         onKeyDown={onKeyDown}
         data-placeholder={placeholder}
         className={cn(
-          'mention-editor-empty flex min-h-[72px] w-full whitespace-pre-wrap rounded-md border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 py-2 text-sm text-[hsl(var(--foreground))] shadow-sm transition-colors',
+          // Deliberately NOT `flex` (Textarea's own className, which this
+          // was originally copied from, has it too — harmless there since a
+          // <textarea> doesn't lay out its own content via flexbox). Applied
+          // to a contentEditable div, `flex` + the default `align-items:
+          // normal` (== stretch) makes every child, including the inline-
+          // block mention chip span, a flex item that STRETCHES to the
+          // container's full cross-axis height — this is what was actually
+          // causing a chip to render several times taller than a line of
+          // plain text and spill onto a second visual row, confirmed by
+          // inspecting the live computed layout (not a chip-CSS or
+          // contenteditable=false quirk, as first suspected). Block-level
+          // flow (the default) is what a text-editing surface needs here.
+          'mention-editor-empty block min-h-[72px] w-full whitespace-pre-wrap rounded-md border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 py-2 text-sm text-[hsl(var(--foreground))] shadow-sm transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]',
           disabled && 'cursor-not-allowed opacity-50',
           className,
