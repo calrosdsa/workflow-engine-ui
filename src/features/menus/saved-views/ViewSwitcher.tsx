@@ -19,6 +19,10 @@ interface ViewSwitcherProps {
   appId: string
   menuId: string
   fields: FieldDef[]
+  /** field name -> (stored value -> display label) — threaded straight
+   *  through to SaveViewDialog's own Kanban column picker; see that prop's
+   *  doc comment. */
+  enumLabels: Map<string, Map<string, string>>
   views: SavedView[]
   /** The view currently being displayed — undefined means "ad hoc / the
    *  menu's own static default", not any saved view. */
@@ -35,7 +39,7 @@ interface ViewSwitcherProps {
 // private/public split), plus Save/Update/Rename/Delete. Slots into
 // SearchMenuRuntime's toolbar alongside the existing Filter toggle/Create
 // button (RecordsTable.tsx's headerActions region).
-export function ViewSwitcher({ appId, menuId, fields, views, activeView, onSelect, currentConfig }: ViewSwitcherProps) {
+export function ViewSwitcher({ appId, menuId, fields, enumLabels, views, activeView, onSelect, currentConfig }: ViewSwitcherProps) {
   const [dialogMode, setDialogMode] = useState<'closed' | 'create' | 'edit'>('closed')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const create = useCreateSavedView(menuId)
@@ -105,6 +109,7 @@ export function ViewSwitcher({ appId, menuId, fields, views, activeView, onSelec
           onClose={closeDialog}
           appId={appId}
           fields={fields}
+          enumLabels={enumLabels}
           config={currentConfig}
           editing={dialogMode === 'edit' ? activeView : undefined}
           saving={create.isPending || update.isPending}

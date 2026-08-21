@@ -30,6 +30,19 @@ export interface CalendarLayoutConfig {
 
 export interface KanbanLayoutConfig {
   groupField: string
+  /** Which of the group field's enum values render as columns, AND in what
+   *  order — one ordered list does both jobs (an omitted value is hidden; a
+   *  present value's position in this array is its column position), the
+   *  same way SavedViewConfig.columns already expresses both List's visible
+   *  columns and their order in a single array. Omitted or empty means "all
+   *  of them, in the field's own natural enum_values order" — the same
+   *  "empty means everything" convention columns already uses, so an
+   *  existing saved Kanban view (created before this existed) keeps showing
+   *  every status with no migration needed. A value here that's no longer a
+   *  real enum_values entry (the option was renamed/removed since) is simply
+   *  dropped rather than rendering a broken column — see KanbanLayout's own
+   *  resolution logic. */
+  visibleColumns?: string[]
 }
 
 // Card has no layout_config of its own — it renders the view's own visible

@@ -8,10 +8,12 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Spinner } from '@/components/ui/spinner'
 import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuilder'
+import { SortRuleList } from '@/components/ui/sort-rule-list'
 import { nanoid } from '@/features/workflows/builder/nanoid'
 import { cn } from '@/lib/utils'
 import { useRoles } from '@/features/roles/hooks'
 import { ColumnsPicker } from './ColumnsPicker'
+import { KanbanColumnsPicker } from './KanbanColumnsPicker'
 import type { FieldDef } from '@/features/forms/types'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
 import { SYSTEM_FIELDS } from './types'
@@ -53,6 +55,12 @@ interface SaveViewDialogProps {
   onClose: () => void
   appId: string
   fields: FieldDef[]
+  /** field name -> (stored value -> display label), for the group field's
+   *  Kanban column picker — same map RecordsTable already builds for List/
+   *  Card's own enum-value display (see enum-labels.ts), threaded through
+   *  here so a Kanban column shows "Active," not "active," in this picker
+   *  too, not just on the board itself. */
+  enumLabels: Map<string, Map<string, string>>
   /** The current live filter/sort/columns to seed a NEW view with — ignored
    *  once `editing` is set, since an edit starts from that view's own saved
    *  config instead (so opening "Edit view" on a saved view doesn't silently
@@ -76,7 +84,7 @@ interface SaveViewDialogProps {
 // NOT the App Builder shell's light-only gray-scale classes (e.g.
 // RoleFormDrawer.tsx) — this drawer renders inside the runtime app, which is
 // themeable (light/dark), unlike the builder shell.
-export function SaveViewDialog({ open, onClose, appId, fields, config, editing, onSave, saving }: SaveViewDialogProps) {
+export function SaveViewDialog({ open, onClose, appId, fields, enumLabels, config, editing, onSave, saving }: SaveViewDialogProps) {
   const seed = editing?.config ?? config
   const [name, setName] = useState(editing?.name ?? '')
   const [visibility, setVisibility] = useState<SavedViewVisibility>(editing?.visibility ?? 'private')
@@ -92,6 +100,9 @@ export function SaveViewDialog({ open, onClose, appId, fields, config, editing, 
   const [groupField, setGroupField] = useState<string>(
     (seed.layout === 'kanban' ? (seed.layout_config as KanbanLayoutConfig)?.groupField : undefined) ?? '',
   )
+  const [kanbanVisibleColumns, setKanbanVisibleColumns] = useState<string[]>(
+    (seed.layout === 'kanban' ? (seed.layout_config as KanbanLayoutConfig)?.visibleColumns : undefined) ?? [],
+  )
   const { data: roles } = useRoles(appId)
 
   // Created At / Last Modified are pickable everywhere a real form field
@@ -100,7 +111,17 @@ export function SaveViewDialog({ open, onClose, appId, fields, config, editing, 
   // its own.
   const fieldsWithSystem = [...fields, ...SYSTEM_FIELDS]
   const dateFields = fieldsWithSystem.filter((f) => f.type === 'date' || f.type === 'datetime')
-  const groupFields = fields.filter((f) => f.type === 'enum' || f.type === 'reference')
+  // Kanban grouping is Select-fields-only — a reference field's distinct
+  // values are an unbounded, paginated set of foreign records rather than a
+  // small fixed set of columns, which would make drag-to-recolumn an
+  // open-ended target picker instead of the fixed board Kanban is meant to
+  // be (see KanbanLayout.tsx's own top comment for the full reasoning).
+  const groupFields = fields.filter((f) => f.type === 'enum')
+  const groupFieldDef = fields.find((f) => f.name === groupField)
+  const kanbanColumnOptions = (groupFieldDef?.enum_values ?? []).map((v) => ({
+    value: v,
+    label: enumLabels.get(groupField)?.get(v) ?? v,
+  }))
 
   const layoutNeedsField = layout === 'calendar' ? !dateField : layout === 'kanban' ? !groupField : false
   const canSubmit = name.trim().length > 0 && name.length <= 100 && (visibility !== 'role' || roleIds.length > 0) && !layoutNeedsField
@@ -113,7 +134,7 @@ export function SaveViewDialog({ open, onClose, appId, fields, config, editing, 
     if (!canSubmit) return
     const layout_config: SavedViewConfig['layout_config'] =
       layout === 'calendar' ? ({ dateField } satisfies CalendarLayoutConfig)
-      : layout === 'kanban' ? ({ groupField } satisfies KanbanLayoutConfig)
+      : layout === 'kanban' ? ({ groupField, visibleColumns: kanbanVisibleColumns } satisfies KanbanLayoutConfig)
       : undefined
     onSave({
       name: name.trim(), visibility, visible_role_ids: visibility === 'role' ? roleIds : [], is_default: isDefault,
@@ -150,8 +171,25 @@ export function SaveViewDialog({ open, onClose, appId, fields, config, editing, 
                     key={l.value}
                     type="button"
                     disabled={disabled}
-                    onClick={() => setLayout(l.value)}
-                    title={disabled ? `No ${l.value === 'calendar' ? 'date/datetime' : 'enum/reference'} field on this form` : undefined}
+                    onClick={() => {
+                      setLayout(l.value)
+                      // A required <select> with no matching value falls
+                      // back to showing its first <option> VISUALLY while
+                      // React's own controlled value stays '' — the classic
+                      // controlled-select-with-no-matching-option trap. Found
+                      // live: switching to Kanban showed "Status" selected
+                      // (the form's only enum field) but Save stayed
+                      // disabled, because groupField was still '' underneath
+                      // — the picker never actually synced what the browser
+                      // was showing back into state. Defaulting explicitly
+                      // here, on every switch into a field-needing layout,
+                      // keeps what's displayed and what's submitted the same
+                      // thing instead of relying on a user's own change event
+                      // to first establish it.
+                      if (l.value === 'calendar' && !dateField && dateFields[0]) setDateField(dateFields[0].name)
+                      if (l.value === 'kanban' && !groupField && groupFields[0]) setGroupField(groupFields[0].name)
+                    }}
+                    title={disabled ? `No ${l.value === 'calendar' ? 'date/datetime' : 'Select'} field on this form` : undefined}
                     className={cn(
                       'flex flex-col items-center gap-1 rounded-md border px-2 py-2 text-xs transition-colors',
                       disabled && 'cursor-not-allowed opacity-40',
@@ -178,8 +216,33 @@ export function SaveViewDialog({ open, onClose, appId, fields, config, editing, 
           )}
 
           {layout === 'kanban' && (
-            <div className="rounded-md border p-2" style={{ borderColor: 'hsl(var(--border))' }}>
-              <FieldPicker label="Group by field" fields={groupFields} value={groupField} onChange={(v) => setGroupField(v ?? '')} required />
+            <div className="space-y-3 rounded-md border p-2" style={{ borderColor: 'hsl(var(--border))' }}>
+              <FieldPicker
+                label="Group by field"
+                fields={groupFields}
+                value={groupField}
+                onChange={(v) => {
+                  // A saved visibleColumns list names one field's enum
+                  // values — switching to a DIFFERENT group field makes it
+                  // meaningless (its values wouldn't even be real options
+                  // for the new field), so this resets to "show every
+                  // column" rather than silently carrying over a stale,
+                  // unrelated filter.
+                  setGroupField(v ?? '')
+                  setKanbanVisibleColumns([])
+                }}
+                required
+              />
+              {groupFieldDef && (
+                <div>
+                  <FieldLabel>Columns</FieldLabel>
+                  <KanbanColumnsPicker
+                    options={kanbanColumnOptions}
+                    visibleColumns={kanbanVisibleColumns}
+                    onVisibleColumnsChange={setKanbanVisibleColumns}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -190,7 +253,21 @@ export function SaveViewDialog({ open, onClose, appId, fields, config, editing, 
 
           <div>
             <FieldLabel>Filter</FieldLabel>
-            <FilterBuilder group={filter} fields={fieldsWithSystem} variables={[]} onChange={setFilter} />
+            {/* hideExpressions: a saved view's filter is end-user-facing
+               config (the same shape RecordsTable's own runtime filter
+               popover edits), not workflow-canvas scripting — Expr access
+               (Vars[...], NodeOutputs[...]) has no meaning for "when should
+               this view's rows be included" and collapsing to one line per
+               condition matches this drawer's own compact field/column
+               rows above it. overflow-x-auto matches RecordsTable's own
+               filter popover: hideExpressions's condition row has a
+               min-width floor (FilterBuilder.tsx) so Field/Value stop
+               getting squeezed as controls stack up — scrolling only this
+               section horizontally, rather than the whole drawer body,
+               keeps Name/Columns/Sort/Visibility unaffected. */}
+            <div className="overflow-x-auto">
+              <FilterBuilder group={filter} fields={fieldsWithSystem} variables={[]} onChange={setFilter} hideExpressions />
+            </div>
           </div>
 
           <div>
@@ -275,47 +352,3 @@ function FieldPicker({ label, fields, value, onChange, required }: {
   )
 }
 
-function SortRuleList({ rules, fields, onChange }: {
-  rules: SortRule[]
-  fields: { name: string; label: string }[]
-  onChange: (rules: SortRule[]) => void
-}) {
-  const addRule = () => onChange([...rules, { id: nanoid(), field: fields[0]?.name ?? '', dir: 'asc' }])
-  const updateRule = (id: string, patch: Partial<SortRule>) =>
-    onChange(rules.map((r) => (r.id === id ? { ...r, ...patch } : r)))
-  const removeRule = (id: string) => onChange(rules.filter((r) => r.id !== id))
-
-  return (
-    <div className="space-y-1.5">
-      {rules.map((r) => (
-        <div key={r.id} className="flex items-center gap-1.5">
-          <Select value={r.field} onChange={(e) => updateRule(r.id, { field: e.target.value })} className="h-8 min-w-0 flex-1 text-[11px]">
-            {fields.map((f) => (
-              <option key={f.name} value={f.name}>{f.label || f.name}</option>
-            ))}
-          </Select>
-          <Select value={r.dir} onChange={(e) => updateRule(r.id, { dir: e.target.value as 'asc' | 'desc' })} className="h-8 w-auto shrink-0 text-[11px]">
-            <option value="asc">Ascending</option>
-            <option value="desc">Descending</option>
-          </Select>
-          <button
-            type="button"
-            onClick={() => removeRule(r.id)}
-            className="shrink-0 rounded px-1.5 py-1 text-[11px] hover:text-red-500"
-            style={{ color: 'hsl(var(--muted-foreground))' }}
-          >
-            ✕
-          </button>
-        </div>
-      ))}
-      <button
-        type="button"
-        onClick={addRule}
-        className="w-full rounded-md border border-dashed py-1 text-[11px] transition-colors hover:bg-[hsl(var(--accent))]"
-        style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}
-      >
-        + Sort rule
-      </button>
-    </div>
-  )
-}
