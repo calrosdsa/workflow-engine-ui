@@ -82,6 +82,13 @@ export const formsApi = {
     api.post(`forms/${formId}/records?executeWorkflows=true`, { json: data }).json<FormRecord>(),
   updateRecord:  (formId: string, recordId: string, data: FormRecord) =>
     api.put(`forms/${formId}/records/${recordId}`, { json: data }).json<FormRecord>(),
+  // Kanban layout's within-column drag-to-reorder — writes only the record's
+  // kanban_order (a fractional-index float the caller computes as the
+  // midpoint between its new neighbors), bypassing validation/triggers/audit
+  // the way updateRecord's full-record PUT doesn't. A 204, not a record body.
+  setKanbanOrder: async (formId: string, recordId: string, order: number): Promise<void> => {
+    await api.patch(`forms/${formId}/records/${recordId}/kanban-order`, { json: { order } })
+  },
   // Awaits the ky ResponsePromise directly (a 204 has no body to parse) so
   // callers get a real, settled Promise<void> — passing the raw
   // ResponsePromise through unresolved is what let React Query's mutation
