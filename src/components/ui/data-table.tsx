@@ -28,6 +28,11 @@ export interface DataTableProps {
   sortDir?: 'asc' | 'desc'
   onSortChange?: (field: string) => void
   onRowClick?: (row: Record<string, unknown>) => void
+  /** Opt-in double-click handler, independent of onRowClick — e.g.
+   *  RecordsTable.tsx wires single-click to open its own drawer and
+   *  double-click to navigate to the full record page instead. Omitted
+   *  entirely (no behavior change) for every consumer that doesn't pass it. */
+  onRowDoubleClick?: (row: Record<string, unknown>) => void
   emptyMessage?: string
   /** Renders skeleton placeholder rows instead of `rows` — lets every
    *  consumer (search lists, audit/linked-record tabs) share one loading
@@ -46,7 +51,7 @@ export interface DataTableProps {
 // A plain native <table>, not a Radix primitive — there's no accessible-
 // primitives gap to fill for tabular data (same reasoning select.tsx's
 // native <select> variant already demonstrates elsewhere in this codebase).
-export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortChange, onRowClick, emptyMessage, loading, onColumnsReorder }: DataTableProps) {
+export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortChange, onRowClick, onRowDoubleClick, emptyMessage, loading, onColumnsReorder }: DataTableProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -104,7 +109,8 @@ export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortC
               <tr
                 key={getRowId(row)}
                 onClick={() => onRowClick?.(row)}
-                className={cn('border-b transition-colors', onRowClick && 'cursor-pointer hover:bg-black/5')}
+                onDoubleClick={() => onRowDoubleClick?.(row)}
+                className={cn('border-b transition-colors', (onRowClick || onRowDoubleClick) && 'cursor-pointer hover:bg-black/5')}
                 style={{ borderColor: 'hsl(var(--border))' }}
               >
                 {columns.map((col) => (
