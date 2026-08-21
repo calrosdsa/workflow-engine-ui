@@ -303,11 +303,62 @@ export interface CreateUserSettings {
   viewOnlyColumns: ViewOnlyColumn[]
 }
 
+/** Configurable record-detail-page tab (FR-D2-015). `type` resolves through
+ *  detail-tabs/registry.ts's DetailTabDefinition registry — this schema layer
+ *  has no knowledge of what any given type actually renders, only its id,
+ *  visibility, and opaque per-type config, mirroring how WidgetInstance
+ *  (dashboard/schema.ts) stays opaque to the widget it resolves to. */
+export interface DetailTabConfig {
+  id: string             // UI-only key (stable across reorders); not meaningful to the backend
+  type: string            // registry key: 'details' | 'audit' | 'linked' | 'related_form' | 'custom' | ...
+  label?: string          // overrides the registry's default label when set
+  hidden?: boolean        // reorderable but hidden from the runtime TabsList — distinct from deleting the entry outright, so a hidden tab's config isn't lost
+  config: unknown          // type-owned payload, parsed via that type's own DetailTabDefinition.parseConfig
+  visibility?: TabVisibilityConfig
+  renderIf?: TabRenderCondition
+}
+
+/** Everyone (default) / roles / specific people / roles-or-people. Reuses
+ *  the same role-membership semantics canViewMenu already evaluates for
+ *  Menu.permission_mode === 'role' (features/auth/permissions.ts) — a
+ *  distinct config shape here only because tab visibility also needs the
+ *  "specific people" option Menu-level gating has never had. */
+export interface TabVisibilityConfig {
+  mode: 'everyone' | 'roles' | 'users' | 'roles_or_users'
+  roleIds?: string[]
+  userIds?: string[]
+}
+
+/** Whole-tab conditional rendering — the tab-level analog of
+ *  ElementBehavior's field-level VisibilityMode/visibleWhen, reusing the
+ *  exact same Vars["fieldKey"] expression addressing and backend evaluator
+ *  (features/forms/runtime/expression-context.ts), invoked for the first
+ *  time from the read-only record-detail path rather than only FormRenderer. */
+export interface TabRenderCondition {
+  mode: 'always' | 'expression'
+  expressionWhen?: string
+}
+
+export function emptyTabVisibility(): TabVisibilityConfig {
+  return { mode: 'everyone' }
+}
+
+export function emptyTabRenderCondition(): TabRenderCondition {
+  return { mode: 'always' }
+}
+
 /** Top-level, form-wide settings bag — sibling of sections/variables on
- *  FormSchema. Currently just Create User; future form-level toggles land
- *  here too rather than growing FormSchema's own fields. */
+ *  FormSchema. Currently Create User and detailTabs; future form-level
+ *  toggles land here too rather than growing FormSchema's own fields. */
 export interface FormSettings {
   createUser: CreateUserSettings
+  /** Absent/undefined (every form that predates FR-D2-015, or has never
+   *  opened the "Detail Page" config panel) resolves to the fixed built-in
+   *  three tabs (details/audit/linked) — see
+   *  detail-tabs/registry.ts's resolveDetailTabs, the single place that
+   *  default is expressed, so RecordDetailPanel.tsx never special-cases an
+   *  absent array itself. */
+  detailTabs?: DetailTabConfig[]
 }
 
 export const INVITATION_STATUS_COLUMN: ViewOnlyColumn = { id: 'invitation_status', label: 'Invitation Status' }

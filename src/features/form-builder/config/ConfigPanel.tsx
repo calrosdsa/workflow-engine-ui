@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { SlidersHorizontal, Layers, FileText } from 'lucide-react'
+import { SlidersHorizontal, Layers, FileText, LayoutPanelTop } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -10,9 +10,13 @@ import {
   SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select-menu'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useForm as useFormDef } from '@/features/forms/hooks'
-import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection } from '../store'
+import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection, updateDetailTabs } from '../store'
+import { DetailPageConfigSection } from './DetailPageConfigSection'
+import { resolveDetailTabs } from '@/features/forms/runtime/detail-tabs/registry'
 import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable } from '../component-registry'
 import { slugifyKey, isParentLinkElement } from '../factory'
 import {
@@ -88,7 +92,7 @@ export function ConfigPanel({ variables }: { variables: VariableDecl[] }) {
           onChange={(p) => updateSection(section.id, p)}
         />
       ) : (
-        <FormConfig schema={schema} />
+        <FormConfig schema={schema} formId={formId} />
       )}
     </aside>
   )
@@ -98,9 +102,11 @@ export function ConfigPanel({ variables }: { variables: VariableDecl[] }) {
 // Form config (shown when nothing is selected — the builder's default state)
 // ---------------------------------------------------------------------------
 
-function FormConfig({ schema }: { schema: FormSchema }) {
+function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | null }) {
   const formName = useFormMetaStore((s) => s.name)
   const cfg: CreateUserSettings = schema.settings?.createUser ?? emptyCreateUserSettings()
+  const [detailPageOpen, setDetailPageOpen] = useState(false)
+  const tabCount = resolveDetailTabs(schema.settings?.detailTabs).filter((t) => !t.hidden).length
 
   return (
     <>
@@ -139,8 +145,54 @@ function FormConfig({ schema }: { schema: FormSchema }) {
               </div>
             </div>
           )}
+
+          <div className="h-px bg-slate-100" />
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Detail Page</p>
+            <p className="text-[10px] text-slate-400">
+              Which tabs show on this form's record detail page, in what order, and who can see each one.
+            </p>
+            {formId ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDetailPageOpen(true)}
+                className="flex w-full items-center justify-between gap-2 text-[12px]"
+              >
+                <span className="flex items-center gap-2">
+                  <LayoutPanelTop size={14} className="text-slate-400" />
+                  Configure Detail Page
+                </span>
+                <span className="text-[10px] text-slate-400">{tabCount} tab{tabCount === 1 ? '' : 's'}</span>
+              </Button>
+            ) : (
+              <p className="text-[11px] text-slate-400">Save this form first to configure its Detail Page tabs.</p>
+            )}
+          </div>
         </div>
       </ScrollArea>
+
+      {formId && (
+        <Drawer open={detailPageOpen} onOpenChange={setDetailPageOpen}>
+          <DrawerContent size="lg">
+            <DrawerHeader>
+              <DrawerTitle>Detail Page</DrawerTitle>
+              <DrawerDescription>
+                Which tabs show on this form's record detail page, in what order, and who can see each one.
+              </DrawerDescription>
+            </DrawerHeader>
+            <ScrollArea className="flex-1">
+              <div className="p-6">
+                <DetailPageConfigSection
+                  formId={formId}
+                  detailTabs={schema.settings?.detailTabs}
+                  onChange={updateDetailTabs}
+                />
+              </div>
+            </ScrollArea>
+          </DrawerContent>
+        </Drawer>
+      )}
     </>
   )
 }

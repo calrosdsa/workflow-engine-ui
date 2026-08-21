@@ -38,6 +38,14 @@ export interface WidgetRendererProps<TConfig> {
    *  or fire off a stream of background requests while the user is mid-edit.
    *  'runtime' is the real, fully-interactive end-user render. */
   mode: 'builder' | 'runtime'
+  /** Set ONLY when this widget instance is rendering inside a detail-page
+   *  'custom' tab (FR-D2-015), never for an ordinary Dashboard menu — a
+   *  widget that wants to auto-scope itself to "the record this tab is
+   *  attached to" (e.g. the table widget's scopeToRecord config, see
+   *  widgets/table/schema.ts) reads this; every widget type that doesn't
+   *  opt in simply ignores it and renders exactly as it does in a Dashboard
+   *  menu today. */
+  recordContext?: { formId: string; recordId: string }
 }
 
 export interface WidgetConfigPanelProps<TConfig> {

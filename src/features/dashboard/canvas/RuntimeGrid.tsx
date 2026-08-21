@@ -31,9 +31,14 @@ interface RuntimeGridProps {
   appId: string
   menus?: Menu[]
   onNavigate?: (slug: string) => void
+  /** Threaded straight through to every tile's WidgetRendererProps — set
+   *  only when this grid itself is rendering inside a detail-page 'custom'
+   *  tab (FR-D2-015's DashboardMenuRuntime.tsx call site never sets this,
+   *  so an ordinary Dashboard menu is unaffected). */
+  recordContext?: { formId: string; recordId: string }
 }
 
-export function RuntimeGrid({ schema, clientId, appId, menus, onNavigate }: RuntimeGridProps) {
+export function RuntimeGrid({ schema, clientId, appId, menus, onNavigate, recordContext }: RuntimeGridProps) {
   const wideLayout: RglLayout = schema.widgets.map((w) => ({
     i: w.id,
     x: w.layout.x,
@@ -72,7 +77,7 @@ export function RuntimeGrid({ schema, clientId, appId, menus, onNavigate }: Runt
         >
           {schema.widgets.map((instance) => (
             <div key={instance.id} className="h-full">
-              <RuntimeTile instance={instance} clientId={clientId} appId={appId} menus={menus} onNavigate={onNavigate} />
+              <RuntimeTile instance={instance} clientId={clientId} appId={appId} menus={menus} onNavigate={onNavigate} recordContext={recordContext} />
             </div>
           ))}
         </ResponsiveGridLayoutWithWidth>
@@ -81,12 +86,13 @@ export function RuntimeGrid({ schema, clientId, appId, menus, onNavigate }: Runt
   )
 }
 
-function RuntimeTile({ instance, clientId, appId, menus, onNavigate }: {
+function RuntimeTile({ instance, clientId, appId, menus, onNavigate, recordContext }: {
   instance: DashboardSchema['widgets'][number]
   clientId: string
   appId: string
   menus?: Menu[]
   onNavigate?: (slug: string) => void
+  recordContext?: { formId: string; recordId: string }
 }) {
   const def = getWidget(instance.type)
   const [tileRef, isVisible] = useIsVisible<HTMLDivElement>()
@@ -124,6 +130,7 @@ function RuntimeTile({ instance, clientId, appId, menus, onNavigate }: {
             menus={menus}
             onNavigate={onNavigate}
             mode="runtime"
+            recordContext={recordContext}
           />
         )}
       </div>

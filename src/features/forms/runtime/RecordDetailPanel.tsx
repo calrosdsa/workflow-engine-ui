@@ -5,11 +5,12 @@
 import { useState, useEffect } from 'react'
 import {
   ChevronLeft, ChevronRight, ChevronDown, Pencil, Trash2, Workflow as WorkflowIcon, User as UserIcon,
-  RotateCw, XCircle, UserPlus,
+  RotateCw, XCircle, UserPlus, History,
 } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { DataTable } from '@/components/ui/data-table'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { PermissionGate } from '@/features/auth/PermissionGate'
 import { useUpdateRecord, useDeleteRecord } from '@/features/forms/hooks'
 import {
@@ -25,9 +26,18 @@ import { COMPONENT_REGISTRY } from '@/features/form-builder/component-registry'
 import { formatValue } from './format-value'
 import { resolveReferenceLabel } from './record-title'
 import { ReferenceValueLabel } from './ReferenceValueLabel'
+import { buildEnumLabels, resolveEnumLabel } from './enum-labels'
+import { Avatar } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { useTeamUsers } from '@/features/users/hooks'
+import type { TeamUser } from '@/features/users/types'
 import { useForm as useFormDef } from '@/features/forms/hooks'
+import { resolveDetailTabs, getDetailTab } from './detail-tabs/registry'
+import { useCurrentViewer, isTabVisible } from './detail-tabs/useTabVisible'
+import { useExpressionRuntimeState, schemaToVariableDecls } from './expression-context'
+import './detail-tabs'
 import type { FormSchema } from '@/features/form-builder/schema'
-import type { FieldDef, AuditLogEntry, FormRecord, LinkedRecordGroup } from '@/features/forms/types'
+import type { FieldDef, AuditLogEntry, AuditFieldChange, FormRecord, LinkedRecordGroup } from '@/features/forms/types'
 
 export { formatValue }
 
@@ -67,6 +77,38 @@ export function RecordDetailPanel({ formId, recordId, fields, schema, onNavigate
   const removeAccess = useRemoveRecordAccess(formId, recordId)
   const enableAccess = useEnableRecordAccess(formId, recordId)
 
+  const viewer = useCurrentViewer()
+  const configuredTabs = resolveDetailTabs(schema?.settings?.detailTabs).filter(
+    (t) => !t.hidden && isTabVisible(t.visibility, viewer),
+  )
+  const variables = schema ? schemaToVariableDecls(schema) : []
+  const renderIfExpressions = configuredTabs
+    .filter((t) => t.renderIf?.mode === 'expression' && !!t.renderIf.expressionWhen)
+    .map((t) => ({ key: t.id, kind: 'visibleWhen' as const, expr: t.renderIf!.expressionWhen }))
+  const renderIfResolved = useExpressionRuntimeState(renderIfExpressions, variables, record ?? {})
+  // Deliberately `?? false`, not useExpressionRuntimeState's own field-level
+  // DEFAULT_STATE.visible=true — a whole tab flashing in/out during the
+  // 250ms debounce window (or staying visible on an invalid expression) is
+  // more disruptive than a single field's visibility flickering, so a tab's
+  // renderIf fails closed (hidden) until a real, resolved `true` comes back,
+  // per FR-D2-015 §6's edge-case row for this exact scenario.
+  const renderableTabs = configuredTabs.filter((t) => {
+    if (t.renderIf?.mode !== 'expression' || !t.renderIf.expressionWhen) return true
+    return renderIfResolved[t.id]?.visible ?? false
+  })
+
+  // hideWhenEmpty (related_form only, FR-D2-015 §3) can only resolve AFTER
+  // that tab's own Renderer has fetched its data — unlike visibility/
+  // renderIf, which are known before any tab-specific content mounts. Every
+  // tab renders optimistically at first; a related_form tab configured with
+  // hideWhenEmpty reports back via onEmptyResolved once its own existence
+  // check settles, and is retroactively dropped from BOTH the trigger list
+  // and the content below — a brief flash-then-hide, not a permanent gap,
+  // and the only tradeoff of not being able to know "is it empty" before
+  // that tab's own Renderer has had a chance to ask.
+  const [emptyTabIds, setEmptyTabIds] = useState<Set<string>>(new Set())
+  const visibleTabs = renderableTabs.filter((t) => !emptyTabIds.has(t.id))
+
   // Reacts to the mutation's own settled state via an effect rather than a
   // mutate()-call callback or an awaited mutateAsync() continuation — traced
   // to formsApi.deleteRecord returning ky's raw, unconsumed ResponsePromise:
@@ -95,37 +137,68 @@ export function RecordDetailPanel({ formId, recordId, fields, schema, onNavigate
 
   return (
     <div className="flex h-full flex-col">
-      <Tabs defaultValue="details" className="flex min-h-0 flex-1 flex-col">
+      {/* Keyed on the resolved visible-tab-id list, not just formId — if a
+         renderIf expression resolves AFTER first paint (the debounced
+         backend round-trip) and changes which tabs are visible, the
+         underlying Radix Tabs' own internal "which value is active" state
+         needs a fresh mount to re-derive a valid defaultValue, or it can end
+         up pointed at a tab that no longer exists in the list. */}
+      <Tabs key={visibleTabs.map((t) => t.id).join(',') || 'empty'} defaultValue={visibleTabs[0]?.id} className="flex min-h-0 flex-1 flex-col">
         <div className="border-b px-6 py-2" style={{ borderColor: 'hsl(var(--border))' }}>
           <TabsList>
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="audit">Audit Log</TabsTrigger>
-            <TabsTrigger value="linked">Linked Records</TabsTrigger>
+            {visibleTabs.map((t) => {
+              const def = getDetailTab(t.type)
+              return (
+                <TabsTrigger key={t.id} value={t.id}>
+                  {t.label || def?.label || t.type}
+                </TabsTrigger>
+              )
+            })}
           </TabsList>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-6">
-          <TabsContent value="details">
-            <DetailsTab
-              formId={formId}
-              recordId={recordId}
-              fields={fields}
-              schema={schema}
-              editing={editing && canEdit}
-              onStartEdit={() => setEditing(true)}
-              onSubmit={async (values) => {
-                await updateRecord.mutateAsync({ recordId, data: values })
-                setEditing(false)
-              }}
-              onCancelEdit={() => setEditing(false)}
-              submitting={updateRecord.isPending}
-            />
-          </TabsContent>
-          <TabsContent value="audit">
-            <AuditLogTab formId={formId} recordId={recordId} />
-          </TabsContent>
-          <TabsContent value="linked">
-            <LinkedRecordsTab formId={formId} recordId={recordId} onNavigateToRecord={onNavigateToRecord} />
-          </TabsContent>
+          {/* Every renderableTab mounts its Renderer (not just visibleTabs)
+             so a hideWhenEmpty related_form tab's own existence-check query
+             keeps running even while its trigger/content chrome is hidden —
+             the moment new data makes it non-empty, it reappears without a
+             second, separate polling mechanism. Chrome visibility
+             (TabsTrigger above, and the wrapper div's display here) is the
+             ONLY thing emptiness affects; the Renderer itself always mounts. */}
+          {renderableTabs.map((t) => {
+            const def = getDetailTab(t.type)
+            if (!def) return null
+            const config = def.parseConfig(t.config)
+            const isVisible = !emptyTabIds.has(t.id)
+            return (
+              <TabsContent key={t.id} value={t.id} forceMount style={isVisible ? undefined : { display: 'none' }}>
+                <def.Renderer
+                  formId={formId}
+                  recordId={recordId}
+                  fields={fields}
+                  schema={schema}
+                  config={config}
+                  onNavigateToRecord={onNavigateToRecord}
+                  editing={editing && canEdit}
+                  onStartEdit={() => setEditing(true)}
+                  onSubmitEdit={async (values) => {
+                    await updateRecord.mutateAsync({ recordId, data: values })
+                    setEditing(false)
+                  }}
+                  onCancelEdit={() => setEditing(false)}
+                  submittingEdit={updateRecord.isPending}
+                  onEmptyResolved={(empty) => {
+                    setEmptyTabIds((prev) => {
+                      if (empty === prev.has(t.id)) return prev
+                      const next = new Set(prev)
+                      if (empty) next.add(t.id)
+                      else next.delete(t.id)
+                      return next
+                    })
+                  }}
+                />
+              </TabsContent>
+            )
+          })}
         </div>
       </Tabs>
 
@@ -212,7 +285,7 @@ export function RecordDetailPanel({ formId, recordId, fields, schema, onNavigate
   )
 }
 
-function DetailsTab({ formId, recordId, fields, schema, editing, onStartEdit, onSubmit, onCancelEdit, submitting }: {
+export function DetailsTab({ formId, recordId, fields, schema, editing, onStartEdit, onSubmit, onCancelEdit, submitting }: {
   formId: string
   recordId: string
   fields: FieldDef[]
@@ -318,62 +391,126 @@ function DetailsTab({ formId, recordId, fields, schema, editing, onStartEdit, on
   )
 }
 
-function actorLabel(entry: AuditLogEntry): { icon: typeof UserIcon; label: string } {
-  if (entry.actor_workflow_execution_id) return { icon: WorkflowIcon, label: 'Workflow' }
-  if (entry.actor_user_id) return { icon: UserIcon, label: entry.actor_user_id }
-  return { icon: UserIcon, label: 'Unknown' }
+function userDisplayName(u: TeamUser): string {
+  const name = `${u.first_name} ${u.last_name}`.trim()
+  return name || u.email
 }
 
-function AuditLogTab({ formId, recordId }: { formId: string; recordId: string }) {
+/** Resolves an actor id to a display name + icon. The users lookup
+ *  (GET /users) is Super-Admin-only server-side (workflow-engine/api/handler.go),
+ *  so `users` is undefined/empty for every other viewer — this always falls
+ *  back to a short, readable id fragment rather than either crashing or
+ *  silently showing nothing, since a 403 there must never break this tab. */
+function actorLabel(
+  entry: AuditLogEntry,
+  users: TeamUser[] | undefined,
+): { icon: typeof UserIcon; label: string; sublabel?: string } {
+  if (entry.actor_workflow_execution_id) return { icon: WorkflowIcon, label: 'Automation', sublabel: 'Workflow' }
+  if (entry.actor_user_id) {
+    const user = users?.find((u) => u.id === entry.actor_user_id)
+    if (user) return { icon: UserIcon, label: userDisplayName(user), sublabel: user.email }
+    return { icon: UserIcon, label: `User ${entry.actor_user_id.slice(0, 8)}` }
+  }
+  return { icon: UserIcon, label: 'System' }
+}
+
+const ACTION_BADGE: Record<AuditLogEntry['action'], { variant: 'success' | 'default' | 'destructive'; label: string }> = {
+  create: { variant: 'success', label: 'Created' },
+  update: { variant: 'default', label: 'Updated' },
+  delete: { variant: 'destructive', label: 'Deleted' },
+}
+
+/** id/created_at/updated_at ride along in every field_changes payload
+ *  (internal/forms/store diffs the whole row) but are never real field
+ *  edits a viewer configured — id never changes and the timestamps are
+ *  system-maintained, so surfacing them as "changes" is pure noise. */
+const NOISE_FIELDS = new Set(['id', 'created_at', 'updated_at'])
+
+function realFieldChanges(entry: AuditLogEntry): [string, AuditFieldChange][] {
+  if (!entry.field_changes) return []
+  return Object.entries(entry.field_changes).filter(([key, change]) => {
+    if (NOISE_FIELDS.has(key)) return false
+    return change.old !== change.new
+  })
+}
+
+export function AuditLogTab({ formId, recordId, fields, schema }: { formId: string; recordId: string; fields: FieldDef[]; schema?: FormSchema }) {
   const [page, setPage] = useState(1)
   const pageSize = 25
   const { data, isLoading } = useAuditLog(formId, recordId, page, pageSize)
+  const { data: users } = useTeamUsers()
   const [expanded, setExpanded] = useState<string | null>(null)
 
-  if (isLoading) return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading…</p>
+  const fieldLabel = (key: string) => fields.find((f) => f.name === key)?.label ?? key
+  const enumLabels = buildEnumLabels(schema)
+  const fieldIsEnum = (key: string) => fields.find((f) => f.name === key)?.type === 'enum'
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full rounded-lg" />
+        ))}
+      </div>
+    )
+  }
   const entries = data?.entries ?? []
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
-  if (entries.length === 0) return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>No audit history yet.</p>
+  if (entries.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-10 text-center" style={{ borderColor: 'hsl(var(--border))' }}>
+        <History size={20} style={{ color: 'hsl(var(--muted-foreground))' }} />
+        <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>No audit history yet.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-2">
       {entries.map((entry) => {
-        const actor = actorLabel(entry)
+        const actor = actorLabel(entry, users)
         const Icon = actor.icon
         const isOpen = expanded === entry.id
-        const changeCount = entry.field_changes ? Object.keys(entry.field_changes).length : 0
+        const changes = realFieldChanges(entry)
+        const changeCount = changes.length
+        const badge = ACTION_BADGE[entry.action]
         return (
           <div key={entry.id} className="rounded-lg border" style={{ borderColor: 'hsl(var(--border))' }}>
             <button
               type="button"
-              onClick={() => setExpanded(isOpen ? null : entry.id)}
-              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-[hsl(var(--accent))]"
+              onClick={() => changeCount > 0 && setExpanded(isOpen ? null : entry.id)}
+              className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm hover:bg-[hsl(var(--accent))]"
             >
-              <span className="flex items-center gap-2">
-                <span
-                  className="rounded-full px-2 py-0.5 text-[11px] font-medium uppercase"
-                  style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
-                >
-                  {entry.action}
-                </span>
-                <span className="flex items-center gap-1" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                  <Icon size={12} /> {actor.label}
+              <span className="flex min-w-0 items-center gap-2.5">
+                <Avatar name={actor.label === 'Automation' ? 'AT' : actor.label} className="h-7 w-7" />
+                <span className="flex min-w-0 flex-col">
+                  <span className="flex items-center gap-1.5">
+                    <span className="truncate text-[13px] font-medium" style={{ color: 'hsl(var(--foreground))' }}>{actor.label}</span>
+                    <Badge variant={badge.variant} className="shrink-0 px-1.5 py-0 text-[10px]">{badge.label}</Badge>
+                  </span>
+                  {actor.sublabel && (
+                    <span className="flex items-center gap-1 truncate text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                      <Icon size={10} /> {actor.sublabel}
+                    </span>
+                  )}
                 </span>
               </span>
-              <span className="flex items-center gap-2 text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>
+              <span className="flex shrink-0 items-center gap-2 text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>
                 {new Date(entry.created_at).toLocaleString()}
                 {changeCount > 0 && <ChevronDown size={12} className={isOpen ? 'rotate-180' : ''} />}
               </span>
             </button>
             {isOpen && changeCount > 0 && (
-              <div className="space-y-1 border-t px-3 py-2 text-[12px]" style={{ borderColor: 'hsl(var(--border))' }}>
-                {Object.entries(entry.field_changes!).map(([field, change]) => (
-                  <div key={field} className="flex justify-between gap-3">
-                    <span style={{ color: 'hsl(var(--muted-foreground))' }}>{field}</span>
-                    <span style={{ color: 'hsl(var(--foreground))' }}>
-                      {formatValue(change.old)} <span style={{ color: 'hsl(var(--muted-foreground))' }}>→</span> {formatValue(change.new)}
+              <div className="space-y-1.5 border-t px-3 py-2.5 text-[12px]" style={{ borderColor: 'hsl(var(--border))' }}>
+                {changes.map(([field, change]) => (
+                  <div key={field} className="flex items-center justify-between gap-3">
+                    <span className="shrink-0" style={{ color: 'hsl(var(--muted-foreground))' }}>{fieldLabel(field)}</span>
+                    <span className="truncate text-right" style={{ color: 'hsl(var(--foreground))' }}>
+                      {fieldIsEnum(field) ? resolveEnumLabel(enumLabels, field, change.old) : formatValue(change.old)}
+                      {' '}<span style={{ color: 'hsl(var(--muted-foreground))' }}>→</span>{' '}
+                      {fieldIsEnum(field) ? resolveEnumLabel(enumLabels, field, change.new) : formatValue(change.new)}
                     </span>
                   </div>
                 ))}
@@ -399,7 +536,7 @@ function AuditLogTab({ formId, recordId }: { formId: string; recordId: string })
   )
 }
 
-function LinkedRecordsTab({ formId, recordId, onNavigateToRecord }: {
+export function LinkedRecordsTab({ formId, recordId, onNavigateToRecord }: {
   formId: string
   recordId: string
   onNavigateToRecord?: (formId: string, recordId: string) => void

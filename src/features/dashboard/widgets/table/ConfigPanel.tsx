@@ -4,6 +4,7 @@ import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuil
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useForm } from '@/features/forms/hooks'
 import type { WidgetConfigPanelProps } from '../../widget-contract'
 import type { TableWidgetConfig } from './schema'
@@ -34,6 +35,7 @@ function ensureSortIds(sort: SortRule[] | undefined): SortRule[] {
 
 export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<TableWidgetConfig>) {
   const { data: form } = useForm(config.formId)
+  const referenceFields = (form?.fields ?? []).filter((f) => f.type === 'reference')
 
   const patch = (p: Partial<TableWidgetConfig>) => onChange({ ...config, ...p })
 
@@ -108,6 +110,32 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
         <Checkbox checked={config.rowClick === 'record'} onCheckedChange={(c) => patch({ rowClick: c === true ? 'record' : 'none' })} />
         Clicking a row opens its details
       </label>
+
+      {form && (
+        <div className="space-y-1.5 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Record scoping</p>
+          <p className="text-[10px] text-slate-400">
+            Only applies when this widget is placed on a form's Detail Page (a "Custom" tab, FR-D2-015) — ignored on an
+            ordinary Dashboard. Pick a reference field on this form that points back at the record the tab is attached to.
+          </p>
+          {referenceFields.length === 0 ? (
+            <p className="text-[11px] text-slate-400">This form has no reference fields.</p>
+          ) : (
+            <SelectMenu
+              value={config.scopeToRecord?.fieldName ?? '__none__'}
+              onValueChange={(v) => patch({ scopeToRecord: v === '__none__' ? undefined : { fieldName: v } })}
+            >
+              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Not scoped" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__" className="text-xs">Not scoped</SelectItem>
+                {referenceFields.map((f) => (
+                  <SelectItem key={f.name} value={f.name} className="text-xs">{f.label || f.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </SelectMenu>
+          )}
+        </div>
+      )}
     </div>
   )
 }

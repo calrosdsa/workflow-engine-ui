@@ -13,6 +13,16 @@ export interface TableWidgetConfig {
   pageSize: number
   allowUserFilter: boolean
   rowClick: TableRowClick
+  /** FR-D2-015: when this widget renders inside a detail-page 'custom' tab
+   *  (WidgetRendererProps.recordContext is set), scopes the table to only
+   *  records where `fieldName` equals the current record's id — composed
+   *  with defaultFilter via AND, same "narrow, never widen" contract the
+   *  related_form tab type's own additionalFilter already follows. Ignored
+   *  entirely when recordContext is undefined (an ordinary Dashboard menu),
+   *  so this widget's behavior there is completely unchanged. `fieldName`
+   *  must be a reference field on `formId` pointing back at the tab's
+   *  owning form — same restriction related_form's targetFieldName applies. */
+  scopeToRecord?: { fieldName: string }
 }
 
 const VALID_ROW_CLICK: TableRowClick[] = ['none', 'record']
@@ -29,6 +39,9 @@ export function parseTableConfig(raw: unknown): TableWidgetConfig {
         pageSize: typeof r.pageSize === 'number' && r.pageSize > 0 ? r.pageSize : 10,
         allowUserFilter: r.allowUserFilter === true,
         rowClick: r.rowClick && VALID_ROW_CLICK.includes(r.rowClick) ? r.rowClick : 'record',
+        scopeToRecord: r.scopeToRecord && typeof r.scopeToRecord.fieldName === 'string'
+          ? { fieldName: r.scopeToRecord.fieldName }
+          : undefined,
       }
     }
   }

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import {
   type FormSchema, type FormElement, type FormSection, type FormColumn,
-  type ColumnLayout, type ComponentType, type CreateUserSettings,
+  type ColumnLayout, type ComponentType, type CreateUserSettings, type DetailTabConfig,
   emptySchema, emptyFormSettings, emptyCreateUserSettings,
 } from './schema'
 import { createElement, createSection, duplicateElement, duplicateSection, relayoutSection, createAccountSection, createParentReferenceField } from './factory'
@@ -49,6 +49,25 @@ export function updateCreateUserSettings(patch: Partial<CreateUserSettings>) {
       settings: {
         ...(s.schema.settings ?? emptyFormSettings()),
         createUser: { ...(s.schema.settings?.createUser ?? emptyCreateUserSettings()), ...patch },
+      },
+    },
+  }))
+  useFormMetaStore.getState().markDirty()
+}
+
+/** Patches FormSchema.settings.detailTabs (the "Detail Page" config panel,
+ *  FR-D2-015) — same one-off pattern as updateCreateUserSettings, next to
+ *  the store it extends, since this concept also has no page-builder
+ *  equivalent. Replaces the whole array rather than patching individual
+ *  entries — callers (the Detail Page panel's own reorder/add/remove/edit
+ *  handlers) always compute the next full array themselves. */
+export function updateDetailTabs(next: DetailTabConfig[]) {
+  useFormBuilderStore.setState((s) => ({
+    schema: {
+      ...s.schema,
+      settings: {
+        ...(s.schema.settings ?? emptyFormSettings()),
+        detailTabs: next,
       },
     },
   }))
