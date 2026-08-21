@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { LayoutTemplate } from 'lucide-react'
 import { useDashboardStore, findWidget } from './store'
-import { registerWidget, _resetRegistryForTests } from './widget-registry'
+import { registerWidget, resetRegistry } from './widget-registry'
 import type { WidgetDefinition } from './widget-contract'
 
 function fakeWidget(type: string): WidgetDefinition<{ note: string }> {
@@ -26,7 +26,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  _resetRegistryForTests()
+  resetRegistry()
 })
 
 describe('useDashboardStore', () => {

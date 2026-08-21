@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { LayoutTemplate } from 'lucide-react'
 import { createWidget, duplicateWidget } from './factory'
-import { registerWidget, _resetRegistryForTests } from './widget-registry'
+import { registerWidget, resetRegistry } from './widget-registry'
 import type { WidgetDefinition } from './widget-contract'
 import type { WidgetInstance } from './schema'
 
@@ -22,7 +22,7 @@ function fakeWidget(type: string): WidgetDefinition<{ note: string }> {
 }
 
 afterEach(() => {
-  _resetRegistryForTests()
+  resetRegistry()
 })
 
 describe('createWidget', () => {
