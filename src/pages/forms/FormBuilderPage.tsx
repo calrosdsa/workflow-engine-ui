@@ -62,6 +62,18 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   const [parentRefSeeded, setParentRefSeeded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
+  // Tracks whether the hydration effect below has actually run for the
+  // CURRENT loaded form — deliberately separate from React Query's own
+  // isLoading, which flips to false the instant `loaded` arrives, i.e. one
+  // render before this effect (which only runs after commit) gets a chance
+  // to populate the builder stores. Gating the canvas's mount on isLoading
+  // alone let FormBuilderDnd/FormCanvas mount and subscribe to the store
+  // while it still held the empty initial schema, so their first paint
+  // rendered "Start building your form" even though loaded already had real
+  // sections — a real, live-reproduced bug, not a display artifact. Mirrors
+  // DashboardEditorPage.tsx's identical `initialised` guard for the same
+  // race (FR-C3-009's own store).
+  const [initialised, setInitialised] = useState(false)
 
   // Hydrate the store from the loaded definition (edit) or reset (new).
   useEffect(() => {
@@ -69,10 +81,12 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
       const b = toBuilder(loaded)
       loadFormIntoStores({ id: loaded.id, name: b.name, slug: b.slug, description: b.description, parentFormId: loaded.parent_form_id, schema: b.schema })
       setSlugTouched(true) // existing slug is locked anyway
+      setInitialised(true)
     } else if (mode === 'new') {
       resetFormBuilder()
       setSlugTouched(false)
       setParentRefSeeded(false)
+      setInitialised(true)
     }
   }, [mode, loaded, parentFormId])
 
@@ -194,7 +208,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   const saving = createMutation.isPending || updateMutation.isPending
   const parentForm = parentFormId ? allForms?.find((f) => f.id === parentFormId) : undefined
 
-  if (mode === 'edit' && isLoading) {
+  if ((mode === 'edit' && isLoading) || !initialised) {
     return <div className="flex h-full items-center justify-center"><Spinner /></div>
   }
 

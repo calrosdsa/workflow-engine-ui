@@ -13,11 +13,14 @@ import {
   SortableContext, verticalListSortingStrategy, useSortable, arrayMove, sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Eye, EyeOff, Trash2, ChevronDown, Plus } from 'lucide-react'
+import { GripVertical, Eye, EyeOff, Trash2, Plus, Lock, Users2, GitBranch } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Badge } from '@/components/ui/badge'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { RoleMultiSelect } from './RoleMultiSelect'
 import { UserMultiSelect } from './UserMultiSelect'
 import { ExpressionField } from './ExpressionField'
@@ -46,7 +49,6 @@ export function DetailPageConfigSection({ formId, detailTabs, onChange, applyDef
   const tabs = applyDefault ? resolveDetailTabs(detailTabs) : (detailTabs ?? [])
   const visibleCount = applyDefault ? tabs.filter((t) => !t.hidden).length : Infinity
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [pickerOpen, setPickerOpen] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -89,67 +91,62 @@ export function DetailPageConfigSection({ formId, detailTabs, onChange, applyDef
     const newTab: DetailTabConfig = { id: nanoid(), type, config: def.createDefaultConfig() }
     onChange([...tabs, newTab])
     setExpandedId(newTab.id)
-    setPickerOpen(false)
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={tabs.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-1.5">
+          <Accordion
+            type="single"
+            collapsible
+            value={expandedId ?? ''}
+            onValueChange={(v) => setExpandedId(v || null)}
+            className="flex flex-col gap-2"
+          >
             {tabs.map((t) => (
               <DetailTabRow
                 key={t.id}
                 formId={formId}
                 tab={t}
-                expanded={expandedId === t.id}
-                onToggleExpand={() => setExpandedId(expandedId === t.id ? null : t.id)}
                 onToggleHidden={() => toggleHidden(t.id)}
                 onRemove={() => removeTab(t.id)}
                 onPatch={(patch) => patchTab(t.id, patch)}
                 canHide={t.hidden || visibleCount > 1}
               />
             ))}
-          </div>
+          </Accordion>
         </SortableContext>
       </DndContext>
 
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setPickerOpen((v) => !v)}
-          className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-slate-200 py-1.5 text-[11px] text-slate-500 hover:border-slate-300 hover:bg-slate-50"
-        >
-          <Plus size={12} /> Add Tab
-        </button>
-        {pickerOpen && (
-          <div className="absolute inset-x-0 top-full z-10 mt-1 space-y-0.5 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
-            {allDetailTabs().map((def) => (
-              <button
-                key={def.type}
-                type="button"
-                onClick={() => addTab(def.type)}
-                className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-slate-50"
-              >
-                <def.icon size={14} className="mt-0.5 shrink-0 text-slate-400" />
-                <span className="min-w-0">
-                  <span className="block text-[12px] font-medium text-slate-700">{def.label}</span>
-                  <span className="block truncate text-[10px] text-slate-400">{def.description}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-[hsl(var(--border))] py-2 text-[12px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:border-[hsl(var(--primary))]/40 hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
+          >
+            <Plus size={13} /> Add Tab
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="center" className="w-72">
+          {allDetailTabs().map((def) => (
+            <DropdownMenuItem key={def.type} onClick={() => addTab(def.type)} className="items-start gap-2.5 py-2">
+              <def.icon size={15} className="mt-0.5 shrink-0 text-[hsl(var(--muted-foreground))]" />
+              <span className="min-w-0">
+                <span className="block text-[12.5px] font-medium text-[hsl(var(--foreground))]">{def.label}</span>
+                <span className="block truncate text-[11px] text-[hsl(var(--muted-foreground))]">{def.description}</span>
+              </span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }
 
-function DetailTabRow({ formId, tab, expanded, onToggleExpand, onToggleHidden, onRemove, onPatch, canHide }: {
+function DetailTabRow({ formId, tab, onToggleHidden, onRemove, onPatch, canHide }: {
   formId: string
   tab: DetailTabConfig
-  expanded: boolean
-  onToggleExpand: () => void
   onToggleHidden: () => void
   onRemove: () => void
   onPatch: (patch: Partial<DetailTabConfig>) => void
@@ -158,85 +155,116 @@ function DetailTabRow({ formId, tab, expanded, onToggleExpand, onToggleHidden, o
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tab.id })
   const def = getDetailTab(tab.type)
   const style = { transform: CSS.Transform.toString(transform), transition }
+  const isConditional = tab.renderIf?.mode === 'expression'
+  const hasCustomVisibility = (tab.visibility?.mode ?? 'everyone') !== 'everyone'
 
   return (
-    <div
+    <AccordionItem
       ref={setNodeRef}
       style={style}
+      value={tab.id}
       className={cn(
-        'rounded-md border border-slate-200 bg-white',
+        'overflow-hidden rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))]',
         isDragging && 'z-10 opacity-70 shadow-md',
-        tab.hidden && 'opacity-60',
+        tab.hidden && 'bg-[hsl(var(--muted))]/40',
       )}
     >
-      <div className="flex items-center gap-1.5 px-2 py-1.5">
+      <div className="flex items-center gap-1.5 pl-1 pr-2">
         <button
           type="button"
           {...attributes}
           {...listeners}
-          className="cursor-grab touch-none text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+          className="cursor-grab touch-none rounded p-1.5 text-[hsl(var(--muted-foreground))]/60 hover:text-[hsl(var(--muted-foreground))] active:cursor-grabbing"
           title="Drag to reorder"
         >
-          <GripVertical size={13} />
+          <GripVertical size={14} />
         </button>
-        {def && <def.icon size={13} className="shrink-0 text-slate-400" />}
-        <button type="button" onClick={onToggleExpand} className="flex min-w-0 flex-1 items-center gap-1 text-left">
-          <span className="truncate text-[12px] font-medium text-slate-700">{tab.label || def?.label || tab.type}</span>
-          {def?.builtin && <span className="shrink-0 text-[9px] uppercase tracking-wide text-slate-400">Built-in</span>}
-          <ChevronDown size={12} className={cn('ml-auto shrink-0 text-slate-400 transition-transform', expanded && 'rotate-180')} />
-        </button>
-        <button
-          type="button"
-          onClick={onToggleHidden}
-          disabled={!canHide}
-          title={tab.hidden ? 'Show tab' : canHide ? 'Hide tab' : "At least one tab must stay visible"}
-          className="shrink-0 text-slate-400 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {tab.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
-        </button>
-        <button
-          type="button"
-          onClick={onRemove}
-          disabled={!canHide}
-          title={canHide ? 'Remove tab' : "At least one tab must stay visible"}
-          className="shrink-0 text-slate-400 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <Trash2 size={13} />
-        </button>
+
+        <AccordionTrigger className="min-w-0 flex-1 gap-2 py-2.5 text-left normal-case tracking-normal text-[hsl(var(--foreground))] hover:text-[hsl(var(--foreground))]">
+          <span className="flex min-w-0 flex-1 items-center gap-2">
+            {def && <def.icon size={14} className="shrink-0 text-[hsl(var(--muted-foreground))]" />}
+            <span className={cn('truncate text-[13px] font-medium', tab.hidden && 'text-[hsl(var(--muted-foreground))]')}>
+              {tab.label || def?.label || tab.type}
+            </span>
+            <span className="flex shrink-0 items-center gap-1">
+              {def?.builtin && (
+                <Badge variant="outline" className="h-5 gap-0.5 px-1.5 py-0 text-[9.5px] font-medium normal-case tracking-normal text-[hsl(var(--muted-foreground))]">
+                  <Lock size={9} /> Built-in
+                </Badge>
+              )}
+              {tab.hidden && (
+                <Badge variant="secondary" className="h-5 px-1.5 py-0 text-[9.5px] font-medium normal-case tracking-normal">Hidden</Badge>
+              )}
+              {hasCustomVisibility && (
+                <Badge variant="outline" className="h-5 gap-0.5 px-1.5 py-0 text-[9.5px] font-medium normal-case tracking-normal text-[hsl(var(--muted-foreground))]">
+                  <Users2 size={9} /> Restricted
+                </Badge>
+              )}
+              {isConditional && (
+                <Badge variant="outline" className="h-5 gap-0.5 px-1.5 py-0 text-[9.5px] font-medium normal-case tracking-normal text-[hsl(var(--muted-foreground))]">
+                  <GitBranch size={9} /> Conditional
+                </Badge>
+              )}
+            </span>
+          </span>
+        </AccordionTrigger>
+
+        <div className="flex shrink-0 items-center gap-0.5">
+          <button
+            type="button"
+            onClick={onToggleHidden}
+            disabled={!canHide}
+            title={tab.hidden ? 'Show tab' : canHide ? 'Hide tab' : 'At least one tab must stay visible'}
+            className="rounded-md p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+          >
+            {tab.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            disabled={!canHide}
+            title={canHide ? 'Remove tab' : 'At least one tab must stay visible'}
+            className="rounded-md p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
 
-      {expanded && def && (
-        <div className="space-y-3 border-t border-slate-100 p-3">
-          <div className="space-y-1.5">
-            <Label className="text-[11px] font-medium text-slate-600">Label</Label>
-            <Input
-              value={tab.label ?? ''}
-              onChange={(e) => onPatch({ label: e.target.value })}
-              placeholder={def.label}
-              className="h-8 text-sm"
+      <AccordionContent className="border-t border-[hsl(var(--border))] px-3 pb-0 pt-0">
+        {def && (
+          <div className="flex flex-col gap-4 py-3.5">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Label</Label>
+              <Input
+                value={tab.label ?? ''}
+                onChange={(e) => onPatch({ label: e.target.value })}
+                placeholder={def.label}
+                className="h-8 text-sm"
+              />
+            </div>
+
+            {def.ConfigPanel && (
+              <def.ConfigPanel
+                config={def.parseConfig(tab.config)}
+                onChange={(config) => onPatch({ config })}
+                formId={formId}
+              />
+            )}
+
+            <TabVisibilitySection
+              visibility={tab.visibility}
+              onChange={(visibility) => onPatch({ visibility })}
+            />
+
+            <TabRenderIfSection
+              renderIf={tab.renderIf}
+              onChange={(renderIf) => onPatch({ renderIf })}
             />
           </div>
-
-          {def.ConfigPanel && (
-            <def.ConfigPanel
-              config={def.parseConfig(tab.config)}
-              onChange={(config) => onPatch({ config })}
-              formId={formId}
-            />
-          )}
-
-          <TabVisibilitySection
-            visibility={tab.visibility}
-            onChange={(visibility) => onPatch({ visibility })}
-          />
-
-          <TabRenderIfSection
-            renderIf={tab.renderIf}
-            onChange={(renderIf) => onPatch({ renderIf })}
-          />
-        </div>
-      )}
-    </div>
+        )}
+      </AccordionContent>
+    </AccordionItem>
   )
 }
 
@@ -249,8 +277,11 @@ function TabVisibilitySection({ visibility, onChange }: {
   const userIds = visibility?.userIds ?? []
 
   return (
-    <div className="space-y-1.5 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Visibility</p>
+    <div className="flex flex-col gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-3">
+      <div className="flex items-center gap-1.5">
+        <Users2 size={12} className="text-[hsl(var(--muted-foreground))]" />
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Who can see this tab</p>
+      </div>
       <SelectMenu value={mode} onValueChange={(v) => onChange({ mode: v as TabVisibilityConfig['mode'], roleIds, userIds })}>
         <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
         <SelectContent>
@@ -261,14 +292,14 @@ function TabVisibilitySection({ visibility, onChange }: {
         </SelectContent>
       </SelectMenu>
       {(mode === 'roles' || mode === 'roles_or_users') && (
-        <div className="space-y-1">
-          <Label className="text-[10px] font-medium text-slate-500">Roles</Label>
+        <div className="flex flex-col gap-1">
+          <Label className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">Roles</Label>
           <RoleMultiSelect value={roleIds} onChange={(ids) => onChange({ mode, roleIds: ids, userIds })} />
         </div>
       )}
       {(mode === 'users' || mode === 'roles_or_users') && (
-        <div className="space-y-1">
-          <Label className="text-[10px] font-medium text-slate-500">People</Label>
+        <div className="flex flex-col gap-1">
+          <Label className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">People</Label>
           <UserMultiSelect value={userIds} onChange={(ids) => onChange({ mode, roleIds, userIds: ids })} />
         </div>
       )}
@@ -290,13 +321,17 @@ function TabRenderIfSection({ renderIf, onChange }: {
   const emptyVariables: VariableDecl[] = []
 
   return (
-    <div className="space-y-1.5 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
-      <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+    <div className="flex flex-col gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-3">
+      <div className="flex items-center gap-1.5">
+        <GitBranch size={12} className="text-[hsl(var(--muted-foreground))]" />
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">When this tab appears</p>
+      </div>
+      <label className="flex cursor-pointer items-center gap-2 text-sm text-[hsl(var(--muted-foreground))]">
         <Checkbox
           checked={isConditional}
           onCheckedChange={(v) => onChange(v ? { mode: 'expression', expressionWhen: renderIf?.expressionWhen ?? '' } : { mode: 'always' })}
         />
-        <Label className="cursor-pointer text-[12px] font-normal text-slate-600">Only show this tab conditionally</Label>
+        <Label className="cursor-pointer text-[12px] font-normal text-[hsl(var(--muted-foreground))]">Only show this tab conditionally</Label>
       </label>
       {isConditional && (
         <ExpressionField

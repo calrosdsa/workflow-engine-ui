@@ -10,7 +10,7 @@ import {
   SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select-menu'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer'
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useForm as useFormDef } from '@/features/forms/hooks'
@@ -190,6 +190,12 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
                 />
               </div>
             </ScrollArea>
+            <DrawerFooter className="items-center justify-between sm:justify-between">
+              <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
+                {tabCount} tab{tabCount === 1 ? '' : 's'} visible — changes apply instantly, use the builder's Save to persist them.
+              </p>
+              <Button type="button" onClick={() => setDetailPageOpen(false)}>Done</Button>
+            </DrawerFooter>
           </DrawerContent>
         </Drawer>
       )}
