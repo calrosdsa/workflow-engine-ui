@@ -15,7 +15,7 @@
 import type { ComponentType } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import type { FormSchema } from '@/features/form-builder/schema'
-import type { FieldDef, FormRecord } from '@/features/forms/types'
+import type { FieldDef } from '@/features/forms/types'
 
 /** Shared cycle-protection cap for any tab type that can nest another
  *  DetailTabList inside itself (currently 'group' and 'details' — a
@@ -39,18 +39,6 @@ export interface DetailTabRendererProps<TConfig> {
    *  related_form tab's row-click can reuse it without RecordDetailPanel
    *  special-casing tab types. */
   onNavigateToRecord?: (formId: string, recordId: string) => void
-  /** Edit-mode plumbing — meaningful ONLY to the built-in 'details' type,
-   *  which is tightly coupled to RecordDetailPanel's own edit state (the
-   *  Edit/Delete footer buttons, FormRenderer submit). Every other tab type
-   *  ignores these entirely; kept optional on the shared contract rather
-   *  than special-casing 'details' outside the registry, so RecordDetailPanel
-   *  can render every tab through one uniform `<def.Renderer {...props} />`
-   *  call regardless of type. */
-  editing?: boolean
-  onStartEdit?: () => void
-  onSubmitEdit?: (values: FormRecord) => void | Promise<void>
-  onCancelEdit?: () => void
-  submittingEdit?: boolean
   /** related_form-only: called once this tab's own data has loaded, with
    *  whether it came back empty — RecordDetailPanel uses this to hide the
    *  tab (trigger AND content) retroactively when hideWhenEmpty is set,

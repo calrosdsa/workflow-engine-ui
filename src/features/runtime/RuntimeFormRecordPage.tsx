@@ -6,7 +6,7 @@ import { usePermission } from '@/features/auth/permissions'
 import { buildRuntimeNavTree } from './nav'
 import { RuntimeSidebar } from './RuntimeSidebar'
 import { PermissionDeniedPage } from './PermissionDeniedPage'
-import { RecordDetailPanel } from '@/features/forms/runtime/RecordDetailPanel'
+import { RecordDetailPanel, RecordDetailToolbar } from '@/features/forms/runtime/RecordDetailPanel'
 import { resolveRecordTitle } from '@/features/forms/runtime/record-title'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { useRecordDetail } from '@/features/forms/runtime/record-detail-hooks'
@@ -45,6 +45,7 @@ export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recor
   const { data: form } = useFormDef(formId)
   const { data: record } = useRecordDetail(formId, recordId)
   const recordTitle = resolveRecordTitle(form?.fields, record)
+  const schema = form ? parseLayout(form.layout) : undefined
 
   return (
     // Theming is provided once by the shared ThemeProvider in
@@ -107,16 +108,22 @@ export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recor
             ) : !form ? null : (
               <>
                 {recordTitle && (
-                  <div className="border-b px-6 py-4" style={{ borderColor: 'hsl(var(--border))' }}>
+                  <div className="flex items-center justify-between gap-3 border-b px-6 py-4" style={{ borderColor: 'hsl(var(--border))' }}>
                     <h1 className="truncate text-lg font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{recordTitle}</h1>
+                    <RecordDetailToolbar
+                      formId={formId}
+                      recordId={recordId}
+                      record={record}
+                      createUserSettings={schema?.settings?.createUser}
+                      onDeleted={() => runtimeRouter.history.back()}
+                    />
                   </div>
                 )}
                 <RecordDetailPanel
                   formId={formId}
                   recordId={recordId}
                   fields={form.fields}
-                  schema={parseLayout(form.layout)}
-                  onDeleted={() => runtimeRouter.history.back()}
+                  schema={schema}
                 />
               </>
             )}

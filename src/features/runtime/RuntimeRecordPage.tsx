@@ -7,7 +7,7 @@ import { buildRuntimeNavTree, runtimeAncestors } from './nav'
 import { RuntimeSidebar } from './RuntimeSidebar'
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
 import { PermissionDeniedPage } from './PermissionDeniedPage'
-import { RecordDetailPanel } from '@/features/forms/runtime/RecordDetailPanel'
+import { RecordDetailPanel, RecordDetailToolbar } from '@/features/forms/runtime/RecordDetailPanel'
 import { resolveRecordTitle } from '@/features/forms/runtime/record-title'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { useRecordDetail } from '@/features/forms/runtime/record-detail-hooks'
@@ -45,6 +45,7 @@ export function RuntimeRecordPage({ snapshot, clientId, appId, currentMenu, form
   const { data: form } = useFormDef(formId)
   const { data: record } = useRecordDetail(formId, recordId)
   const recordTitle = resolveRecordTitle(form?.fields, record)
+  const schema = form ? parseLayout(form.layout) : undefined
 
   return (
     // Theming is provided once by the shared ThemeProvider in
@@ -105,16 +106,22 @@ export function RuntimeRecordPage({ snapshot, clientId, appId, currentMenu, form
             ) : !form ? null : (
               <>
                 {recordTitle && (
-                  <div className="border-b px-6 py-4" style={{ borderColor: 'hsl(var(--border))' }}>
+                  <div className="flex items-center justify-between gap-3 border-b px-6 py-4" style={{ borderColor: 'hsl(var(--border))' }}>
                     <h1 className="truncate text-lg font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{recordTitle}</h1>
+                    <RecordDetailToolbar
+                      formId={formId}
+                      recordId={recordId}
+                      record={record}
+                      createUserSettings={schema?.settings?.createUser}
+                      onDeleted={() => runtimeRouter.navigate({ to: `/${clientId}/${appId}/${currentMenu.slug}` })}
+                    />
                   </div>
                 )}
                 <RecordDetailPanel
                   formId={formId}
                   recordId={recordId}
                   fields={form.fields}
-                  schema={parseLayout(form.layout)}
-                  onDeleted={() => runtimeRouter.navigate({ to: `/${clientId}/${appId}/${currentMenu.slug}` })}
+                  schema={schema}
                 />
               </>
             )}

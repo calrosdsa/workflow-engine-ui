@@ -7,8 +7,12 @@ import type { FormSchema, FormElement } from '@/features/form-builder/schema'
  *  rules and static (non-expression) required mode. Expression-mode required
  *  fields cannot be statically encoded here — see expression-context.ts's
  *  superRefine-based runtime check, applied by FormRenderer on top of this
- *  schema's result. */
-function fieldSchema(el: FormElement): z.ZodTypeAny {
+ *  schema's result. Exported for InlineFieldEditor.tsx's single-field
+ *  validation on the record detail view — a field with expression-mode
+ *  required/readOnly/visibility is excluded from inline editing entirely
+ *  (see that file), so this static-rules-only validator is a complete,
+ *  correct check for every field inline editing actually allows. */
+export function fieldSchema(el: FormElement): z.ZodTypeAny {
   const reg = COMPONENT_REGISTRY[el.component]
   const isStaticRequired = el.behavior.required === 'always'
 

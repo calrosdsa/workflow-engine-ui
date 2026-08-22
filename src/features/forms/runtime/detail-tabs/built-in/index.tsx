@@ -26,11 +26,6 @@ registerDetailTab({
       recordId={props.recordId}
       fields={props.fields}
       schema={props.schema}
-      editing={!!props.editing}
-      onStartEdit={props.onStartEdit ?? (() => {})}
-      onSubmit={props.onSubmitEdit ?? (() => {})}
-      onCancelEdit={props.onCancelEdit ?? (() => {})}
-      submitting={!!props.submittingEdit}
       childTabs={props.config.childTabs}
       onNavigateToRecord={props.onNavigateToRecord}
       groupDepth={props.groupDepth}

@@ -12,7 +12,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { ActiveFiltersBar } from '@/components/ui/active-filters-bar'
 import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuilder'
 import { nanoid } from '@/features/workflows/builder/nanoid'
-import { RecordDetailPanel } from './RecordDetailPanel'
+import { RecordDetailPanel, RecordDetailToolbar } from './RecordDetailPanel'
 import { resolveRecordTitle } from './record-title'
 import { formatSystemDatetime } from './format-value'
 import { RecordReferenceLink } from './RecordReferenceLink'
@@ -476,20 +476,31 @@ export function RecordsTable({
 
       <Drawer open={!!selectedRecord} onOpenChange={(o) => !o && closeRecord()}>
         <DrawerContent size="lg" container={document.getElementById('runtime-root')}>
-          <DrawerHeader className="flex flex-row items-center justify-between pr-10">
+          <DrawerHeader className="flex flex-row items-center justify-between gap-2 pr-10">
             <DrawerTitle className="truncate">
               {(selectedRecord && resolveRecordTitle(form.fields, selectedRecordLive ?? selectedRecord)) || 'Record details'}
             </DrawerTitle>
-            {selectedRecord && onExpandRecord && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => onExpandRecord(selectedRecord)}
-              >
-                <Maximize2 size={12} />Expand
-              </Button>
-            )}
+            <div className="flex shrink-0 items-center gap-1.5">
+              {selectedRecord && onExpandRecord && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => onExpandRecord(selectedRecord)}
+                >
+                  <Maximize2 size={12} />Expand
+                </Button>
+              )}
+              {selectedRecord && (
+                <RecordDetailToolbar
+                  formId={formId}
+                  recordId={selectedRecord.id as string}
+                  record={selectedRecordLive ?? selectedRecord}
+                  createUserSettings={formSchema.settings?.createUser}
+                  onDeleted={closeRecord}
+                />
+              )}
+            </div>
           </DrawerHeader>
           {selectedRecord && (
             <RecordDetailPanel
@@ -497,7 +508,6 @@ export function RecordsTable({
               recordId={selectedRecord.id as string}
               fields={form.fields}
               schema={formSchema}
-              onDeleted={closeRecord}
             />
           )}
         </DrawerContent>

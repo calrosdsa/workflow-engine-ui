@@ -17,8 +17,7 @@ import type { GroupTabConfig } from './schema'
 // this at a depth no legitimate admin-authored layout would ever need.
 
 export function GroupTabRenderer({
-  formId, recordId, fields, schema, config, onNavigateToRecord,
-  editing, onStartEdit, onSubmitEdit, onCancelEdit, submittingEdit, groupDepth = 0,
+  formId, recordId, fields, schema, config, onNavigateToRecord, groupDepth = 0,
 }: DetailTabRendererProps<GroupTabConfig>) {
   // Re-reads the same React Query cache entry RecordDetailPanel's own
   // useRecordDetail call already populated — no extra network request, just
@@ -51,11 +50,6 @@ export function GroupTabRenderer({
       record={record}
       tabConfigs={config.tabs}
       onNavigateToRecord={onNavigateToRecord}
-      editing={editing}
-      onStartEdit={onStartEdit}
-      onSubmitEdit={onSubmitEdit}
-      onCancelEdit={onCancelEdit}
-      submittingEdit={submittingEdit}
       nested
       groupDepth={groupDepth + 1}
     />

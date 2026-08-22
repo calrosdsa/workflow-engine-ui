@@ -2,24 +2,15 @@
 // "Expand to full page" route — Details / Audit Log / Linked Records tabs.
 // Takes only (formId, recordId, fields), not the whole Menu, so it's usable
 // from both call sites without depending on menu context.
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
-  ChevronLeft, ChevronRight, ChevronDown, Pencil, Trash2, Workflow as WorkflowIcon, User as UserIcon,
-  RotateCw, XCircle, UserPlus, History,
+  ChevronLeft, ChevronRight, ChevronDown, Workflow as WorkflowIcon, User as UserIcon, History,
 } from 'lucide-react'
 import { DataTable } from '@/components/ui/data-table'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { PermissionGate } from '@/features/auth/PermissionGate'
-import { useUpdateRecord, useDeleteRecord } from '@/features/forms/hooks'
-import {
-  useRecordDetail, useAuditLog, useLinkedRecords,
-  useRecordAccountStatus, useResendRecordInvite, useRemoveRecordAccess, useEnableRecordAccess,
-} from './record-detail-hooks'
-import { FormRenderer } from './FormRenderer'
-import { FieldValueDisplay } from './FieldValueDisplay'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { EnableAccountDialog } from './EnableAccountDialog'
+import { useRecordDetail, useAuditLog, useLinkedRecords } from './record-detail-hooks'
+import { InlineFieldEditor } from './InlineFieldEditor'
 import { COLUMN_LAYOUTS } from '@/features/form-builder/schema'
 import { COMPONENT_REGISTRY } from '@/features/form-builder/component-registry'
 import { formatValue } from './format-value'
@@ -40,6 +31,7 @@ import type { FormSchema, DetailTabConfig } from '@/features/form-builder/schema
 import type { FieldDef, AuditLogEntry, AuditFieldChange, FormRecord, LinkedRecordGroup } from '@/features/forms/types'
 
 export { formatValue }
+export { RecordDetailToolbar } from './RecordDetailToolbar'
 
 interface RecordDetailPanelProps {
   formId: string
@@ -48,62 +40,19 @@ interface RecordDetailPanelProps {
   /** The form's builder layout (sections/columns). When provided, the
    *  Details tab mirrors the same section/column arrangement configured in
    *  the form designer instead of falling back to a flat field list, and
-   *  edit mode (Edit button / per-field pencils) becomes available — editing
-   *  reuses FormRenderer, which requires the real schema to render inputs. */
+   *  per-field inline editing (InlineFieldEditor) becomes available for
+   *  eligible fields — it needs the real schema to know each field's
+   *  ComponentType/behavior rules. */
   schema?: FormSchema
   /** Called with a (formId, recordId) pair when the user wants to jump to a
    *  linked record — the caller decides how to resolve that into a real
    *  navigation (e.g. finding a Search menu that targets that form). */
   onNavigateToRecord?: (formId: string, recordId: string) => void
-  /** Called after a successful delete so the caller can close the drawer /
-   *  navigate back to the list — the panel itself has no navigation context. */
-  onDeleted?: () => void
 }
 
-export function RecordDetailPanel({ formId, recordId, fields, schema, onNavigateToRecord, onDeleted }: RecordDetailPanelProps) {
-  const [editing, setEditing] = useState(false)
-  const [confirmingDelete, setConfirmingDelete] = useState(false)
-  const [confirmingRemoveAccess, setConfirmingRemoveAccess] = useState(false)
-  const [enablingAccount, setEnablingAccount] = useState(false)
-  const canEdit = !!schema && schema.sections.length > 0
-  const createUserSettings = schema?.settings?.createUser
-  const accountEnabled = !!createUserSettings?.enabled
-
-  const updateRecord = useUpdateRecord(formId)
-  const deleteRecord = useDeleteRecord(formId)
+export function RecordDetailPanel({ formId, recordId, fields, schema, onNavigateToRecord }: RecordDetailPanelProps) {
   const { data: record } = useRecordDetail(formId, recordId)
-  const { data: accountStatus } = useRecordAccountStatus(formId, recordId, accountEnabled)
-  const resendInvite = useResendRecordInvite(formId, recordId)
-  const removeAccess = useRemoveRecordAccess(formId, recordId)
-  const enableAccess = useEnableRecordAccess(formId, recordId)
-
   const configuredTabs = resolveDetailTabs(schema?.settings?.detailTabs)
-
-  // Reacts to the mutation's own settled state via an effect rather than a
-  // mutate()-call callback or an awaited mutateAsync() continuation — traced
-  // to formsApi.deleteRecord returning ky's raw, unconsumed ResponsePromise:
-  // the DELETE's HTTP request completed (204) but the mutation's own
-  // isPending/isSuccess never flipped since nothing ever awaited/consumed
-  // that response (see api.ts's deleteRecord, now fixed to await it
-  // directly). Watching `deleteRecord.isSuccess` here is the robust way to
-  // react to the fix — it fires from this component's own next render once
-  // React Query actually flags the mutation successful.
-  useEffect(() => {
-    if (deleteRecord.isSuccess) {
-      onDeleted?.()
-      setConfirmingDelete(false)
-    }
-    // onDeleted intentionally excluded — call sites pass a fresh inline
-    // function each render, and re-running this effect for that alone would
-    // re-fire onDeleted every time the parent re-renders after the mutation
-    // already succeeded.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deleteRecord.isSuccess])
-
-  const handleDelete = () => {
-    if (deleteRecord.isPending) return
-    deleteRecord.mutate(recordId)
-  }
 
   return (
     <div className="flex h-full flex-col">
@@ -116,112 +65,19 @@ export function RecordDetailPanel({ formId, recordId, fields, schema, onNavigate
         tabConfigs={configuredTabs}
         layout={schema?.settings?.detailLayout ?? 'single'}
         onNavigateToRecord={onNavigateToRecord}
-        editing={editing && canEdit}
-        onStartEdit={() => setEditing(true)}
-        onSubmitEdit={async (values) => {
-          await updateRecord.mutateAsync({ recordId, data: values })
-          setEditing(false)
-        }}
-        onCancelEdit={() => setEditing(false)}
-        submittingEdit={updateRecord.isPending}
-      />
-
-      {canEdit && !editing && (
-        <div className="flex items-center justify-end gap-2 border-t px-6 py-3" style={{ borderColor: 'hsl(var(--border))' }}>
-          {accountEnabled && (
-            <PermissionGate need={`forms:${formId}:edit`}>
-              {accountStatus?.status === 'pending' && (
-                <Button
-                  variant="outline" size="sm" className="gap-1.5"
-                  disabled={resendInvite.isPending}
-                  onClick={() => resendInvite.mutate()}
-                >
-                  <RotateCw size={13} />Resend Invite
-                </Button>
-              )}
-              {accountStatus?.status === 'active' && (
-                <Button
-                  variant="outline" size="sm" className="gap-1.5 text-red-500 hover:bg-red-50 hover:text-red-700"
-                  onClick={() => setConfirmingRemoveAccess(true)}
-                >
-                  <XCircle size={13} />Remove Login Access
-                </Button>
-              )}
-              {accountStatus?.status === 'removed' && (
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEnablingAccount(true)}>
-                  <UserPlus size={13} />Enable Account
-                </Button>
-              )}
-            </PermissionGate>
-          )}
-          <PermissionGate need={`forms:${formId}:delete`}>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setConfirmingDelete(true)}>
-              <Trash2 size={13} />Delete
-            </Button>
-          </PermissionGate>
-          <PermissionGate need={`forms:${formId}:edit`}>
-            <Button size="sm" className="gap-1.5" onClick={() => setEditing(true)}>
-              <Pencil size={13} />Edit
-            </Button>
-          </PermissionGate>
-        </div>
-      )}
-
-      <ConfirmDialog
-        open={confirmingDelete}
-        onOpenChange={setConfirmingDelete}
-        title="Delete this record?"
-        description="This action can't be undone."
-        confirmLabel="Delete"
-        destructive
-        loading={deleteRecord.isPending}
-        onConfirm={handleDelete}
-        container={document.getElementById('runtime-root')}
-      />
-
-      <ConfirmDialog
-        open={confirmingRemoveAccess}
-        onOpenChange={setConfirmingRemoveAccess}
-        title="Remove login access?"
-        description="This person will no longer be able to log in. You can re-enable access later."
-        confirmLabel="Remove Access"
-        destructive
-        loading={removeAccess.isPending}
-        onConfirm={async () => {
-          await removeAccess.mutateAsync()
-          setConfirmingRemoveAccess(false)
-        }}
-        container={document.getElementById('runtime-root')}
-      />
-
-      <EnableAccountDialog
-        open={enablingAccount}
-        onOpenChange={setEnablingAccount}
-        defaultEmail={createUserSettings?.emailFieldKey ? (record?.[createUserSettings.emailFieldKey] as string | undefined) : undefined}
-        loading={enableAccess.isPending}
-        onConfirm={async (data) => {
-          await enableAccess.mutateAsync(data)
-          setEnablingAccount(false)
-        }}
-        container={document.getElementById('runtime-root')}
       />
     </div>
   )
 }
 
 export function DetailsTab({
-  formId, recordId, fields, schema, editing, onStartEdit, onSubmit, onCancelEdit, submitting,
+  formId, recordId, fields, schema,
   childTabs, onNavigateToRecord, groupDepth,
 }: {
   formId: string
   recordId: string
   fields: FieldDef[]
   schema?: FormSchema
-  editing: boolean
-  onStartEdit: () => void
-  onSubmit: (values: FormRecord) => void | Promise<void>
-  onCancelEdit: () => void
-  submitting: boolean
   /** Optional tabs (e.g. "Comments" / "History") rendered as a nested
    *  sub-tab-bar below the fields — see built-in/schema.ts's DetailsTabConfig. */
   childTabs?: DetailTabConfig[]
@@ -231,18 +87,6 @@ export function DetailsTab({
   const { data: record, isLoading } = useRecordDetail(formId, recordId)
   if (isLoading) return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading…</p>
   if (!record) return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Record not found.</p>
-
-  // Editing swaps the entire tab body for the edit form — child tabs
-  // (Comments/History) don't make sense mid-edit, same as they're absent
-  // from the plain-fields-fallback render path below.
-  if (editing && schema && schema.sections.length > 0) {
-    return (
-      <div className="space-y-3">
-        <FormRenderer schema={schema} fields={fields} formId={formId} defaultValues={record} onSubmit={onSubmit} submitting={submitting} submitLabel="Save" />
-        <Button variant="outline" size="sm" onClick={onCancelEdit} disabled={submitting}>Cancel</Button>
-      </div>
-    )
-  }
 
   // Same cycle-protection as GroupTabRenderer — 'details' is itself pickable
   // inside a Tab Group (or another Details' own childTabs), so nothing stops
@@ -297,23 +141,11 @@ export function DetailsTab({
               return (
                 <div key={column.id} className="space-y-3" style={{ flex: ratios[idx] ?? 1 }}>
                   {visibleElements.map((el) => (
-                    <div key={el.id} className="group text-sm">
-                      <div className="mb-1 flex items-center gap-1.5 text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                    <div key={el.id} className="text-sm">
+                      <div className="mb-1 text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
                         {el.label}
-                        {el.component !== 'line_items' && (
-                          <PermissionGate need={`forms:${formId}:edit`}>
-                            <button
-                              type="button"
-                              onClick={onStartEdit}
-                              className="opacity-0 transition-opacity hover:text-[hsl(var(--foreground))] group-hover:opacity-100 focus-visible:opacity-100"
-                              aria-label={`Edit ${el.label}`}
-                            >
-                              <Pencil size={11} />
-                            </button>
-                          </PermissionGate>
-                        )}
                       </div>
-                      <FieldValueDisplay el={el} record={record} formId={formId} />
+                      <InlineFieldEditor el={el} record={record} formId={formId} recordId={recordId} />
                     </div>
                   ))}
                 </div>

@@ -61,7 +61,12 @@ export function FieldRenderer({ element: el, control, formId, runtimeState, erro
   )
 }
 
-function FieldInput({ el, field, formId, disabled }: {
+// Exported for InlineFieldEditor.tsx's per-field editing on the record
+// detail view — this switch never touches react-hook-form internals
+// directly (no `control`/`formState`), only the plain {value, onChange,
+// onBlur} shape Controller happens to hand it above, so it's safe to call
+// standalone outside any <form>/Controller context.
+export function FieldInput({ el, field, formId, disabled }: {
   el: FormElement
   field: { value: unknown; onChange: (v: unknown) => void; onBlur: () => void }
   formId?: string

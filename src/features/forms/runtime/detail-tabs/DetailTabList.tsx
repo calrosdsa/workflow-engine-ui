@@ -25,14 +25,6 @@ export interface DetailTabListProps {
   record?: FormRecord
   tabConfigs: DetailTabConfig[]
   onNavigateToRecord?: (formId: string, recordId: string) => void
-  /** Edit-mode plumbing — meaningful only when the 'details' built-in type
-   *  is among tabConfigs (the only type that reads these), same optional-and-
-   *  ignored-elsewhere contract DetailTabRendererProps itself already has. */
-  editing?: boolean
-  onStartEdit?: () => void
-  onSubmitEdit?: (values: FormRecord) => void | Promise<void>
-  onCancelEdit?: () => void
-  submittingEdit?: boolean
   /** Distinguishes the top-level tab bar's chrome (border, padding) from a
    *  nested group's — a group's own tab bar reads as a lighter-weight sub-
    *  navigation, not a second full-bleed header. */
@@ -58,7 +50,7 @@ export interface DetailTabListProps {
 
 export function DetailTabList({
   formId, recordId, fields, schema, record, tabConfigs, onNavigateToRecord,
-  editing, onStartEdit, onSubmitEdit, onCancelEdit, submittingEdit, nested, groupDepth = 0,
+  nested, groupDepth = 0,
   rendererOverride,
 }: DetailTabListProps) {
   const viewer = useCurrentViewer()
@@ -134,11 +126,6 @@ export function DetailTabList({
                 schema={schema}
                 config={config}
                 onNavigateToRecord={onNavigateToRecord}
-                editing={editing}
-                onStartEdit={onStartEdit ?? (() => {})}
-                onSubmitEdit={onSubmitEdit ?? (() => {})}
-                onCancelEdit={onCancelEdit ?? (() => {})}
-                submittingEdit={submittingEdit}
                 groupDepth={groupDepth}
                 onEmptyResolved={(empty) => {
                   setEmptyTabIds((prev) => {
