@@ -55,6 +55,14 @@ export interface AggregateRecordsResponse {
   groups: AggregateGroupResponse[]
 }
 
+// Mirrors api/forms/handler.go's triggerWorkflowResponse (FR-B3-007's
+// on_demand_data_driven dispatch, FR-D2-017's trigger_workflow custom action).
+export interface TriggerWorkflowResponse {
+  execution_id: string
+  status: string
+  workflow_definition_id: string
+}
+
 export const formsApi = {
   // --- definitions ---
   list:   () => api.get('forms').json<FormDefinition[]>(),
@@ -106,6 +114,16 @@ export const formsApi = {
     api.get(`forms/${formId}/records/${recordId}/audit`, { searchParams: params }).json<AuditLogResponse>(),
   getLinkedRecords: (formId: string, recordId: string, params: { page: number; page_size: number }) =>
     api.get(`forms/${formId}/records/${recordId}/linked`, { searchParams: params }).json<LinkedRecordsResponse>(),
+  // Dispatches a workflow whose Trigger node is Mode: on_demand_data_driven
+  // (FR-B3-007) against this specific record — the trigger_workflow custom
+  // action's dispatch call (FR-D2-017). form_id/record_id are URL path
+  // segments (not the JSON body) so the backend's RequireFormPermission
+  // ("view") gate can read form_id the same way GetRecord's route already
+  // does — see api/forms/handler.go's TriggerWorkflow doc comment.
+  triggerWorkflow: (formId: string, recordId: string, workflowDefinitionId: string) =>
+    api.post(`forms/${formId}/records/${recordId}/trigger-workflow`, {
+      json: { workflow_definition_id: workflowDefinitionId },
+    }).json<TriggerWorkflowResponse>(),
 
   // --- comments (FR-D2-016) ---
   getComments: (formId: string, recordId: string, params: { page: number; page_size: number }) =>

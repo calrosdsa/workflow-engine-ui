@@ -6,3 +6,4 @@
 // does so at its own top level) — see registry.ts's load-order note
 // (identical reasoning to detail-tabs/registry.ts's).
 import './update-field'
+import './trigger-workflow'

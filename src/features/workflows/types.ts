@@ -436,7 +436,7 @@ export interface ResponseSchema {
 // the entry point of every workflow (supersedes the legacy 'entry' node).
 // ---------------------------------------------------------------------------
 
-export type TriggerMode = 'on_demand' | 'scheduled' | 'before' | 'after' | 'after_async'
+export type TriggerMode = 'on_demand' | 'scheduled' | 'before' | 'after' | 'after_async' | 'on_demand_data_driven'
 
 export type TriggerEventType = 'create' | 'update' | 'delete' | 'create_or_update'
 
@@ -452,6 +452,11 @@ export interface TriggerConfig {
   form_id?: string
   event_type?: TriggerEventType
   filter?: FilterGroup
+
+  // on_demand_data_driven mode only (FR-B3-007). Which form's records this
+  // trigger accepts when manually dispatched — optional, unlike Before/
+  // After/AfterAsync's required form_id; empty means any form may dispatch.
+  source_form_id?: string
 
   enabled: boolean
 }

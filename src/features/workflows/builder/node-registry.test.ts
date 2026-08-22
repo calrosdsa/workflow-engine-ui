@@ -23,6 +23,7 @@ describe('normaliseTriggerConfig', () => {
       mode: 'on_demand', cron: '', timezone: '', description: '',
       form_id: '', event_type: 'create_or_update',
       filter: { id: expect.any(String), combinator: 'and', conditions: [], groups: [] },
+      source_form_id: '',
       enabled: true,
     })
   })

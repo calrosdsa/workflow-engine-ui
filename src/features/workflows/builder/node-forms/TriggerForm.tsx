@@ -1,6 +1,6 @@
 // trigger — mirrors internal/graph/configs_trigger.go
 import {
-  Filter as FilterIcon, Clock, Zap as ZapIcon, ShieldCheck, CheckCircle2, Send,
+  Filter as FilterIcon, Clock, Zap as ZapIcon, ShieldCheck, CheckCircle2, Send, MousePointerClick,
   type LucideIcon,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -16,19 +16,21 @@ import type { VariableDecl, TriggerConfig, TriggerMode, TriggerEventType } from 
 export function normaliseTriggerConfig(raw: unknown): TriggerConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<TriggerConfig>
   return {
-    mode:        r.mode ?? 'on_demand',
-    cron:        r.cron ?? '',
-    timezone:    r.timezone ?? '',
-    description: r.description ?? '',
-    form_id:     r.form_id ?? '',
-    event_type:  r.event_type ?? 'create_or_update',
-    filter:      ensureGroupIds(r.filter) ?? newGroup(),
-    enabled:     r.enabled ?? true,
+    mode:           r.mode ?? 'on_demand',
+    cron:           r.cron ?? '',
+    timezone:       r.timezone ?? '',
+    description:    r.description ?? '',
+    form_id:        r.form_id ?? '',
+    event_type:     r.event_type ?? 'create_or_update',
+    filter:         ensureGroupIds(r.filter) ?? newGroup(),
+    source_form_id: r.source_form_id ?? '',
+    enabled:        r.enabled ?? true,
   }
 }
 
 const TRIGGER_MODES: { value: TriggerMode; label: string; icon: LucideIcon; description: string }[] = [
   { value: 'on_demand',   label: 'On Demand',    icon: ZapIcon,      description: 'Run manually or via API — no automatic trigger.' },
+  { value: 'on_demand_data_driven', label: 'On Demand (with a record)', icon: MousePointerClick, description: 'Run manually against one specific record — its fields are available to every node as Vars["fieldKey"]. Used by record-detail custom actions (FR-D2-017).' },
   { value: 'scheduled',   label: 'Scheduled',    icon: Clock,        description: 'Run on a recurring cron schedule.' },
   { value: 'before',      label: 'Before Write', icon: ShieldCheck,  description: 'Run before a record is created/updated/deleted — can block the write.' },
   { value: 'after',       label: 'After Write',  icon: CheckCircle2, description: 'Run after a record write commits — synchronously, blocking the response.' },
@@ -113,6 +115,17 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
       </div>
 
       <div className="h-px bg-slate-100" />
+
+      {/* On Demand (data-driven) mode fields — FR-B3-007 */}
+      {config.mode === 'on_demand_data_driven' && (
+        <div className="space-y-1.5">
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Restrict to Form (optional)</Label>
+          <FormReferenceSelect value={config.source_form_id || undefined} onChange={(id) => set({ source_form_id: id ?? '' })} />
+          <p className="text-[10px] text-slate-400">
+            Leave blank to allow this workflow to be triggered against a record from any form. When set, only that form's own record-detail custom actions can dispatch this workflow.
+          </p>
+        </div>
+      )}
 
       {/* Scheduled mode fields */}
       {config.mode === 'scheduled' && (
