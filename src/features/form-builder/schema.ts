@@ -303,6 +303,50 @@ export interface CreateUserSettings {
   viewOnlyColumns: ViewOnlyColumn[]
 }
 
+/** Which named layout template a form's record-detail page uses (Detail
+ *  Page Builder) — mirrors ColumnLayout/COLUMN_LAYOUTS' "small fixed set of
+ *  named templates" pattern rather than a freeform zone editor. 'single'
+ *  (the implicit default — see FormSettings.detailLayout) has exactly one
+ *  zone; every tab/field predating this feature has no `zone` set and
+ *  lands there unchanged. The two sidebar templates add a second, narrower
+ *  zone, differing only in which side it renders on. */
+export type DetailPageLayoutId = 'single' | 'main-right-sidebar' | 'main-left-sidebar'
+
+/** The zone id an unset DetailTabConfig.zone always resolves to — a fixed
+ *  id, NOT "whichever zone a template happens to list first." Every
+ *  DETAIL_PAGE_LAYOUTS template defines a zone with this id (see below), so
+ *  this is a safe, layout-independent default: main-left-sidebar lists
+ *  'sidebar' first for VISUAL ordering only, but an unset zone must still
+ *  mean "main content," never "whichever side renders first." Getting this
+ *  wrong would silently move every pre-existing tab into the sidebar the
+ *  moment a form switched to main-left-sidebar. */
+export const DEFAULT_DETAIL_PAGE_ZONE = 'main'
+
+export interface DetailPageZoneDef {
+  id: string
+  label: string
+  width: 'flex' | 'narrow'
+}
+
+export interface DetailPageLayoutDef {
+  label: string
+  /** Ordered zones this template defines, in VISUAL left-to-right order —
+   *  used for rendering position only. A DetailTabConfig's own `zone`
+   *  (below) must match one of these ids to render there — validated only
+   *  at the UI layer (the canvas only ever offers the active template's
+   *  real zone ids), not the type system, so adding a future template
+   *  needs no DetailTabConfig change. Every template MUST define a zone
+   *  with id === DEFAULT_DETAIL_PAGE_ZONE ('main') — that's what an unset
+   *  DetailTabConfig.zone resolves to, regardless of this array's order. */
+  zones: DetailPageZoneDef[]
+}
+
+export const DETAIL_PAGE_LAYOUTS: Record<DetailPageLayoutId, DetailPageLayoutDef> = {
+  'single':             { label: 'Single column',       zones: [{ id: 'main', label: 'Content', width: 'flex' }] },
+  'main-right-sidebar': { label: 'Main + right sidebar', zones: [{ id: 'main', label: 'Content', width: 'flex' }, { id: 'sidebar', label: 'Sidebar', width: 'narrow' }] },
+  'main-left-sidebar':  { label: 'Main + left sidebar',  zones: [{ id: 'sidebar', label: 'Sidebar', width: 'narrow' }, { id: 'main', label: 'Content', width: 'flex' }] },
+}
+
 /** Configurable record-detail-page tab (FR-D2-015). `type` resolves through
  *  detail-tabs/registry.ts's DetailTabDefinition registry — this schema layer
  *  has no knowledge of what any given type actually renders, only its id,
@@ -310,12 +354,20 @@ export interface CreateUserSettings {
  *  (dashboard/schema.ts) stays opaque to the widget it resolves to. */
 export interface DetailTabConfig {
   id: string             // UI-only key (stable across reorders); not meaningful to the backend
-  type: string            // registry key: 'details' | 'audit' | 'linked' | 'related_form' | 'custom' | ...
+  type: string            // registry key: 'details' | 'audit' | 'linked' | 'related_form' | 'custom' | 'field_ref' | ...
   label?: string          // overrides the registry's default label when set
   hidden?: boolean        // reorderable but hidden from the runtime TabsList — distinct from deleting the entry outright, so a hidden tab's config isn't lost
   config: unknown          // type-owned payload, parsed via that type's own DetailTabDefinition.parseConfig
   visibility?: TabVisibilityConfig
   renderIf?: TabRenderCondition
+  /** Which zone (of the form's DETAIL_PAGE_LAYOUTS[detailLayout] zones)
+   *  this tab occupies. Absent/undefined always means DEFAULT_DETAIL_PAGE_ZONE
+   *  ('main') — a fixed id, NOT "whichever zone the active template lists
+   *  first" (main-left-sidebar lists 'sidebar' first for visual order only).
+   *  This needs no migration for existing saved forms even once a form
+   *  switches to a sidebar layout: every pre-existing tab simply lands in
+   *  'main'. */
+  zone?: string
 }
 
 /** Everyone (default) / roles / specific people / roles-or-people. Reuses
@@ -359,6 +411,11 @@ export interface FormSettings {
    *  default is expressed, so RecordDetailPanel.tsx never special-cases an
    *  absent array itself. */
   detailTabs?: DetailTabConfig[]
+  /** Which DETAIL_PAGE_LAYOUTS template this form's record-detail page
+   *  uses. Absent means 'single' — identical to every form's behavior
+   *  before the Detail Page Builder existed (one column, no zone concept),
+   *  so no migration is needed for existing saved forms. */
+  detailLayout?: DetailPageLayoutId
 }
 
 export const INVITATION_STATUS_COLUMN: ViewOnlyColumn = { id: 'invitation_status', label: 'Invitation Status' }

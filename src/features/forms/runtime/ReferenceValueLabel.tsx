@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query'
 import { formsApi } from '@/features/forms/api'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { resolveReferenceLabel } from './record-title'
+import { PREVIEW_REFERENCE_SENTINEL } from './preview-sentinel'
 
 interface ReferenceValueLabelProps {
   /** The referenced form's id (element.formRef / FieldDef.reference_table). */
@@ -25,13 +26,20 @@ interface ReferenceValueLabelProps {
 
 export function ReferenceValueLabel({ formId, recordId, displayField }: ReferenceValueLabelProps) {
   const id = typeof recordId === 'string' ? recordId : undefined
-  const { data: targetForm } = useFormDef(formId ?? '')
+  // Detail Page Builder preview mode fabricates this exact sentinel for
+  // every reference field (sample-data.ts) since it can't safely fake a
+  // real linked-record id — short-circuit before any query so preview
+  // never fetches, 404s, or (worse) collides with an unrelated real
+  // record that happens to share the sentinel string.
+  const isPreviewSample = id === PREVIEW_REFERENCE_SENTINEL
+  const { data: targetForm } = useFormDef(!isPreviewSample ? (formId ?? '') : '')
   const { data: record, isLoading } = useQuery({
     queryKey: ['forms', formId, 'records', id],
     queryFn: () => formsApi.getRecord(formId!, id!),
-    enabled: !!formId && !!id,
+    enabled: !isPreviewSample && !!formId && !!id,
   })
 
+  if (isPreviewSample) return <span className="text-[hsl(var(--muted-foreground))]">Sample Reference</span>
   if (!id) return <>—</>
   if (isLoading) return <span className="text-[hsl(var(--muted-foreground))]">…</span>
   if (!record) return <>{id}</>

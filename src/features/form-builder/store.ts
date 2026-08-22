@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import {
   type FormSchema, type FormElement, type FormSection, type FormColumn,
   type ColumnLayout, type ComponentType, type CreateUserSettings, type DetailTabConfig,
+  type DetailPageLayoutId,
+  DETAIL_PAGE_LAYOUTS, DEFAULT_DETAIL_PAGE_ZONE,
   emptySchema, emptyFormSettings, emptyCreateUserSettings,
 } from './schema'
 import { createElement, createSection, duplicateElement, duplicateSection, relayoutSection, createAccountSection, createParentReferenceField } from './factory'
@@ -71,6 +73,38 @@ export function updateDetailTabs(next: DetailTabConfig[]) {
       },
     },
   }))
+  useFormMetaStore.getState().markDirty()
+}
+
+/** Switches FormSchema.settings.detailLayout (Detail Page Builder) AND
+ *  reconciles every existing detailTabs entry in the same update — any tab
+ *  whose `zone` isn't one of the NEW layout's zone ids gets reset to
+ *  DEFAULT_DETAIL_PAGE_ZONE ('main') right here, not lazily at render time.
+ *  Runs once, at the moment the layout is switched, so the user sees their
+ *  sidebar tabs visibly move to Content when they pick Single Column —
+ *  ZonedDetailTabList's own runtime fallback (same rule) exists as a
+ *  defensive floor for data that somehow skipped this, not as the primary
+ *  mechanism; leaving reconciliation to render time only would mean a
+ *  tab's `zone` field silently drifts out of sync with what's visually
+ *  true the moment you inspect the saved data directly. */
+export function updateDetailLayout(next: DetailPageLayoutId) {
+  useFormBuilderStore.setState((s) => {
+    const zoneIds = new Set((DETAIL_PAGE_LAYOUTS[next]?.zones ?? DETAIL_PAGE_LAYOUTS.single.zones).map((z) => z.id))
+    const currentTabs = s.schema.settings?.detailTabs ?? []
+    const reconciled = currentTabs.map((t) =>
+      t.zone && !zoneIds.has(t.zone) ? { ...t, zone: DEFAULT_DETAIL_PAGE_ZONE } : t,
+    )
+    return {
+      schema: {
+        ...s.schema,
+        settings: {
+          ...(s.schema.settings ?? emptyFormSettings()),
+          detailLayout: next,
+          detailTabs: reconciled,
+        },
+      },
+    }
+  })
   useFormMetaStore.getState().markDirty()
 }
 

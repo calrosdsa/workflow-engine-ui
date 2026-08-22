@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { SlidersHorizontal, Layers, FileText, LayoutPanelTop } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { SlidersHorizontal, Layers, FileText, LayoutPanelTop, LayoutGrid } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -14,10 +14,12 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, Dr
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useForm as useFormDef } from '@/features/forms/hooks'
-import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection, updateDetailTabs } from '../store'
+import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection, updateDetailTabs, updateDetailLayout } from '../store'
 import { DetailPageConfigSection } from './DetailPageConfigSection'
+import { DetailPageBuilderOverlay } from '@/features/detail-page-builder/DetailPageBuilderOverlay'
 import { resolveDetailTabs } from '@/features/forms/runtime/detail-tabs/registry'
 import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable } from '../component-registry'
+import { projectToFields } from '../projection'
 import { slugifyKey, isParentLinkElement } from '../factory'
 import {
   type FormElement, type FormSchema, type VisibilityMode, type RequiredMode, type ReadOnlyMode,
@@ -106,7 +108,9 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
   const formName = useFormMetaStore((s) => s.name)
   const cfg: CreateUserSettings = schema.settings?.createUser ?? emptyCreateUserSettings()
   const [detailPageOpen, setDetailPageOpen] = useState(false)
+  const [canvasOpen, setCanvasOpen] = useState(false)
   const tabCount = resolveDetailTabs(schema.settings?.detailTabs).filter((t) => !t.hidden).length
+  const fields = useMemo(() => projectToFields(schema).fields, [schema])
 
   return (
     <>
@@ -153,18 +157,29 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
               Which tabs show on this form's record detail page, in what order, and who can see each one.
             </p>
             {formId ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setDetailPageOpen(true)}
-                className="flex w-full items-center justify-between gap-2 text-[12px]"
-              >
-                <span className="flex items-center gap-2">
-                  <LayoutPanelTop size={14} className="text-slate-400" />
-                  Configure Detail Page
-                </span>
-                <span className="text-[10px] text-slate-400">{tabCount} tab{tabCount === 1 ? '' : 's'}</span>
-              </Button>
+              <div className="space-y-1.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDetailPageOpen(true)}
+                  className="flex w-full items-center justify-between gap-2 text-[12px]"
+                >
+                  <span className="flex items-center gap-2">
+                    <LayoutPanelTop size={14} className="text-slate-400" />
+                    Configure Detail Page
+                  </span>
+                  <span className="text-[10px] text-slate-400">{tabCount} tab{tabCount === 1 ? '' : 's'}</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCanvasOpen(true)}
+                  className="flex w-full items-center gap-2 text-[12px]"
+                >
+                  <LayoutGrid size={14} className="text-slate-400" />
+                  Open Canvas Editor
+                </Button>
+              </div>
             ) : (
               <p className="text-[11px] text-slate-400">Save this form first to configure its Detail Page tabs.</p>
             )}
@@ -198,6 +213,18 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
             </DrawerFooter>
           </DrawerContent>
         </Drawer>
+      )}
+
+      {formId && (
+        <DetailPageBuilderOverlay
+          open={canvasOpen}
+          onOpenChange={setCanvasOpen}
+          formId={formId}
+          fields={fields}
+          schema={schema}
+          onChangeTabs={updateDetailTabs}
+          onChangeLayout={updateDetailLayout}
+        />
       )}
     </>
   )

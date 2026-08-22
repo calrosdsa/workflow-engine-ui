@@ -17,7 +17,7 @@ import {
   useRecordAccountStatus, useResendRecordInvite, useRemoveRecordAccess, useEnableRecordAccess,
 } from './record-detail-hooks'
 import { FormRenderer } from './FormRenderer'
-import { LineItemsGrid } from './LineItemsGrid'
+import { FieldValueDisplay } from './FieldValueDisplay'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EnableAccountDialog } from './EnableAccountDialog'
 import { COLUMN_LAYOUTS } from '@/features/form-builder/schema'
@@ -33,6 +33,7 @@ import type { TeamUser } from '@/features/users/types'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { resolveDetailTabs } from './detail-tabs/registry'
 import { DetailTabList } from './detail-tabs/DetailTabList'
+import { ZonedDetailTabList } from './detail-tabs/ZonedDetailTabList'
 import { MAX_GROUP_DEPTH } from './detail-tabs/contract'
 import './detail-tabs'
 import type { FormSchema, DetailTabConfig } from '@/features/form-builder/schema'
@@ -106,13 +107,14 @@ export function RecordDetailPanel({ formId, recordId, fields, schema, onNavigate
 
   return (
     <div className="flex h-full flex-col">
-      <DetailTabList
+      <ZonedDetailTabList
         formId={formId}
         recordId={recordId}
         fields={fields}
         schema={schema}
         record={record}
         tabConfigs={configuredTabs}
+        layout={schema?.settings?.detailLayout ?? 'single'}
         onNavigateToRecord={onNavigateToRecord}
         editing={editing && canEdit}
         onStartEdit={() => setEditing(true)}
@@ -311,15 +313,7 @@ export function DetailsTab({
                           </PermissionGate>
                         )}
                       </div>
-                      {el.component === 'line_items' ? (
-                        <LineItemsGrid el={el} field={{ value: record[el.key], onChange: () => {} }} parentFormId={formId} disabled />
-                      ) : el.component === 'form' ? (
-                        <div style={{ color: 'hsl(var(--foreground))' }}>
-                          <ReferenceValueLabel formId={el.formRef} recordId={record[el.key]} displayField={el.displayField} />
-                        </div>
-                      ) : (
-                        <div style={{ color: 'hsl(var(--foreground))' }}>{formatValue(record[el.key])}</div>
-                      )}
+                      <FieldValueDisplay el={el} record={record} formId={formId} />
                     </div>
                   ))}
                 </div>

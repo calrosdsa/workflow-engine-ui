@@ -1,5 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { formsApi } from '@/features/forms/api'
+import { PREVIEW_RECORD_ID } from './preview-sentinel'
+
+/** True for the Detail Page Builder preview's sentinel record id — every
+ *  hook below gates `enabled` on this IN ADDITION TO its existing
+ *  `!!recordId` check, the one airtight way to guarantee a real fetch
+ *  never fires for preview data (see preview-sentinel.ts's own doc
+ *  comment for why a cache-seeding-only approach isn't reliable enough:
+ *  `enabled: false` means React Query never calls queryFn at all, no
+ *  staleTime/in-flight-fetch race possible). DetailPagePreview.tsx still
+ *  seeds the cache for this id via setQueryData so the UI shows real
+ *  (fabricated) content — this check is what stops a real network
+ *  request from ever being attempted in the first place. */
+const isPreviewRecord = (recordId: string | null) => recordId === PREVIEW_RECORD_ID
 
 /** Shared query key so the drawer and the full-page "expand" route reuse the
  *  same cache entry for a given record. */
@@ -7,7 +20,7 @@ export function useRecordDetail(formId: string, recordId: string | null) {
   return useQuery({
     queryKey: ['forms', formId, 'records', recordId],
     queryFn: () => formsApi.getRecord(formId, recordId!),
-    enabled: !!recordId,
+    enabled: !!recordId && !isPreviewRecord(recordId),
   })
 }
 
@@ -15,7 +28,7 @@ export function useAuditLog(formId: string, recordId: string | null, page: numbe
   return useQuery({
     queryKey: ['forms', formId, 'records', recordId, 'audit', page, pageSize],
     queryFn: () => formsApi.getRecordAuditLog(formId, recordId!, { page, page_size: pageSize }),
-    enabled: !!recordId,
+    enabled: !!recordId && !isPreviewRecord(recordId),
   })
 }
 
@@ -23,7 +36,7 @@ export function useLinkedRecords(formId: string, recordId: string | null, page: 
   return useQuery({
     queryKey: ['forms', formId, 'records', recordId, 'linked', page, pageSize],
     queryFn: () => formsApi.getLinkedRecords(formId, recordId!, { page, page_size: pageSize }),
-    enabled: !!recordId,
+    enabled: !!recordId && !isPreviewRecord(recordId),
   })
 }
 
@@ -36,7 +49,7 @@ export function useComments(formId: string, recordId: string | null, page: numbe
   return useQuery({
     queryKey: commentsKey(formId, recordId, page, pageSize),
     queryFn: () => formsApi.getComments(formId, recordId!, { page, page_size: pageSize }),
-    enabled: !!recordId,
+    enabled: !!recordId && !isPreviewRecord(recordId),
   })
 }
 

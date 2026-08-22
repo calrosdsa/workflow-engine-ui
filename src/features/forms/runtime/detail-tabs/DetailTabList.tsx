@@ -7,11 +7,12 @@
 // instead of RecordDetailPanel and the group Renderer each maintaining their
 // own copy — a group's children go through the identical visibility/renderIf/
 // hideWhenEmpty machinery the top-level tab list already has, no special-casing.
-import { useState } from 'react'
+import { useState, type ComponentType } from 'react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { getDetailTab } from './registry'
 import { useCurrentViewer, isTabVisible } from './useTabVisible'
 import { useExpressionRuntimeState, schemaToVariableDecls } from '../expression-context'
+import type { DetailTabRendererProps } from './contract'
 import type { DetailTabConfig } from '@/features/form-builder/schema'
 import type { FormSchema } from '@/features/form-builder/schema'
 import type { FieldDef, FormRecord } from '@/features/forms/types'
@@ -45,11 +46,20 @@ export interface DetailTabListProps {
    *  several groups), which would otherwise recurse until the browser tab
    *  crashes. */
   groupDepth?: number
+  /** Detail Page Builder preview only — swaps a tab TYPE's registered
+   *  Renderer for a lightweight stand-in (e.g. a static placeholder card
+   *  instead of related_form's real cross-form query, or custom's real
+   *  live Dashboard widget canvas). Returning undefined for a type falls
+   *  back to the real getDetailTab(type).Renderer, so every existing call
+   *  site (RecordDetailPanel, GroupTabRenderer) passing nothing is
+   *  completely unaffected. */
+  rendererOverride?: (type: string) => ComponentType<DetailTabRendererProps<any>> | undefined
 }
 
 export function DetailTabList({
   formId, recordId, fields, schema, record, tabConfigs, onNavigateToRecord,
   editing, onStartEdit, onSubmitEdit, onCancelEdit, submittingEdit, nested, groupDepth = 0,
+  rendererOverride,
 }: DetailTabListProps) {
   const viewer = useCurrentViewer()
   const configuredTabs = tabConfigs.filter((t) => !t.hidden && isTabVisible(t.visibility, viewer))
@@ -114,9 +124,10 @@ export function DetailTabList({
           if (!def) return null
           const config = def.parseConfig(t.config)
           const isVisible = !emptyTabIds.has(t.id)
+          const Renderer = rendererOverride?.(t.type) ?? def.Renderer
           return (
             <TabsContent key={t.id} value={t.id} forceMount style={isVisible ? undefined : { display: 'none' }}>
-              <def.Renderer
+              <Renderer
                 formId={formId}
                 recordId={recordId}
                 fields={fields}
