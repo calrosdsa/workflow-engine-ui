@@ -85,6 +85,13 @@ export function DetailsTab({
   groupDepth?: number
 }) {
   const { data: record, isLoading } = useRecordDetail(formId, recordId)
+  // Only one field can be in edit mode at a time across this whole record —
+  // lifted here (rather than each InlineFieldEditor owning independent
+  // local state) so opening a second field's editor forces the first one
+  // to resolve first. Keyed by el.id (stable across a record's fields,
+  // unlike el.key which theoretically could collide across sections) so an
+  // editor knows whether IT is the one currently open.
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null)
   if (isLoading) return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading…</p>
   if (!record) return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Record not found.</p>
 
@@ -145,7 +152,16 @@ export function DetailsTab({
                       <div className="mb-1 text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
                         {el.label}
                       </div>
-                      <InlineFieldEditor el={el} record={record} formId={formId} recordId={recordId} />
+                      <InlineFieldEditor
+                        el={el}
+                        record={record}
+                        formId={formId}
+                        recordId={recordId}
+                        isEditing={editingFieldId === el.id}
+                        anyFieldEditing={editingFieldId !== null}
+                        onStartEdit={() => setEditingFieldId(el.id)}
+                        onStopEdit={() => setEditingFieldId((cur) => (cur === el.id ? null : cur))}
+                      />
                     </div>
                   ))}
                 </div>

@@ -113,6 +113,7 @@ export function RuntimeRecordPage({ snapshot, clientId, appId, currentMenu, form
                       recordId={recordId}
                       record={record}
                       createUserSettings={schema?.settings?.createUser}
+                      schema={schema}
                       onDeleted={() => runtimeRouter.navigate({ to: `/${clientId}/${appId}/${currentMenu.slug}` })}
                     />
                   </div>

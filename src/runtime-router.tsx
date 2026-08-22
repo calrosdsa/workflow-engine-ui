@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/auth'
 import { runtimeApi } from '@/features/runtime/api'
 import { ThemeProvider } from '@/features/theme/ThemeProvider'
 import { mergeTheme } from '@/features/theme/default-theme'
+import { Toaster } from '@/components/ui/sonner'
 import { RuntimeAppShell } from '@/features/runtime/RuntimeAppShell'
 import { RuntimeRecordPage } from '@/features/runtime/RuntimeRecordPage'
 import { RuntimeFormRecordPage } from '@/features/runtime/RuntimeFormRecordPage'
@@ -136,6 +137,7 @@ function RuntimeAppRouteComponent() {
           outlives all of them removes that gap entirely. */}
       <ThemeProvider theme={theme} scopeElement={document.getElementById('runtime-root')}>
         <Outlet />
+        <Toaster position="bottom-right" />
       </ThemeProvider>
     </RuntimeSnapshotContext.Provider>
   )

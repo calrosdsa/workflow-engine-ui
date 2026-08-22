@@ -3,6 +3,40 @@ import { iterElements } from '@/features/form-builder/projection'
 import { COMPONENT_REGISTRY } from '@/features/form-builder/component-registry'
 import type { FormSchema, FormElement } from '@/features/form-builder/schema'
 
+/** Component types with a simple, self-contained FieldInput control that
+ *  makes sense rendered/written to standalone, outside a whole-form context.
+ *  Deliberately excludes: 'form' (needs ReferenceFieldAutocomplete's own
+ *  search popover — a real candidate, but separate, follow-up scope),
+ *  'line_items' (a whole grid, never single-field-writable), 'line_item_count'
+ *  (virtual/computed, never a real input), 'file'/'image' (currently a
+ *  URL-text-field stub with no real upload backend — writing to a stub
+ *  would be misleading), and every presentational type (no value to write). */
+const SINGLE_FIELD_WRITABLE_TYPES = new Set<FormElement['component']>([
+  'text', 'textarea', 'richtext', 'number', 'email', 'url', 'password', 'phone',
+  'date', 'time', 'datetime',
+  'checkbox', 'switch', 'radio', 'select', 'multiselect', 'role', 'autocomplete',
+])
+
+/** True when `el` is a legal target for a standalone single-field write
+ *  (per-field inline editing, or a FR-D2-017 update_field custom action) —
+ *  the STATIC half of eligibility, shared by both call sites. Deliberately
+ *  does NOT check any runtime permission (a caller-specific concern,
+ *  InlineFieldEditor.tsx's own `canEdit` gate is not meaningful at Form
+ *  Builder config time, where there is no "current viewer" to check against)
+ *  and deliberately excludes expression-mode readOnly/visibility (would need
+ *  the same whole-form useExpressionRuntimeState round-trip FormRenderer
+ *  runs — out of scope for a single isolated field; excluding rather than
+ *  guessing keeps this safe, since a field that SHOULD be blocked by an
+ *  expression never becomes writable this way, it just stays unavailable). */
+export function isFieldSingleWritable(el: FormElement): boolean {
+  if (!SINGLE_FIELD_WRITABLE_TYPES.has(el.component)) return false
+  if (el.behavior.readOnly === 'always') return false
+  if (el.behavior.visibility === 'hidden') return false
+  if (el.behavior.readOnly === 'expression') return false
+  if (el.behavior.visibility === 'expression') return false
+  return true
+}
+
 /** Builds a per-field zod validator from a data-bearing element's validation
  *  rules and static (non-expression) required mode. Expression-mode required
  *  fields cannot be statically encoded here — see expression-context.ts's

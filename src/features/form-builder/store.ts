@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import {
   type FormSchema, type FormElement, type FormSection, type FormColumn,
   type ColumnLayout, type ComponentType, type CreateUserSettings, type DetailTabConfig,
-  type DetailPageLayoutId,
+  type DetailPageLayoutId, type CustomActionConfig,
   DETAIL_PAGE_LAYOUTS, DEFAULT_DETAIL_PAGE_ZONE,
   emptySchema, emptyFormSettings, emptyCreateUserSettings,
 } from './schema'
@@ -70,6 +70,24 @@ export function updateDetailTabs(next: DetailTabConfig[]) {
       settings: {
         ...(s.schema.settings ?? emptyFormSettings()),
         detailTabs: next,
+      },
+    },
+  }))
+  useFormMetaStore.getState().markDirty()
+}
+
+/** Patches FormSchema.settings.customActions (the "Custom Actions" config
+ *  panel, FR-D2-017) — same one-off pattern as updateDetailTabs, next to it.
+ *  Replaces the whole array rather than patching individual entries — the
+ *  Custom Actions panel's own reorder/add/remove/edit handlers always
+ *  compute the next full array themselves. */
+export function updateCustomActions(next: CustomActionConfig[]) {
+  useFormBuilderStore.setState((s) => ({
+    schema: {
+      ...s.schema,
+      settings: {
+        ...(s.schema.settings ?? emptyFormSettings()),
+        customActions: next,
       },
     },
   }))

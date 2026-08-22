@@ -497,6 +497,7 @@ export function RecordsTable({
                   recordId={selectedRecord.id as string}
                   record={selectedRecordLive ?? selectedRecord}
                   createUserSettings={formSchema.settings?.createUser}
+                  schema={formSchema}
                   onDeleted={closeRecord}
                 />
               )}

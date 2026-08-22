@@ -13,57 +13,63 @@
 // payload, rather than treating that as "desired rows: none."
 //
 // Eligibility is intentionally conservative — see isFieldEligible below.
+//
+// Edit-mode is CONTROLLED by the parent (DetailsTab) via isEditing/
+// onStartEdit/onStopEdit rather than local state, so DetailsTab can enforce
+// "only one field editing at a time" across the whole record — see its own
+// editingFieldId comment for why that's lifted instead of living here.
 import { useState } from 'react'
 import { Check, X, Pencil } from 'lucide-react'
+import { toast } from 'sonner'
 import { FieldValueDisplay } from './FieldValueDisplay'
 import { FieldInput } from './FieldRenderer'
-import { fieldSchema } from './schema-to-zod'
+import { fieldSchema, isFieldSingleWritable } from './schema-to-zod'
 import { useUpdateRecord } from '@/features/forms/hooks'
 import { usePermission } from '@/features/auth/permissions'
 import type { FormElement } from '@/features/form-builder/schema'
 import type { FormRecord } from '@/features/forms/types'
 
-/** Component types with a simple, self-contained FieldInput control that
- *  makes sense rendered in place, standalone, outside a whole-form context.
- *  Deliberately excludes: 'form' (needs ReferenceFieldAutocomplete's own
- *  search popover — a real inline-editing candidate, but separate,
- *  follow-up scope), 'line_items' (a whole grid, never was pencil-editable
- *  even in the old whole-form flow), 'line_item_count' (virtual/computed,
- *  never a real input), 'file'/'image' (currently a URL-text-field stub
- *  with no real upload backend — inline-editing a stub would be
- *  misleading), and every presentational type (no value to edit). */
-const INLINE_EDITABLE_TYPES = new Set<FormElement['component']>([
-  'text', 'textarea', 'richtext', 'number', 'email', 'url', 'password', 'phone',
-  'date', 'time', 'datetime',
-  'checkbox', 'switch', 'radio', 'select', 'multiselect', 'role', 'autocomplete',
-])
-
+/** The RUNTIME half of eligibility — isFieldSingleWritable's static checks
+ *  (component type, readOnly/visibility mode) plus the one thing only a
+ *  live viewer session can answer: does THIS viewer hold edit permission.
+ *  Shared with FR-D2-017's update_field custom action via
+ *  isFieldSingleWritable, not duplicated — that action type reuses the same
+ *  static half, evaluated at Form Builder config time where no "current
+ *  viewer" exists to check canEdit against. */
 function isFieldEligible(el: FormElement, canEdit: boolean): boolean {
   if (!canEdit) return false
-  if (!INLINE_EDITABLE_TYPES.has(el.component)) return false
-  if (el.behavior.readOnly === 'always') return false
-  if (el.behavior.visibility === 'hidden') return false
-  // Expression-mode readOnly/visibility would need the same
-  // useExpressionRuntimeState round-trip FormRenderer runs for the whole
-  // form (values/variables shape built across every sibling field) —
-  // deliberately out of scope for a single isolated field this pass.
-  // Excluding rather than guessing keeps this safe: a field that SHOULD be
-  // blocked by an expression never gets an edit affordance, it just stays
-  // plain read-only, same as it would if the expression were unevaluated.
-  if (el.behavior.readOnly === 'expression') return false
-  if (el.behavior.visibility === 'expression') return false
-  return true
+  return isFieldSingleWritable(el)
 }
 
-export function InlineFieldEditor({ el, record, formId, recordId }: {
+/** Order-sensitive deep-ish equality via JSON — correct for every value
+ *  shape a FieldInput actually produces (scalars, and multiselect's string
+ *  arrays), and simpler than a bespoke comparator for those same shapes. A
+ *  reordered multiselect counts as "changed", which is the conservative,
+ *  correct call (it IS a different array, even if same members). */
+function valuesEqual(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
+}
+
+export function InlineFieldEditor({ el, record, formId, recordId, isEditing, anyFieldEditing, onStartEdit, onStopEdit }: {
   el: FormElement
   record: FormRecord
   formId: string
   recordId: string
+  /** Whether THIS field is the one currently open for editing — controlled
+   *  by DetailsTab so at most one field across the record is ever true. */
+  isEditing: boolean
+  /** Whether SOME field (any field, including this one) is currently being
+   *  edited. When true and isEditing is false, this field's own
+   *  click-to-edit affordance is disabled — otherwise clicking it would
+   *  just silently steal edit focus from whichever field is actually open,
+   *  instead of requiring that field's changes to be saved or cancelled
+   *  first, which is the whole point of enforcing one-at-a-time. */
+  anyFieldEditing: boolean
+  onStartEdit: () => void
+  onStopEdit: () => void
 }) {
   const canEdit = usePermission(`forms:${formId}:edit`)
   const eligible = isFieldEligible(el, canEdit)
-  const [editing, setEditing] = useState(false)
   const [value, setValue] = useState<unknown>(record[el.key])
   const [error, setError] = useState<string | null>(null)
   const updateRecord = useUpdateRecord(formId)
@@ -72,22 +78,27 @@ export function InlineFieldEditor({ el, record, formId, recordId }: {
     return <FieldValueDisplay el={el} record={record} formId={formId} />
   }
 
-  if (!editing) {
+  if (!isEditing) {
+    const locked = anyFieldEditing
     return (
       <button
         type="button"
-        onClick={() => { setValue(record[el.key]); setError(null); setEditing(true) }}
-        className="group/field flex w-full items-start gap-1.5 rounded px-1 py-0.5 -mx-1 -my-0.5 text-left transition-colors hover:bg-[hsl(var(--accent))]"
+        disabled={locked}
+        title={locked ? 'Finish editing the other field first' : undefined}
+        onClick={() => { setValue(record[el.key]); setError(null); onStartEdit() }}
+        className="group/field flex w-full items-start gap-1.5 rounded px-1 py-0.5 -mx-1 -my-0.5 text-left transition-colors hover:bg-[hsl(var(--accent))] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
       >
         <span className="min-w-0 flex-1">
           <FieldValueDisplay el={el} record={record} formId={formId} />
         </span>
-        <Pencil size={11} className="mt-0.5 shrink-0 text-[hsl(var(--muted-foreground))] opacity-0 transition-opacity group-hover/field:opacity-100" />
+        {!locked && (
+          <Pencil size={11} className="mt-0.5 shrink-0 text-[hsl(var(--muted-foreground))] opacity-0 transition-opacity group-hover/field:opacity-100" />
+        )}
       </button>
     )
   }
 
-  const cancel = () => { setEditing(false); setError(null) }
+  const cancel = () => { onStopEdit(); setError(null) }
 
   const save = async () => {
     const result = fieldSchema(el).safeParse(value)
@@ -96,11 +107,19 @@ export function InlineFieldEditor({ el, record, formId, recordId }: {
       return
     }
     setError(null)
+    if (valuesEqual(result.data, record[el.key])) {
+      toast.info('No changes to save', { description: `${el.label} is unchanged.` })
+      onStopEdit()
+      return
+    }
     try {
       await updateRecord.mutateAsync({ recordId, data: { [el.key]: result.data } })
-      setEditing(false)
+      toast.success('Saved', { description: `${el.label} was updated.` })
+      onStopEdit()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save')
+      const message = e instanceof Error ? e.message : 'Failed to save'
+      setError(message)
+      toast.error('Save failed', { description: message })
     }
   }
 

@@ -57,9 +57,14 @@ export function DetailTabConfigForm({ formId, tab, onPatch }: {
   )
 }
 
-export function TabVisibilitySection({ visibility, onChange }: {
+export function TabVisibilitySection({ visibility, onChange, itemLabel = 'tab' }: {
   visibility: TabVisibilityConfig | undefined
   onChange: (v: TabVisibilityConfig) => void
+  /** What this gate is visibility-gating, for the section heading — "tab"
+   *  (default, every FR-D2-015 call site) or "action" (FR-D2-017's Custom
+   *  Actions panel, which reuses this component verbatim rather than
+   *  forking it for one word of copy). */
+  itemLabel?: string
 }) {
   const mode = visibility?.mode ?? 'everyone'
   const roleIds = visibility?.roleIds ?? []
@@ -69,7 +74,7 @@ export function TabVisibilitySection({ visibility, onChange }: {
     <div className="flex flex-col gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-3">
       <div className="flex items-center gap-1.5">
         <Users2 size={12} className="text-[hsl(var(--muted-foreground))]" />
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Who can see this tab</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Who can see this {itemLabel}</p>
       </div>
       <SelectMenu value={mode} onValueChange={(v) => onChange({ mode: v as TabVisibilityConfig['mode'], roleIds, userIds })}>
         <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
@@ -96,9 +101,12 @@ export function TabVisibilitySection({ visibility, onChange }: {
   )
 }
 
-export function TabRenderIfSection({ renderIf, onChange }: {
+export function TabRenderIfSection({ renderIf, onChange, itemLabel = 'tab' }: {
   renderIf: DetailTabConfig['renderIf']
   onChange: (r: NonNullable<DetailTabConfig['renderIf']>) => void
+  /** Same reasoning as TabVisibilitySection's itemLabel — "tab" (default)
+   *  or "action" (FR-D2-017). */
+  itemLabel?: string
 }) {
   const isConditional = renderIf?.mode === 'expression'
   // Tab-level renderIf reuses the exact Vars["fieldKey"] addressing field-
@@ -113,14 +121,14 @@ export function TabRenderIfSection({ renderIf, onChange }: {
     <div className="flex flex-col gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-3">
       <div className="flex items-center gap-1.5">
         <GitBranch size={12} className="text-[hsl(var(--muted-foreground))]" />
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">When this tab appears</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">When this {itemLabel} appears</p>
       </div>
       <label className="flex cursor-pointer items-center gap-2 text-sm text-[hsl(var(--muted-foreground))]">
         <Checkbox
           checked={isConditional}
           onCheckedChange={(v) => onChange(v ? { mode: 'expression', expressionWhen: renderIf?.expressionWhen ?? '' } : { mode: 'always' })}
         />
-        <Label className="cursor-pointer text-[12px] font-normal text-[hsl(var(--muted-foreground))]">Only show this tab conditionally</Label>
+        <Label className="cursor-pointer text-[12px] font-normal text-[hsl(var(--muted-foreground))]">Only show this {itemLabel} conditionally</Label>
       </label>
       {isConditional && (
         <ExpressionField

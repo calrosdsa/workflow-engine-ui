@@ -115,6 +115,7 @@ export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recor
                       recordId={recordId}
                       record={record}
                       createUserSettings={schema?.settings?.createUser}
+                      schema={schema}
                       onDeleted={() => runtimeRouter.history.back()}
                     />
                   </div>

@@ -399,9 +399,33 @@ export function emptyTabRenderCondition(): TabRenderCondition {
   return { mode: 'always' }
 }
 
+/** Configurable record-detail toolbar action (FR-D2-017). `type` resolves
+ *  through custom-actions/registry.ts's CustomActionDefinition registry —
+ *  this schema layer has no knowledge of what any given type actually does,
+ *  mirroring how DetailTabConfig stays opaque to the tab type it resolves
+ *  to. Unlike DetailTabConfig, there's no `hidden`/`zone` (an action has no
+ *  reorderable-tab-list positioning concept — menu-item order is simply
+ *  array order) and `label` is required (a tab falls back to the registry's
+ *  own default label; a menu item's label is always admin-authored, since
+ *  "Update Status" carries no sensible generic default the way "Details"
+ *  does). Only `update_field` is implemented as of FR-D2-017 v0.1 —
+ *  `trigger_workflow` remains an undesigned, un-registered type (see that
+ *  document's §8), so `type` is `string`, not a fixed union, the same way
+ *  DetailTabConfig.type stays a plain string so new types register without
+ *  a schema change. */
+export interface CustomActionConfig {
+  id: string             // UI-only key (stable across reorders); not meaningful to the backend
+  type: string             // registry key: 'update_field' (only registered type as of FR-D2-017 v0.1)
+  label: string           // always admin-authored, no registry-default fallback
+  config: unknown          // type-owned payload, parsed via that type's own CustomActionDefinition.parseConfig
+  visibility?: TabVisibilityConfig
+  renderIf?: TabRenderCondition
+}
+
 /** Top-level, form-wide settings bag — sibling of sections/variables on
- *  FormSchema. Currently Create User and detailTabs; future form-level
- *  toggles land here too rather than growing FormSchema's own fields. */
+ *  FormSchema. Currently Create User, detailTabs, and customActions; future
+ *  form-level toggles land here too rather than growing FormSchema's own
+ *  fields. */
 export interface FormSettings {
   createUser: CreateUserSettings
   /** Absent/undefined (every form that predates FR-D2-015, or has never
@@ -416,6 +440,11 @@ export interface FormSettings {
    *  before the Detail Page Builder existed (one column, no zone concept),
    *  so no migration is needed for existing saved forms. */
   detailLayout?: DetailPageLayoutId
+  /** Absent/undefined (every form today) resolves to an empty list — unlike
+   *  detailTabs, there is no "at least one" fallback default, since a
+   *  record-detail toolbar with zero custom actions (today's universal
+   *  state) is a completely normal, not degraded, configuration. */
+  customActions?: CustomActionConfig[]
 }
 
 export const INVITATION_STATUS_COLUMN: ViewOnlyColumn = { id: 'invitation_status', label: 'Invitation Status' }

@@ -13,6 +13,7 @@
 // occupying its own separate bordered row below the title.
 import { useEffect, useState } from 'react'
 import { MoreHorizontal, Trash2, RotateCw, XCircle, UserPlus } from 'lucide-react'
+import { toast } from 'sonner'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EnableAccountDialog } from './EnableAccountDialog'
@@ -22,7 +23,11 @@ import { useDeleteRecord } from '@/features/forms/hooks'
 import {
   useRecordAccountStatus, useResendRecordInvite, useRemoveRecordAccess, useEnableRecordAccess,
 } from './record-detail-hooks'
-import type { CreateUserSettings } from '@/features/form-builder/schema'
+import { useCurrentViewer, isTabVisible } from './detail-tabs/useTabVisible'
+import { useExpressionRuntimeState, schemaToVariableDecls } from './expression-context'
+import { getCustomAction } from './custom-actions/registry'
+import './custom-actions'
+import type { CreateUserSettings, FormSchema } from '@/features/form-builder/schema'
 import type { FormRecord } from '@/features/forms/types'
 
 interface RecordDetailToolbarProps {
@@ -30,12 +35,18 @@ interface RecordDetailToolbarProps {
   recordId: string
   record: FormRecord | undefined
   createUserSettings: CreateUserSettings | undefined
+  /** FR-D2-017's customActions live on FormSettings, and a custom action's
+   *  visibility/renderIf gates and update_field's own field-eligibility
+   *  check all need the form's real schema — absent (every form that has
+   *  never opened the "Custom Actions" panel) resolves to an empty action
+   *  list, zero behavior change from today. */
+  schema?: FormSchema
   /** Called after a successful delete so the caller can close the drawer /
    *  navigate back to the list — this toolbar has no navigation context. */
   onDeleted?: () => void
 }
 
-export function RecordDetailToolbar({ formId, recordId, record, createUserSettings, onDeleted }: RecordDetailToolbarProps) {
+export function RecordDetailToolbar({ formId, recordId, record, createUserSettings, schema, onDeleted }: RecordDetailToolbarProps) {
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [confirmingRemoveAccess, setConfirmingRemoveAccess] = useState(false)
   const [enablingAccount, setEnablingAccount] = useState(false)
@@ -50,17 +61,46 @@ export function RecordDetailToolbar({ formId, recordId, record, createUserSettin
   const removeAccess = useRemoveRecordAccess(formId, recordId)
   const enableAccess = useEnableRecordAccess(formId, recordId)
 
+  // Custom actions (FR-D2-017) — resolved the exact same way DetailTabList
+  // resolves its own tab list: a static TabVisibilityConfig gate (client-
+  // side, against the already-loaded session) composed with an expression
+  // renderIf gate (a debounced /expressions/validate round-trip), fails
+  // closed (hidden) until a real resolved `true` comes back rather than
+  // flashing visible during the 250ms debounce window — identical reasoning
+  // to DetailTabList's own renderIfResolved comment.
+  const viewer = useCurrentViewer()
+  const configuredActions = (schema?.settings?.customActions ?? []).filter((a) => isTabVisible(a.visibility, viewer))
+  const variables = schema ? schemaToVariableDecls(schema) : []
+  const actionRenderIfExpressions = configuredActions
+    .filter((a) => a.renderIf?.mode === 'expression' && !!a.renderIf.expressionWhen)
+    .map((a) => ({ key: a.id, kind: 'visibleWhen' as const, expr: a.renderIf!.expressionWhen }))
+  const actionRenderIfResolved = useExpressionRuntimeState(actionRenderIfExpressions, variables, record ?? {})
+  const visibleActions = configuredActions.filter((a) => {
+    if (a.renderIf?.mode !== 'expression' || !a.renderIf.expressionWhen) return true
+    return actionRenderIfResolved[a.id]?.visible ?? false
+  })
+
   // Same reasoning as RecordDetailPanel's original effect (see its own doc
   // comment, unchanged): deleteRecord.mutate() alone doesn't give a
   // reliable completion signal, since formsApi.deleteRecord's underlying
   // ky response is fire-and-forget from the mutation's own perspective.
   useEffect(() => {
     if (deleteRecord.isSuccess) {
+      toast.success('Record deleted')
       onDeleted?.()
       setConfirmingDelete(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deleteRecord.isSuccess])
+
+  useEffect(() => {
+    if (deleteRecord.isError) {
+      toast.error('Delete failed', {
+        description: deleteRecord.error instanceof Error ? deleteRecord.error.message : undefined,
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deleteRecord.isError])
 
   const handleDelete = () => {
     if (deleteRecord.isPending) return
@@ -68,7 +108,8 @@ export function RecordDetailToolbar({ formId, recordId, record, createUserSettin
   }
 
   const hasAccountAction = accountEnabled && canEdit && !!accountStatus?.status
-  const hasAnyAction = hasAccountAction || canDelete
+  const hasCustomActions = visibleActions.length > 0
+  const hasAnyAction = hasCustomActions || hasAccountAction || canDelete
   if (!hasAnyAction) return null
 
   return (
@@ -78,10 +119,39 @@ export function RecordDetailToolbar({ formId, recordId, record, createUserSettin
           <MoreHorizontal size={16} />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56" container={document.getElementById('runtime-root')}>
+          {hasCustomActions && record && (
+            <>
+              {visibleActions.map((action) => {
+                const def = getCustomAction(action.type)
+                if (!def) return null
+                const config = def.parseConfig(action.config)
+                return (
+                  <def.MenuItem
+                    key={action.id}
+                    formId={formId}
+                    recordId={recordId}
+                    record={record}
+                    schema={schema}
+                    config={config}
+                    label={action.label}
+                  />
+                )
+              })}
+            </>
+          )}
+          {hasCustomActions && (hasAccountAction || canDelete) && <DropdownMenuSeparator />}
           {hasAccountAction && (
             <PermissionGate need={`forms:${formId}:edit`}>
               {accountStatus?.status === 'pending' && (
-                <DropdownMenuItem disabled={resendInvite.isPending} onClick={() => resendInvite.mutate()}>
+                <DropdownMenuItem
+                  disabled={resendInvite.isPending}
+                  onClick={() => {
+                    resendInvite.mutate(undefined, {
+                      onSuccess: () => toast.success('Invite resent'),
+                      onError: (e) => toast.error('Failed to resend invite', { description: e instanceof Error ? e.message : undefined }),
+                    })
+                  }}
+                >
                   <RotateCw size={13} />Resend Invite
                 </DropdownMenuItem>
               )}
@@ -127,8 +197,13 @@ export function RecordDetailToolbar({ formId, recordId, record, createUserSettin
         destructive
         loading={removeAccess.isPending}
         onConfirm={async () => {
-          await removeAccess.mutateAsync()
-          setConfirmingRemoveAccess(false)
+          try {
+            await removeAccess.mutateAsync()
+            toast.success('Login access removed')
+            setConfirmingRemoveAccess(false)
+          } catch (e) {
+            toast.error('Failed to remove access', { description: e instanceof Error ? e.message : undefined })
+          }
         }}
         container={document.getElementById('runtime-root')}
       />
@@ -139,8 +214,13 @@ export function RecordDetailToolbar({ formId, recordId, record, createUserSettin
         defaultEmail={createUserSettings?.emailFieldKey ? (record?.[createUserSettings.emailFieldKey] as string | undefined) : undefined}
         loading={enableAccess.isPending}
         onConfirm={async (data) => {
-          await enableAccess.mutateAsync(data)
-          setEnablingAccount(false)
+          try {
+            await enableAccess.mutateAsync(data)
+            toast.success('Account enabled')
+            setEnablingAccount(false)
+          } catch (e) {
+            toast.error('Failed to enable account', { description: e instanceof Error ? e.message : undefined })
+          }
         }}
         container={document.getElementById('runtime-root')}
       />

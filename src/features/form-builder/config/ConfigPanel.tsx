@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { SlidersHorizontal, Layers, FileText, LayoutPanelTop, LayoutGrid } from 'lucide-react'
+import { SlidersHorizontal, Layers, FileText, LayoutPanelTop, LayoutGrid, Zap } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -14,8 +14,9 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, Dr
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useForm as useFormDef } from '@/features/forms/hooks'
-import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection, updateDetailTabs, updateDetailLayout } from '../store'
+import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection, updateDetailTabs, updateDetailLayout, updateCustomActions } from '../store'
 import { DetailPageConfigSection } from './DetailPageConfigSection'
+import { CustomActionsConfigSection } from './CustomActionsConfigSection'
 import { DetailPageBuilderOverlay } from '@/features/detail-page-builder/DetailPageBuilderOverlay'
 import { resolveDetailTabs } from '@/features/forms/runtime/detail-tabs/registry'
 import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable } from '../component-registry'
@@ -109,7 +110,9 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
   const cfg: CreateUserSettings = schema.settings?.createUser ?? emptyCreateUserSettings()
   const [detailPageOpen, setDetailPageOpen] = useState(false)
   const [canvasOpen, setCanvasOpen] = useState(false)
+  const [customActionsOpen, setCustomActionsOpen] = useState(false)
   const tabCount = resolveDetailTabs(schema.settings?.detailTabs).filter((t) => !t.hidden).length
+  const actionCount = (schema.settings?.customActions ?? []).length
   const fields = useMemo(() => projectToFields(schema).fields, [schema])
 
   return (
@@ -184,6 +187,30 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
               <p className="text-[11px] text-slate-400">Save this form first to configure its Detail Page tabs.</p>
             )}
           </div>
+
+          <div className="h-px bg-slate-100" />
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Custom Actions</p>
+            <p className="text-[10px] text-slate-400">
+              Menu items in the record detail's "..." menu that update a field, gated by who can see them and when.
+            </p>
+            {formId ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCustomActionsOpen(true)}
+                className="flex w-full items-center justify-between gap-2 text-[12px]"
+              >
+                <span className="flex items-center gap-2">
+                  <Zap size={14} className="text-slate-400" />
+                  Configure Custom Actions
+                </span>
+                <span className="text-[10px] text-slate-400">{actionCount} action{actionCount === 1 ? '' : 's'}</span>
+              </Button>
+            ) : (
+              <p className="text-[11px] text-slate-400">Save this form first to configure its custom actions.</p>
+            )}
+          </div>
         </div>
       </ScrollArea>
 
@@ -210,6 +237,35 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
                 {tabCount} tab{tabCount === 1 ? '' : 's'} visible — changes apply instantly, use the builder's Save to persist them.
               </p>
               <Button type="button" onClick={() => setDetailPageOpen(false)}>Done</Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      )}
+
+      {formId && (
+        <Drawer open={customActionsOpen} onOpenChange={setCustomActionsOpen}>
+          <DrawerContent size="lg">
+            <DrawerHeader>
+              <DrawerTitle>Custom Actions</DrawerTitle>
+              <DrawerDescription>
+                Menu items in the record detail's "..." menu that update a field, gated by who can see them and when.
+              </DrawerDescription>
+            </DrawerHeader>
+            <ScrollArea className="flex-1">
+              <div className="p-6">
+                <CustomActionsConfigSection
+                  formId={formId}
+                  schema={schema}
+                  customActions={schema.settings?.customActions}
+                  onChange={updateCustomActions}
+                />
+              </div>
+            </ScrollArea>
+            <DrawerFooter className="items-center justify-between sm:justify-between">
+              <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
+                {actionCount} action{actionCount === 1 ? '' : 's'} — changes apply instantly, use the builder's Save to persist them.
+              </p>
+              <Button type="button" onClick={() => setCustomActionsOpen(false)}>Done</Button>
             </DrawerFooter>
           </DrawerContent>
         </Drawer>
