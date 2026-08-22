@@ -383,6 +383,23 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               </button>
             </div>
             <div className="max-h-64 overflow-y-auto px-3 py-2.5">
+              {debugSnapshot.watches && debugSnapshot.watches.length > 0 && (
+                <div className="mb-2.5 space-y-1.5 border-b border-slate-100 pb-2.5">
+                  {debugSnapshot.watches.map((w, i) => (
+                    <div key={i} className="text-[11px]">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="font-semibold text-slate-600">{w.name || `watch ${i + 1}`}</span>
+                        <code className="truncate font-mono text-[10px] text-slate-400">{w.expression}</code>
+                      </div>
+                      {w.error ? (
+                        <pre className="mt-0.5 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-red-600">{w.error}</pre>
+                      ) : (
+                        <pre className="mt-0.5 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-slate-700">{JSON.stringify(w.value, null, 2)}</pre>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
               {debugSnapshot.variables && Object.keys(debugSnapshot.variables).length > 0 ? (
                 <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-slate-700">
                   {JSON.stringify(debugSnapshot.variables, null, 2)}
@@ -767,9 +784,11 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
     }
     case 'debug': {
       const cfg = data.configuration as DebugConfig | undefined
+      const watchCount = cfg?.watches?.length ?? 0
       return (
         <p className="text-[11px] text-slate-400">
           {cfg?.label ? <span className="text-lime-600">{cfg.label}</span> : 'Captures a variable snapshot here'}
+          {watchCount > 0 && <span className="ml-1.5 text-slate-400">· {watchCount} watch{watchCount === 1 ? '' : 'es'}</span>}
         </p>
       )
     }

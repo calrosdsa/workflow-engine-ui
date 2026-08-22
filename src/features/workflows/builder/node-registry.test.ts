@@ -9,11 +9,12 @@ import { normaliseDeleteRecordsConfig } from './node-forms/DeleteRecordsForm'
 import { normaliseTransformConfig } from './node-forms/TransformForm'
 import { normaliseSaveRecordsConfig } from './node-forms/SaveRecordsForm'
 import { normaliseHttpRequestConfig } from './node-forms/HttpRequestForm'
+import { normaliseDebugConfig } from './node-forms/DebugForm'
 
 // Each normalise*Config function is pure — (raw: unknown) => Config — with no
 // React/Zustand dependency, so it's cheap to unit-test in isolation the same
 // way the builder-kit tree-store core is (see features/builder-kit/
-// tree-store.test.ts). Coverage here is for the 10 types with a REAL
+// tree-store.test.ts). Coverage here is for the 11 types with a REAL
 // normalizer; condition/subflow/iterator use identity normalise (nothing to
 // assert beyond "returns its input", not worth a dedicated test).
 
@@ -160,5 +161,22 @@ describe('normaliseHttpRequestConfig', () => {
     // ensureResponseSchemaIds (defaults to []), never leaves it undefined.
     expect(result.response_schemas![0].id).toEqual(expect.any(String))
     expect(result.response_schemas![0].fields[0].id).toEqual(expect.any(String))
+  })
+})
+
+describe('normaliseDebugConfig', () => {
+  it('defaults label to empty and watches to an empty list', () => {
+    expect(normaliseDebugConfig(undefined)).toEqual({ label: '', watches: [] })
+  })
+
+  it('preserves the legacy label-only shape (no watches field at all)', () => {
+    expect(normaliseDebugConfig({ label: 'after fetch' })).toEqual({ label: 'after fetch', watches: [] })
+  })
+
+  it('re-attaches ids to watches missing one', () => {
+    const result = normaliseDebugConfig({ watches: [{ name: 'total', expression: 'Vars["x"] + 1' }] })
+    expect(result.watches![0].id).toEqual(expect.any(String))
+    expect(result.watches![0].name).toBe('total')
+    expect(result.watches![0].expression).toBe('Vars["x"] + 1')
   })
 })

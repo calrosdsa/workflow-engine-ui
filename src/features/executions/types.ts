@@ -36,7 +36,14 @@ export interface Execution {
   // iterators with at least one failed item (FR-B2-015).
   iterator_failed_items?: Record<string, ExecutionFailedItem[]>
   // debug nodeID -> captured variable snapshot (FR-B2-013).
-  debug_snapshots?: Record<string, { variables?: Record<string, unknown>; label?: string }>
+  debug_snapshots?: Record<string, {
+    variables?: Record<string, unknown>
+    label?: string
+    // One entry per configured DebugWatch (graph.DebugWatch), in config
+    // order — `value` and `error` are mutually exclusive; a compile/eval
+    // failure never fails the node itself (see engine's DebugActivity).
+    watches?: { name: string; expression: string; value?: unknown; error?: string }[]
+  }>
   // nodeID -> non-fatal warning text, independent of node_statuses/node_errors
   // (still COMPLETED — a warning flags what DIDN'T happen, not a failure).
   // Today populated only by an Iterator that processed zero items.

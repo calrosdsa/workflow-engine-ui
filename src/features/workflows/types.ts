@@ -534,6 +534,17 @@ export interface KnowledgeIngestConfig {
 // graph, for later inspection via the execution sidebar (FR-B2-013).
 // ---------------------------------------------------------------------------
 
+// One named expression captured into a debug node's snapshot for inspection
+// — purely observational, never written to workflow state (mirrors
+// graph.DebugWatch). `id` is a local-only key for list rendering, not sent
+// to the backend, same convention as VariableAssignment.id above.
+export interface DebugWatch {
+  id: string
+  name: string
+  expression: string
+}
+
 export interface DebugConfig {
   label?: string
+  watches?: DebugWatch[]
 }

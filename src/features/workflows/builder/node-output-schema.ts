@@ -418,9 +418,20 @@ export function buildNodeOutputSchema(
       // is no separate "record" namespace, so this schema is 'vars'-rooted
       // just like an iterator's loop item, and its keys are the trigger's
       // bound form's real fields when known.
+      //
+      // on_demand_data_driven (FR-B3-007) exposes the SAME Vars[...] shape,
+      // via the same mergeTriggerRecord mechanism, just dispatched from
+      // api/forms's trigger-workflow route instead of a record write — so it
+      // gets the same autocomplete treatment. Its bound form is optional
+      // (source_form_id, not form_id — before/after/after_async watch ONE
+      // form's writes, this mode can be left unscoped to accept any form's
+      // record); an unscoped trigger falls back to no known fields, same as
+      // an unset form_id on the sibling modes.
       const cfg = node.data.configuration as TriggerConfig | undefined
-      if (cfg?.mode !== 'before' && cfg?.mode !== 'after' && cfg?.mode !== 'after_async') return []
-      const form = cfg.form_id ? formsById.get(cfg.form_id) : undefined
+      const recordModes = ['before', 'after', 'after_async', 'on_demand_data_driven']
+      if (!cfg || !recordModes.includes(cfg.mode)) return []
+      const boundFormId = cfg.mode === 'on_demand_data_driven' ? cfg.source_form_id : cfg.form_id
+      const form = boundFormId ? formsById.get(boundFormId) : undefined
       return [{
         nodeId: node.id,
         nodeLabel: `${label} (triggering record)`,
