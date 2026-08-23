@@ -107,19 +107,23 @@ export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recor
               <PermissionDeniedPage />
             ) : !form ? null : (
               <>
-                {recordTitle && (
-                  <div className="flex items-center justify-between gap-3 border-b px-6 py-4" style={{ borderColor: 'hsl(var(--border))' }}>
-                    <h1 className="truncate text-lg font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{recordTitle}</h1>
-                    <RecordDetailToolbar
-                      formId={formId}
-                      recordId={recordId}
-                      record={record}
-                      createUserSettings={schema?.settings?.createUser}
-                      schema={schema}
-                      onDeleted={() => runtimeRouter.history.back()}
-                    />
-                  </div>
-                )}
+                {/* Always rendered, not gated on recordTitle — see
+                    RuntimeRecordPage.tsx's identical comment: recordTitle
+                    only comes back empty while `record` is still loading,
+                    and gating the whole block on it used to hide
+                    RecordDetailToolbar's Edit/Delete controls during that
+                    window too, not just the heading. */}
+                <div className="flex items-center justify-between gap-3 border-b px-6 py-4" style={{ borderColor: 'hsl(var(--border))' }}>
+                  <h1 className="truncate text-lg font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{recordTitle || 'Loading…'}</h1>
+                  <RecordDetailToolbar
+                    formId={formId}
+                    recordId={recordId}
+                    record={record}
+                    createUserSettings={schema?.settings?.createUser}
+                    schema={schema}
+                    onDeleted={() => runtimeRouter.history.back()}
+                  />
+                </div>
                 <RecordDetailPanel
                   formId={formId}
                   recordId={recordId}
