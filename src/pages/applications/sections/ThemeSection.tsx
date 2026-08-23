@@ -50,8 +50,8 @@ export function ThemeSection() {
   }
 
   return (
-    <div className="grid h-full grid-cols-2 divide-x divide-[hsl(var(--border))]">
-      <div className="space-y-6 overflow-y-auto p-6">
+    <div className="grid h-full grid-cols-1 divide-y divide-[hsl(var(--border))] overflow-y-auto lg:grid-cols-2 lg:divide-x lg:divide-y-0 lg:overflow-hidden">
+      <div className="space-y-6 overflow-y-auto p-4 sm:p-6">
         <div>
           <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Theme</h2>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">Colors, typography, and branding for this application's runtime.</p>
@@ -60,7 +60,7 @@ export function ThemeSection() {
         <ColorSection title="Light mode colors" colors={draft.colors} onChange={(k, hex) => patchColors('colors', k, hex)} canWrite={canWrite} />
         <ColorSection title="Dark mode overrides" colors={{ ...draft.colors, ...draft.darkColors }} onChange={(k, hex) => patchColors('darkColors', k, hex)} canWrite={canWrite} />
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Font family</label>
             <select
@@ -149,7 +149,7 @@ function ColorSection({ title, colors, onChange, canWrite }: {
   return (
     <div>
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">{title}</h3>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 min-[420px]:grid-cols-3">
         {(Object.keys(colors) as (keyof ThemeConfig['colors'])[]).map((key) => (
           <div key={key}>
             <label className="mb-1 block text-[11px] capitalize text-[hsl(var(--muted-foreground))]">{key}</label>

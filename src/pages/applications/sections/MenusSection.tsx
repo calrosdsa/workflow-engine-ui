@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, ChevronRight, ChevronDown, ArrowUp, ArrowDown, GripVertical, Trash2, Loader2, AlertCircle, EyeOff, Eye } from 'lucide-react'
+import { Plus, ChevronRight, ChevronLeft, ChevronDown, ArrowUp, ArrowDown, GripVertical, Trash2, Loader2, AlertCircle, EyeOff, Eye } from 'lucide-react'
 import {
   DndContext, DragOverlay, PointerSensor, KeyboardSensor,
   useSensor, useSensors, pointerWithin, rectIntersection,
@@ -52,7 +52,20 @@ export function MenusSection({ appId }: MenusSectionProps) {
 
   return (
     <div className="flex h-full">
-      <div className="w-72 shrink-0 space-y-3 overflow-y-auto border-r border-[hsl(var(--border))] p-4">
+      {/* Below `lg` this is a drill-down, not a stacked pane: the tree and
+       *  detail panel are already full-height siblings that would otherwise
+       *  squeeze into a ~288px sidebar + a sliver of detail (see the audit
+       *  that flagged this — menu names truncated to one letter at 375px).
+       *  A form this size (5+ fields plus a per-type config panel) needs the
+       *  full width once you're editing it, so `selected` toggles which pane
+       *  is in the DOM flow instead of both existing at reduced width. `lg:`
+       *  and up shows both simultaneously, matching the desktop layout. */}
+      <div
+        className={cn(
+          'w-full shrink-0 space-y-3 overflow-y-auto border-[hsl(var(--border))] p-4 lg:w-72 lg:border-r',
+          selected ? 'hidden lg:block' : 'block',
+        )}
+      >
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Menus</h3>
           <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => { setPickerParentId(null); setPickerOpen(true) }}>
@@ -70,9 +83,9 @@ export function MenusSection({ appId }: MenusSectionProps) {
         />
       </div>
 
-      <div className="min-w-0 flex-1 overflow-y-auto">
+      <div className={cn('min-w-0 flex-1 overflow-y-auto', selected ? 'block' : 'hidden lg:block')}>
         {selected ? (
-          <MenuDetail key={selected.id} menu={selected} appId={appId} onDeleted={() => setSelectedId(null)} />
+          <MenuDetail key={selected.id} menu={selected} appId={appId} onDeleted={() => setSelectedId(null)} onBack={() => setSelectedId(null)} />
         ) : (
           <div className="p-6 text-sm text-[hsl(var(--muted-foreground))]">Select a menu to configure it.</div>
         )}
@@ -711,7 +724,7 @@ export async function ensurePairedAddMenu({ allMenus, searchMenu, formId, permis
 // Detail / config panel
 // ---------------------------------------------------------------------------
 
-function MenuDetail({ menu, appId, onDeleted }: { menu: Menu; appId: string; onDeleted: () => void }) {
+function MenuDetail({ menu, appId, onDeleted, onBack }: { menu: Menu; appId: string; onDeleted: () => void; onBack: () => void }) {
   const updateMutation = useUpdateMenu(menu.id)
   const createMutation = useCreateMenu()
   const deleteMutation = useDeleteMenu()
@@ -786,8 +799,16 @@ function MenuDetail({ menu, appId, onDeleted }: { menu: Menu; appId: string; onD
   }
 
   return (
-    <div className="max-w-xl space-y-5 p-6">
-      <div className="grid grid-cols-2 gap-3">
+    <div className="max-w-xl space-y-5 p-4 sm:p-6">
+      <button
+        onClick={onBack}
+        className="-ml-1 flex items-center gap-1 rounded text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] lg:hidden"
+      >
+        <ChevronLeft size={16} />
+        Menus
+      </button>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name</label>
           <Input value={name} onChange={(e) => { setName(e.target.value); setSaved(false) }} disabled={!canWrite} />

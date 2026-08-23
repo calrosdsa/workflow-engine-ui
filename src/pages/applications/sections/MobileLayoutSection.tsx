@@ -105,8 +105,8 @@ export function MobileLayoutSection({ appId: _appId }: { appId: string }) {
   }
 
   return (
-    <div className="grid h-full grid-cols-2 divide-x">
-      <div className="space-y-6 overflow-y-auto p-6">
+    <div className="grid h-full grid-cols-1 divide-y divide-[hsl(var(--border))] overflow-y-auto lg:grid-cols-2 lg:divide-x lg:divide-y-0 lg:overflow-hidden">
+      <div className="space-y-6 overflow-y-auto p-4 sm:p-6">
         <div>
           <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Mobile Layout</h2>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">Arrange and show/hide top-level menus in the mobile app's navigation.</p>
@@ -159,7 +159,7 @@ export function MobileLayoutSection({ appId: _appId }: { appId: string }) {
         )}
       </div>
 
-      <div className="overflow-y-auto bg-[hsl(var(--muted))]/40 p-6">
+      <div className="overflow-y-auto bg-[hsl(var(--muted))]/40 p-4 sm:p-6">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Live preview</p>
         <PhonePreview rows={rows} style={style} />
       </div>
