@@ -69,18 +69,28 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
 
   return (
     <div className="flex h-screen flex-col">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-white px-4">
+      {/* This header carries the shell chrome for every app screen (Dashboard,
+       *  Workflows, Forms, App Design, Settings), not just App Design — the
+       *  audit that flagged this measured 776px of un-shrinkable content
+       *  (mostly the 5-item text-label nav at 503px, plus the right-side
+       *  actions at 189px) forced into a 375px header with no wrap or shrink
+       *  anywhere, so the overflow escaped onto the whole page as horizontal
+       *  scroll and pushed Settings/Launch off-screen. Fix: nav labels and
+       *  the app name collapse to icon-only below `sm`, freeing enough width
+       *  that all 5 destinations plus the Live badge and Launch button fit
+       *  without any of them needing an overflow menu. */}
+      <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-white px-2 sm:gap-3 sm:px-4">
         <Button variant="ghost" size="icon" onClick={() => navigate({ to: '/' })} title="Back to Home">
           <ArrowLeft size={16} />
         </Button>
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 shrink-0 items-center gap-2">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
             <ListTree size={14} />
           </div>
-          <span className="max-w-[160px] truncate text-sm font-semibold text-slate-800" title={app.name}>{app.name}</span>
+          <span className="hidden max-w-[160px] truncate text-sm font-semibold text-slate-800 sm:inline" title={app.name}>{app.name}</span>
         </div>
 
-        <nav className="ml-4 flex items-center gap-1">
+        <nav className="flex items-center gap-0.5 sm:ml-2 sm:gap-1">
           {NAV_ITEMS.map(({ to, label, icon: Icon, exact }) => {
             const target = to.replace('$appId', appId)
             const active = exact ? pathname === target : pathname.startsWith(target)
@@ -88,21 +98,24 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
               <button
                 key={to}
                 onClick={() => navigate({ to, params: { appId } })}
+                title={label}
+                aria-label={label}
+                aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                  'flex items-center gap-1.5 rounded-md p-2 text-sm font-medium transition-colors sm:px-3 sm:py-1.5',
                   active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50',
                 )}
               >
                 <Icon size={14} />
-                {label}
+                <span className="hidden sm:inline">{label}</span>
               </button>
             )
           })}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           {app.published_version != null && (
-            <span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-600">
+            <span className="hidden shrink-0 whitespace-nowrap rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-600 sm:inline-block">
               Live v{app.published_version}
             </span>
           )}
@@ -111,10 +124,11 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
               size="sm"
               onClick={handlePublish}
               disabled={publishMutation.isPending}
-              className="gap-1.5 bg-indigo-600 text-white hover:bg-indigo-700"
+              title="Launch Application"
+              className="gap-1.5 bg-indigo-600 px-2 text-white hover:bg-indigo-700 sm:px-3"
             >
               {publishMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Rocket size={14} />}
-              Launch Application
+              <span className="hidden sm:inline">Launch Application</span>
             </Button>
           )}
         </div>
