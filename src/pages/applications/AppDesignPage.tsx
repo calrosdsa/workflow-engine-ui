@@ -33,13 +33,16 @@ export function AppDesignPage({ appId }: { appId: string }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-1 border-b bg-white px-4 py-2">
+      <div className="flex items-center gap-1 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-2">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              tab === id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50'
+            aria-current={tab === id ? 'page' : undefined}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 ${
+              tab === id
+                ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
+                : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))]'
             }`}
           >
             <Icon size={14} />

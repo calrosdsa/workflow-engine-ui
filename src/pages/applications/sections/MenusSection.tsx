@@ -52,9 +52,9 @@ export function MenusSection({ appId }: MenusSectionProps) {
 
   return (
     <div className="flex h-full">
-      <div className="w-72 shrink-0 space-y-3 overflow-y-auto border-r p-4">
+      <div className="w-72 shrink-0 space-y-3 overflow-y-auto border-r border-[hsl(var(--border))] p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Menus</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Menus</h3>
           <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => { setPickerParentId(null); setPickerOpen(true) }}>
             <Plus size={12} />Add
           </Button>
@@ -74,7 +74,7 @@ export function MenusSection({ appId }: MenusSectionProps) {
         {selected ? (
           <MenuDetail key={selected.id} menu={selected} appId={appId} onDeleted={() => setSelectedId(null)} />
         ) : (
-          <div className="p-6 text-sm text-gray-400">Select a menu to configure it.</div>
+          <div className="p-6 text-sm text-[hsl(var(--muted-foreground))]">Select a menu to configure it.</div>
         )}
       </div>
 
@@ -340,7 +340,7 @@ export function MenuTree({ tree, hiddenMenus, allMenus, selectedId, onSelect, on
       <SortableContext items={rowIds} strategy={verticalListSortingStrategy}>
         <div className="space-y-0.5">
           {tree.length === 0 ? (
-            <p className="rounded-md border border-dashed border-gray-200 p-4 text-center text-xs text-gray-400">
+            <p className="rounded-md border border-dashed border-[hsl(var(--border))] p-4 text-center text-xs text-[hsl(var(--muted-foreground))]">
               No menus yet. Add one to build your navigation.
             </p>
           ) : (
@@ -374,8 +374,8 @@ export function MenuTree({ tree, hiddenMenus, allMenus, selectedId, onSelect, on
 
       <DragOverlay dropAnimation={{ duration: 150, easing: 'cubic-bezier(0.2,0,0,1)' }}>
         {activeOverlay && (
-          <div className="flex items-center gap-1.5 rounded-md border border-indigo-300 bg-white px-2 py-1 text-[13px] font-medium text-slate-700 shadow-lg">
-            {(() => { const Icon = MENU_TYPE_REGISTRY[activeOverlay.menuType].icon; return <Icon size={13} className="shrink-0 text-indigo-500" /> })()}
+          <div className="flex items-center gap-1.5 rounded-md border border-[hsl(var(--primary))]/40 bg-[hsl(var(--card))] px-2 py-1 text-[13px] font-medium text-[hsl(var(--foreground))] shadow-lg">
+            {(() => { const Icon = MENU_TYPE_REGISTRY[activeOverlay.menuType].icon; return <Icon size={13} className="shrink-0 text-[hsl(var(--primary))]" /> })()}
             {activeOverlay.name}
           </div>
         )}
@@ -395,7 +395,7 @@ function RootDropZone() {
       ref={setNodeRef}
       className={cn(
         'mt-1 rounded-md border border-dashed px-2 py-1.5 text-center text-[11px] transition-colors',
-        isOver ? 'border-indigo-400 bg-indigo-50 text-indigo-500' : 'border-gray-200 text-gray-300',
+        isOver ? 'border-[hsl(var(--primary))]/60 bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]' : 'border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]',
       )}
     >
       Drop here to move to top level
@@ -422,15 +422,16 @@ function HiddenTray({ menus, selectedId, onSelect, onRestore }: {
   const { setNodeRef, isOver } = useDroppable({ id: HIDDEN_ZONE_ID })
 
   return (
-    <div className="mt-3 border-t pt-3">
+    <div className="mt-3 border-t border-[hsl(var(--border))] pt-3">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500"
+        aria-expanded={open}
+        className="flex w-full items-center gap-1.5 rounded text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
       >
         {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         <EyeOff size={12} />
         Hidden
-        {menus.length > 0 && <span className="font-normal normal-case text-gray-400">({menus.length})</span>}
+        {menus.length > 0 && <span className="font-normal normal-case text-[hsl(var(--muted-foreground))]/70">({menus.length})</span>}
       </button>
 
       {open && (
@@ -438,11 +439,11 @@ function HiddenTray({ menus, selectedId, onSelect, onRestore }: {
           ref={setNodeRef}
           className={cn(
             'mt-2 min-h-[2.25rem] space-y-0.5 rounded-md border border-dashed p-1 transition-colors',
-            isOver ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200',
+            isOver ? 'border-[hsl(var(--primary))]/60 bg-[hsl(var(--primary))]/10' : 'border-[hsl(var(--border))]',
           )}
         >
           {menus.length === 0 ? (
-            <p className="p-2 text-center text-[11px] text-gray-300">Drag a menu here to hide it from the sidebar.</p>
+            <p className="p-2 text-center text-[11px] text-[hsl(var(--muted-foreground))]/70">Drag a menu here to hide it from the sidebar.</p>
           ) : (
             menus.map((menu) => (
               <HiddenMenuRow
@@ -477,27 +478,29 @@ function HiddenMenuRow({ menu, selected, onSelect, onRestore }: {
       style={style}
       className={cn(
         'group flex items-center gap-1 rounded-md px-1.5 py-1 text-[13px]',
-        selected ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50',
+        selected ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]' : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))]',
         isDragging && 'opacity-50',
       )}
     >
       <button
         {...attributes}
         {...listeners}
+        aria-label="Drag back onto the tree to restore"
         title="Drag back onto the tree to restore"
-        className="shrink-0 cursor-grab touch-none rounded p-0.5 text-gray-300 hover:text-gray-500 active:cursor-grabbing"
+        className="shrink-0 cursor-grab touch-none rounded p-0.5 text-[hsl(var(--muted-foreground))]/60 hover:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] active:cursor-grabbing"
       >
         <GripVertical size={12} />
       </button>
       <span className="w-3 shrink-0" />
-      <button onClick={onSelect} className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-left">
+      <button onClick={onSelect} className="flex min-w-0 flex-1 items-center gap-1.5 truncate rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]">
         <Icon size={13} className="shrink-0" />
         <span className="truncate">{menu.name}</span>
       </button>
       <button
+        aria-label="Restore to the sidebar"
         title="Restore to the sidebar"
         onClick={onRestore}
-        className="hidden shrink-0 rounded p-0.5 text-gray-400 hover:text-gray-700 group-hover:block"
+        className="hidden shrink-0 rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] group-hover:block group-focus-within:block"
       >
         <Eye size={12} />
       </button>
@@ -538,39 +541,45 @@ function MenuRow({ node, depth, index, siblingCount, selected, hasChildren, isCo
       style={{ ...style, paddingLeft: depth * 14 + 6 }}
       className={cn(
         'group flex items-center gap-1 rounded-md px-1.5 py-1 text-[13px]',
-        selected ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50',
+        selected ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]' : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--accent))]',
         isDragging && 'opacity-50',
-        isNestTarget && 'ring-2 ring-indigo-400 ring-inset bg-indigo-50/60',
+        isNestTarget && 'bg-[hsl(var(--primary))]/10 ring-2 ring-inset ring-[hsl(var(--primary))]/60',
       )}
     >
       <button
         {...attributes}
         {...listeners}
+        aria-label="Drag to reorder or move to another group"
         title="Drag to reorder or move to another group"
-        className="shrink-0 cursor-grab touch-none rounded p-0.5 text-gray-300 hover:text-gray-500 active:cursor-grabbing"
+        className="shrink-0 cursor-grab touch-none rounded p-0.5 text-[hsl(var(--muted-foreground))]/60 hover:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] active:cursor-grabbing"
       >
         <GripVertical size={12} />
       </button>
       {hasChildren ? (
-        <button onClick={onToggleCollapsed} className="shrink-0 text-gray-400">
+        <button
+          onClick={onToggleCollapsed}
+          aria-label={isCollapsed ? 'Expand' : 'Collapse'}
+          aria-expanded={!isCollapsed}
+          className="shrink-0 rounded text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+        >
           {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
         </button>
       ) : (
         <span className="w-3 shrink-0" />
       )}
-      <button onClick={onSelect} className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-left">
+      <button onClick={onSelect} className="flex min-w-0 flex-1 items-center gap-1.5 truncate rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]">
         <Icon size={13} className="shrink-0" />
         <span className="truncate">{node.name}</span>
       </button>
-      <span className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
-        <button title="Move up" disabled={index === 0} onClick={() => onMove(-1)} className="rounded p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
+      <span className="hidden shrink-0 items-center gap-0.5 group-hover:flex group-focus-within:flex">
+        <button title="Move up" aria-label="Move up" disabled={index === 0} onClick={() => onMove(-1)} className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-30">
           <ArrowUp size={11} />
         </button>
-        <button title="Move down" disabled={index === siblingCount - 1} onClick={() => onMove(1)} className="rounded p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
+        <button title="Move down" aria-label="Move down" disabled={index === siblingCount - 1} onClick={() => onMove(1)} className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-30">
           <ArrowDown size={11} />
         </button>
         {node.menu_type === 'parent' && (
-          <button title="Add child menu" onClick={onAddChild} className="rounded p-0.5 text-gray-400 hover:text-gray-700">
+          <button title="Add child menu" aria-label="Add child menu" onClick={onAddChild} className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]">
             <Plus size={11} />
           </button>
         )}
@@ -628,20 +637,20 @@ function MenuTypePickerDialog({ open, onClose, parentId, onCreated }: {
                 key={entry.type}
                 onClick={() => pick(entry.type)}
                 disabled={createMutation.isPending}
-                className="flex items-center gap-3 rounded-lg border border-gray-200 p-3 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50/40 disabled:opacity-50"
+                className="flex items-center gap-3 rounded-lg border border-[hsl(var(--border))] p-3 text-left transition-colors hover:border-[hsl(var(--primary))]/40 hover:bg-[hsl(var(--primary))]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-50"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-indigo-600">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]">
                   <Icon size={16} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800">{entry.label}</p>
-                  <p className="truncate text-xs text-gray-400">{entry.description}</p>
+                  <p className="text-sm font-medium text-[hsl(var(--foreground))]">{entry.label}</p>
+                  <p className="truncate text-xs text-[hsl(var(--muted-foreground))]">{entry.description}</p>
                 </div>
               </button>
             )
           })}
           {error && (
-            <p className="flex items-center gap-1.5 text-xs text-red-600"><AlertCircle size={12} />{error}</p>
+            <p className="flex items-center gap-1.5 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={12} />{error}</p>
           )}
         </div>
       </DialogContent>
@@ -780,27 +789,27 @@ function MenuDetail({ menu, appId, onDeleted }: { menu: Menu; appId: string; onD
     <div className="max-w-xl space-y-5 p-6">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Name</label>
+          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name</label>
           <Input value={name} onChange={(e) => { setName(e.target.value); setSaved(false) }} disabled={!canWrite} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Slug</label>
+          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Slug</label>
           <Input value={slug} onChange={(e) => { setSlug(e.target.value); setSaved(false) }} className="font-mono text-xs" disabled={!canWrite} />
         </div>
       </div>
 
       <div>
-        <label className="mb-2 block text-xs font-medium text-gray-600">Permission</label>
+        <label className="mb-2 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Permission</label>
         <div className="flex items-center gap-4">
           {(['all', 'role'] as const).map((mode) => (
-            <label key={mode} className="flex items-center gap-1.5 text-sm text-gray-700">
+            <label key={mode} className="flex items-center gap-1.5 text-sm text-[hsl(var(--foreground))]">
               <input
                 type="radio"
                 name={`permission-mode-${menu.id}`}
                 checked={permissionMode === mode}
                 disabled={!canWrite}
                 onChange={() => { setPermissionMode(mode); setSaved(false) }}
-                className="text-indigo-600"
+                className="text-[hsl(var(--primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
               />
               {mode === 'all' ? 'For All' : 'Specific Role'}
             </label>
@@ -808,9 +817,9 @@ function MenuDetail({ menu, appId, onDeleted }: { menu: Menu; appId: string; onD
         </div>
 
         {permissionMode === 'role' && (
-          <div className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-md border border-slate-200 p-2">
+          <div className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-md border border-[hsl(var(--border))] p-2">
             {(roles ?? []).map((role) => (
-              <label key={role.id} className="flex items-center gap-2 text-[12px] text-slate-700">
+              <label key={role.id} className="flex items-center gap-2 text-[12px] text-[hsl(var(--foreground))]">
                 <Checkbox
                   checked={requiredRoleIds.includes(role.id)}
                   onCheckedChange={() => toggleRole(role.id)}
@@ -820,11 +829,11 @@ function MenuDetail({ menu, appId, onDeleted }: { menu: Menu; appId: string; onD
               </label>
             ))}
             {(roles ?? []).length === 0 && (
-              <p className="text-[11px] text-slate-400">No roles defined for this app yet.</p>
+              <p className="text-[11px] text-[hsl(var(--muted-foreground))]">No roles defined for this app yet.</p>
             )}
           </div>
         )}
-        <p className="mt-1 text-[11px] text-gray-400">
+        <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
           {permissionMode === 'all'
             ? 'Visible to anyone who can view the app.'
             : "Only visible to members whose current role is checked above."}
@@ -832,18 +841,18 @@ function MenuDetail({ menu, appId, onDeleted }: { menu: Menu; appId: string; onD
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-gray-600">Required permission (optional)</label>
+        <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Required permission (optional)</label>
         <select
           value={requiredPermission}
           onChange={(e) => { setRequiredPermission(e.target.value); setSaved(false) }}
           disabled={!canWrite}
-          className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700"
+          className="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1.5 text-sm text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <option value="">No additional permission required</option>
           {(permissionsCatalog ?? []).map((p) => <option key={p.key} value={p.key}>{p.label} ({p.key})</option>)}
         </select>
         {isResourceBacked && (
-          <p className="mt-1 text-[11px] text-gray-400">
+          <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
             {MENU_TYPE_REGISTRY[menu.menu_type].label} menus also require the viewer to have{' '}
             {menu.menu_type === 'add' ? 'Create' : 'View'} access on{' '}
             {resourceForm ? `"${resourceForm.name}"` : 'this form'} — enforced automatically on top of the settings above.
@@ -852,22 +861,22 @@ function MenuDetail({ menu, appId, onDeleted }: { menu: Menu; appId: string; onD
       </div>
 
       <div>
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
           {MENU_TYPE_REGISTRY[menu.menu_type].label} settings
         </h4>
         <ConfigPanel menu={{ ...menu, config }} onChange={(c) => { setConfig(c); setSaved(false) }} appId={appId} />
       </div>
 
-      {error && <p className="flex items-center gap-1.5 text-xs text-red-600"><AlertCircle size={12} />{error}</p>}
+      {error && <p className="flex items-center gap-1.5 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={12} />{error}</p>}
 
       {canWrite && (
-        <div className="flex items-center gap-3 border-t pt-4">
+        <div className="flex items-center gap-3 border-t border-[hsl(var(--border))] pt-4">
           <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-1.5">
             {updateMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : null}
             Save
           </Button>
-          {saved && !updateMutation.isPending && <span className="text-xs text-emerald-600">Saved</span>}
-          <Button variant="outline" onClick={handleDelete} disabled={deleteMutation.isPending} className="ml-auto gap-1.5 text-red-600 hover:bg-red-50">
+          {saved && !updateMutation.isPending && <span className="text-xs text-[hsl(var(--success))]">Saved</span>}
+          <Button variant="outline" onClick={handleDelete} disabled={deleteMutation.isPending} className="ml-auto gap-1.5 text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10">
             <Trash2 size={13} />Delete
           </Button>
         </div>

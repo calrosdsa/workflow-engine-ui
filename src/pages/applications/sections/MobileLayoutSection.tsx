@@ -108,22 +108,22 @@ export function MobileLayoutSection({ appId: _appId }: { appId: string }) {
     <div className="grid h-full grid-cols-2 divide-x">
       <div className="space-y-6 overflow-y-auto p-6">
         <div>
-          <h2 className="text-lg font-semibold text-slate-800">Mobile Layout</h2>
-          <p className="text-sm text-gray-500">Arrange and show/hide top-level menus in the mobile app's navigation.</p>
+          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Mobile Layout</h2>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">Arrange and show/hide top-level menus in the mobile app's navigation.</p>
         </div>
 
         <div>
-          <label className="mb-2 block text-xs font-medium text-gray-600">Navigation style</label>
+          <label className="mb-2 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Navigation style</label>
           <div className="flex items-center gap-4">
             {(['bottom_tabs', 'drawer'] as const).map((s) => (
-              <label key={s} className="flex items-center gap-1.5 text-sm text-gray-700">
+              <label key={s} className="flex items-center gap-1.5 text-sm text-[hsl(var(--foreground))]">
                 <input
                   type="radio"
                   name="mobile-nav-style"
                   checked={style === s}
                   disabled={!canWrite}
                   onChange={() => { setStyle(s); setSaved(false) }}
-                  className="text-indigo-600"
+                  className="text-[hsl(var(--primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
                 />
                 {s === 'bottom_tabs' ? 'Bottom Tabs' : 'Drawer'}
               </label>
@@ -132,7 +132,7 @@ export function MobileLayoutSection({ appId: _appId }: { appId: string }) {
         </div>
 
         {rows.length === 0 ? (
-          <p className="rounded-md border border-dashed border-gray-200 p-4 text-center text-xs text-gray-400">
+          <p className="rounded-md border border-dashed border-[hsl(var(--border))] p-4 text-center text-xs text-[hsl(var(--muted-foreground))]">
             No top-level menus yet. Add menus in the Menus tab first.
           </p>
         ) : (
@@ -148,19 +148,19 @@ export function MobileLayoutSection({ appId: _appId }: { appId: string }) {
         )}
 
         {canWrite && (
-          <div className="flex items-center gap-3 border-t pt-4">
+          <div className="flex items-center gap-3 border-t border-[hsl(var(--border))] pt-4">
             <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-1.5">
               {updateMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
               Save mobile layout
             </Button>
-            {saved && !updateMutation.isPending && <span className="flex items-center gap-1 text-xs text-emerald-600"><CheckCircle2 size={13} />Saved</span>}
-            {updateMutation.isError && <span className="flex items-center gap-1 text-xs text-red-600"><AlertCircle size={13} />Failed to save</span>}
+            {saved && !updateMutation.isPending && <span className="flex items-center gap-1 text-xs text-[hsl(var(--success))]"><CheckCircle2 size={13} />Saved</span>}
+            {updateMutation.isError && <span className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={13} />Failed to save</span>}
           </div>
         )}
       </div>
 
-      <div className="overflow-y-auto bg-gray-50 p-6">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Live preview</p>
+      <div className="overflow-y-auto bg-[hsl(var(--muted))]/40 p-6">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Live preview</p>
         <PhonePreview rows={rows} style={style} />
       </div>
     </div>
@@ -181,7 +181,7 @@ function MobileNavRow({ menu, visible, onToggleVisible, canWrite }: {
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
       className={cn(
-        'flex items-center gap-2 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm',
+        'flex items-center gap-2 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2 py-1.5 text-sm',
         isDragging && 'opacity-50',
         !visible && 'opacity-50',
       )}
@@ -189,14 +189,15 @@ function MobileNavRow({ menu, visible, onToggleVisible, canWrite }: {
       <button
         {...attributes}
         {...listeners}
+        aria-label="Drag to reorder"
         title="Drag to reorder"
-        className="shrink-0 cursor-grab touch-none rounded p-0.5 text-gray-300 hover:text-gray-500 active:cursor-grabbing"
+        className="shrink-0 cursor-grab touch-none rounded p-0.5 text-[hsl(var(--muted-foreground))]/60 hover:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] active:cursor-grabbing"
       >
         <GripVertical size={14} />
       </button>
-      <Icon size={14} className="shrink-0 text-gray-500" />
+      <Icon size={14} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
       <span className="min-w-0 flex-1 truncate">{menu.name}</span>
-      <label className="flex shrink-0 items-center gap-1.5 text-xs text-gray-500">
+      <label className="flex shrink-0 items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]">
         <Checkbox checked={visible} onCheckedChange={onToggleVisible} disabled={!canWrite} />
         Visible
       </label>

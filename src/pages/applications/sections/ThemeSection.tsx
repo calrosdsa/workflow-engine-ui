@@ -50,11 +50,11 @@ export function ThemeSection() {
   }
 
   return (
-    <div className="grid h-full grid-cols-2 divide-x">
+    <div className="grid h-full grid-cols-2 divide-x divide-[hsl(var(--border))]">
       <div className="space-y-6 overflow-y-auto p-6">
         <div>
-          <h2 className="text-lg font-semibold text-slate-800">Theme</h2>
-          <p className="text-sm text-gray-500">Colors, typography, and branding for this application's runtime.</p>
+          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Theme</h2>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">Colors, typography, and branding for this application's runtime.</p>
         </div>
 
         <ColorSection title="Light mode colors" colors={draft.colors} onChange={(k, hex) => patchColors('colors', k, hex)} canWrite={canWrite} />
@@ -62,18 +62,18 @@ export function ThemeSection() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Font family</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Font family</label>
             <select
               value={draft.typography.fontFamily}
               onChange={(e) => { setSaved(false); setDraft((d) => ({ ...d, typography: { ...d.typography, fontFamily: e.target.value } })) }}
               disabled={!canWrite}
-              className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm"
+              className="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1.5 text-sm text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {FONT_OPTIONS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Base font size</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Base font size</label>
             <Input
               value={draft.typography.baseSize}
               onChange={(e) => { setSaved(false); setDraft((d) => ({ ...d, typography: { ...d.typography, baseSize: e.target.value } })) }}
@@ -82,7 +82,7 @@ export function ThemeSection() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Border radius</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Border radius</label>
             <Input
               value={draft.radius}
               onChange={(e) => { setSaved(false); setDraft((d) => ({ ...d, radius: e.target.value })) }}
@@ -91,12 +91,12 @@ export function ThemeSection() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Shadow</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Shadow</label>
             <select
               value={draft.shadow}
               onChange={(e) => { setSaved(false); setDraft((d) => ({ ...d, shadow: e.target.value as ThemeConfig['shadow'] })) }}
               disabled={!canWrite}
-              className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm"
+              className="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1.5 text-sm text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {SHADOW_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -105,33 +105,33 @@ export function ThemeSection() {
 
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Logo URL</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Logo URL</label>
             <Input value={draft.logoUrl ?? ''} onChange={(e) => { setSaved(false); setDraft((d) => ({ ...d, logoUrl: e.target.value })) }} disabled={!canWrite} placeholder="https://…" />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Favicon URL</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Favicon URL</label>
             <Input value={draft.faviconUrl ?? ''} onChange={(e) => { setSaved(false); setDraft((d) => ({ ...d, faviconUrl: e.target.value })) }} disabled={!canWrite} placeholder="https://…" />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">App icon URL</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">App icon URL</label>
             <Input value={draft.appIconUrl ?? ''} onChange={(e) => { setSaved(false); setDraft((d) => ({ ...d, appIconUrl: e.target.value })) }} disabled={!canWrite} placeholder="https://…" />
           </div>
         </div>
 
         {canWrite && (
-          <div className="flex items-center gap-3 border-t pt-4">
+          <div className="flex items-center gap-3 border-t border-[hsl(var(--border))] pt-4">
             <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-1.5">
               {updateMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
               Save theme
             </Button>
-            {saved && !updateMutation.isPending && <span className="flex items-center gap-1 text-xs text-emerald-600"><CheckCircle2 size={13} />Saved</span>}
-            {updateMutation.isError && <span className="flex items-center gap-1 text-xs text-red-600"><AlertCircle size={13} />Failed to save</span>}
+            {saved && !updateMutation.isPending && <span className="flex items-center gap-1 text-xs text-[hsl(var(--success))]"><CheckCircle2 size={13} />Saved</span>}
+            {updateMutation.isError && <span className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={13} />Failed to save</span>}
           </div>
         )}
       </div>
 
-      <div className="overflow-y-auto bg-gray-50 p-6">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Live preview</p>
+      <div className="overflow-y-auto bg-[hsl(var(--muted))]/40 p-6">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Live preview</p>
         <ThemeProvider theme={draft} scopeElement={previewEl}>
           <PreviewPane setEl={setPreviewEl} />
         </ThemeProvider>
@@ -148,11 +148,11 @@ function ColorSection({ title, colors, onChange, canWrite }: {
 }) {
   return (
     <div>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{title}</h3>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">{title}</h3>
       <div className="grid grid-cols-2 gap-3">
         {(Object.keys(colors) as (keyof ThemeConfig['colors'])[]).map((key) => (
           <div key={key}>
-            <label className="mb-1 block text-[11px] capitalize text-gray-500">{key}</label>
+            <label className="mb-1 block text-[11px] capitalize text-[hsl(var(--muted-foreground))]">{key}</label>
             <ColorPicker value={hslTripletToHex(colors[key])} onChange={(hex) => onChange(key, hex)} className={!canWrite ? 'pointer-events-none opacity-60' : ''} />
           </div>
         ))}
@@ -175,7 +175,10 @@ function PreviewPane({ setEl }: { setEl: (el: HTMLDivElement | null) => void }) 
             <button
               key={m}
               onClick={() => setMode(m as ThemeMode)}
-              className={`flex h-6 w-6 items-center justify-center rounded ${mode === m ? 'bg-black/10' : ''}`}
+              aria-label={`Preview in ${m} mode`}
+              aria-pressed={mode === m}
+              className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+              style={mode === m ? { backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' } : undefined}
               title={m}
             >
               <Icon size={12} />
@@ -187,7 +190,7 @@ function PreviewPane({ setEl }: { setEl: (el: HTMLDivElement | null) => void }) 
         <p className="mb-3 text-sm">This is a card with themed background and radius.</p>
         <div className="flex gap-2">
           <button
-            className="rounded-md px-3 py-1.5 text-sm text-white"
+            className="rounded-md px-3 py-1.5 text-sm"
             style={{ backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))', borderRadius: 'var(--radius)' }}
           >
             Primary
