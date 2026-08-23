@@ -236,6 +236,7 @@ Borders are always 1px, always the `border` token color, never a decorative widt
 - **Outline / Ghost:** transparent or bordered at rest, fills with the `accent` gray tint on hover — the system's default for every secondary action.
 - **Destructive:** solid `destructive` red, reserved for delete/remove.
 - **Focus:** a visible 2px ring in the `ring` color with a 2px offset against the page background on every variant, including ghost — this system never relies on hover alone to signal focus.
+- **Touch targets:** the runtime surface's compact icon-only controls (28-30px, sized for a dense desktop header) grow their hit area to 44×44px under `pointer-coarse:` (Tailwind's `@media (pointer: coarse)` variant) rather than growing at rest — this keeps desktop density unchanged while meeting the touch minimum on the devices that actually need it. Prefer this over a fixed larger size when the control lives in a tight header row; use a fixed 44px box only for controls that are mobile-only to begin with (already gated behind a breakpoint like `md:hidden`).
 
 ### Cards / Containers
 - **Corner Style:** `rounded-lg`.

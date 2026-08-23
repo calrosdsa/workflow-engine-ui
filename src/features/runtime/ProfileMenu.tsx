@@ -22,7 +22,7 @@ export function ProfileMenu({ session }: ProfileMenuProps) {
       <DropdownMenuTrigger asChild>
         <button
           aria-label="Account menu"
-          className="flex shrink-0 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] pointer-coarse:h-11 pointer-coarse:w-11"
         >
           <Avatar name={name} />
         </button>

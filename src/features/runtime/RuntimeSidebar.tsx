@@ -55,7 +55,7 @@ function NavItem({ node, clientId, appId, activeMenuId, onNavigate, depth }: {
         {hasChildren && (
           <button
             onClick={() => setOpen((o) => !o)}
-            className="shrink-0 rounded p-1 opacity-60 transition-[opacity,background-color] hover:opacity-100 hover:bg-[hsl(var(--accent))] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+            className="flex shrink-0 items-center justify-center rounded p-1 opacity-60 transition-[opacity,background-color] hover:opacity-100 hover:bg-[hsl(var(--accent))] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] pointer-coarse:h-11 pointer-coarse:w-11"
             aria-label={open ? `Collapse ${node.name}` : `Expand ${node.name}`}
             aria-expanded={open}
           >

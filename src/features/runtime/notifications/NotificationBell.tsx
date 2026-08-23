@@ -48,7 +48,7 @@ export function NotificationBell({ clientId, appId }: NotificationBellProps) {
       <PopoverTrigger asChild>
         <button
           aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
-          className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+          className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] pointer-coarse:h-11 pointer-coarse:w-11"
         >
           <Bell size={15} />
           {unreadCount > 0 && (
