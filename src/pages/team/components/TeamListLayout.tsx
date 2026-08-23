@@ -23,42 +23,51 @@ export function TeamListLayout({
   apps, selectedAppId, onSelectApp, search, onSearchChange, searchPlaceholder, primaryAction, children,
 }: TeamListLayoutProps) {
   return (
-    <div className="flex h-full min-h-0">
-      <aside className="w-56 shrink-0 overflow-y-auto border-r border-gray-200 bg-white p-3">
-        <button
-          onClick={() => onSelectApp(null)}
-          className={cn(
-            'flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors',
-            selectedAppId === null ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50',
-          )}
-        >
-          <Layers size={14} />
-          All
-        </button>
-        <div className="mt-0.5 space-y-0.5 border-l border-gray-200 pl-3">
-          {apps.map((app) => (
-            <button
-              key={app.id}
-              onClick={() => onSelectApp(app.id)}
-              className={cn(
-                'block w-full truncate rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                selectedAppId === app.id ? 'bg-indigo-50 font-medium text-indigo-700' : 'text-gray-600 hover:bg-gray-50',
-              )}
-            >
-              {app.name}
-            </button>
-          ))}
+    // A fixed w-56 sidebar beside a toolbar pairing a primary-action button
+    // with a hard w-64 search input, with no responsive classes anywhere,
+    // left no room for either at phone width. Below `md` the sidebar
+    // becomes a horizontal, scrollable app-picker strip above the content
+    // (rather than a stacked full-height block, which would push the
+    // actual list below the fold) and the toolbar stacks its two controls
+    // instead of forcing them side by side.
+    <div className="flex h-full min-h-0 flex-col md:flex-row">
+      <aside className="shrink-0 overflow-x-auto overflow-y-hidden border-b border-gray-200 bg-white p-3 md:w-56 md:overflow-x-hidden md:overflow-y-auto md:border-b-0 md:border-r">
+        <div className="flex gap-1 md:block md:space-y-0.5">
+          <button
+            onClick={() => onSelectApp(null)}
+            className={cn(
+              'flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors md:w-full',
+              selectedAppId === null ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50',
+            )}
+          >
+            <Layers size={14} />
+            All
+          </button>
+          <div className="flex gap-1 md:mt-0.5 md:block md:space-y-0.5 md:border-l md:border-gray-200 md:pl-3">
+            {apps.map((app) => (
+              <button
+                key={app.id}
+                onClick={() => onSelectApp(app.id)}
+                className={cn(
+                  'shrink-0 whitespace-nowrap rounded-md px-2 py-1.5 text-left text-sm transition-colors md:block md:w-full md:truncate',
+                  selectedAppId === app.id ? 'bg-indigo-50 font-medium text-indigo-700' : 'text-gray-600 hover:bg-gray-50',
+                )}
+              >
+                {app.name}
+              </button>
+            ))}
+          </div>
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3">
+        <div className="flex shrink-0 flex-col gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           {primaryAction ? (
             <Button size="sm" className="bg-emerald-500 text-white hover:bg-emerald-600" onClick={primaryAction.onClick}>
               {primaryAction.label}
             </Button>
           ) : <span />}
-          <div className="relative w-64">
+          <div className="relative w-full sm:w-64">
             <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <Input
               value={search}

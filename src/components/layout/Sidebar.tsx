@@ -18,7 +18,16 @@ const globalNavItems = [
   { to: '/knowledge-bases', label: 'Knowledge Bases', icon: BookOpen },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  /** Called after any nav Link is clicked — matches RuntimeSidebar's own
+   *  convention, so the mobile slide-over version of this sidebar
+   *  (AppShell.tsx) can close itself on navigation instead of staying open
+   *  over the newly-navigated page. Undefined on desktop, where there's no
+   *  overlay to close. */
+  onNavigate?: () => void
+}
+
+export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const session = useAuthStore((s) => s.session)
   const canSeeTeam = isSuperAdmin(session)
 
@@ -34,6 +43,7 @@ export function Sidebar() {
           <Link
             key={to}
             to={to}
+            onClick={onNavigate}
             className={cn(
               'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
               'text-gray-300 hover:bg-gray-800 hover:text-white',
@@ -51,6 +61,7 @@ export function Sidebar() {
             <Link
               key={to}
               to={to}
+              onClick={onNavigate}
               className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                 'text-gray-300 hover:bg-gray-800 hover:text-white',
@@ -64,6 +75,7 @@ export function Sidebar() {
           {canSeeTeam && (
             <Link
               to="/team"
+              onClick={onNavigate}
               className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                 'text-gray-300 hover:bg-gray-800 hover:text-white',
