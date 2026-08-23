@@ -19,7 +19,7 @@
 // persists it, same architecture note DetailPageBuilderOverlay's own header
 // comment already documents for detailTabs/detailLayout generally.
 import { useEffect, useRef, useState } from 'react'
-import { AlertCircle, ArrowLeft, Check, LayoutDashboard, Redo2, Save, Undo2 } from 'lucide-react'
+import { AlertCircle, ArrowLeft, Check, Redo2, Save, Undo2 } from 'lucide-react'
 import '@/features/dashboard/widgets'
 import { useDashboardStore } from '@/features/dashboard/store'
 import { DashboardBuilderDnd } from '@/features/dashboard/canvas/DashboardBuilderDnd'
@@ -148,28 +148,23 @@ export function CustomTabEditorOverlay({ open, onOpenChange, tabLabel, schema, o
         {!initialised ? (
           <div className="flex h-screen items-center justify-center"><Spinner /></div>
         ) : (
-          <div className="flex h-screen flex-col overflow-hidden bg-slate-50">
-            <header className="z-20 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-3 shadow-sm">
+          <div className="flex h-screen flex-col overflow-hidden bg-[hsl(var(--muted))]">
+            <header className="z-20 flex h-14 shrink-0 items-center gap-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 shadow-sm">
               <Button
                 variant="ghost" size="icon"
-                className="h-8 w-8 text-slate-500 hover:text-slate-700"
                 onClick={handleBack}
                 title="Back to Detail Page Builder"
               >
                 <ArrowLeft size={16} />
               </Button>
 
-              <div className="h-5 w-px bg-slate-200" />
-
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 shadow-sm">
-                <LayoutDashboard size={16} className="text-white" />
-              </div>
+              <div className="h-5 w-px bg-[hsl(var(--border))]" />
 
               <div className="flex items-center gap-2">
-                <p className="px-1.5 text-[15px] font-semibold text-slate-800">{tabLabel}</p>
+                <p className="px-1.5 text-[15px] font-semibold text-[hsl(var(--foreground))]">{tabLabel}</p>
                 {dirty && (
-                  <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-600">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                  <span className="flex items-center gap-1 rounded-full bg-[hsl(var(--warning))]/15 px-2 py-0.5 text-[10px] font-medium text-[hsl(var(--warning))]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--warning))]" />
                     Unsaved
                   </span>
                 )}
@@ -180,7 +175,6 @@ export function CustomTabEditorOverlay({ open, onOpenChange, tabLabel, schema, o
               <div className="flex items-center gap-0.5">
                 <Button
                   variant="ghost" size="icon"
-                  className="h-8 w-8 text-slate-500 hover:text-slate-700 disabled:opacity-30"
                   onClick={undo}
                   disabled={!canUndo}
                   title="Undo (Ctrl+Z)"
@@ -189,7 +183,6 @@ export function CustomTabEditorOverlay({ open, onOpenChange, tabLabel, schema, o
                 </Button>
                 <Button
                   variant="ghost" size="icon"
-                  className="h-8 w-8 text-slate-500 hover:text-slate-700 disabled:opacity-30"
                   onClick={redo}
                   disabled={!canRedo}
                   title="Redo (Ctrl+Shift+Z)"
@@ -198,7 +191,7 @@ export function CustomTabEditorOverlay({ open, onOpenChange, tabLabel, schema, o
                 </Button>
               </div>
 
-              <div className="h-5 w-px bg-slate-200" />
+              <div className="h-5 w-px bg-[hsl(var(--border))]" />
 
               <Button size="sm" onClick={handleSave} title="Apply to this tab (Ctrl+S)">
                 {justSaved ? <Check size={13} /> : <Save size={13} />}
@@ -206,7 +199,7 @@ export function CustomTabEditorOverlay({ open, onOpenChange, tabLabel, schema, o
               </Button>
             </header>
 
-            <div className="flex items-center gap-1.5 border-b border-amber-100 bg-amber-50/60 px-3 py-1.5 text-[11px] text-amber-700">
+            <div className="flex items-center gap-1.5 border-b border-[hsl(var(--warning))]/25 bg-[hsl(var(--warning))]/10 px-3 py-1.5 text-[11px] text-[hsl(var(--warning))]">
               <AlertCircle size={12} className="shrink-0" />
               Applying here updates this tab's configuration — use the Form Builder's own Save to persist it.
             </div>

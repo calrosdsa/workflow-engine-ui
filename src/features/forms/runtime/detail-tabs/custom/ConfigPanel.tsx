@@ -21,15 +21,15 @@ export function CustomTabConfigPanel({ config, onChange }: DetailTabConfigPanelP
 
   return (
     <>
-      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50">
-          <LayoutDashboard size={18} className="text-indigo-500" />
+      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-6 text-center">
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[hsl(var(--primary))]/10">
+          <LayoutDashboard size={18} className="text-[hsl(var(--primary))]" />
         </div>
         <div>
-          <p className="text-sm font-medium text-slate-700">
+          <p className="text-sm font-medium text-[hsl(var(--foreground))]">
             {widgetCount === 0 ? 'This tab is empty' : `${widgetCount} widget${widgetCount === 1 ? '' : 's'} configured`}
           </p>
-          <p className="mt-1 text-[11px] text-slate-400">
+          <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
             The same Table/Chart/etc. widgets a Dashboard menu uses — arrange them in the full-screen editor.
           </p>
         </div>
