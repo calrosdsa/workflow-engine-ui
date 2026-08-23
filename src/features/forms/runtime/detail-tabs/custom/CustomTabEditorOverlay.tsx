@@ -153,6 +153,7 @@ export function CustomTabEditorOverlay({ open, onOpenChange, tabLabel, schema, o
               <Button
                 variant="ghost" size="icon"
                 onClick={handleBack}
+                aria-label="Back to Detail Page Builder"
                 title="Back to Detail Page Builder"
               >
                 <ArrowLeft size={16} />
@@ -177,6 +178,7 @@ export function CustomTabEditorOverlay({ open, onOpenChange, tabLabel, schema, o
                   variant="ghost" size="icon"
                   onClick={undo}
                   disabled={!canUndo}
+                  aria-label="Undo"
                   title="Undo (Ctrl+Z)"
                 >
                   <Undo2 size={16} />
@@ -185,6 +187,7 @@ export function CustomTabEditorOverlay({ open, onOpenChange, tabLabel, schema, o
                   variant="ghost" size="icon"
                   onClick={redo}
                   disabled={!canRedo}
+                  aria-label="Redo"
                   title="Redo (Ctrl+Shift+Z)"
                 >
                   <Redo2 size={16} />
