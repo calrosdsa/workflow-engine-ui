@@ -1,17 +1,19 @@
 import { useMemo } from 'react'
 import {
-  Settings, ChevronLeft, ChevronRight, SlidersHorizontal, Maximize2, Minimize2,
+  Settings, ChevronLeft, ChevronRight, SlidersHorizontal, Maximize2, Minimize2, Plug,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useBuilderStore } from './store'
 import { NODE_REGISTRY } from './node-registry'
+import { useConnectorRegistry } from './connector-hooks'
+import { SchemaForm, defaultsForSchema } from './SchemaForm'
 import { cn } from '@/lib/utils'
 import { useForms } from '@/features/forms/hooks'
 import { computeAncestors } from './executionOrder'
 import { buildNodeOutputSchema, iteratorItemSchema, type NodeOutputSchema } from './node-output-schema'
-import type { IteratorConfig } from '../types'
+import type { IteratorConfig, NodeType } from '../types'
 
 // ---------------------------------------------------------------------------
 // Main panel
@@ -29,8 +31,24 @@ export function NodeConfigPanel() {
     configPanelOpen, toggleConfigPanel, configPanelWide, toggleConfigPanelWide,
   } = useBuilderStore()
   const node = nodes.find((n) => n.id === selectedNodeId)
-  const reg  = node ? NODE_REGISTRY[node.data.type] : null
-  const Icon = reg?.icon
+
+  // Two-step lookup: NODE_REGISTRY first (every built-in type — zero
+  // behavior change from before this file supported connectors at all),
+  // falling back to the runtime-fetched connector registry for anything
+  // NODE_REGISTRY doesn't recognize. `node.data.type` is cast to `string`
+  // ONLY at this local lookup site — NodeType itself stays a closed union
+  // everywhere else (defaultPorts/nodeSetupIssue/defaultConfig's own
+  // switches keep their exhaustiveness checking); see connector-registry.ts's
+  // header comment for the full reasoning.
+  const nodeTypeKey = node ? (node.data.type as string) : null
+  const builtIn = nodeTypeKey ? NODE_REGISTRY[nodeTypeKey as NodeType] : null
+  const { data: connectorEntries } = useConnectorRegistry()
+  const connectorEntry = !builtIn && nodeTypeKey
+    ? (connectorEntries ?? []).find((c) => c.type === nodeTypeKey)
+    : null
+
+  const reg  = builtIn
+  const Icon = builtIn?.icon ?? (connectorEntry ? Plug : undefined)
 
   // Forms cache → id map, so fetch_records outputs can expose their record fields.
   const { data: forms } = useForms()
@@ -117,7 +135,9 @@ export function NodeConfigPanel() {
         </div>
       )}
 
-      {/* Expanded — node selected */}
+      {/* Expanded — node selected, resolved as a BUILT-IN type. Byte-for-byte
+          unchanged from before connectors existed — reg.form/reg.normalise
+          dispatch exactly as always. */}
       {configPanelOpen && node && reg && Icon && (
         <>
           {/* Header */}
@@ -156,6 +176,81 @@ export function NodeConfigPanel() {
             </div>
           </ScrollArea>
         </>
+      )}
+
+      {/* Expanded — node selected, resolved as a PLUGGABLE CONNECTOR type.
+          No compiled gradient/accent exists for a runtime-discovered type,
+          so this header is deliberately neutral (slate + a generic plug
+          icon) rather than faking a themed look — it reads as "a connector
+          node," not as a built-in with the wrong colors. */}
+      {configPanelOpen && node && !reg && connectorEntry && (
+        <>
+          <div className="flex items-center gap-3 border-b border-slate-100 bg-slate-700 px-4 py-3.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20">
+              <Plug size={17} strokeWidth={2.25} className="text-white" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-semibold text-white">{connectorEntry.label}</p>
+              <p className="truncate font-mono text-[10px] text-white/60">{node.id}</p>
+            </div>
+          </div>
+
+          <ScrollArea className="flex-1">
+            <div className="space-y-5 p-4">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Label</Label>
+                <Input
+                  value={node.data.label}
+                  onChange={(e) => updateNodeLabel(node.id, e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+
+              <div className="h-px bg-slate-100" />
+
+              <SchemaForm
+                schema={connectorEntry.configSchema}
+                value={
+                  node.data.configuration && typeof node.data.configuration === 'object'
+                    ? node.data.configuration
+                    : defaultsForSchema(connectorEntry.configSchema)
+                }
+                onChange={(cfg) => updateNodeConfig(node.id, cfg)}
+              />
+            </div>
+          </ScrollArea>
+        </>
+      )}
+
+      {/* Expanded — node selected, but its type is neither a known built-in
+          nor a currently-registered connector (a saved workflow referencing
+          a deregistered connector — see the connector plan's deregistration
+          risk note). Shows the raw stored config read-only rather than
+          crashing trying to render a form against a schema that doesn't
+          exist here. */}
+      {configPanelOpen && node && !reg && !connectorEntry && (
+        <div className="flex flex-1 flex-col gap-3 p-4">
+          <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+            <Plug size={16} className="shrink-0 text-amber-500" />
+            <p className="text-[12px] leading-snug text-amber-700">
+              Unknown node type <span className="font-mono">{nodeTypeKey}</span> — its connector is not currently registered.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Label</Label>
+            <Input
+              value={node.data.label}
+              onChange={(e) => updateNodeLabel(node.id, e.target.value)}
+              className="h-8 text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Stored configuration (read-only)</Label>
+            <pre className="max-h-64 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[11px] text-slate-600">
+              {JSON.stringify(node.data.configuration, null, 2)}
+            </pre>
+          </div>
+        </div>
       )}
     </aside>
   )

@@ -427,10 +427,42 @@ export function buildNodeOutputSchema(
       // form's writes, this mode can be left unscoped to accept any form's
       // record); an unscoped trigger falls back to no known fields, same as
       // an unset form_id on the sibling modes.
+      //
+      // webhook mode reuses the identical __trigger_new_record key (see
+      // api/webhooks.Handler.Dispatch's doc comment) to carry the parsed
+      // request body — same Vars[...] shape again, but with no bound form at
+      // all (an external caller's JSON has no app-builder schema), so it
+      // always falls through to boundFormId=undefined below and gets no
+      // known fields — the same graceful "no autocomplete, but the
+      // triggering-record concept still shows up" outcome an unscoped
+      // on_demand_data_driven trigger gets today.
+      //
+      // on_error mode ALSO reuses __trigger_new_record (see
+      // internal/errortrigger.Dispatcher.start), but unlike webhook, its
+      // shape is fixed and known ahead of time — every Error Trigger
+      // dispatch carries exactly failed_definition_id/failed_execution_id/
+      // error_message, never arbitrary external data — so it gets real
+      // autocomplete for those three keys instead of falling back to none.
+      if (node.data.type === 'trigger') {
+        const c = node.data.configuration as TriggerConfig | undefined
+        if (c?.mode === 'on_error') {
+          return [{
+            nodeId: node.id,
+            nodeLabel: `${label} (failure context)`,
+            nodeType: type,
+            root: 'vars',
+            fields: [
+              { key: 'failed_definition_id', type: 'string' },
+              { key: 'failed_execution_id', type: 'string' },
+              { key: 'error_message', type: 'string' },
+            ],
+          }]
+        }
+      }
       const cfg = node.data.configuration as TriggerConfig | undefined
-      const recordModes = ['before', 'after', 'after_async', 'on_demand_data_driven']
+      const recordModes = ['before', 'after', 'after_async', 'on_demand_data_driven', 'webhook']
       if (!cfg || !recordModes.includes(cfg.mode)) return []
-      const boundFormId = cfg.mode === 'on_demand_data_driven' ? cfg.source_form_id : cfg.form_id
+      const boundFormId = cfg.mode === 'on_demand_data_driven' ? cfg.source_form_id : cfg.mode === 'webhook' ? undefined : cfg.form_id
       const form = boundFormId ? formsById.get(boundFormId) : undefined
       return [{
         nodeId: node.id,

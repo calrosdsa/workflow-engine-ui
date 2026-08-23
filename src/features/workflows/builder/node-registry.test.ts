@@ -10,13 +10,14 @@ import { normaliseTransformConfig } from './node-forms/TransformForm'
 import { normaliseSaveRecordsConfig } from './node-forms/SaveRecordsForm'
 import { normaliseHttpRequestConfig } from './node-forms/HttpRequestForm'
 import { normaliseDebugConfig } from './node-forms/DebugForm'
+import { normaliseSubflowConfig } from './node-forms/SubflowForm'
 
 // Each normalise*Config function is pure — (raw: unknown) => Config — with no
 // React/Zustand dependency, so it's cheap to unit-test in isolation the same
 // way the builder-kit tree-store core is (see features/builder-kit/
-// tree-store.test.ts). Coverage here is for the 11 types with a REAL
-// normalizer; condition/subflow/iterator use identity normalise (nothing to
-// assert beyond "returns its input", not worth a dedicated test).
+// tree-store.test.ts). Coverage here is for the 12 types with a REAL
+// normalizer; condition/iterator use identity normalise (nothing to assert
+// beyond "returns its input", not worth a dedicated test).
 
 describe('normaliseTriggerConfig', () => {
   it('fills in every default for an empty/undefined raw config', () => {
@@ -25,6 +26,8 @@ describe('normaliseTriggerConfig', () => {
       form_id: '', event_type: 'create_or_update',
       filter: { id: expect.any(String), combinator: 'and', conditions: [], groups: [] },
       source_form_id: '',
+      webhook_token: '',
+      source_definition_id: '',
       enabled: true,
     })
   })
@@ -178,5 +181,48 @@ describe('normaliseDebugConfig', () => {
     expect(result.watches![0].id).toEqual(expect.any(String))
     expect(result.watches![0].name).toBe('total')
     expect(result.watches![0].expression).toBe('Vars["x"] + 1')
+  })
+})
+
+describe('normaliseSubflowConfig', () => {
+  it('fills in every default for an empty/undefined raw config', () => {
+    const result = normaliseSubflowConfig(undefined)
+    expect(result.definition_id).toBe('')
+    expect(result.sync).toBe(true)
+    expect(result.input_mappings).toEqual([])
+    expect(result.output_mappings).toEqual([])
+  })
+
+  it('preserves a well-formed config and re-attaches mapping ids', () => {
+    const result = normaliseSubflowConfig({
+      definition_id: 'def-1',
+      sync: false,
+      input_mappings: [{ variable_name: 'amount', mode: 'literal', literal_value: 42 }],
+      output_mappings: [{ source_variable: 'result', target_variable: 'callerResult' }],
+    })
+    expect(result.definition_id).toBe('def-1')
+    expect(result.sync).toBe(false)
+    expect(result.input_mappings).toHaveLength(1)
+    expect(result.input_mappings![0]).toMatchObject({ variable_name: 'amount', mode: 'literal', literal_value: 42 })
+    expect(result.input_mappings![0].id).toEqual(expect.any(String))
+    expect(result.output_mappings).toHaveLength(1)
+    expect(result.output_mappings![0]).toMatchObject({ source_variable: 'result', target_variable: 'callerResult' })
+    expect(result.output_mappings![0].id).toEqual(expect.any(String))
+  })
+
+  it('preserves an existing mapping id rather than replacing it', () => {
+    const result = normaliseSubflowConfig({
+      definition_id: 'def-1',
+      input_mappings: [{ id: 'existing-id', variable_name: 'x', mode: 'literal', literal_value: 1 }],
+    })
+    expect(result.input_mappings![0].id).toBe('existing-id')
+  })
+
+  it('upgrades the legacy definition_id-only shape (no mappings at all)', () => {
+    const result = normaliseSubflowConfig({ definition_id: 'def-legacy' })
+    expect(result.definition_id).toBe('def-legacy')
+    expect(result.sync).toBe(true)
+    expect(result.input_mappings).toEqual([])
+    expect(result.output_mappings).toEqual([])
   })
 })

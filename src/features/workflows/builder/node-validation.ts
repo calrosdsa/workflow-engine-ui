@@ -1,6 +1,7 @@
 import type {
   GraphNode, TriggerConfig, SetVariableConfig, ConditionConfig, IteratorConfig,
   HttpRequestConfig, ShowMessageConfig, TransformConfig, SaveRecordsConfig, NotificationConfig,
+  SubflowConfig,
 } from '../types'
 
 /**
@@ -32,15 +33,10 @@ export function nodeSetupIssue(data: GraphNode): string | null {
     }
     case 'condition':
       return (cfg as ConditionConfig | undefined)?.expression ? null : 'Write a branch expression'
-    case 'subflow':
-      // Always flagged, regardless of definition_id (FR-B2-003): subflow has
-      // no execution-time dispatch in the backend at all, which now hard-
-      // rejects it at save time (internal/graph/configs.go's
-      // SubflowConfig.Validate). No longer addable from the palette either
-      // — this case only still matters for a workflow saved before that
-      // change, so its existing subflow node surfaces a clear reason to
-      // remove it instead of a cryptic save failure.
-      return 'Not supported — remove this node'
+    case 'subflow': {
+      const c = cfg as SubflowConfig | undefined
+      return c?.definition_id ? null : 'Pick a workflow to run'
+    }
     case 'fetch_records':
     case 'upsert_records':
     case 'update_records':

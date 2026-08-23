@@ -138,8 +138,25 @@ export interface ConditionConfig {
   expression: string
 }
 
+/** Copies one of the CALLED workflow's final declared variables into one of
+ *  THIS (calling) workflow's own declared variables — only applied when
+ *  SubflowConfig.sync is true. Mirrors internal/graph.SubflowOutputMapping. */
+export interface SubflowOutputMapping {
+  id: string // local UI-only key for list rendering (not sent to backend)
+  source_variable: string // a variable name declared on the CALLED definition
+  target_variable: string // a variable name declared on THIS definition
+}
+
+/** Execute Workflow node config — mirrors internal/graph.SubflowConfig.
+ *  input_mappings reuses VariableAssignment's literal/expression shape, but
+ *  each entry's variable_name names one of the CALLED definition's declared
+ *  variables (not this workflow's own), and an expression is evaluated
+ *  against THIS (calling) workflow's own Vars/NodeOutputs. */
 export interface SubflowConfig {
   definition_id: string
+  input_mappings?: VariableAssignment[]
+  sync: boolean
+  output_mappings?: SubflowOutputMapping[]
 }
 
 // ---------------------------------------------------------------------------
@@ -436,7 +453,16 @@ export interface ResponseSchema {
 // the entry point of every workflow (supersedes the legacy 'entry' node).
 // ---------------------------------------------------------------------------
 
-export type TriggerMode = 'on_demand' | 'scheduled' | 'before' | 'after' | 'after_async' | 'on_demand_data_driven'
+export type TriggerMode =
+  | 'on_demand'
+  | 'scheduled'
+  | 'before'
+  | 'after'
+  | 'after_async'
+  | 'on_demand_data_driven'
+  | 'webhook'
+  | 'executed_by_workflow'
+  | 'on_error'
 
 export type TriggerEventType = 'create' | 'update' | 'delete' | 'create_or_update'
 
@@ -457,6 +483,16 @@ export interface TriggerConfig {
   // trigger accepts when manually dispatched — optional, unlike Before/
   // After/AfterAsync's required form_id; empty means any form may dispatch.
   source_form_id?: string
+
+  // webhook mode only. Server-minted (see api/workflows.Handler.
+  // syncWebhook) — read-only from the frontend's perspective; the builder
+  // displays it as part of a full URL, never lets the user edit it directly.
+  webhook_token?: string
+
+  // on_error mode only. Which workflow's FAILED executions this trigger
+  // reacts to — empty means "any workflow in this app" (excluding this
+  // definition itself).
+  source_definition_id?: string
 
   enabled: boolean
 }

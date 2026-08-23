@@ -1,18 +1,30 @@
-import { useState, useEffect, useRef } from 'react'
-import { Search, X } from 'lucide-react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { Search, X, Plug } from 'lucide-react'
 import { NODE_REGISTRY, PALETTE_NODES, NODE_CATEGORIES } from './node-registry'
+import { useConnectorRegistry } from './connector-hooks'
 import { cn } from '@/lib/utils'
 import type { NodeType } from '../types'
 
 interface NodePickerModalProps {
-  onSelect: (type: NodeType) => void
+  onSelect: (type: string) => void
   onClose:  () => void
 }
+
+// A candidate is either a built-in NodeType (rendered via NODE_REGISTRY, as
+// always) or a runtime-discovered connector type (no NODE_REGISTRY entry —
+// rendered with a generic plug icon and slate color instead). Discriminated
+// by `kind` rather than trying to duck-type "is this a NodeType," which
+// would need a runtime membership check against the same union
+// widening this file is specifically trying to avoid needing elsewhere.
+type Candidate =
+  | { kind: 'builtin'; type: NodeType }
+  | { kind: 'connector'; type: string; label: string; description: string }
 
 export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
   const [search,    setSearch]    = useState('')
   const [activeTab, setActiveTab] = useState(0)
   const searchRef = useRef<HTMLInputElement>(null)
+  const { data: connectorEntries } = useConnectorRegistry()
 
   useEffect(() => {
     searchRef.current?.focus()
@@ -25,12 +37,41 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
+  // Categories gain one more tab, "Connectors", only when at least one is
+  // configured — appended after the built-in tabs (NODE_CATEGORIES itself
+  // stays untouched, per the connector plan §07) rather than merged into
+  // "Integrations", so a connector's presence/absence never shifts where
+  // any built-in tab sits.
+  const connectorCandidates: Candidate[] = useMemo(
+    () => (connectorEntries ?? []).map((c) => ({ kind: 'connector' as const, type: c.type, label: c.label, description: c.description })),
+    [connectorEntries],
+  )
+  const tabs = useMemo(() => {
+    const builtinTabs = NODE_CATEGORIES.map((cat) => ({
+      label: cat.label,
+      candidates: cat.types.map((t): Candidate => ({ kind: 'builtin', type: t })),
+    }))
+    if (connectorCandidates.length === 0) return builtinTabs
+    // "All" (index 0) also gains the connector entries, so searching or
+    // browsing the default tab surfaces everything.
+    builtinTabs[0] = { ...builtinTabs[0], candidates: [...builtinTabs[0].candidates, ...connectorCandidates] }
+    return [...builtinTabs, { label: 'Connectors', candidates: connectorCandidates }]
+  }, [connectorCandidates])
+
+  const searchPool: Candidate[] = useMemo(
+    () => [...PALETTE_NODES.map((t): Candidate => ({ kind: 'builtin', type: t })), ...connectorCandidates],
+    [connectorCandidates],
+  )
+
+  const candidateLabel = (c: Candidate) => (c.kind === 'builtin' ? NODE_REGISTRY[c.type].label : c.label)
+  const candidateDescription = (c: Candidate) => (c.kind === 'builtin' ? NODE_REGISTRY[c.type].description : c.description)
+
   const candidates = search
-    ? PALETTE_NODES.filter((t) =>
-        NODE_REGISTRY[t].label.toLowerCase().includes(search.toLowerCase()) ||
-        NODE_REGISTRY[t].description.toLowerCase().includes(search.toLowerCase())
+    ? searchPool.filter((c) =>
+        candidateLabel(c).toLowerCase().includes(search.toLowerCase()) ||
+        candidateDescription(c).toLowerCase().includes(search.toLowerCase())
       )
-    : NODE_CATEGORIES[activeTab].types
+    : tabs[activeTab].candidates
 
   return (
     // Backdrop
@@ -51,7 +92,7 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
               // Enter picks the top match — type a few letters and hit Enter.
               if (e.key === 'Enter' && candidates.length > 0) {
                 e.preventDefault()
-                onSelect(candidates[0])
+                onSelect(candidates[0].type)
               }
             }}
             placeholder="Search nodes…"
@@ -68,9 +109,9 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
         {/* Category tabs — only show when not searching */}
         {!search && (
           <div className="flex gap-1 px-4 pt-3">
-            {NODE_CATEGORIES.map((cat, i) => (
+            {tabs.map((tab, i) => (
               <button
-                key={cat.label}
+                key={tab.label}
                 onClick={() => setActiveTab(i)}
                 className={cn(
                   'rounded-lg px-3 py-1.5 text-xs font-semibold transition-all',
@@ -79,7 +120,7 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
                     : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700',
                 )}
               >
-                {cat.label}
+                {tab.label}
               </button>
             ))}
           </div>
@@ -94,13 +135,15 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-2.5">
-              {candidates.map((type) => {
-                const reg = NODE_REGISTRY[type]
-                const Icon = reg.icon
+              {candidates.map((c) => {
+                const label = candidateLabel(c)
+                const description = candidateDescription(c)
+                const Icon = c.kind === 'builtin' ? NODE_REGISTRY[c.type].icon : Plug
+                const gradient = c.kind === 'builtin' ? NODE_REGISTRY[c.type].gradient : 'bg-slate-600'
                 return (
                   <button
-                    key={type}
-                    onClick={() => onSelect(type)}
+                    key={c.type}
+                    onClick={() => onSelect(c.type)}
                     className={cn(
                       'group flex flex-col items-start gap-2.5 rounded-xl border border-slate-200 p-3.5 text-left',
                       'transition-all hover:border-slate-300 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5',
@@ -108,13 +151,13 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
                   >
                     <div className={cn(
                       'flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-sm transition-transform group-hover:scale-105',
-                      reg.gradient,
+                      gradient,
                     )}>
                       <Icon size={18} strokeWidth={2.25} />
                     </div>
                     <div>
-                      <p className="text-[13px] font-semibold text-slate-800">{reg.label}</p>
-                      <p className="mt-0.5 text-[10px] leading-snug text-slate-400">{reg.description}</p>
+                      <p className="text-[13px] font-semibold text-slate-800">{label}</p>
+                      <p className="mt-0.5 text-[10px] leading-snug text-slate-400">{description}</p>
                     </div>
                   </button>
                 )

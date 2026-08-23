@@ -81,7 +81,7 @@ function stripTriggerIds(cfg: Record<string, unknown>): Record<string, unknown> 
 // Node construction helpers
 // ---------------------------------------------------------------------------
 
-function makeNode(type: NodeType, position: { x: number; y: number }): FlowNode {
+function makeNode(type: NodeType | (string & {}), position: { x: number; y: number }): FlowNode {
   const id = nanoid()
   const { inputs, outputs } = defaultPorts(type)
   return {
@@ -305,9 +305,17 @@ export interface BuilderState {
   onNodesChange:        (changes: NodeChange<FlowNode>[]) => void
   onEdgesChange:        (changes: EdgeChange<FlowEdge>[]) => void
   onConnect:            (connection: Connection) => void
-  addNode:              (type: NodeType, position?: { x: number; y: number }) => void
-  addConnectedNode:     (type: NodeType, sourceNodeId: string, sourceHandle?: string) => void
-  insertNodeOnEdge:     (type: NodeType, edgeId: string) => void
+  // `type` accepts NodeType | (string & {}) — every built-in NodeType
+  // literal still autocompletes/type-checks normally, but a runtime
+  // connector type string (never a real NodeType) is also accepted. The
+  // `& {}` intersection is what keeps literal-string autocomplete alive
+  // for callers passing a NodeType constant, rather than TypeScript
+  // collapsing the union to plain `string` and losing that ergonomics —
+  // see connector-registry.ts's header comment for why NodeType itself
+  // must stay closed rather than being widened at its own declaration.
+  addNode:              (type: NodeType | (string & {}), position?: { x: number; y: number }) => void
+  addConnectedNode:     (type: NodeType | (string & {}), sourceNodeId: string, sourceHandle?: string) => void
+  insertNodeOnEdge:     (type: NodeType | (string & {}), edgeId: string) => void
   reorderNode:          (draggedId: string, targetId: string, position: DropPosition) => void
   deleteBranch:         (parentId: string, branchRootId: string) => void
   swapLastTwoBranches:  (parentId: string) => void

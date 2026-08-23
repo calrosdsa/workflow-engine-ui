@@ -27,7 +27,7 @@ import type {
   NodeType, Port, VariableDecl, SetVariableConfig, ConditionConfig, FetchRecordsConfig, IteratorConfig,
   UpsertRecordsConfig, UpdateRecordsConfig, DeleteRecordsConfig, HttpRequestConfig,
   TriggerConfig, ShowMessageConfig, TransformConfig, SaveRecordsConfig, NotificationConfig,
-  KnowledgeRetrievalConfig, KnowledgeIngestConfig, DebugConfig,
+  KnowledgeRetrievalConfig, KnowledgeIngestConfig, DebugConfig, SubflowConfig,
 } from '../types'
 import type { NodeOutputSchema } from './node-output-schema'
 import { TriggerForm, normaliseTriggerConfig } from './node-forms/TriggerForm'
@@ -135,12 +135,13 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     category: 'Logic',
   },
   subflow: {
-    label: 'Subflow', icon: Box,
+    label: 'Execute Workflow', icon: Box,
     color: 'bg-violet-500', gradient: 'bg-gradient-to-br from-violet-500 to-purple-600',
     accent: '#8b5cf6', textColor: 'text-violet-700', ring: 'bg-violet-50',
-    description: 'Run a nested workflow',
+    description: 'Run another saved workflow, with input/output mapping',
     form: SubflowForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseSubflowConfig(raw),
+    category: 'Logic',
   },
   merge: {
     label: 'Merge', icon: GitMerge,
@@ -278,11 +279,19 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
   },
 }
 
-export function defaultLabel(type: NodeType): string {
-  return NODE_REGISTRY[type]?.label ?? type
+// These three accept NodeType | (string & {}) — see store.ts's addNode doc
+// comment for why this shape (rather than plain `string`) keeps built-in
+// callers' literal-type autocomplete intact. A connector type string is
+// never a real NodeType, so every switch below keeps exhaustiveness
+// checking on the closed union unaffected — TypeScript still errors if a
+// built-in `case` is missing; only the `default:` branch (already the
+// deliberate "safe generic fallback" per each function's own doc comment)
+// is reached for a connector type.
+export function defaultLabel(type: NodeType | (string & {})): string {
+  return NODE_REGISTRY[type as NodeType]?.label ?? type
 }
 
-export function defaultPorts(type: NodeType): { inputs: Port[]; outputs: Port[] } {
+export function defaultPorts(type: NodeType | (string & {})): { inputs: Port[]; outputs: Port[] } {
   switch (type) {
     case 'entry':
     case 'trigger':
@@ -310,11 +319,11 @@ export function defaultPorts(type: NodeType): { inputs: Port[]; outputs: Port[] 
   }
 }
 
-export function defaultConfig(type: NodeType):
+export function defaultConfig(type: NodeType | (string & {})):
   | SetVariableConfig | ConditionConfig | FetchRecordsConfig | IteratorConfig
   | UpsertRecordsConfig | UpdateRecordsConfig | DeleteRecordsConfig | HttpRequestConfig
   | TriggerConfig | ShowMessageConfig | TransformConfig | SaveRecordsConfig | NotificationConfig
-  | KnowledgeRetrievalConfig | KnowledgeIngestConfig | DebugConfig
+  | KnowledgeRetrievalConfig | KnowledgeIngestConfig | DebugConfig | SubflowConfig
   | Record<string, never> {
   switch (type) {
     case 'trigger':
@@ -325,6 +334,8 @@ export function defaultConfig(type: NodeType):
       return { assignments: [] } satisfies SetVariableConfig
     case 'condition':
       return { expression: '' } satisfies ConditionConfig
+    case 'subflow':
+      return { definition_id: '', sync: true, input_mappings: [], output_mappings: [] } satisfies SubflowConfig
     case 'fetch_records':
       return {
         form_id: '', mode: 'many',
@@ -379,20 +390,17 @@ export function defaultConfig(type: NodeType):
 // loop_end are added automatically — loop_end is auto-paired when an iterator
 // is added; trigger/entry is seeded once when a new workflow is created).
 //
-// 'subflow' is deliberately excluded (FR-B2-003): it has no execution-time
-// dispatch in the backend at all — a saved workflow reaching that node used
-// to fail at runtime with a generic "unknown node type" error, and the
-// backend now hard-rejects it at save time (see internal/graph/configs.go's
-// SubflowConfig.Validate). Removed from the palette so a new workflow can't
-// add one in the first place; NODE_REGISTRY itself keeps the 'subflow' entry
-// so an already-saved workflow with one (impossible to create fresh now, but
-// nothing already re-validates old rows) still renders instead of crashing
-// the canvas — see node-validation.ts's nodeSetupIssue for the always-on
-// warning such a node shows.
+// 'subflow' (Execute Workflow) was previously excluded here (FR-B2-003): it
+// had no execution-time dispatch in the backend, so a saved workflow
+// reaching that node failed at runtime with a generic "unknown node type"
+// error, and the backend hard-rejected it at save time. Real dispatch now
+// exists (input/output variable mapping, cross-definition cycle detection,
+// sync/async — see internal/graph.SubflowConfig and internal/subflow), so
+// it's back in the palette.
 export const PALETTE_NODES: NodeType[] = [
   'set_variable', 'condition', 'fetch_records', 'upsert_records', 'update_records',
   'delete_records', 'transform', 'save_records', 'iterator', 'http_request', 'show_message',
-  'notification', 'knowledge_retrieval', 'knowledge_ingest', 'merge', 'debug',
+  'notification', 'knowledge_retrieval', 'knowledge_ingest', 'merge', 'debug', 'subflow',
 ]
 
 // Node picker category tabs, derived from each PALETTE_NODES member's own

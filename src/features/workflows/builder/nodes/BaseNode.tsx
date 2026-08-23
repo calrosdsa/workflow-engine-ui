@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Handle, Position, type NodeProps, useStore } from '@xyflow/react'
-import { Plus, GripVertical, ArrowLeftRight, Trash2, GitBranchPlus, Copy, Check, AlertTriangle, AlertCircle, CheckCircle2, XCircle, MinusCircle, Loader2, MessageCircle, Bug } from 'lucide-react'
+import { Plus, GripVertical, ArrowLeftRight, Trash2, GitBranchPlus, Copy, Check, AlertTriangle, AlertCircle, CheckCircle2, XCircle, MinusCircle, Loader2, MessageCircle, Bug, Plug } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NODE_REGISTRY } from '../node-registry'
+import { useConnectorRegistry } from '../connector-hooks'
 import { useBuilderStore, DUPLICABLE_NODE_TYPES, type FlowNode, type DropPosition } from '../store'
 import { computeExecutionOrder } from '../executionOrder'
 import { nodeSetupIssue } from '../node-validation'
@@ -48,8 +49,33 @@ function overlayStatusLabel(status: NodeExecutionStatus): string {
 }
 
 export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
-  const reg        = NODE_REGISTRY[data.type]
-  const Icon       = reg.icon
+  // Two-step lookup, same pattern as NodeConfigPanel.tsx's — NODE_REGISTRY
+  // only has the 21 built-in NodeType keys, so a connector-typed node
+  // (e.g. "whatsapp_send") resolves to undefined there at RUNTIME, even
+  // though FlowNode['data']['type'] is statically typed as NodeType (a
+  // connector type only ever reaches this field via store.ts's addNode/
+  // addConnectedNode/insertNodeOnEdge, whose signatures were widened to
+  // NodeType | (string & {}) specifically to allow this — see store.ts's
+  // own comment on why). Without the cast below, TS believes
+  // NODE_REGISTRY[data.type] can never be undefined and would flag
+  // builtInReg?. as needless — the cast is what makes the compiler agree
+  // with what's actually true at runtime. Previously this file read
+  // NODE_REGISTRY[data.type].icon unconditionally, which crashed with
+  // "Cannot read properties of undefined" the first time a real connector
+  // node reached this component — this two-step lookup is that fix.
+  // NodeBody's own switch already has a safe `default: return null` for
+  // body content, so only the header (icon/gradient/label) needed it. A
+  // type in NEITHER registry (a deregistered connector — see the connector
+  // plan's deregistration risk note) gets a neutral fallback too, rather
+  // than crashing a third time on some future edge case.
+  const builtInReg = NODE_REGISTRY[data.type as keyof typeof NODE_REGISTRY]
+  const { data: connectorEntries } = useConnectorRegistry()
+  const connectorEntry = !builtInReg
+    ? (connectorEntries ?? []).find((c) => c.type === data.type)
+    : undefined
+  const Icon      = builtInReg?.icon ?? Plug
+  const gradient  = builtInReg?.gradient ?? 'bg-gradient-to-br from-slate-600 to-slate-700'
+  const headerLabel = builtInReg?.label ?? connectorEntry?.label ?? data.type
   const hasInputs  = data.inputs?.length  > 0
   const hasOutputs = data.outputs?.length > 0
 
@@ -498,7 +524,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
       )}
 
       {/* Header */}
-      <div className={cn('relative flex items-center gap-2 rounded-t-2xl px-2 py-1.5', reg.gradient)}>
+      <div className={cn('relative flex items-center gap-2 rounded-t-2xl px-2 py-1.5', gradient)}>
         {/* Drag grip — initiates reorder drag (only this is draggable) */}
         <div
           draggable
@@ -515,7 +541,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[13px] font-semibold leading-tight text-white">{data.label}</p>
-          <p className="text-[9px] font-medium uppercase tracking-wider text-white/70 leading-tight">{reg.label}</p>
+          <p className="text-[9px] font-medium uppercase tracking-wider text-white/70 leading-tight">{headerLabel}</p>
         </div>
       </div>
 
@@ -716,8 +742,13 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
       return <code className="block truncate rounded bg-slate-100 px-1.5 py-1 font-mono text-[10px] text-slate-700">{cfg.expression}</code>
     }
     case 'subflow': {
-      const cfg = data.configuration as { definition_id?: string }
-      return <p className="text-[11px] italic text-slate-400">{cfg?.definition_id ? `↳ ${cfg.definition_id.slice(0, 8)}…` : 'Not linked'}</p>
+      const cfg = data.configuration as { definition_id?: string; sync?: boolean }
+      if (!cfg?.definition_id) return <p className="text-[11px] italic text-slate-400">No workflow selected</p>
+      return (
+        <p className="text-[11px] text-slate-500">
+          ↳ {cfg.definition_id.slice(0, 8)}… <span className="text-slate-400">· {cfg.sync === false ? 'fire and forget' : 'waits for result'}</span>
+        </p>
+      )
     }
     case 'loop_end':
       return <p className="text-[11px] text-slate-400">Marks the end of the loop body</p>

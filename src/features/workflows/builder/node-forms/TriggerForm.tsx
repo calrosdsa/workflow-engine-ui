@@ -1,6 +1,8 @@
 // trigger — mirrors internal/graph/configs_trigger.go
+import { useState } from 'react'
 import {
   Filter as FilterIcon, Clock, Zap as ZapIcon, ShieldCheck, CheckCircle2, Send, MousePointerClick,
+  Webhook, Workflow as WorkflowIcon, AlertTriangle, Copy, Check, RefreshCw,
   type LucideIcon,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -10,21 +12,24 @@ import { FilterBuilder, newGroup } from '../FilterBuilder'
 import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenceSelect'
 import { useForm } from '@/features/forms/hooks'
 import { ensureGroupIds } from './id-helpers'
+import { WorkflowReferenceSelect } from '../config/WorkflowReferenceSelect'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, TriggerConfig, TriggerMode, TriggerEventType } from '../../types'
 
 export function normaliseTriggerConfig(raw: unknown): TriggerConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<TriggerConfig>
   return {
-    mode:           r.mode ?? 'on_demand',
-    cron:           r.cron ?? '',
-    timezone:       r.timezone ?? '',
-    description:    r.description ?? '',
-    form_id:        r.form_id ?? '',
-    event_type:     r.event_type ?? 'create_or_update',
-    filter:         ensureGroupIds(r.filter) ?? newGroup(),
-    source_form_id: r.source_form_id ?? '',
-    enabled:        r.enabled ?? true,
+    mode:                  r.mode ?? 'on_demand',
+    cron:                  r.cron ?? '',
+    timezone:              r.timezone ?? '',
+    description:           r.description ?? '',
+    form_id:               r.form_id ?? '',
+    event_type:            r.event_type ?? 'create_or_update',
+    filter:                ensureGroupIds(r.filter) ?? newGroup(),
+    source_form_id:        r.source_form_id ?? '',
+    webhook_token:         r.webhook_token ?? '',
+    source_definition_id:  r.source_definition_id ?? '',
+    enabled:               r.enabled ?? true,
   }
 }
 
@@ -35,6 +40,9 @@ const TRIGGER_MODES: { value: TriggerMode; label: string; icon: LucideIcon; desc
   { value: 'before',      label: 'Before Write', icon: ShieldCheck,  description: 'Run before a record is created/updated/deleted — can block the write.' },
   { value: 'after',       label: 'After Write',  icon: CheckCircle2, description: 'Run after a record write commits — synchronously, blocking the response.' },
   { value: 'after_async', label: 'After Write (Async)', icon: Send,  description: 'Run after a record write commits — fire-and-forget, does not block the response.' },
+  { value: 'webhook',     label: 'On Webhook Call', icon: Webhook,   description: 'Run when an external system sends an HTTP request to this workflow\'s own URL.' },
+  { value: 'executed_by_workflow', label: 'When Executed by Another Workflow', icon: WorkflowIcon, description: 'Run only when called by an Execute Workflow node in a different workflow.' },
+  { value: 'on_error',    label: 'Error Trigger', icon: AlertTriangle, description: 'Run when another workflow\'s execution fails.' },
 ]
 
 const EVENT_TYPES: { value: TriggerEventType; label: string }[] = [
@@ -225,6 +233,83 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
       {config.mode === 'on_demand' && (
         <p className="rounded-lg border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-400">
           No additional configuration. Run this workflow manually or via the executions API.
+        </p>
+      )}
+
+      {/* Webhook mode */}
+      {config.mode === 'webhook' && <WebhookModeFields config={config} />}
+
+      {/* Executed-by-workflow mode */}
+      {config.mode === 'executed_by_workflow' && (
+        <p className="rounded-lg border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-400">
+          No additional configuration. Add an <span className="font-semibold text-slate-500">Execute Workflow</span> node
+          in another workflow and point it at this one — this trigger only accepts calls made that way, never a plain
+          on-demand run or the executions API.
+        </p>
+      )}
+
+      {/* Error trigger mode */}
+      {config.mode === 'on_error' && (
+        <div className="space-y-1.5">
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Watch Workflow (optional)</Label>
+          <WorkflowReferenceSelect
+            value={config.source_definition_id || undefined}
+            onChange={(id) => set({ source_definition_id: id ?? '' })}
+            placeholder="Any workflow in this app…"
+          />
+          <p className="text-[10px] text-slate-400">
+            Leave blank to react to any workflow's failed execution in this app. When set, only that workflow's
+            failures dispatch this trigger.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// WebhookModeFields shows the generated URL (once saved) and a copy button.
+// The token is server-minted — see api/workflows.Handler.syncWebhook — so
+// there is nothing to fill in here before the first save; this section is
+// read-only by design.
+function WebhookModeFields({ config }: { config: TriggerConfig }) {
+  const [copied, setCopied] = useState(false)
+  const url = config.webhook_token
+    ? `${window.location.origin}/api/webhooks/${config.webhook_token}`
+    : ''
+
+  const copy = async () => {
+    if (!url) return
+    await navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Webhook URL</Label>
+      {url ? (
+        <>
+          <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+            <code className="min-w-0 flex-1 truncate text-[11px] text-slate-600">{url}</code>
+            <button
+              type="button"
+              onClick={copy}
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+              title="Copy URL"
+            >
+              {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-400">
+            Send a <span className="font-mono">POST</span> request here with a JSON object body — its fields are
+            available to every node as <span className="font-mono">Vars["fieldKey"]</span>, the same way a
+            triggering record's fields are. A body-less call is treated as an empty payload.
+          </p>
+        </>
+      ) : (
+        <p className="flex items-center gap-1.5 rounded-lg border border-dashed border-slate-200 p-3 text-[11px] text-slate-400">
+          <RefreshCw size={12} className="shrink-0" />
+          Save this workflow once to generate its webhook URL.
         </p>
       )}
     </div>

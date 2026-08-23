@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   ReactFlow,
@@ -21,6 +21,7 @@ import {
   type FlowNode,
 } from "@/features/workflows/builder/store";
 import { NODE_REGISTRY } from "@/features/workflows/builder/node-registry";
+import { useConnectorRegistry } from "@/features/workflows/builder/connector-hooks";
 import type { NodeType } from "@/features/workflows/types";
 import { NodePickerModal } from "@/features/workflows/builder/NodePickerModal";
 
@@ -40,15 +41,16 @@ const edgeTypes = {
   default: CustomEdge,
 };
 
-// Every node type renders through the same BaseNode component (its body
-// switches on data.type internally — see BaseNode.tsx's NodeBody) — derived
-// from NODE_REGISTRY's own keys so a new node type can never go missing here
-// the way this map previously drifted out of sync by hand (missing several
-// real types, plus a stale 'send_email' entry for a type that no longer
-// exists), which made React Flow silently fall back to its generic 'default'
-// node renderer — no BaseNode, no data, no visible content — for any
-// omitted type.
-const nodeTypes = Object.fromEntries(
+// Every BUILT-IN node type renders through the same BaseNode component (its
+// body switches on data.type internally — see BaseNode.tsx's NodeBody) —
+// derived from NODE_REGISTRY's own keys so a new node type can never go
+// missing here the way this map previously drifted out of sync by hand
+// (missing several real types, plus a stale 'send_email' entry for a type
+// that no longer exists), which made React Flow silently fall back to its
+// generic 'default' node renderer — no BaseNode, no data, no visible
+// content — for any omitted type. Module-level (not per-render) since the
+// built-in set never changes at runtime.
+const builtInNodeTypes = Object.fromEntries(
   (Object.keys(NODE_REGISTRY) as NodeType[]).map((type) => [type, BaseNode]),
 ) as Record<NodeType, typeof BaseNode>;
 
@@ -72,6 +74,27 @@ const Flow = () => {
   } = useBuilderStore();
   const canUndo = useBuilderStore((s) => s.past.length > 0);
   const canRedo = useBuilderStore((s) => s.future.length > 0);
+
+  // Extends builtInNodeTypes with every currently-known connector type, all
+  // pointing at the SAME BaseNode component — a connector-typed node has no
+  // NodeBody case of its own (that's out of scope for v1, see the connector
+  // plan §06's explicit "custom canvas body... did NOT select as required
+  // now"), so it renders through BaseNode's own default fallback body,
+  // exactly like any other omitted-but-registered type does today. Without
+  // this, a connector node would hit React Flow's generic 'default'
+  // renderer — the same silent-blank-node failure mode the comment on
+  // builtInNodeTypes above already documents fixing for built-ins.
+  // Memoized on the connector registry's data so this object is stable
+  // across renders that don't change the connector set — React Flow's own
+  // docs call out that a nodeTypes/edgeTypes object recreated every render
+  // causes unnecessary internal remounting.
+  const { data: connectorEntries } = useConnectorRegistry();
+  const nodeTypes = useMemo(() => {
+    if (!connectorEntries || connectorEntries.length === 0) return builtInNodeTypes;
+    const merged: Record<string, typeof BaseNode> = { ...builtInNodeTypes };
+    for (const c of connectorEntries) merged[c.type] = BaseNode;
+    return merged;
+  }, [connectorEntries]);
 
   const [showMiniMap, setShowMiniMap] = useState(true);
 
@@ -104,13 +127,16 @@ const Flow = () => {
     rfInstanceRef.current = instance;
   }, []);
 
-  // Drop from palette onto canvas
+  // Drop from palette onto canvas. `type` is genuinely just a string off the
+  // drag payload — was already an unchecked `as NodeType` assertion before
+  // connectors existed (a drag-and-drop payload has no compile-time type
+  // safety regardless), so this is a widened annotation, not a new risk.
   const onDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
       const type = e.dataTransfer.getData(
         "application/xyflow-node-type",
-      ) as NodeType;
+      );
       if (!type || !rfInstanceRef.current) return;
       const bounds = (
         e.currentTarget as HTMLDivElement
@@ -156,9 +182,10 @@ const Flow = () => {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // Node picker selection
+  // Node picker selection — type is NodeType | connector type string; see
+  // NodePickerModal's own onSelect prop for why it's plain `string` there.
   const handlePickerSelect = useCallback(
-    (type: NodeType) => {
+    (type: string) => {
       if (!pickerContext) return;
       if (pickerContext.kind === "edge") {
         insertNodeOnEdge(type, pickerContext.edgeId);
