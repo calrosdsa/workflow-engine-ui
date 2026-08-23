@@ -162,6 +162,7 @@ export function DashboardEditorPage({ appId, menuId }: DashboardEditorPageProps)
           variant="ghost" size="icon"
           className="h-8 w-8 text-slate-500 hover:text-slate-700"
           onClick={handleBack}
+          aria-label="Back to menus"
           title="Back to menus"
         >
           <ArrowLeft size={16} />
@@ -195,6 +196,7 @@ export function DashboardEditorPage({ appId, menuId }: DashboardEditorPageProps)
             className="h-8 w-8 text-slate-500 hover:text-slate-700 disabled:opacity-30"
             onClick={undo}
             disabled={!canUndo}
+            aria-label="Undo"
             title="Undo (Ctrl+Z)"
           >
             <Undo2 size={16} />
@@ -204,6 +206,7 @@ export function DashboardEditorPage({ appId, menuId }: DashboardEditorPageProps)
             className="h-8 w-8 text-slate-500 hover:text-slate-700 disabled:opacity-30"
             onClick={redo}
             disabled={!canRedo}
+            aria-label="Redo"
             title="Redo (Ctrl+Shift+Z)"
           >
             <Redo2 size={16} />
