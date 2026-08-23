@@ -415,7 +415,7 @@ export interface HttpRequestConfig {
 // structural import of FieldType.
 // ---------------------------------------------------------------------------
 
-export type ResponseFieldType = 'string' | 'integer' | 'float' | 'boolean' | 'datetime' | 'time' | 'object'
+export type ResponseFieldType = 'string' | 'integer' | 'float' | 'boolean' | 'datetime' | 'time' | 'object' | 'list'
 
 /** One row in a schema card: a JSONPath into one element (for a `list`
  *  schema) or into the single response object (for `single`), its declared
@@ -424,12 +424,20 @@ export type ResponseFieldType = 'string' | 'integer' | 'float' | 'boolean' | 'da
  *  "address.geo.lat" is already valid trivial JSONPath — no migration
  *  needed for existing schemas. For a `headers`-sourced schema, path is a
  *  literal (case-insensitive) header name, not JSONPath — e.g.
- *  "content-type" (hyphens aren't valid bare-word JSONPath). */
+ *  "content-type" (hyphens aren't valid bare-word JSONPath).
+ *
+ *  A field typed 'list' is a NESTED array within the row (e.g. an "Orders"
+ *  schema's own "items" field) — path is evaluated relative to the current
+ *  element and must resolve to an array; `fields` describes each nested
+ *  element's own shape, recursively, the same way a top-level `list` schema's
+ *  `fields` does (see internal/graph/configs_http.go's ResponseSchemaField).
+ *  Required (non-empty) when type is 'list', unused otherwise. */
 export interface ResponseSchemaField {
   id: string                    // UI-only key for list rendering (stripped on save)
   path: string                  // JSONPath, e.g. "id" or "address.geo.lat"; literal header name for a headers source
   type: ResponseFieldType
   name: string                  // target field name shown downstream, e.g. "Id"
+  fields?: ResponseSchemaField[] // only when type === 'list'
 }
 
 export type ResponseSchemaKind   = 'list' | 'single'

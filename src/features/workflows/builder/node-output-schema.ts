@@ -89,34 +89,60 @@ const FETCH_SOURCE_RE = /NodeOutputs\s*\[\s*"([^"]+)"\s*\]\s*\[\s*"(records|firs
 // can be named anything.
 const HTTP_SCHEMA_SOURCE_RE = /NodeOutputs\s*\[\s*"([^"]+)"\s*\]\s*\[\s*"([^"]+)"\s*\]/
 
-/** Turns a schema's declared fields into a FLAT OutputField list, one per
- *  field, keyed by its declared NAME (e.g. "City"), never by its source
- *  JSONPath segments (e.g. "address.city"). This matches the real runtime
- *  shape exactly: HTTPRequestActivity's extractSchemaRow (internal/
- *  activities/http_request.go) always assembles a row as
- *  row[f.Name] = extractedValue — completely flat, regardless of how deep
- *  the source path was. A field's dotted path is only ever a SOURCE lookup
- *  into the original response, never a shape the extracted row mirrors — so
- *  "address.city" named "City" shows up as one flat "City" field, not a
- *  nested address.city.
+// Matches a NESTED iterator's source expression reaching into the enclosing
+// loop's current element, e.g. Vars["item"]["Items"] — a loop over one
+// order's own line items, where "item" is the OUTER iterator's item_var and
+// "Items" is a nested-list field (ResponseFieldType 'list') on that outer
+// element's shape. Captures the loop var name and the single field key
+// reached inside it — only a ONE-segment reach is recognized (a deeper
+// Vars["item"]["a"]["b"] chain falls through to the generic "no known
+// shape" case), matching this function's existing scope of resolving one
+// hop, not an arbitrary path.
+const VARS_ITEM_FIELD_RE = /^Vars\s*\[\s*"([^"]+)"\s*\]\s*\[\s*"([^"]+)"\s*\]$/
+
+/** Turns a schema's declared fields into an OutputField list, one per field,
+ *  keyed by its declared NAME (e.g. "City"), never by its source JSONPath
+ *  segments (e.g. "address.city"). This matches the real runtime shape
+ *  exactly: HTTPRequestActivity's extractSchemaRow (internal/activities/
+ *  http_request.go) always assembles a row as row[f.Name] = extractedValue
+ *  — flat AT EACH LEVEL, regardless of how deep the source JSONPath was. A
+ *  scalar field's dotted path is only ever a SOURCE lookup into the original
+ *  response, never a shape the extracted row mirrors — so "address.city"
+ *  named "City" shows up as one flat "City" field, not a nested
+ *  address.city.
  *
- *  `exprPathPrefix`, when given, makes every field carry a precomputed
- *  `exprPath` rooted at that prefix (`${prefix}["<name>"]`) — needed for the
- *  http_request sibling-entry case (buildNodeOutputSchema), since only the
- *  top-level schema field otherwise knows about the
+ *  A field typed 'list' is the one genuine exception to "flat": its OWN
+ *  extracted value really is a nested array of rows (extractField's
+ *  recursive case), so it gets isArray + children (recursing into this same
+ *  function for its nested fields) — the identical shape fetch_records'
+ *  `records` field already uses for ITS per-row children, just one level
+ *  deeper here since the nesting is author-declared rather than fixed.
+ *
+ *  `exprPathPrefix`, when given, makes every TOP-LEVEL field carry a
+ *  precomputed `exprPath` rooted at that prefix (`${prefix}["<name>"]`) —
+ *  needed for the http_request sibling-entry case (buildNodeOutputSchema),
+ *  since only the top-level schema field otherwise knows about the
  *  NodeOutputs[id][schemaName][0] indirection. Omitted for the
  *  iterator-loop-item case (iteratorItemSchema), where the item is already
  *  one row — Vars["item"]["City"]'s generic derivation is already correct
- *  with no indirection to bridge. */
+ *  with no indirection to bridge. Never passed down into a nested list's OWN
+ *  children — outputFieldPath's generic bracket-chain derivation (walking
+ *  isArray fields with a [0] at each level) already produces the right path
+ *  once the top-level field's exprPath anchors the walk, so only the
+ *  top-level call site needs the explicit override. */
 function schemaFieldsFlat(fields: ResponseSchemaField[], exprPathPrefix?: string): OutputField[] {
   return fields
     .filter((f) => f.name && f.path)
-    .map((f) => ({
-      key: f.name,
-      label: f.name,
-      type: f.type,
-      ...(exprPathPrefix !== undefined ? { exprPath: `${exprPathPrefix}["${f.name}"]` } : {}),
-    }))
+    .map((f) => {
+      const isList = f.type === 'list'
+      return {
+        key: f.name,
+        label: f.name,
+        type: isList ? 'array' : f.type,
+        ...(isList ? { isArray: true, children: schemaFieldsFlat(f.fields ?? []) } : {}),
+        ...(exprPathPrefix !== undefined ? { exprPath: `${exprPathPrefix}["${f.name}"]` } : {}),
+      }
+    })
 }
 
 /**
@@ -156,6 +182,40 @@ export function inferItemFields(
       const cfg = sourceNode.data.configuration as HttpRequestConfig | undefined
       const schema = (cfg?.response_schemas ?? []).find((s) => s.name === httpMatch[2] && s.kind === 'list')
       if (schema) return schemaFieldsFlat(schema.fields)
+    }
+  }
+
+  // Nested iterator: Vars["item"]["Items"] reaching into an ENCLOSING
+  // loop's current element for one of its own nested-list fields (e.g. an
+  // order's line items). Resolved by finding an Iterator node whose
+  // item_var matches the referenced loop var, inferring THAT iterator's own
+  // item shape (recursively — the outer loop's source could itself be
+  // another http_request schema, a fetch_records, or another nested
+  // iterator), then walking into the named child's own children.
+  //
+  // Matched by item_var NAME across every Iterator node, not by verified
+  // graph ancestry (unlike computeAncestors' real parent-walk elsewhere in
+  // this builder) — this function has never received `edges` or a
+  // `selectedNodeId` to compute true ancestors, only the flat `nodes` list,
+  // matching the same text-pattern-first stance FETCH_SOURCE_RE/
+  // HTTP_SCHEMA_SOURCE_RE already take above. Two unrelated loops sharing
+  // an item_var name (e.g. both called "item", the default) could
+  // false-match; acceptable for autocomplete (worst case: a wrong/missing
+  // suggestion, never a runtime failure, since this only feeds the editor's
+  // browsing UI, not evaluation).
+  const varsItemMatch = VARS_ITEM_FIELD_RE.exec(sourceExpr.trim())
+  if (varsItemMatch) {
+    const [, loopVarName, fieldKey] = varsItemMatch
+    const outerIterator = nodes.find((n) => {
+      if (n.data.type !== 'iterator') return false
+      const cfg = n.data.configuration as IteratorConfig | undefined
+      return (cfg?.item_var || 'item') === loopVarName
+    })
+    if (outerIterator) {
+      const outerCfg = outerIterator.data.configuration as IteratorConfig | undefined
+      const outerItemFields = inferItemFields(outerCfg?.source_expr, nodes, formsById)
+      const matchedChild = outerItemFields?.find((f) => f.key === fieldKey)
+      if (matchedChild?.children) return matchedChild.children
     }
   }
 

@@ -3,7 +3,7 @@
 // their own) — shared by the normalise functions across node-forms/*.
 import { nanoid } from '../nanoid'
 import type {
-  FilterGroup, FieldValue, TransformFieldMap, KeyValuePair, ResponseSchema,
+  FilterGroup, FieldValue, TransformFieldMap, KeyValuePair, ResponseSchema, ResponseSchemaField,
 } from '../../types'
 
 export function ensureGroupIds(g: FilterGroup | undefined): FilterGroup | undefined {
@@ -28,6 +28,18 @@ export function ensureKeyValueIds(rows: KeyValuePair[] | undefined): KeyValuePai
   return (rows ?? []).map((r) => ({ ...r, id: r.id ?? nanoid() }))
 }
 
+// A 'list'-typed field nests its own field list arbitrarily deep (an
+// order's items, each item's own sub-components, ...) — mirrors
+// ensureGroupIds' recursive shape for FilterGroup, one level per nesting
+// instead of FilterGroup's fixed two.
+function ensureResponseFieldIds(fields: ResponseSchemaField[] | undefined): ResponseSchemaField[] {
+  return (fields ?? []).map((f) => ({
+    ...f,
+    id: f.id ?? nanoid(),
+    fields: f.type === 'list' ? ensureResponseFieldIds(f.fields) : undefined,
+  }))
+}
+
 // One level deeper than ensureKeyValueIds — each schema needs an id AND its
 // nested fields array needs ids of its own (mirrors how ensureGroupIds
 // recurses one level deeper than ensureValueIds for fetch_records filters).
@@ -35,6 +47,6 @@ export function ensureResponseSchemaIds(schemas: ResponseSchema[] | undefined): 
   return (schemas ?? []).map((s) => ({
     ...s,
     id: s.id ?? nanoid(),
-    fields: (s.fields ?? []).map((f) => ({ ...f, id: f.id ?? nanoid() })),
+    fields: ensureResponseFieldIds(s.fields),
   }))
 }
