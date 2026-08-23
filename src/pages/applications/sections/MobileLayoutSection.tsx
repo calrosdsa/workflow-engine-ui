@@ -211,13 +211,20 @@ function PhonePreview({ rows, style }: { rows: { menu: Menu; visible: boolean }[
   const overflow = style === 'bottom_tabs' ? visibleRows.slice(5) : []
 
   return (
+    // The 8px bezel border and its background are the physical device
+    // chassis, not a themeable app surface — every phone renders that frame
+    // the same way regardless of which app theme is being edited, so those
+    // two stay literal. Everything inside the screen is a mockup of the
+    // configured app's own UI chrome (the icons/names ARE this app's real
+    // menu data), so that part follows tokens like ThemeSection's
+    // PreviewPane and this file's own MobileNavRow already do.
     <div className="mx-auto w-56 overflow-hidden rounded-[2rem] border-8 border-gray-800 bg-white shadow-lg">
-      <div className="flex h-96 flex-col justify-between">
+      <div className="flex h-96 flex-col justify-between bg-[hsl(var(--background))]">
         <div className="flex-1 p-3">
           {visibleRows.length === 0 ? (
-            <p className="flex h-full items-center justify-center text-center text-xs text-gray-400">No visible menus</p>
+            <p className="flex h-full items-center justify-center text-center text-xs text-[hsl(var(--muted-foreground))]">No visible menus</p>
           ) : (
-            <div className="flex items-center gap-2 text-xs text-gray-400">
+            <div className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
               <Smartphone size={12} />
               {style === 'bottom_tabs' ? 'App content' : 'Drawer menu'}
             </div>
@@ -225,31 +232,31 @@ function PhonePreview({ rows, style }: { rows: { menu: Menu; visible: boolean }[
         </div>
 
         {style === 'bottom_tabs' ? (
-          <div className="flex border-t border-gray-200 bg-gray-50">
+          <div className="flex border-t border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40">
             {tabs.map(({ menu }) => {
               const Icon = MENU_TYPE_REGISTRY[menu.menu_type].icon
               return (
                 <div key={menu.id} className="flex flex-1 flex-col items-center gap-0.5 py-2">
-                  <Icon size={16} className="text-indigo-600" />
-                  <span className="max-w-full truncate px-1 text-[9px] text-gray-600">{menu.name}</span>
+                  <Icon size={16} className="text-[hsl(var(--primary))]" />
+                  <span className="max-w-full truncate px-1 text-[9px] text-[hsl(var(--foreground))]">{menu.name}</span>
                 </div>
               )
             })}
             {overflow.length > 0 && (
               <div className="flex flex-1 flex-col items-center gap-0.5 py-2">
-                <div className="flex h-4 w-4 items-center justify-center rounded-full bg-gray-300 text-[8px] text-gray-700">+{overflow.length}</div>
-                <span className="text-[9px] text-gray-600">More</span>
+                <div className="flex h-4 w-4 items-center justify-center rounded-full bg-[hsl(var(--muted-foreground))]/30 text-[9px] text-[hsl(var(--foreground))]">+{overflow.length}</div>
+                <span className="text-[9px] text-[hsl(var(--foreground))]">More</span>
               </div>
             )}
           </div>
         ) : (
-          <div className="space-y-1 border-t border-gray-200 bg-gray-50 p-2">
+          <div className="space-y-1 border-t border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-2">
             {tabs.map(({ menu }) => {
               const Icon = MENU_TYPE_REGISTRY[menu.menu_type].icon
               return (
                 <div key={menu.id} className="flex items-center gap-2 rounded px-2 py-1">
-                  <Icon size={13} className="text-indigo-600" />
-                  <span className="truncate text-[11px] text-gray-700">{menu.name}</span>
+                  <Icon size={13} className="text-[hsl(var(--primary))]" />
+                  <span className="truncate text-[11px] text-[hsl(var(--foreground))]">{menu.name}</span>
                 </div>
               )
             })}
