@@ -152,14 +152,15 @@ function WatchRow({ index, watch, onChange, onDelete, onOpenEditor }: WatchRowPr
         </button>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-start gap-1.5">
         <div className="relative flex-1">
-          <Braces size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-indigo-400" />
-          <input
+          <Braces size={11} className="absolute left-2.5 top-2 text-indigo-400" />
+          <textarea
             value={watch.expression}
             onChange={(e) => onChange({ expression: e.target.value })}
             placeholder='e.g. Vars["count"] + 1'
-            className="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-7 pr-2 font-mono text-[11px] text-slate-700 placeholder:text-slate-300 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            rows={2}
+            className="w-full resize-y rounded-lg border border-slate-200 bg-white py-1.5 pl-7 pr-2 font-mono text-[11px] text-slate-700 placeholder:text-slate-300 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
           />
         </div>
         <button
