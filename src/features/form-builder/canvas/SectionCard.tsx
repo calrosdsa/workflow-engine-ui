@@ -4,6 +4,7 @@ import {
   GripVertical, ChevronDown, ChevronRight, Copy, Trash2, Columns3, MoreVertical,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
 import { Input } from '@/components/ui/input'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
@@ -30,7 +31,8 @@ export function SectionCard({ section }: { section: FormSection }) {
     id: section.id,
     data: { kind: 'section', sectionId: section.id },
   })
-  const style = { transform: CSS.Translate.toString(transform), transition }
+  const reducedMotion = usePrefersReducedMotion()
+  const style = { transform: CSS.Translate.toString(transform), transition: reducedMotion ? undefined : transition }
 
   return (
     <div
@@ -38,7 +40,7 @@ export function SectionCard({ section }: { section: FormSection }) {
       style={style}
       onClick={(e) => { e.stopPropagation(); selectSection(section.id) }}
       className={cn(
-        'rounded-xl border bg-[hsl(var(--card))] shadow-sm transition-shadow',
+        'rounded-xl border bg-[hsl(var(--card))] shadow-sm transition-shadow motion-reduce:transition-none',
         selected ? 'border-[hsl(var(--primary))] ring-2 ring-[hsl(var(--primary))]/25' : 'border-[hsl(var(--border))]',
         isDragging && 'opacity-60 shadow-lg',
       )}

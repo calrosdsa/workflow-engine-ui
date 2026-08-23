@@ -6,6 +6,7 @@ import {
   type DragStartEvent, type DragEndEvent, type CollisionDetection,
 } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
+import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
 import { useFormBuilderStore, findElement } from '../store'
 import { COMPONENT_REGISTRY } from '../component-registry'
 import type { ComponentType } from '../schema'
@@ -32,6 +33,7 @@ export function FormBuilderDnd({ children }: { children: ReactNode }) {
   const moveSection = useFormBuilderStore((s) => s.moveSection)
 
   const [activeDrag, setActiveDrag] = useState<ActiveDrag>(null)
+  const reducedMotion = usePrefersReducedMotion()
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -128,7 +130,7 @@ export function FormBuilderDnd({ children }: { children: ReactNode }) {
     >
       {children}
 
-      <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.2,0,0,1)' }}>
+      <DragOverlay dropAnimation={reducedMotion ? null : { duration: 180, easing: 'cubic-bezier(0.2,0,0,1)' }}>
         {activeDrag?.kind === 'new-component' && <ComponentDragPreview component={activeDrag.component} />}
         {activeDrag?.kind === 'element' && <ElementDragPreview elementId={activeDrag.elementId} />}
         {activeDrag?.kind === 'section' && (

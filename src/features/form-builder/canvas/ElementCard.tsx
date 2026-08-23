@@ -2,6 +2,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Copy, Trash2, Asterisk, Link2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
 import { useFormBuilderStore, useFormMetaStore } from '../store'
 import { COMPONENT_REGISTRY } from '../component-registry'
 import { ElementPreview } from '../ElementPreview'
@@ -37,10 +38,11 @@ export function ElementCard({ element, sectionId, columnId }: ElementCardProps) 
     id: element.id,
     data: { kind: 'element', elementId: element.id, sectionId, columnId },
   })
+  const reducedMotion = usePrefersReducedMotion()
 
   const style = {
     transform: CSS.Translate.toString(transform),
-    transition,
+    transition: reducedMotion ? undefined : transition,
   }
 
   return (
@@ -49,14 +51,14 @@ export function ElementCard({ element, sectionId, columnId }: ElementCardProps) 
       style={style}
       onClick={(e) => { e.stopPropagation(); selectElement(element.id) }}
       className={cn(
-        'group relative rounded-lg border bg-[hsl(var(--card))] transition-shadow',
+        'group relative rounded-lg border bg-[hsl(var(--card))] transition-shadow motion-reduce:transition-none',
         selected ? 'border-[hsl(var(--primary))] ring-2 ring-[hsl(var(--primary))]/25 shadow-sm' : 'border-[hsl(var(--border))] hover:border-[hsl(var(--border))] hover:shadow-sm',
         isDragging && 'opacity-50 shadow-lg',
       )}
     >
       {/* Hover/selected toolbar */}
       <div className={cn(
-        'absolute -top-3 right-2 z-10 flex items-center gap-0.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-0.5 py-0.5 shadow-sm transition-opacity',
+        'absolute -top-3 right-2 z-10 flex items-center gap-0.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-0.5 py-0.5 shadow-sm transition-opacity motion-reduce:transition-none',
         selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
       )}>
         <button

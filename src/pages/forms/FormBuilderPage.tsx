@@ -284,11 +284,12 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
             className="h-8 max-w-[240px] border-transparent bg-transparent text-sm font-semibold text-[hsl(var(--foreground))] hover:border-[hsl(var(--border))] focus:border-[hsl(var(--ring))]"
           />
           <div className="flex items-center gap-1 rounded-md bg-[hsl(var(--muted))] px-2 py-1">
-            <span className="text-[10px] font-medium uppercase tracking-wider text-[hsl(var(--muted-foreground))]">slug</span>
+            <span id="form-slug-label" className="text-[10px] font-medium uppercase tracking-wider text-[hsl(var(--muted-foreground))]">slug</span>
             <input
               value={slug}
               onChange={(e) => { setSlugTouched(true); setSlug(slugifyKey(e.target.value)) }}
               placeholder="table_name"
+              aria-labelledby="form-slug-label"
               className="w-32 bg-transparent font-mono text-[12px] text-[hsl(var(--muted-foreground))] outline-none"
               title="Logical identifier for URLs — editable; must stay unique. The physical table is never renamed."
             />
