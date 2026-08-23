@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Copy, Trash2, Asterisk, Link2 } from 'lucide-react'
@@ -15,7 +16,16 @@ interface ElementCardProps {
   columnId: string
 }
 
-export function ElementCard({ element, sectionId, columnId }: ElementCardProps) {
+// Memoized on default shallow prop comparison — `element` now keeps a
+// stable reference across store mutations that don't touch it (see
+// builder-kit/tree-store.ts's produce(), now real Immer instead of a
+// structuredClone-the-whole-tree stand-in that gave every element a fresh
+// identity on every mutation, anywhere in the schema). Without that fix
+// this memo would silently never skip a render — worth knowing before
+// "helpfully" reverting it. Still re-renders on its own selectedId store
+// subscription regardless of props, which is correct: it needs to know if
+// IT is the selected card.
+export const ElementCard = memo(function ElementCard({ element, sectionId, columnId }: ElementCardProps) {
   const selectedId = useFormBuilderStore((s) => s.selectedItemId)
   const selectElement = useFormBuilderStore((s) => s.selectItem)
   const duplicate = useFormBuilderStore((s) => s.duplicateItemById)
@@ -132,4 +142,4 @@ export function ElementCard({ element, sectionId, columnId }: ElementCardProps) 
       </div>
     </div>
   )
-}
+})

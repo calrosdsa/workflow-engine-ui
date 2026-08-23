@@ -369,6 +369,82 @@ describe('undo/redo', () => {
   })
 })
 
+// Regression coverage for the switch from a hand-rolled
+// structuredClone-the-whole-tree produce() to real Immer: the whole reason
+// for the switch was that ElementCard/SectionCard/ColumnDropZone (React
+// components consuming this store) rely on React.memo's default shallow
+// prop comparison to skip re-rendering untouched cards. That only works if
+// an untouched section/column/item KEEPS its object identity across a
+// mutation elsewhere in the tree — structuredClone gave everything a fresh
+// identity on every single mutation, which made memo() silently do nothing.
+describe('structural sharing (produce via Immer)', () => {
+  it('keeps an untouched sibling section referentially identical after another section is edited', () => {
+    const store = makeStore()
+    store.getState().addSection()
+    store.getState().addSection()
+    const [sectionA, sectionB] = store.getState().schema.sections
+
+    store.getState().updateSection(sectionB.id, { title: 'Renamed' })
+
+    const after = store.getState().schema.sections
+    expect(after[0]).toBe(sectionA) // untouched — same reference
+    expect(after[1]).not.toBe(sectionB) // touched — new reference, as expected
+    expect(after[1].title).toBe('Renamed')
+  })
+
+  it('keeps an untouched item referentially identical after a sibling item in the same column is edited', () => {
+    const store = makeStore()
+    store.getState().addSection()
+    const section = store.getState().schema.sections[0]
+    store.getState().addItem('a', section.id, section.columns[0].id)
+    store.getState().addItem('b', section.id, section.columns[0].id)
+    const [itemA, itemB] = store.getState().schema.sections[0].columns[0].items
+
+    store.getState().updateItem(itemB.id, { label: 'Edited' })
+
+    const afterItems = store.getState().schema.sections[0].columns[0].items
+    expect(afterItems[0]).toBe(itemA) // untouched sibling — same reference
+    expect(afterItems[1]).not.toBe(itemB)
+    expect(afterItems[1].label).toBe('Edited')
+  })
+
+  it('keeps an untouched column, and everything in it, referentially identical after a different column is edited', () => {
+    const store = makeStore()
+    store.getState().addSection()
+    const section = store.getState().schema.sections[0]
+    store.getState().setSectionLayout(section.id, 'pair')
+    const [colA0, colB] = store.getState().schema.sections[0].columns
+    store.getState().addItem('untouched', section.id, colA0.id)
+    // Re-read colA AFTER seeding it — addItem touches colA itself (its own
+    // items array grows), so the pre-seed colA0 reference is stale by
+    // definition; colA is the reference we expect to survive the FOLLOWING,
+    // unrelated mutation to colB untouched.
+    const colA = store.getState().schema.sections[0].columns[0]
+    const untouchedItem = colA.items[0]
+
+    store.getState().addItem('new-in-other-column', section.id, colB.id)
+
+    const afterColumns = store.getState().schema.sections[0].columns
+    expect(afterColumns[0]).toBe(colA)
+    expect(afterColumns[0].items[0]).toBe(untouchedItem)
+    expect(afterColumns[1]).not.toBe(colB)
+  })
+
+  it('undo restores the exact prior object references, not merely equal values', () => {
+    const store = makeStore()
+    store.getState().addSection()
+    const originalSection = store.getState().schema.sections[0]
+    store.getState().updateSection(originalSection.id, { title: 'Changed' })
+
+    store.getState().undo()
+
+    // Undo swaps back to a PAST schema snapshot wholesale (not a re-diffed
+    // produce()), so this restores the original reference exactly — not
+    // just an equal-by-value copy.
+    expect(store.getState().schema.sections[0]).toBe(originalSection)
+  })
+})
+
 describe('onMutate hook', () => {
   it('fires after every content mutation, not on selection-only changes', () => {
     let mutations = 0

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { cn } from '@/lib/utils'
@@ -9,7 +10,14 @@ interface ColumnDropZoneProps {
   sectionId: string
 }
 
-export function ColumnDropZone({ column, sectionId }: ColumnDropZoneProps) {
+// Memoized on default shallow prop comparison — see ElementCard.tsx's
+// identical note: `column` now keeps a stable reference across store
+// mutations that don't touch it or its own items, now that
+// builder-kit/tree-store.ts's produce() is real Immer. Unlike
+// ElementCard/SectionCard, this one has no store subscription of its own
+// (only useDroppable's per-drag-session isOver), so a skipped render here
+// is a genuinely full skip, not just a props-only one.
+export const ColumnDropZone = memo(function ColumnDropZone({ column, sectionId }: ColumnDropZoneProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: `column:${column.id}`,
     data: { kind: 'column', columnId: column.id, sectionId },
@@ -44,4 +52,4 @@ export function ColumnDropZone({ column, sectionId }: ColumnDropZoneProps) {
       )}
     </div>
   )
-}
+})

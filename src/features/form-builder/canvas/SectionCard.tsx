@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
@@ -16,7 +17,13 @@ import { useFormBuilderStore, deleteSectionChecked } from '../store'
 import { COLUMN_LAYOUTS, type ColumnLayout, type FormSection } from '../schema'
 import { ColumnDropZone } from './ColumnDropZone'
 
-export function SectionCard({ section }: { section: FormSection }) {
+// Memoized on default shallow prop comparison — see ElementCard.tsx's
+// identical note: `section` now keeps a stable reference across store
+// mutations that don't touch it, now that builder-kit/tree-store.ts's
+// produce() is real Immer instead of a structuredClone-the-whole-tree
+// stand-in. Still re-renders on its own selectedSectionId store
+// subscription regardless of props, which is correct.
+export const SectionCard = memo(function SectionCard({ section }: { section: FormSection }) {
   const updateSection = useFormBuilderStore((s) => s.updateSection)
   const setLayout = useFormBuilderStore((s) => s.setSectionLayout)
   const duplicate = useFormBuilderStore((s) => s.duplicateSectionById)
@@ -135,4 +142,4 @@ export function SectionCard({ section }: { section: FormSection }) {
       )}
     </div>
   )
-}
+})

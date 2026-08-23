@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { produce as immerProduce } from 'immer'
 
 // A generic Zustand store for the "Section[] -> Column[] -> Item[]" shape
 // shared by form-builder and page-builder. Adapters keep their own field
@@ -61,13 +62,20 @@ export function findItem<
   return null
 }
 
-/** Returns a new schema with `mut` applied to a copy. Sections/columns/items
- *  are shallow-rebuilt along the touched path; React-friendly immutability
- *  (structuredClone + mutate, not the real Immer library). */
+/** Returns a new schema with `mut` applied to a draft, structurally sharing
+ *  everything `mut` didn't touch (real Immer, not a hand-rolled
+ *  structuredClone-the-whole-tree stand-in — that version gave every
+ *  section/column/item a fresh object identity on EVERY mutation, anywhere
+ *  in the tree, which made ElementCard/SectionCard/ColumnDropZone
+ *  React.memo unable to ever skip a re-render: their props were never
+ *  reference-equal across renders even when genuinely unchanged. Immer's
+ *  draft-mutation contract is why every call site below can keep mutating
+ *  the draft in place (.push/.splice/Object.assign/nested reassignment) —
+ *  that's the whole point of a producer function, not a workaround. */
 export function produce<Schema>(schema: Schema, mut: (draft: Schema) => void): Schema {
-  const draft: Schema = structuredClone(schema)
-  mut(draft)
-  return draft
+  return immerProduce(schema, (draft) => {
+    mut(draft)
+  })
 }
 
 /** Looks up a column by section+column id and replaces its item array via
