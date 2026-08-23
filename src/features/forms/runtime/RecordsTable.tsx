@@ -342,7 +342,7 @@ export function RecordsTable({
           <div className="flex items-center gap-2">
             {canSearch && (
               <div className="relative">
-                <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
                 <Input
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
@@ -401,12 +401,12 @@ export function RecordsTable({
       )}
 
       {calendarFieldMissing && layoutConfig && (
-        <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <p className="mb-3 rounded-md border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/15 px-3 py-2 text-xs text-[hsl(var(--warning))]">
           This view's Calendar field no longer exists — showing as a list.
         </p>
       )}
       {kanbanFieldMissing && layoutConfig && (
-        <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <p className="mb-3 rounded-md border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/15 px-3 py-2 text-xs text-[hsl(var(--warning))]">
           This view's Kanban field no longer exists — showing as a list.
         </p>
       )}
@@ -529,8 +529,8 @@ function RecordsTableMessage({ icon: Icon, text, tone, spin }: {
 }) {
   return (
     <div className="flex h-32 flex-col items-center justify-center gap-2 p-3 text-center">
-      <Icon size={18} className={cn(spin && 'animate-spin', tone === 'error' ? 'text-red-300' : 'text-slate-300')} />
-      <p className={cn('text-xs', tone === 'error' ? 'text-red-500' : 'text-slate-400')}>{text}</p>
+      <Icon size={18} className={cn(spin && 'animate-spin', tone === 'error' ? 'text-[hsl(var(--destructive))]/50' : 'text-[hsl(var(--muted-foreground))]/60')} />
+      <p className={cn('text-xs', tone === 'error' ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--muted-foreground))]')}>{text}</p>
     </div>
   )
 }
