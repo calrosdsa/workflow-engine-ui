@@ -112,12 +112,28 @@ export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitti
         <div key={section.id}>
           {section.title && <h3 className="mb-3 text-sm font-semibold text-slate-800">{section.title}</h3>}
           {section.description && <p className="mb-3 text-xs text-gray-500">{section.description}</p>}
-          <div className="flex gap-4">
+          {/* A 2/3/4-column section layout (COLUMN_LAYOUTS — all real,
+           *  builder-selectable options) has no room to sit side by side on
+           *  a phone: a flex row with no wrap/breakpoint here forced every
+           *  column into a squeezed sliver of the viewport. Below `md` this
+           *  stacks to one full-width column per row instead — the ratio
+           *  only makes sense once columns are actually side by side, so
+           *  each column falls back to `flex: 1` (no grow race) at stacked
+           *  width and only takes on its configured ratio at `md:` via the
+           *  `md:flex-[var(...)]` arbitrary-property/CSS-var pairing (the
+           *  ratio is set per-render, so it can't be a static Tailwind
+           *  class — this is the one way to still gate an inline value by
+           *  breakpoint). */}
+          <div className="flex flex-col gap-4 md:flex-row">
             {section.columns.map((column) => {
               const ratios = COLUMN_LAYOUTS[section.layout]?.ratios ?? [1]
               const idx = section.columns.indexOf(column)
               return (
-                <div key={column.id} className="space-y-4" style={{ flex: ratios[idx] ?? 1 }}>
+                <div
+                  key={column.id}
+                  className="min-w-0 flex-1 space-y-4 md:flex-[var(--col-ratio)]"
+                  style={{ '--col-ratio': ratios[idx] ?? 1 } as React.CSSProperties}
+                >
                   {column.elements.map((el) => {
                     // visibility.hidden = never shown at all (distinct from
                     // an expression resolving false); handled here rather

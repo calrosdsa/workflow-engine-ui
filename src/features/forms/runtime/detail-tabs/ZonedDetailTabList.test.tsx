@@ -92,4 +92,28 @@ describe('ZonedDetailTabList', () => {
     expect(lists.length).toBe(1)
     expect(lists[0].getAttribute('data-ids')).toBe('orphaned')
   })
+
+  // A w-80 (320px) sidebar zone beside a flex-1 main zone, with no wrap, ate
+  // ~85% of a 375px viewport before the main content got anything (the
+  // overflow bug this responsive fix addresses). jsdom doesn't run real
+  // layout/media queries, so this only asserts the Tailwind classes that
+  // encode the intended behavior are present on the right elements — the
+  // actual stacking was live-verified in the browser separately.
+  it('sidebar zone is full-width and stacks below md, fixed 320px at md and up', () => {
+    const tabConfigs = [tab('details'), tab('status', 'sidebar')]
+    const { container } = render(<ZonedDetailTabList {...baseProps} tabConfigs={tabConfigs} layout="main-right-sidebar" />)
+    const zoneDivs = container.querySelectorAll(':scope > div > div')
+    const sidebarZone = Array.from(zoneDivs).find((el) => el.querySelector('[data-ids="status"]'))
+    expect(sidebarZone).toBeTruthy()
+    expect(sidebarZone!.className).toContain('w-full')
+    expect(sidebarZone!.className).toContain('md:w-80')
+    expect(sidebarZone!.className).not.toMatch(/(?<!md:)\bw-80\b/)
+  })
+
+  it('outer container stacks zones vertically below md, side by side at md and up', () => {
+    const tabConfigs = [tab('details'), tab('status', 'sidebar')]
+    const { container } = render(<ZonedDetailTabList {...baseProps} tabConfigs={tabConfigs} layout="main-right-sidebar" />)
+    expect(container.firstElementChild!.className).toContain('flex-col')
+    expect(container.firstElementChild!.className).toContain('md:flex-row')
+  })
 })

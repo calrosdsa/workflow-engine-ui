@@ -50,14 +50,23 @@ export function ZonedDetailTabList({ layout = 'single', tabConfigs, ...rest }: Z
   }
 
   return (
-    <div className={cn('flex', rest.nested ? '' : 'min-h-0 flex-1')}>
+    // A sidebar zone template (main-left-sidebar / main-right-sidebar) puts
+    // a fixed 320px (w-80) zone beside the flex-1 main zone with no wrap —
+    // on a phone that sidebar alone is ~85% of the viewport before the main
+    // zone gets anything. Below `md` this stacks every zone full-width
+    // instead (content zone first regardless of the template's visual
+    // left/right order, since that's the zone a user actually came here
+    // for); at `md:` and up it's the original side-by-side layout.
+    <div className={cn('flex flex-col md:flex-row', rest.nested ? '' : 'min-h-0 flex-1')}>
       {zoneTabs.map(({ zone, tabs }, idx) => (
         <div
           key={zone.id}
           className={cn(
             'flex min-h-0 flex-col',
-            zone.width === 'flex' ? 'flex-1 min-w-0' : 'w-80 shrink-0',
-            idx > 0 && 'border-l',
+            zone.width === 'flex'
+              ? 'order-first flex-1 min-w-0 md:order-none'
+              : 'w-full shrink-0 md:w-80',
+            idx > 0 && 'md:border-l',
           )}
           style={idx > 0 ? { borderColor: 'hsl(var(--border))' } : undefined}
         >
