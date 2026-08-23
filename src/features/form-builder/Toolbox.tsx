@@ -27,6 +27,7 @@ function ToolboxItem({ entry }: { entry: ComponentRegistryEntry }) {
       className={cn(
         'group flex w-full items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-left transition-all',
         'hover:border-indigo-300 hover:bg-indigo-50/50 hover:shadow-sm active:cursor-grabbing cursor-grab',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
         isDragging && 'opacity-40',
       )}
       title={entry.description}

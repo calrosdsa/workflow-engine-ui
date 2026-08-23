@@ -121,7 +121,7 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
           type="button"
           title="Configure"
           onClick={(e) => { e.stopPropagation(); onSelect() }}
-          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
         >
           <Settings2 size={13} />
         </button>
@@ -129,7 +129,7 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
           type="button"
           title="Duplicate"
           onClick={(e) => { e.stopPropagation(); onDuplicate() }}
-          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
         >
           <Copy size={13} />
         </button>
@@ -137,7 +137,7 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
           type="button"
           title="Delete"
           onClick={(e) => { e.stopPropagation(); onDelete() }}
-          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-600"
+          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
         >
           <Trash2 size={13} />
         </button>

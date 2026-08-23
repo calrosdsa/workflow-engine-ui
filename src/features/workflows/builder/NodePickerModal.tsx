@@ -101,7 +101,7 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
           {search && candidates.length > 0 && (
             <kbd className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400">↵</kbd>
           )}
-          <button onClick={onClose} className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
+          <button onClick={onClose} className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1">
             <X size={15} />
           </button>
         </div>
@@ -114,7 +114,7 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
                 key={tab.label}
                 onClick={() => setActiveTab(i)}
                 className={cn(
-                  'rounded-lg px-3 py-1.5 text-xs font-semibold transition-all',
+                  'rounded-lg px-3 py-1.5 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
                   activeTab === i
                     ? 'bg-slate-900 text-white shadow-sm'
                     : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700',
@@ -147,6 +147,7 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
                     className={cn(
                       'group flex flex-col items-start gap-2.5 rounded-xl border border-slate-200 p-3.5 text-left',
                       'transition-all hover:border-slate-300 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
                     )}
                   >
                     <div className={cn(

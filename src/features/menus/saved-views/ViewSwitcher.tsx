@@ -166,10 +166,10 @@ function ViewRow({ view, active, onSelect, onEdit, onDelete }: {
       </DropdownMenuItem>
       {view.can_manage && (
         <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100">
-          <button onClick={(e) => { e.stopPropagation(); onEdit() }} className="rounded p-1 hover:bg-[hsl(var(--muted))]" title="Edit view">
+          <button onClick={(e) => { e.stopPropagation(); onEdit() }} className="rounded p-1 hover:bg-[hsl(var(--muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1" title="Edit view">
             <Pencil size={11} />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); onDelete() }} className="rounded p-1 text-red-500 hover:bg-red-50" title="Delete view">
+          <button onClick={(e) => { e.stopPropagation(); onDelete() }} className="rounded p-1 text-red-500 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1" title="Delete view">
             <Trash2 size={11} />
           </button>
         </div>

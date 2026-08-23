@@ -91,7 +91,7 @@ export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortC
             <tr key={i} className="border-b" style={{ borderColor: 'hsl(var(--border))' }}>
               {columns.map((col) => (
                 <td key={col.key} className="px-3 py-2">
-                  <div className="h-4 w-full max-w-32 animate-pulse rounded bg-slate-100" />
+                  <div className="h-4 w-full max-w-32 animate-pulse rounded bg-[hsl(var(--muted))]" />
                 </td>
               ))}
             </tr>
@@ -164,7 +164,7 @@ function DataTableHeaderCell({ col, sortField, sortDir, onSortChange, draggable 
     >
       <div className={cn('flex items-center gap-1', col.align === 'right' && 'justify-end')}>
         {draggable && (
-          <span {...attributes} {...listeners} className="cursor-grab touch-none text-slate-300 hover:text-slate-500 active:cursor-grabbing">
+          <span {...attributes} {...listeners} className="cursor-grab touch-none text-[hsl(var(--muted-foreground))]/50 hover:text-[hsl(var(--muted-foreground))] active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1">
             <GripVertical size={12} />
           </span>
         )}

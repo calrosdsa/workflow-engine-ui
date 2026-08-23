@@ -93,12 +93,14 @@ export function DetailPageBuilderOverlay({
               </DialogDescription>
             </div>
             <div className="mr-8 flex items-center gap-2">
-              <div className="flex items-center rounded-md border border-[hsl(var(--border))] p-0.5">
+              <div role="tablist" aria-label="Builder mode" className="flex items-center rounded-md border border-[hsl(var(--border))] p-0.5">
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={mode === 'edit'}
                   onClick={() => setMode('edit')}
                   className={cn(
-                    'flex items-center gap-1.5 rounded px-2.5 py-1 text-[12px] font-medium transition-colors',
+                    'flex items-center gap-1.5 rounded px-2.5 py-1 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 focus-visible:ring-offset-[hsl(var(--background))]',
                     mode === 'edit' ? 'bg-[hsl(var(--accent))] text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))]',
                   )}
                 >
@@ -106,9 +108,11 @@ export function DetailPageBuilderOverlay({
                 </button>
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={mode === 'preview'}
                   onClick={() => setMode('preview')}
                   className={cn(
-                    'flex items-center gap-1.5 rounded px-2.5 py-1 text-[12px] font-medium transition-colors',
+                    'flex items-center gap-1.5 rounded px-2.5 py-1 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 focus-visible:ring-offset-[hsl(var(--background))]',
                     mode === 'preview' ? 'bg-[hsl(var(--accent))] text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))]',
                   )}
                 >

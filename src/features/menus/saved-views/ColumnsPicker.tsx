@@ -116,7 +116,7 @@ function ColumnRow({ field, draggable, onAction, actionIcon: ActionIcon, actionT
         type="button"
         onClick={onAction}
         title={actionTitle}
-        className="shrink-0 rounded p-0.5 opacity-60 hover:bg-[hsl(var(--accent))] hover:opacity-100"
+        className="shrink-0 rounded p-0.5 opacity-60 hover:bg-[hsl(var(--accent))] hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
       >
         <ActionIcon size={12} />
       </button>

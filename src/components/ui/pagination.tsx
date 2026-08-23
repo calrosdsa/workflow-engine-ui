@@ -18,8 +18,10 @@ export function Pagination({ page, pageCount, onPageChange }: PaginationProps) {
           key={n}
           onClick={() => onPageChange(n)}
           className={cn(
-            'flex h-7 w-7 items-center justify-center rounded-md text-sm transition-colors',
-            n === page ? 'bg-gray-200 font-medium text-gray-900' : 'text-gray-500 hover:bg-gray-100',
+            'flex h-7 w-7 items-center justify-center rounded-md text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))]',
+            n === page
+              ? 'bg-[hsl(var(--accent))] font-medium text-[hsl(var(--accent-foreground))]'
+              : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))]',
           )}
         >
           {n}

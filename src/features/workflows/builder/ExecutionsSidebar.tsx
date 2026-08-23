@@ -39,7 +39,7 @@ export function ExecutionsSidebar({ workflowId }: { workflowId: string }) {
     >
       <button
         onClick={toggle}
-        className="absolute -left-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-600"
+        className="absolute -left-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
         title={open ? 'Collapse executions' : 'Expand executions'}
       >
         {open ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
@@ -67,7 +67,7 @@ export function ExecutionsSidebar({ workflowId }: { workflowId: string }) {
             {selectedExecutionId && (
               <button
                 onClick={() => select(null)}
-                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
                 title="Clear overlay"
               >
                 <X size={11} />Clear
@@ -113,7 +113,7 @@ function ExecutionRow({ execution, selected, onClick }: {
     <button
       onClick={onClick}
       className={[
-        'flex w-full flex-col gap-1 border-b border-slate-50 px-3.5 py-2.5 text-left transition-colors',
+        'flex w-full flex-col gap-1 border-b border-slate-50 px-3.5 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[hsl(var(--ring))]',
         selected ? 'bg-blue-50' : 'hover:bg-slate-50',
       ].join(' ')}
     >

@@ -49,7 +49,7 @@ export function SectionCard({ section }: { section: FormSection }) {
           {...attributes}
           {...listeners}
           onClick={(e) => e.stopPropagation()}
-          className="flex h-6 w-5 cursor-grab items-center justify-center rounded text-slate-300 hover:bg-slate-100 hover:text-slate-500 active:cursor-grabbing"
+          className="flex h-6 w-5 cursor-grab items-center justify-center rounded text-slate-300 hover:bg-slate-100 hover:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 active:cursor-grabbing"
           title="Drag to reorder section"
         >
           <GripVertical size={14} />
@@ -57,7 +57,7 @@ export function SectionCard({ section }: { section: FormSection }) {
 
         <button
           onClick={(e) => { e.stopPropagation(); toggleCollapsed(section.id) }}
-          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100"
+          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
           title={section.collapsed ? 'Expand' : 'Collapse'}
         >
           {section.collapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />}

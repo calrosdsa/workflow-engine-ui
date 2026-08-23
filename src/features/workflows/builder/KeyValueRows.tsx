@@ -92,7 +92,7 @@ function KeyValueRow({ row, variables, nodeContext, keyPlaceholder, onChange, on
         />
         <button
           onClick={onRemove}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-300 hover:bg-red-50 hover:text-red-400"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-300 hover:bg-red-50 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
           title="Remove row"
         >
           <Trash2 size={11} />
@@ -107,7 +107,7 @@ function KeyValueRow({ row, variables, nodeContext, keyPlaceholder, onChange, on
               type="button"
               onClick={() => onChange({ value_mode: m })}
               className={cn(
-                'flex-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors',
+                'flex-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
                 (row.value_mode ?? 'static') === m ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400',
               )}
             >
@@ -122,12 +122,12 @@ function KeyValueRow({ row, variables, nodeContext, keyPlaceholder, onChange, on
               value={row.expression ?? ''}
               onChange={(e) => onChange({ expression: e.target.value })}
               placeholder='Vars["name"]'
-              className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-2 py-1 font-mono text-[11px] text-slate-700 placeholder:text-slate-300 focus:outline-none"
+              className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-2 py-1 font-mono text-[11px] text-slate-700 placeholder:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
             />
             <button
               onClick={() => setEditorOpen(true)}
               title="Open expression editor"
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-slate-200 text-slate-400 hover:text-slate-600"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-slate-200 text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
             >
               <Code2 size={12} />
             </button>

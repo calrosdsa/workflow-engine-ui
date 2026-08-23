@@ -6,12 +6,12 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default:     'bg-blue-100 text-blue-800',
-        secondary:   'bg-gray-100 text-gray-800',
-        destructive: 'bg-red-100 text-red-800',
-        success:     'bg-green-100 text-green-800',
-        warning:     'bg-yellow-100 text-yellow-800',
-        outline:     'border border-gray-300 text-gray-700',
+        default:     'bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]',
+        secondary:   'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
+        destructive: 'bg-[hsl(var(--destructive))]/15 text-[hsl(var(--destructive))]',
+        success:     'bg-[hsl(var(--success))]/15 text-[hsl(var(--success))]',
+        warning:     'bg-[hsl(var(--warning))]/15 text-[hsl(var(--warning))]',
+        outline:     'border border-[hsl(var(--border))] text-[hsl(var(--foreground))]',
       },
     },
     defaultVariants: { variant: 'default' },

@@ -306,7 +306,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               className={cn(
-                'absolute -bottom-2 -left-2 z-20 flex h-6 w-6 items-center justify-center rounded-full text-white shadow-md ring-2 ring-white transition-transform hover:scale-110 nodrag nopan',
+                'absolute -bottom-2 -left-2 z-20 flex h-6 w-6 items-center justify-center rounded-full text-white shadow-md ring-2 ring-white transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-white nodrag nopan',
                 nodeStatus === 'COMPLETED_WITH_ERRORS' ? 'bg-amber-500 shadow-amber-500/30'
                   : nodeError || nodeMessage?.message_type === 'error' ? 'bg-red-500 shadow-red-500/30'
                   : nodeMessage?.message_type === 'info' ? 'bg-amber-500 shadow-amber-500/30'
@@ -340,7 +340,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               </span>
               <button
                 onClick={() => copyOverlayText(nodeError ?? nodeMessage?.message ?? '')}
-                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-500 transition-colors hover:bg-white/60"
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-500 transition-colors hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
                 title="Copy to clipboard"
               >
                 {errorCopied ? <Check size={11} /> : <Copy size={11} />}
@@ -384,7 +384,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
             <button
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
-              className="absolute -right-2 top-1/2 z-20 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-lime-600 text-white shadow-md shadow-lime-600/30 ring-2 ring-white transition-transform hover:scale-110 nodrag nopan"
+              className="absolute -right-2 top-1/2 z-20 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-lime-600 text-white shadow-md shadow-lime-600/30 ring-2 ring-white transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-white nodrag nopan"
               title="View captured snapshot"
             >
               <Bug size={12} strokeWidth={2.5} />
@@ -401,7 +401,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               </span>
               <button
                 onClick={() => copyOverlayText(JSON.stringify(debugSnapshot.variables ?? {}, null, 2))}
-                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-500 transition-colors hover:bg-white/60"
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-500 transition-colors hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
                 title="Copy to clipboard"
               >
                 {errorCopied ? <Check size={11} /> : <Copy size={11} />}
@@ -451,7 +451,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
             <button
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
-              className="absolute -left-2 -top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-white shadow-md shadow-amber-500/30 ring-2 ring-white transition-transform hover:scale-110 nodrag nopan"
+              className="absolute -left-2 -top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-white shadow-md shadow-amber-500/30 ring-2 ring-white transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-white nodrag nopan"
               title="View warning"
             >
               <AlertTriangle size={12} strokeWidth={2.5} />
@@ -466,7 +466,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">Warning</span>
               <button
                 onClick={() => copyOverlayText(nodeWarning)}
-                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-500 transition-colors hover:bg-white/60"
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-500 transition-colors hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
                 title="Copy to clipboard"
               >
                 {errorCopied ? <Check size={11} /> : <Copy size={11} />}
@@ -492,7 +492,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
         >
           {canDuplicate && (
             <button
-              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
@@ -506,7 +506,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           )}
           {canDelete && (
             <button
-              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
@@ -587,7 +587,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
         <div className="absolute left-1/2 -translate-x-1/2 -bottom-9 flex flex-col items-center pointer-events-none">
           <div className="h-3.5 w-px bg-slate-300" />
           <button
-            className="pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-md shadow-blue-500/30 ring-4 ring-white hover:bg-blue-600 hover:scale-110 transition-all nodrag nopan"
+            className="pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-md shadow-blue-500/30 ring-4 ring-white hover:bg-blue-600 hover:scale-110 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-white nodrag nopan"
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => handleAddClick(e, data.outputs[0]?.id ?? 'out')}
             title="Add next node"
@@ -615,7 +615,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
             )}
           >
             <button
-              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
@@ -627,7 +627,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               <ArrowLeftRight size={12} strokeWidth={2.5} />
             </button>
             <button
-              className="flex h-6 w-6 items-center justify-center rounded-full text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-600"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
@@ -639,7 +639,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               <Trash2 size={12} strokeWidth={2.5} />
             </button>
             <button
-              className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-sm transition-all hover:bg-blue-600 hover:scale-110"
+              className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-sm transition-all hover:bg-blue-600 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => handleAddClick(e, data.outputs[0]?.id ?? 'out')}
               title="Add node in a new branch"

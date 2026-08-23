@@ -63,14 +63,14 @@ export function ElementCard({ element, sectionId, columnId }: ElementCardProps) 
           {...attributes}
           {...listeners}
           onClick={(e) => e.stopPropagation()}
-          className="flex h-6 w-6 cursor-grab items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 active:cursor-grabbing"
+          className="flex h-6 w-6 cursor-grab items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 active:cursor-grabbing"
           title="Drag to move"
         >
           <GripVertical size={13} />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); duplicate(element.id) }}
-          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
           title="Duplicate"
         >
           <Copy size={12} />
@@ -78,7 +78,7 @@ export function ElementCard({ element, sectionId, columnId }: ElementCardProps) 
         {!isParentLink && (
           <button
             onClick={(e) => { e.stopPropagation(); remove(element.id) }}
-            className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-500"
+            className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
             title="Delete"
           >
             <Trash2 size={12} />

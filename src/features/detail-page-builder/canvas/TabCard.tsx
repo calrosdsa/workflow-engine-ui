@@ -1,6 +1,7 @@
 // One draggable card on the Detail Page Builder canvas, representing one
-// DetailTabConfig entry — mirrors form-builder/canvas/ElementCard.tsx's
-// drag-handle/select/delete chrome, applied to a tab instead of a field.
+// DetailTabConfig entry — follows the same drag-handle/select/delete chrome
+// shape as form-builder/canvas/ElementCard.tsx, applied to a tab instead of
+// a field.
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Eye, EyeOff, Trash2, Lock, Users2, GitBranch } from 'lucide-react'
@@ -43,18 +44,46 @@ export function TabCard({ tab, zoneId, selected, canHide, onSelect, onToggleHidd
         isDragging && 'z-10 opacity-60 shadow-lg',
       )}
     >
-      <div className="flex items-center gap-1.5 px-2 py-2">
+      {/* Hover/selected toolbar — same floating-pill position and shape as
+          form-builder/canvas/ElementCard.tsx's, built on semantic tokens
+          instead of raw colors. Pinned fully visible while selected (not
+          just on hover), and also on keyboard focus via group-focus-within,
+          so the actions stay discoverable without a pointer over the card. */}
+      <div className={cn(
+        'absolute -top-3 right-2 z-10 flex items-center gap-0.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-0.5 py-0.5 shadow-sm transition-opacity',
+        selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100',
+      )}>
         <button
           type="button"
           {...attributes}
           {...listeners}
           onClick={(e) => e.stopPropagation()}
-          className="cursor-grab touch-none rounded p-1 text-[hsl(var(--muted-foreground))]/60 hover:text-[hsl(var(--muted-foreground))] active:cursor-grabbing"
+          className="flex h-6 w-6 cursor-grab touch-none items-center justify-center rounded text-[hsl(var(--muted-foreground))]/60 hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 focus-visible:ring-offset-[hsl(var(--card))] active:cursor-grabbing"
           title="Drag to move"
         >
           <GripVertical size={13} />
         </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onToggleHidden() }}
+          disabled={!canHide}
+          title={tab.hidden ? 'Show tab' : canHide ? 'Hide tab' : 'At least one tab must stay visible'}
+          className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 focus-visible:ring-offset-[hsl(var(--card))] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {tab.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onRemove() }}
+          disabled={!canHide}
+          title={canHide ? 'Remove tab' : 'At least one tab must stay visible'}
+          className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] transition-colors hover:bg-red-50 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 focus-visible:ring-offset-[hsl(var(--card))] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
 
+      <div className="flex items-center gap-1.5 px-2 py-2">
         {def && <def.icon size={14} className="shrink-0 text-[hsl(var(--muted-foreground))]" />}
 
         <span className={cn('min-w-0 flex-1 truncate text-[13px] font-medium', tab.hidden && 'text-[hsl(var(--muted-foreground))]')}>
@@ -77,27 +106,6 @@ export function TabCard({ tab, zoneId, selected, canHide, onSelect, onToggleHidd
               <GitBranch size={9} />
             </Badge>
           )}
-        </div>
-
-        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onToggleHidden() }}
-            disabled={!canHide}
-            title={tab.hidden ? 'Show tab' : canHide ? 'Hide tab' : 'At least one tab must stay visible'}
-            className="rounded-md p-1 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {tab.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
-          </button>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onRemove() }}
-            disabled={!canHide}
-            title={canHide ? 'Remove tab' : 'At least one tab must stay visible'}
-            className="rounded-md p-1 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Trash2 size={13} />
-          </button>
         </div>
       </div>
     </div>

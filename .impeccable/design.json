@@ -1,0 +1,363 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-23T02:00:00.000Z",
+  "title": "Design System: App Builder",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Default Blue",
+        "canonical": "hsl(221.2 83.2% 53.3%)",
+        "tonalRamp": [
+          "hsl(221.2 83.2% 15%)",
+          "hsl(221.2 83.2% 25%)",
+          "hsl(221.2 83.2% 35%)",
+          "hsl(221.2 83.2% 45%)",
+          "hsl(221.2 83.2% 53.3%)",
+          "hsl(221.2 83.2% 65%)",
+          "hsl(221.2 83.2% 80%)",
+          "hsl(221.2 83.2% 95%)"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Muted Foreground",
+        "canonical": "hsl(215.4 16.3% 46.9%)",
+        "tonalRamp": [
+          "hsl(215.4 16.3% 15%)",
+          "hsl(215.4 16.3% 25%)",
+          "hsl(215.4 16.3% 35%)",
+          "hsl(215.4 16.3% 46.9%)",
+          "hsl(215.4 16.3% 58%)",
+          "hsl(215.4 16.3% 70%)",
+          "hsl(215.4 16.3% 85%)",
+          "hsl(215.4 16.3% 95%)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border Hairline",
+        "canonical": "hsl(214.3 31.8% 91.4%)",
+        "tonalRamp": [
+          "hsl(214.3 31.8% 20%)",
+          "hsl(214.3 31.8% 35%)",
+          "hsl(214.3 31.8% 50%)",
+          "hsl(214.3 31.8% 65%)",
+          "hsl(214.3 31.8% 78%)",
+          "hsl(214.3 31.8% 91.4%)",
+          "hsl(214.3 31.8% 96%)",
+          "hsl(214.3 31.8% 99%)"
+        ]
+      },
+      "destructive": {
+        "role": "neutral",
+        "displayName": "Reserved Red",
+        "canonical": "hsl(0 84.2% 60.2%)",
+        "tonalRamp": [
+          "hsl(0 84.2% 20%)",
+          "hsl(0 84.2% 32%)",
+          "hsl(0 84.2% 44%)",
+          "hsl(0 84.2% 60.2%)",
+          "hsl(0 84.2% 70%)",
+          "hsl(0 84.2% 80%)",
+          "hsl(0 84.2% 90%)",
+          "hsl(0 84.2% 96%)"
+        ]
+      },
+      "node-trigger": {
+        "role": "tertiary",
+        "displayName": "Trigger Emerald",
+        "canonical": "#10b981",
+        "tonalRamp": [
+          "#022c22",
+          "#064e3b",
+          "#065f46",
+          "#047857",
+          "#059669",
+          "#10b981",
+          "#6ee7b7",
+          "#d1fae5"
+        ]
+      },
+      "node-condition": {
+        "role": "tertiary",
+        "displayName": "Condition Amber",
+        "canonical": "#f59e0b",
+        "tonalRamp": [
+          "#451a03",
+          "#78350f",
+          "#92400e",
+          "#b45309",
+          "#d97706",
+          "#f59e0b",
+          "#fcd34d",
+          "#fef3c7"
+        ]
+      },
+      "node-subflow": {
+        "role": "tertiary",
+        "displayName": "Execute Workflow Violet",
+        "canonical": "#8b5cf6",
+        "tonalRamp": [
+          "#2e1065",
+          "#4c1d95",
+          "#5b21b6",
+          "#6d28d9",
+          "#7c3aed",
+          "#8b5cf6",
+          "#c4b5fd",
+          "#ede9fe"
+        ]
+      },
+      "node-data": {
+        "role": "tertiary",
+        "displayName": "Data Op Blue",
+        "canonical": "#3b82f6",
+        "tonalRamp": [
+          "#172554",
+          "#1e3a8a",
+          "#1e40af",
+          "#1d4ed8",
+          "#2563eb",
+          "#3b82f6",
+          "#93c5fd",
+          "#dbeafe"
+        ]
+      },
+      "node-notify": {
+        "role": "tertiary",
+        "displayName": "Notification Rose",
+        "canonical": "#f43f5e",
+        "tonalRamp": [
+          "#4c0519",
+          "#881337",
+          "#9f1239",
+          "#be123c",
+          "#e11d48",
+          "#f43f5e",
+          "#fda4af",
+          "#ffe4e6"
+        ]
+      },
+      "node-knowledge": {
+        "role": "tertiary",
+        "displayName": "Knowledge Cyan",
+        "canonical": "#06b6d4",
+        "tonalRamp": [
+          "#083344",
+          "#164e63",
+          "#155e75",
+          "#0e7490",
+          "#0891b2",
+          "#06b6d4",
+          "#67e8f9",
+          "#cffafe"
+        ]
+      },
+      "success": {
+        "role": "secondary",
+        "displayName": "Success Green",
+        "canonical": "hsl(142 71% 45%)",
+        "tonalRamp": [
+          "hsl(142 71% 12%)",
+          "hsl(142 71% 20%)",
+          "hsl(142 71% 28%)",
+          "hsl(142 71% 36%)",
+          "hsl(142 71% 45%)",
+          "hsl(142 71% 60%)",
+          "hsl(142 71% 78%)",
+          "hsl(142 71% 93%)"
+        ]
+      },
+      "warning": {
+        "role": "secondary",
+        "displayName": "Warning Amber",
+        "canonical": "hsl(38 92% 50%)",
+        "tonalRamp": [
+          "hsl(38 92% 14%)",
+          "hsl(38 92% 24%)",
+          "hsl(38 92% 34%)",
+          "hsl(38 92% 42%)",
+          "hsl(38 92% 50%)",
+          "hsl(38 92% 65%)",
+          "hsl(38 92% 80%)",
+          "hsl(38 92% 94%)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "dialog-title": {
+        "displayName": "Dialog Title",
+        "purpose": "Modal/dialog headers — the largest text anywhere in the shell."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Canvas card titles, node picker item labels — the primary name inside a small container."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default for nearly all UI text — inputs, buttons, table cells, body copy."
+      },
+      "body-compact": {
+        "displayName": "Body Compact",
+        "purpose": "Dense list rows, canvas node body text, secondary panel copy."
+      },
+      "label": {
+        "displayName": "Section Label",
+        "purpose": "Uppercase, tracked config-panel section headers — the system's one recurring structural type device."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Field descriptions, timestamps, counts, node subtitles — the standard supporting-text size."
+      },
+      "micro": {
+        "displayName": "Micro",
+        "purpose": "The floor of the scale — badge glyphs and tiny inline tags only, never body-length copy."
+      }
+    },
+    "shadows": [
+      {
+        "name": "resting",
+        "value": "0 1px 2px 0 rgba(0,0,0,0.05)",
+        "purpose": "Cards, buttons, inputs at rest — barely perceptible edge softness (Tailwind shadow-sm)."
+      },
+      {
+        "name": "floating",
+        "value": "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)",
+        "purpose": "Popovers, dropdown menus, select content (Tailwind shadow-lg)."
+      },
+      {
+        "name": "modal",
+        "value": "0 25px 50px -12px rgba(0,0,0,0.25)",
+        "purpose": "Dialog content — the system's heaviest shadow, paired with a backdrop-blur scrim (Tailwind shadow-xl)."
+      }
+    ],
+    "motion": [
+      {
+        "name": "dialog-enter",
+        "value": "200ms ease-out; fade-in + zoom-in-95% + slide-in-from-top-[48%]",
+        "purpose": "The system's one authored entrance moment, used for every Dialog/modal overlay."
+      },
+      {
+        "name": "state-transition",
+        "value": "transition-colors (default Tailwind duration/easing)",
+        "purpose": "Hover/focus/active color changes on buttons, inputs, and interactive rows — the only motion outside dialogs."
+      }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Default call-to-action button — solid blue, used sparingly against the neutral shell.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Save</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; border-radius: 0.5rem; font-size: 14px; font-weight: 500; height: 36px; padding: 8px 16px; border: none; cursor: pointer; transition: background-color 0.15s ease, opacity 0.15s ease; } .ds-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px hsl(0 0% 100%), 0 0 0 4px hsl(221.2 83.2% 53.3%); } .ds-btn:disabled { pointer-events: none; opacity: 0.5; } .ds-btn-primary { background-color: hsl(221.2 83.2% 53.3%); color: hsl(210 40% 98%); } .ds-btn-primary:hover { background-color: hsl(221.2 83.2% 48%); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Default secondary action — bordered, fills with the neutral accent tint on hover.",
+      "html": "<button class=\"ds-btn ds-btn-outline\">Cancel</button>",
+      "css": ".ds-btn-outline { background-color: hsl(0 0% 100%); color: hsl(222.2 84% 4.9%); border: 1px solid hsl(214.3 31.8% 91.4%); } .ds-btn-outline:hover { background-color: hsl(210 40% 96.1%); color: hsl(222.2 47.4% 11.2%); } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 2px hsl(0 0% 100%), 0 0 0 4px hsl(221.2 83.2% 53.3%); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "Default text field — used across every builder config panel and form.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Enter a value…\" />",
+      "css": ".ds-input { display: flex; height: 36px; width: 100%; border-radius: 0.5rem; border: 1px solid hsl(214.3 31.8% 91.4%); background-color: hsl(0 0% 100%); padding: 4px 12px; font-size: 14px; color: hsl(222.2 84% 4.9%); box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); transition: box-shadow 0.15s ease; } .ds-input::placeholder { color: hsl(215.4 16.3% 46.9%); } .ds-input:focus-visible { outline: none; box-shadow: 0 0 0 2px hsl(221.2 83.2% 53.3%); } .ds-input:disabled { cursor: not-allowed; opacity: 0.5; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card-default",
+      "description": "Default content container — border-first separation, minimal shadow.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-header\"><div class=\"ds-card-title\">Card title</div><div class=\"ds-card-desc\">Supporting description text.</div></div><div class=\"ds-card-content\">Card body content goes here.</div></div>",
+      "css": ".ds-card { border-radius: 0.5rem; border: 1px solid hsl(214.3 31.8% 91.4%); background-color: hsl(0 0% 100%); color: hsl(222.2 84% 4.9%); box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); } .ds-card-header { display: flex; flex-direction: column; gap: 6px; padding: 24px; } .ds-card-title { font-weight: 600; line-height: 1; letter-spacing: -0.01em; } .ds-card-desc { font-size: 14px; color: hsl(215.4 16.3% 46.9%); } .ds-card-content { padding: 0 24px 24px; }"
+    },
+    {
+      "name": "Badge",
+      "kind": "chip",
+      "refersTo": "badge-default",
+      "description": "Status/count chip. Each variant is a translucent tint of its token color as background with the full-strength token as text — shown here in the default (primary) and success variants.",
+      "html": "<span class=\"ds-badge ds-badge-default\">Active</span> <span class=\"ds-badge ds-badge-success\">Completed</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; border-radius: 9999px; padding: 2px 10px; font-size: 12px; font-weight: 600; margin-right: 6px; } .ds-badge-default { background-color: hsl(221.2 83.2% 53.3% / 0.15); color: hsl(221.2 83.2% 53.3%); } .ds-badge-success { background-color: hsl(142 71% 45% / 0.15); color: hsl(142 71% 45%); }"
+    },
+    {
+      "name": "Dialog",
+      "kind": "custom",
+      "refersTo": "dialog",
+      "description": "Modal overlay — the system's highest elevation layer and its one authored entrance animation.",
+      "html": "<div class=\"ds-dialog-overlay\"></div><div class=\"ds-dialog\"><div class=\"ds-dialog-header\"><div class=\"ds-dialog-title\">Dialog title</div></div><div class=\"ds-dialog-body\">Dialog content goes here.</div><div class=\"ds-dialog-footer\"><button class=\"ds-btn ds-btn-outline\">Cancel</button><button class=\"ds-btn ds-btn-primary\">Confirm</button></div></div>",
+      "css": ".ds-dialog-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); } .ds-dialog { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 1rem; border: 1px solid hsl(214.3 31.8% 91.4%); background-color: hsl(0 0% 100%); color: hsl(222.2 84% 4.9%); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); min-width: 360px; animation: ds-dialog-in 200ms ease-out; } @keyframes ds-dialog-in { from { opacity: 0; transform: translate(-50%, calc(-50% - 8px)) scale(0.95); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } } .ds-dialog-header { border-bottom: 1px solid hsl(214.3 31.8% 91.4%); padding: 16px 24px; } .ds-dialog-title { font-size: 15px; font-weight: 600; } .ds-dialog-body { padding: 24px; } .ds-dialog-footer { display: flex; align-items: center; justify-content: flex-end; gap: 8px; border-top: 1px solid hsl(214.3 31.8% 91.4%); padding: 16px 24px; }"
+    },
+    {
+      "name": "Workflow Node Card",
+      "kind": "custom",
+      "refersTo": "workflow-node",
+      "description": "Signature component: a canvas node card with a category-hued gradient header. Shown here in the Trigger (emerald) variant; every other node type follows the identical shape with its own hue.",
+      "html": "<div class=\"ds-node\"><div class=\"ds-node-header ds-node-header--trigger\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"white\" stroke-width=\"2.25\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polygon points=\"13 2 3 14 12 14 11 22 21 10 12 10 13 2\"></polygon></svg><span class=\"ds-node-label\">Trigger</span></div><div class=\"ds-node-body\">On Demand</div></div>",
+      "css": ".ds-node { width: 200px; border-radius: 0.5rem; border: 1px solid hsl(214.3 31.8% 91.4%); background: hsl(0 0% 100%); overflow: hidden; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); } .ds-node-header { display: flex; align-items: center; gap: 8px; padding: 8px 10px; } .ds-node-header--trigger { background: linear-gradient(to bottom right, #10b981, #059669); } .ds-node-label { color: white; font-size: 13px; font-weight: 600; } .ds-node-body { padding: 10px; font-size: 11px; color: hsl(215.4 16.3% 46.9%); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Instrument Panel",
+    "overview": "App Builder's own admin surface is deliberately quiet: an unmodified shadcn/ui shell in system-ui, a single default blue, and gray-scale everywhere else. This is not an unfinished visual identity — it is the honest current state, and it fits the product. A builder spends the day switching between a form designer, a node-graph workflow canvas, a dashboard grid, and a permissions table; the chrome around every one of those tools stays identical and gets out of the way, so the one thing that's allowed to carry color is the thing that actually varies: what a piece of the interface is and what state it's in. The one place this system spends color deliberately is the workflow canvas, where every node type owns a fixed hue — emerald for triggers, amber for conditions, violet for Execute Workflow, blue for data operations, rose for notifications, cyan for knowledge/RAG nodes. That's the system's real signature: not a brand palette applied to the whole app, but a categorical color code applied to exactly one surface, because that's the one surface where 'instantly tell what kind of thing this is' is load-bearing to the job of building a workflow.",
+    "keyCharacteristics": [
+      "Neutral, unbranded shell (default shadcn/ui tokens, system-ui type) everywhere outside the workflow canvas.",
+      "Color is semantic, never decorative: it marks node category, status, and interactive state — nothing is colored for atmosphere.",
+      "Flat at rest; shadow appears only as surfaces lift off the page (cards, popovers, dialogs), scaled by how far off the page they sit.",
+      "A visible, consistent focus ring on every interactive element — this system does not rely on hover alone."
+    ],
+    "rules": [
+      {
+        "name": "The Reserved Red Rule",
+        "body": "Destructive red appears only on delete/remove actions and genuine error states — never as a generic \"important\" accent.",
+        "section": "colors"
+      },
+      {
+        "name": "The Named Status Rule",
+        "body": "Success and warning are real root tokens (--success, --warning), not raw Tailwind green/amber literals reached for per-component. Any new status-colored surface references these, the same way it already references --destructive.",
+        "section": "colors"
+      },
+      {
+        "name": "The Canvas Exception Rule",
+        "body": "The neutral-shell discipline applies to every surface except the workflow node canvas, where each node type owns a fixed, saturated hue expressed as a gradient header, matching minimap/handle color, and soft badge tint. This is the one place color density is intentionally high.",
+        "section": "colors"
+      },
+      {
+        "name": "The No-Display-Size Rule",
+        "body": "There is no display/hero typographic tier anywhere in the Builder shell — the largest text on any screen is a dialog title at 15px.",
+        "section": "typography"
+      },
+      {
+        "name": "The Density Floor Rule",
+        "body": "9px (Micro) is the smallest text this system uses anywhere, and it's reserved for glyphs/tags, never for a sentence a user has to actually read. Body-length copy never drops below 10px (Caption).",
+        "section": "typography"
+      },
+      {
+        "name": "The Border-Before-Shadow Rule",
+        "body": "A card is defined first by its border, second by its shadow. Shadow strength scales with how temporary/overlaid a surface is, not with perceived importance.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep the admin shell's color vocabulary to primary blue + neutral gray + reserved status colors (success/warning/destructive). New chrome should not introduce a second accent color.",
+      "Do reserve saturated, categorical color for surfaces where \"what type is this\" is the actual task — not as a general decorative device.",
+      "Do use the focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 pattern on every new custom interactive element (drop to ring-offset-1 on compact 20-28px icon-only controls where a 2px offset would collide with a neighboring control).",
+      "Do scale shadow with how temporary/overlaid a surface is (resting → floating → modal), not with perceived importance.",
+      "Do use the uppercase 11px/600-weight/tracked label style for config-panel section headers."
+    ],
+    "donts": [
+      "Don't add a display/hero typographic size. The system's ceiling is a 15px dialog title.",
+      "Don't introduce raw Tailwind color utilities on shell components — every component in the shared UI library now references hsl(var(--token)) tokens throughout, including Badge, which used raw literals until this pass.",
+      "Don't apply the workflow-canvas node-color system anywhere outside the workflow canvas.",
+      "Don't add a colored left/right border as a status indicator on cards or list rows — this system has no precedent for that pattern.",
+      "Don't invent a custom or web font. system-ui is the confirmed, deliberate choice for the entire admin shell."
+    ]
+  }
+}

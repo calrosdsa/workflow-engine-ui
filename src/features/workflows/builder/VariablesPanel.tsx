@@ -39,7 +39,7 @@ export function VariablesPanel() {
       {/* Toggle button — always visible on the right edge */}
       <button
         onClick={toggleVarsPanel}
-        className="absolute -right-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-600"
+        className="absolute -right-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
         title={varsPanelOpen ? 'Collapse variables' : 'Expand variables'}
       >
         {varsPanelOpen ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}
@@ -86,7 +86,7 @@ export function VariablesPanel() {
                   <span className="font-mono text-[10px] font-semibold uppercase tracking-wide text-slate-400">#{i + 1}</span>
                   <button
                     onClick={() => remove(i)}
-                    className="flex h-5 w-5 items-center justify-center rounded text-slate-300 transition-colors hover:bg-red-50 hover:text-red-500"
+                    className="flex h-5 w-5 items-center justify-center rounded text-slate-300 transition-colors hover:bg-red-50 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
                   >
                     <Trash2 size={11} />
                   </button>
