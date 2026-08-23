@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { AlertCircle, ArrowLeft, Check, LayoutDashboard, Redo2, Save, Undo2 } from 'lucide-react'
+import { AlertCircle, ArrowLeft, Check, Redo2, Save, Undo2 } from 'lucide-react'
 import '@/features/dashboard/widgets'
 import { useMenu, useUpdateMenu } from '@/features/menus/hooks'
 import { useDashboardStore } from '@/features/dashboard/store'
@@ -169,10 +169,6 @@ export function DashboardEditorPage({ appId, menuId }: DashboardEditorPageProps)
         </Button>
 
         <div className="h-5 w-px bg-slate-200" />
-
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 shadow-sm">
-          <LayoutDashboard size={16} className="text-white" />
-        </div>
 
         <div className="flex items-center gap-2">
           <Input
