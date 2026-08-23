@@ -47,16 +47,29 @@ export function SectionCard({ section }: { section: FormSection }) {
     >
       {/* Section header */}
       <div className="flex items-center gap-2 border-b border-[hsl(var(--border))] px-3 py-2.5">
-        <button
-          {...attributes}
-          {...listeners}
-          onClick={(e) => e.stopPropagation()}
-          aria-label="Drag to reorder section"
-          className="flex h-6 w-5 cursor-grab items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 active:cursor-grabbing"
-          title="Drag to reorder section"
-        >
-          <GripVertical size={14} />
-        </button>
+        <div className="relative">
+          <button
+            {...attributes}
+            {...listeners}
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Drag to reorder section"
+            className="peer flex h-6 w-5 cursor-grab items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 active:cursor-grabbing"
+            title="Drag to reorder section"
+          >
+            <GripVertical size={14} />
+          </button>
+          {/* Visible-on-keyboard-focus hint — see ElementCard.tsx's identical
+              pattern for why: dnd-kit's own sr-only instructions (wired via
+              aria-describedby) already cover screen readers, this covers
+              the sighted keyboard-only user who can't rely on hover or a
+              screen reader. */}
+          <span
+            role="presentation"
+            className="pointer-events-none absolute -bottom-7 left-1/2 z-20 hidden -translate-x-1/2 whitespace-nowrap rounded border border-[hsl(var(--border))] bg-[hsl(var(--popover))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--popover-foreground))] shadow-sm peer-focus-visible:block"
+          >
+            Space to drag, arrows to move
+          </span>
+        </div>
 
         <button
           onClick={(e) => { e.stopPropagation(); toggleCollapsed(section.id) }}

@@ -56,21 +56,38 @@ export function ElementCard({ element, sectionId, columnId }: ElementCardProps) 
         isDragging && 'opacity-50 shadow-lg',
       )}
     >
-      {/* Hover/selected toolbar */}
+      {/* Hover/selected toolbar — group-focus-within (not just group-hover)
+          so a sighted keyboard user tabbing onto Drag/Duplicate/Delete
+          actually sees the row they just focused, matching the same fix
+          already applied to detail-page-builder/canvas/TabCard.tsx. */}
       <div className={cn(
         'absolute -top-3 right-2 z-10 flex items-center gap-0.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-0.5 py-0.5 shadow-sm transition-opacity motion-reduce:transition-none',
-        selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+        selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100',
       )}>
-        <button
-          {...attributes}
-          {...listeners}
-          onClick={(e) => e.stopPropagation()}
-          aria-label="Drag to move"
-          className="flex h-6 w-6 cursor-grab items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 active:cursor-grabbing"
-          title="Drag to move"
-        >
-          <GripVertical size={13} />
-        </button>
+        <div className="relative">
+          <button
+            {...attributes}
+            {...listeners}
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Drag to move"
+            className="peer flex h-6 w-6 cursor-grab items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 active:cursor-grabbing"
+            title="Drag to move"
+          >
+            <GripVertical size={13} />
+          </button>
+          {/* Visible-on-keyboard-focus hint — the button's own aria-label and
+              dnd-kit's built-in sr-only instructions already cover screen
+              readers; this covers the sighted keyboard-only user who can't
+              rely on either. Hidden by default, shown only via :focus-visible
+              on the sibling button (peer), never on hover — the title
+              attribute already handles the mouse case. */}
+          <span
+            role="presentation"
+            className="pointer-events-none absolute left-1/2 top-full z-20 mt-1 hidden -translate-x-1/2 whitespace-nowrap rounded border border-[hsl(var(--border))] bg-[hsl(var(--popover))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--popover-foreground))] shadow-sm peer-focus-visible:block"
+          >
+            Space to drag, arrows to move
+          </span>
+        </div>
         <button
           onClick={(e) => { e.stopPropagation(); duplicate(element.id) }}
           aria-label="Duplicate"
