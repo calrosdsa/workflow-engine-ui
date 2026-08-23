@@ -16,6 +16,7 @@ import { KeyValueRows } from '../KeyValueRows'
 import { CredentialSelect } from '@/features/app-settings/CredentialSelect'
 import { nanoid } from '../nanoid'
 import { ensureKeyValueIds, ensureResponseSchemaIds } from './id-helpers'
+import { AutoMapPanel } from './AutoMapPanel'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type {
   VariableDecl, HttpRequestConfig, HTTPMethod, HTTPAuthType, HTTPBodyMode, ValueMode,
@@ -154,6 +155,8 @@ export function HttpRequestForm({ config, variables, nodeContext, onChange }: Ht
       <div className="h-px bg-slate-100" />
 
       <ResponseSchemaSection
+        config={config}
+        variables={variables}
         schemas={config.response_schemas ?? []}
         onChange={(response_schemas) => set({ response_schemas })}
       />
@@ -221,17 +224,23 @@ function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMo
 // Standalone from the form/FieldDef system — see types.ts's ResponseSchema.
 // ---------------------------------------------------------------------------
 
-const RESPONSE_FIELD_TYPES: ResponseFieldType[] = ['string', 'integer', 'float', 'boolean', 'datetime', 'time', 'object']
+const RESPONSE_FIELD_TYPES: ResponseFieldType[] = ['string', 'integer', 'float', 'boolean', 'datetime', 'time', 'object', 'list']
 
 function newResponseSchema(): ResponseSchema {
   return { id: nanoid(), name: '', kind: 'list', source: 'body', fields: [] }
 }
 
+// Shared by both a schema's top-level fields and a 'list'-typed field's own
+// nested fields — a 'list'-typed field's fields array may be empty mid-edit
+// (the backend's Validate() requires at least one before save, but the UI
+// itself tolerates zero while the author is still adding rows).
 function newResponseSchemaField(): ResponseSchemaField {
   return { id: nanoid(), path: '', type: 'string', name: '' }
 }
 
-function ResponseSchemaSection({ schemas, onChange }: {
+function ResponseSchemaSection({ config, variables, schemas, onChange }: {
+  config: HttpRequestConfig
+  variables: VariableDecl[]
   schemas: ResponseSchema[]
   onChange: (schemas: ResponseSchema[]) => void
 }) {
@@ -271,6 +280,8 @@ function ResponseSchemaSection({ schemas, onChange }: {
             <span className="font-mono text-cyan-600">List Of Objects</span> schema becomes a real array you
             can drop into an Iterator's source list, with each field autocompleting inside the loop body.
           </p>
+
+          <AutoMapPanel config={config} variables={variables} onAddSchema={(schema) => onChange([...schemas, schema])} />
 
           {schemas.map((s) => (
             <SchemaCard
@@ -412,41 +423,94 @@ function SchemaCard({ schema, onChange, onRemove }: {
   )
 }
 
-function SchemaFieldRow({ field, source, onChange, onRemove }: {
+// A field typed 'list' can't be headers-sourced (backend rejects it — a flat
+// header map has nothing to iterate), so the type picker excludes it for a
+// headers-source row rather than letting an author pick a combination that
+// will fail on save.
+function fieldTypeOptionsFor(source: ResponseSchemaSource): ResponseFieldType[] {
+  return source === 'headers' ? RESPONSE_FIELD_TYPES.filter((t) => t !== 'list') : RESPONSE_FIELD_TYPES
+}
+
+function SchemaFieldRow({ field, source, depth = 0, onChange, onRemove }: {
   field: ResponseSchemaField
   source: ResponseSchemaSource
+  /** Nesting depth (0 = top-level) — purely a visual indent cue, since a
+   *  'list' field's own children are body-shaped regardless of the outer
+   *  schema's source (see backend Validate()'s identical stance). */
+  depth?: number
   onChange: (patch: Partial<ResponseSchemaField>) => void
   onRemove: () => void
 }) {
+  const isList = field.type === 'list'
+  const nested = field.fields ?? []
+
+  const addNested = () => onChange({ fields: [...nested, newResponseSchemaField()] })
+  const updateNested = (id: string, patch: Partial<ResponseSchemaField>) =>
+    onChange({ fields: nested.map((f) => (f.id === id ? { ...f, ...patch } : f)) })
+  const removeNested = (id: string) => onChange({ fields: nested.filter((f) => f.id !== id) })
+
   return (
-    <div className="flex items-center gap-1.5">
-      <Input
-        value={field.path}
-        onChange={(e) => onChange({ path: e.target.value })}
-        placeholder={source === 'headers' ? 'header name, e.g. content-type' : 'JSONPath, e.g. address.geo.lat'}
-        className="h-7 min-w-0 flex-1 font-mono text-[11px]"
-      />
-      <span className="shrink-0 text-[11px] text-slate-300">=</span>
-      <select
-        value={field.type}
-        onChange={(e) => onChange({ type: e.target.value as ResponseFieldType })}
-        className="h-7 shrink-0 rounded-md border border-slate-200 bg-white px-1.5 text-[11px] capitalize text-slate-700 focus:border-cyan-400 focus:outline-none"
-      >
-        {RESPONSE_FIELD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-      </select>
-      <Input
-        value={field.name}
-        onChange={(e) => onChange({ name: e.target.value })}
-        placeholder="e.g. Id"
-        className="h-7 min-w-0 flex-1 text-[11px]"
-      />
-      <button
-        onClick={onRemove}
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-300 hover:bg-red-50 hover:text-red-400"
-        title="Remove field"
-      >
-        <Trash2 size={11} />
-      </button>
+    <div className={depth > 0 ? 'border-l-2 border-cyan-100 pl-2.5' : undefined}>
+      <div className="flex items-center gap-1.5">
+        <Input
+          value={field.path}
+          onChange={(e) => onChange({ path: e.target.value })}
+          placeholder={source === 'headers' ? 'header name, e.g. content-type' : isList ? 'JSONPath to the array, e.g. items' : 'JSONPath, e.g. address.geo.lat'}
+          className="h-7 min-w-0 flex-1 font-mono text-[11px]"
+        />
+        <span className="shrink-0 text-[11px] text-slate-300">=</span>
+        <select
+          value={field.type}
+          onChange={(e) => {
+            const type = e.target.value as ResponseFieldType
+            onChange({ type, fields: type === 'list' ? (field.fields ?? []) : undefined })
+          }}
+          className="h-7 shrink-0 rounded-md border border-slate-200 bg-white px-1.5 text-[11px] capitalize text-slate-700 focus:border-cyan-400 focus:outline-none"
+        >
+          {fieldTypeOptionsFor(source).map((t) => <option key={t} value={t}>{t === 'list' ? 'List of objects' : t}</option>)}
+        </select>
+        <Input
+          value={field.name}
+          onChange={(e) => onChange({ name: e.target.value })}
+          placeholder="e.g. Id"
+          className="h-7 min-w-0 flex-1 text-[11px]"
+        />
+        <button
+          onClick={onRemove}
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-300 hover:bg-red-50 hover:text-red-400"
+          title="Remove field"
+        >
+          <Trash2 size={11} />
+        </button>
+      </div>
+
+      {isList && (
+        <div className="mt-1.5 space-y-1.5 pl-3">
+          {nested.length === 0 && (
+            <p className="rounded-lg border border-dashed border-slate-200 p-2 text-center text-[10px] text-slate-400">
+              No fields yet for each item in this list.
+            </p>
+          )}
+          {nested.map((f) => (
+            <SchemaFieldRow
+              key={f.id}
+              field={f}
+              source="body"
+              depth={depth + 1}
+              onChange={(patch) => updateNested(f.id, patch)}
+              onRemove={() => removeNested(f.id)}
+            />
+          ))}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={addNested}
+            className="h-6 w-full gap-1.5 border-dashed text-[10.5px] text-slate-500 hover:text-slate-700"
+          >
+            <Plus size={11} /> Add nested field
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import ky from 'ky'
-import type { VariableDecl } from '@/features/workflows/types'
+import type { VariableDecl, HttpRequestConfig } from '@/features/workflows/types'
 import { useAuthStore } from '@/stores/auth'
 
 // All requests go to /api which Vite proxies to localhost:8080. The Vite
@@ -83,6 +83,51 @@ export async function validateExpression(
       signal,
     })
     .json<ExpressionValidateResult>()
+}
+
+// ---------------------------------------------------------------------------
+// HTTP request test-execute (Workflow Builder's http_request node —
+// "send request" preview and the auto-map feature that proposes a
+// ResponseSchema from the real response). Mirrors api/httprequesttest's
+// testRequestRequest/testRequestResponse wire shapes exactly.
+// ---------------------------------------------------------------------------
+
+export interface HttpRequestTestRequest {
+  configuration: HttpRequestConfig
+  variables?: VariableDecl[]
+  sample_values?: Record<string, unknown>
+}
+
+export interface HttpRequestTestResult {
+  status_code: number
+  status: string
+  headers: Record<string, string>
+  headers_all: Record<string, string[]>
+  body: unknown
+  body_text: string
+  is_json: boolean
+  duration_ms: number
+  ok: boolean
+  /** A soft/business-logic failure (bad config, an unresolvable expression,
+   *  or a transport failure like DNS/timeout) — every other field is
+   *  zero-valued when set. Distinct from a non-2xx HTTP response, which is
+   *  a SUCCESSFUL test (ok: false, a real status_code/body). */
+  error?: string
+}
+
+/** Fires a real outbound HTTP call built from an http_request node's config
+ *  — gated server-side behind workflows:write (unlike validateExpression's
+ *  unauthenticated endpoint), since this makes real network I/O and can
+ *  resolve a saved credential into the outgoing request. Never throws on a
+ *  bad config/unreachable target — the result carries `error` with a
+ *  message. Only throws on a genuine failure to reach this backend itself. */
+export async function testHttpRequest(
+  req: HttpRequestTestRequest,
+  signal?: AbortSignal,
+): Promise<HttpRequestTestResult> {
+  return api
+    .post('http-request/test', { json: req, signal })
+    .json<HttpRequestTestResult>()
 }
 
 // ---------------------------------------------------------------------------
