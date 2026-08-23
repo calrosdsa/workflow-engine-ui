@@ -6,18 +6,26 @@
 // tab's own optional additionalFilter via AND, not a replacement for it —
 // deleting/loosening additionalFilter must never widen the result set past
 // "records actually linked to this one."
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { nanoid } from '@/features/workflows/builder/nanoid'
 import { formsApi } from '@/features/forms/api'
 import { RecordsTable } from '../../RecordsTable'
 import type { DetailTabRendererProps } from '../contract'
 import type { RelatedFormTabConfig } from './schema'
 import type { FilterGroup } from '@/features/workflows/types'
 
+// The condition's own `id` only needs to be unique WITHIN one filter tree
+// (FilterBuilder's list-rendering key — see stripFilterIds's comment in
+// SearchMenuRuntime.tsx for the wider convention). Deriving it from
+// fieldName/recordId instead of nanoid() keeps buildLinkFilter's return
+// value referentially stable in CONTENT across renders for the same
+// (fieldName, recordId) pair — required because this feeds a useQuery
+// queryKey below; a random id here previously changed the key's VALUE (not
+// just its object reference) on every render, so React Query saw a "new"
+// query every time and never stopped refetching.
 function buildLinkFilter(fieldName: string, recordId: string, additional: FilterGroup | undefined): FilterGroup {
   const linkCondition = {
-    id: nanoid(),
+    id: `link-${fieldName}-${recordId}`,
     field: fieldName,
     op: 'eq' as const,
     value_mode: 'static' as const,
@@ -34,9 +42,12 @@ function buildLinkFilter(fieldName: string, recordId: string, additional: Filter
 }
 
 export function RelatedFormTabRenderer({ recordId, config, onNavigateToRecord, onEmptyResolved }: DetailTabRendererProps<RelatedFormTabConfig>) {
-  const filter = config.targetFormId && config.targetFieldName
-    ? buildLinkFilter(config.targetFieldName, recordId, config.additionalFilter)
-    : undefined
+  const filter = useMemo(
+    () => config.targetFormId && config.targetFieldName
+      ? buildLinkFilter(config.targetFieldName, recordId, config.additionalFilter)
+      : undefined,
+    [config.targetFormId, config.targetFieldName, recordId, config.additionalFilter],
+  )
 
   // A separate, minimal existence check (page_size: 1) rather than a new
   // prop on RecordsTable itself — RecordsTable has no "tell me your result
