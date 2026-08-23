@@ -84,6 +84,17 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   // DashboardEditorPage.tsx's identical `initialised` guard for the same
   // race (FR-C3-009's own store).
   const [initialised, setInitialised] = useState(false)
+  // The SAME race reappears switching from one existing form to another
+  // in-app (e.g. Back to forms -> a different form's link) — TanStack
+  // Router reuses this exact component instance across a $formId param
+  // change rather than unmounting it, so `initialised` (once true for form
+  // A) stayed true for form B too, defeating the guard above for every
+  // navigation after the very first one. Resetting it here the instant
+  // formId itself changes re-arms the guard on every form switch, not just
+  // on mount.
+  useEffect(() => {
+    setInitialised(false)
+  }, [formId])
 
   // Hydrate the store from the loaded definition (edit) or reset (new).
   useEffect(() => {
