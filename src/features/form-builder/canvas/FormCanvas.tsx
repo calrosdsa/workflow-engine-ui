@@ -17,7 +17,7 @@ export function FormCanvas() {
   const hasSections = schema.sections.length > 0
 
   return (
-    <div className="flex h-full flex-1 flex-col bg-slate-50" onClick={() => selectElement(null)}>
+    <div className="flex h-full flex-1 flex-col bg-[hsl(var(--muted))]" onClick={() => selectElement(null)}>
       <ScrollArea className="flex-1">
         <div className="mx-auto max-w-4xl space-y-4 p-6">
           {!hasSections && <EmptyCanvas onAddSection={addSection} />}
@@ -34,7 +34,7 @@ export function FormCanvas() {
             <Button
               variant="outline"
               onClick={(e) => { e.stopPropagation(); addSection() }}
-              className="w-full gap-2 border-dashed border-slate-300 py-6 text-slate-500 hover:border-indigo-300 hover:bg-indigo-50/40 hover:text-indigo-600"
+              className="w-full gap-2 border-dashed border-[hsl(var(--border))] py-6 text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--primary))]/40 hover:bg-[hsl(var(--primary))]/5 hover:text-[hsl(var(--primary))]"
             >
               <Plus size={16} /> Add Section
             </Button>
@@ -49,15 +49,15 @@ export function FormCanvas() {
 
 function EmptyCanvas({ onAddSection }: { onAddSection: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 bg-white/60 py-20 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
-        <LayoutGrid size={26} className="text-slate-300" />
+    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[hsl(var(--border))] bg-[hsl(var(--background))]/60 py-20 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--muted))]">
+        <LayoutGrid size={26} className="text-[hsl(var(--muted-foreground))]" />
       </div>
       <div>
-        <p className="text-sm font-medium text-slate-600">Start building your form</p>
-        <p className="mt-1 text-xs text-slate-400">Add a section, then drag components from the left.</p>
+        <p className="text-sm font-medium text-[hsl(var(--foreground))]">Start building your form</p>
+        <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">Add a section, then drag components from the left.</p>
       </div>
-      <Button onClick={(e) => { e.stopPropagation(); onAddSection() }} className="mt-1 gap-2 bg-indigo-600 text-white hover:bg-indigo-700">
+      <Button onClick={(e) => { e.stopPropagation(); onAddSection() }} className="mt-1 gap-2">
         <Plus size={15} /> Add Section
       </Button>
     </div>

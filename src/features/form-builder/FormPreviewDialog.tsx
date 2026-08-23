@@ -43,10 +43,10 @@ export function FormPreviewDialog({ open, onClose, name, schema, formId }: FormP
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="flex h-[85vh] w-[720px] max-w-[95vw] flex-col overflow-hidden p-0">
-        <DialogHeader className="border-b border-slate-100 px-6 pb-4 pt-5">
+        <DialogHeader className="border-b border-[hsl(var(--border))] px-6 pb-4 pt-5">
           <DialogTitle className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-100">
-              <Eye size={14} className="text-indigo-600" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[hsl(var(--primary))]/15">
+              <Eye size={14} className="text-[hsl(var(--primary))]" />
             </div>
             Preview — {name || 'Untitled Form'}
           </DialogTitle>
@@ -55,11 +55,11 @@ export function FormPreviewDialog({ open, onClose, name, schema, formId }: FormP
         <ScrollArea className="flex-1">
           <div className="mx-auto max-w-2xl space-y-6 p-6">
             {schema.sections.length === 0 ? (
-              <p className="py-12 text-center text-sm text-slate-400">This form has no fields yet.</p>
+              <p className="py-12 text-center text-sm text-[hsl(var(--muted-foreground))]">This form has no fields yet.</p>
             ) : (
               <>
                 {justSubmitted && (
-                  <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+                  <div className="flex items-center gap-2 rounded-md border border-[hsl(var(--success))]/40 bg-[hsl(var(--success))]/15 p-3 text-sm text-[hsl(var(--success))]">
                     <CheckCircle2 size={16} className="shrink-0" />
                     Validation passed — this is a preview, so nothing was actually saved.
                   </div>

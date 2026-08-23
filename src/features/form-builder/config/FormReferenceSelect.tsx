@@ -63,12 +63,12 @@ export function FormReferenceSelect({ value, onChange, excludeId, requireReferen
             aria-expanded={open}
             className={cn(
               'h-8 w-full justify-between gap-2 px-2.5 text-[13px] font-normal',
-              !value && 'text-slate-400',
-              isBroken && 'border-amber-300',
+              !value && 'text-[hsl(var(--muted-foreground))]',
+              isBroken && 'border-[hsl(var(--warning))]/40',
             )}
           >
             <span className="flex min-w-0 items-center gap-1.5">
-              <FileText size={13} className="shrink-0 text-slate-400" />
+              <FileText size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
               <span className="truncate">
                 {isLoading && !selected
                   ? 'Loading forms…'
@@ -79,7 +79,7 @@ export function FormReferenceSelect({ value, onChange, excludeId, requireReferen
                       : 'Select a form…'}
               </span>
             </span>
-            <ChevronsUpDown size={13} className="shrink-0 text-slate-400" />
+            <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -91,7 +91,7 @@ export function FormReferenceSelect({ value, onChange, excludeId, requireReferen
             <CommandInput placeholder="Search forms…" />
             <CommandList>
               {isLoading ? (
-                <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-slate-400">
+                <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
                   <Loader2 size={13} className="animate-spin" /> Loading forms…
                 </div>
               ) : (
@@ -114,11 +114,11 @@ export function FormReferenceSelect({ value, onChange, excludeId, requireReferen
                       >
                         <Check
                           size={14}
-                          className={cn('shrink-0', f.id === value ? 'opacity-100 text-indigo-600' : 'opacity-0')}
+                          className={cn('shrink-0', f.id === value ? 'opacity-100 text-[hsl(var(--primary))]' : 'opacity-0')}
                         />
                         <span className="flex min-w-0 flex-col">
                           <span className="truncate">{f.name}</span>
-                          <span className="truncate font-mono text-[10px] text-slate-400">{f.slug}</span>
+                          <span className="truncate font-mono text-[10px] text-[hsl(var(--muted-foreground))]">{f.slug}</span>
                         </span>
                       </CommandItem>
                     ))}
@@ -132,24 +132,24 @@ export function FormReferenceSelect({ value, onChange, excludeId, requireReferen
 
       {/* Selected form display + clear action */}
       {value && (
-        <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+        <div className="flex items-center justify-between gap-2 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-2.5 py-1.5">
           <div className="flex min-w-0 items-center gap-1.5 text-[11px]">
             {isBroken ? (
               <>
-                <AlertTriangle size={12} className="shrink-0 text-amber-500" />
-                <span className="text-amber-700">Referenced form is unavailable</span>
+                <AlertTriangle size={12} className="shrink-0 text-[hsl(var(--warning))]" />
+                <span className="text-[hsl(var(--warning))]">Referenced form is unavailable</span>
               </>
             ) : (
               <>
-                <FileText size={12} className="shrink-0 text-slate-400" />
-                <span className="truncate text-slate-600">{selected?.name ?? value}</span>
+                <FileText size={12} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
+                <span className="truncate text-[hsl(var(--muted-foreground))]">{selected?.name ?? value}</span>
               </>
             )}
           </div>
           <button
             type="button"
             onClick={() => onChange(undefined)}
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
             title="Clear selection"
           >
             <X size={12} />
@@ -157,7 +157,7 @@ export function FormReferenceSelect({ value, onChange, excludeId, requireReferen
         </div>
       )}
       {isBroken && (
-        <p className="text-[10px] text-amber-600">
+        <p className="text-[10px] text-[hsl(var(--warning))]">
           The stored reference (<span className="font-mono">{value}</span>) no longer matches an existing
           form. It's preserved until you pick a new one.
         </p>

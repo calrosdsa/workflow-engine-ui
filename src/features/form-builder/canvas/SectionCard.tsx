@@ -38,18 +38,19 @@ export function SectionCard({ section }: { section: FormSection }) {
       style={style}
       onClick={(e) => { e.stopPropagation(); selectSection(section.id) }}
       className={cn(
-        'rounded-xl border bg-white shadow-sm transition-shadow',
-        selected ? 'border-indigo-300 ring-2 ring-indigo-300/25' : 'border-slate-200',
+        'rounded-xl border bg-[hsl(var(--card))] shadow-sm transition-shadow',
+        selected ? 'border-[hsl(var(--primary))] ring-2 ring-[hsl(var(--primary))]/25' : 'border-[hsl(var(--border))]',
         isDragging && 'opacity-60 shadow-lg',
       )}
     >
       {/* Section header */}
-      <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2.5">
+      <div className="flex items-center gap-2 border-b border-[hsl(var(--border))] px-3 py-2.5">
         <button
           {...attributes}
           {...listeners}
           onClick={(e) => e.stopPropagation()}
-          className="flex h-6 w-5 cursor-grab items-center justify-center rounded text-slate-300 hover:bg-slate-100 hover:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 active:cursor-grabbing"
+          aria-label="Drag to reorder section"
+          className="flex h-6 w-5 cursor-grab items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 active:cursor-grabbing"
           title="Drag to reorder section"
         >
           <GripVertical size={14} />
@@ -57,7 +58,8 @@ export function SectionCard({ section }: { section: FormSection }) {
 
         <button
           onClick={(e) => { e.stopPropagation(); toggleCollapsed(section.id) }}
-          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+          aria-label={section.collapsed ? 'Expand' : 'Collapse'}
+          className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
           title={section.collapsed ? 'Expand' : 'Collapse'}
         >
           {section.collapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
@@ -67,14 +69,14 @@ export function SectionCard({ section }: { section: FormSection }) {
           value={section.title}
           onChange={(e) => updateSection(section.id, { title: e.target.value })}
           onClick={(e) => e.stopPropagation()}
-          className="h-7 max-w-xs border-transparent bg-transparent px-1 text-sm font-semibold text-slate-800 hover:border-slate-200 focus:border-indigo-300"
+          className="h-7 max-w-xs border-transparent bg-transparent px-1 text-sm font-semibold text-[hsl(var(--foreground))] hover:border-[hsl(var(--border))] focus:border-[hsl(var(--ring))]"
         />
 
         <div className="ml-auto flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
           {/* Layout picker */}
           <SelectMenu value={section.layout} onValueChange={(v) => setLayout(section.id, v as ColumnLayout)}>
-            <SelectTrigger className="h-7 w-auto gap-1.5 border-slate-200 px-2 text-[11px]">
-              <Columns3 size={12} className="text-slate-400" />
+            <SelectTrigger className="h-7 w-auto gap-1.5 border-[hsl(var(--border))] px-2 text-[11px]">
+              <Columns3 size={12} className="text-[hsl(var(--muted-foreground))]" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -86,7 +88,10 @@ export function SectionCard({ section }: { section: FormSection }) {
 
           {/* Section actions */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex h-7 w-7 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+            <DropdownMenuTrigger
+              aria-label="Section actions"
+              className="flex h-7 w-7 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+            >
               <MoreVertical size={14} />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -105,7 +110,7 @@ export function SectionCard({ section }: { section: FormSection }) {
       {/* Columns */}
       {!section.collapsed && (
         <div className="p-3">
-          {section.description && <p className="mb-2 px-1 text-[11px] text-slate-400">{section.description}</p>}
+          {section.description && <p className="mb-2 px-1 text-[11px] text-[hsl(var(--muted-foreground))]">{section.description}</p>}
           <div className="flex gap-3">
             {section.columns.map((col) => (
               <ColumnDropZone key={col.id} column={col} sectionId={section.id} />

@@ -22,14 +22,14 @@ export function ExpressionField({ value, onChange, variables, nodeContext, place
   return (
     <div className="flex items-center gap-1.5">
       <div className="relative flex-1">
-        <Braces size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-indigo-400" />
+        <Braces size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--primary))]/60" />
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder ?? 'e.g. Vars["country"] == "US"'}
           className={cn(
-            'w-full rounded-md border border-slate-200 bg-white py-1.5 pl-7 pr-2 font-mono text-[11px] text-slate-700',
-            'placeholder:text-slate-300 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100',
+            'w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] py-1.5 pl-7 pr-2 font-mono text-[11px] text-[hsl(var(--foreground))]',
+            'placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--ring))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15',
           )}
         />
       </div>
@@ -37,7 +37,7 @@ export function ExpressionField({ value, onChange, variables, nodeContext, place
         type="button"
         onClick={() => setOpen(true)}
         title="Open expression editor"
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] transition-colors hover:border-[hsl(var(--primary))]/40 hover:bg-[hsl(var(--primary))]/5 hover:text-[hsl(var(--primary))]"
       >
         <Code2 size={13} />
       </button>

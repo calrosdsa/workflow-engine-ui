@@ -96,8 +96,8 @@ export function AddAdvancedSettingDialog({
 
         <div className="space-y-5 px-6 py-4">
           <div className="space-y-1.5">
-            <Label className="text-[13px] font-medium text-slate-700">
-              Settings Name<span className="text-red-500"> *</span>
+            <Label className="text-[13px] font-medium text-[hsl(var(--foreground))]">
+              Settings Name<span className="text-[hsl(var(--destructive))]"> *</span>
             </Label>
             <Input
               value={draft.name}
@@ -108,14 +108,14 @@ export function AddAdvancedSettingDialog({
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[13px] font-medium text-slate-700">Applies To</Label>
+            <Label className="text-[13px] font-medium text-[hsl(var(--foreground))]">Applies To</Label>
             <RadioGroup
               value={draft.appliesTo}
               onValueChange={(v) => setAudience(v as AdvancedSettingAudience)}
               className="grid grid-flow-col auto-cols-max gap-5"
             >
               {AUDIENCE_OPTIONS.map((opt) => (
-                <label key={opt.value} className="flex items-center gap-2 text-[13px] text-slate-600">
+                <label key={opt.value} className="flex items-center gap-2 text-[13px] text-[hsl(var(--muted-foreground))]">
                   <RadioGroupItem value={opt.value} />
                   {opt.label}
                 </label>
@@ -130,7 +130,7 @@ export function AddAdvancedSettingDialog({
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[13px] font-medium text-slate-700">Apply These Settings When</Label>
+            <Label className="text-[13px] font-medium text-[hsl(var(--foreground))]">Apply These Settings When</Label>
             <AdvancedSettingConditionBuilder
               group={draft.when ?? emptyAdvancedSettingGroup()}
               fields={fields}
@@ -139,17 +139,17 @@ export function AddAdvancedSettingDialog({
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[13px] font-medium text-slate-700">Actions</Label>
+            <Label className="text-[13px] font-medium text-[hsl(var(--foreground))]">Actions</Label>
             {draft.actions.length === 0 && (
-              <p className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-[12px] text-slate-400">
+              <p className="rounded-lg border border-dashed border-[hsl(var(--border))] px-3 py-4 text-center text-[12px] text-[hsl(var(--muted-foreground))]">
                 No actions yet — add at least one below.
               </p>
             )}
             <div className="space-y-2">
               {draft.actions.map((action) => (
-                <div key={action.id} className="flex items-center gap-2 rounded-lg bg-slate-100 p-2">
+                <div key={action.id} className="flex items-center gap-2 rounded-lg bg-[hsl(var(--muted))] p-2">
                   <SelectMenu value={action.type} onValueChange={(v) => updateAction(action.id, v as AdvancedSettingActionType)}>
-                    <SelectTrigger className="h-8 flex-1 bg-white text-sm"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 flex-1 bg-[hsl(var(--card))] text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {(Object.keys(ACTION_LABELS) as AdvancedSettingActionType[]).map((t) => (
                         <SelectItem key={t} value={t} className="text-xs">{ACTION_LABELS[t]}</SelectItem>
@@ -159,7 +159,7 @@ export function AddAdvancedSettingDialog({
                   <button
                     type="button"
                     onClick={() => removeAction(action.id)}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-red-50 hover:text-red-500"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
                     title="Remove action"
                   >
                     <Trash2 size={14} />

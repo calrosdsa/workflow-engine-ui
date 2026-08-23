@@ -132,7 +132,7 @@ export function FormBuilderDnd({ children }: { children: ReactNode }) {
         {activeDrag?.kind === 'new-component' && <ComponentDragPreview component={activeDrag.component} />}
         {activeDrag?.kind === 'element' && <ElementDragPreview elementId={activeDrag.elementId} />}
         {activeDrag?.kind === 'section' && (
-          <div className="rounded-xl border border-indigo-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-xl">
+          <div className="rounded-xl border border-[hsl(var(--primary))]/40 bg-[hsl(var(--card))] px-4 py-3 text-sm font-semibold text-[hsl(var(--foreground))] shadow-xl">
             Moving section…
           </div>
         )}
@@ -149,11 +149,11 @@ function ComponentDragPreview({ component }: { component: ComponentType }) {
   const reg = COMPONENT_REGISTRY[component]
   const Icon = reg.icon
   return (
-    <div className="flex items-center gap-2.5 rounded-lg border border-indigo-300 bg-white px-3 py-2 shadow-xl">
-      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-100 text-indigo-600">
+    <div className="flex items-center gap-2.5 rounded-lg border border-[hsl(var(--primary))]/40 bg-[hsl(var(--card))] px-3 py-2 shadow-xl">
+      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]">
         <Icon size={15} />
       </span>
-      <span className="text-[12px] font-medium text-slate-700">{reg.label}</span>
+      <span className="text-[12px] font-medium text-[hsl(var(--foreground))]">{reg.label}</span>
     </div>
   )
 }
@@ -165,9 +165,9 @@ function ElementDragPreview({ elementId }: { elementId: string }) {
   const reg = COMPONENT_REGISTRY[found.item.component]
   const Icon = reg.icon
   return (
-    <div className="flex items-center gap-2.5 rounded-lg border border-indigo-300 bg-white px-3 py-2 shadow-xl">
-      <Icon size={14} className="text-indigo-500" />
-      <span className="text-[12px] font-medium text-slate-700">{found.item.label}</span>
+    <div className="flex items-center gap-2.5 rounded-lg border border-[hsl(var(--primary))]/40 bg-[hsl(var(--card))] px-3 py-2 shadow-xl">
+      <Icon size={14} className="text-[hsl(var(--primary))]" />
+      <span className="text-[12px] font-medium text-[hsl(var(--foreground))]">{found.item.label}</span>
     </div>
   )
 }

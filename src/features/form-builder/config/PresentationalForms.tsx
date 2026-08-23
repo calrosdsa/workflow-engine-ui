@@ -55,7 +55,7 @@ export function SpacerForm({ element, onChange }: PresentationalFormProps) {
 }
 
 export function DividerForm() {
-  return <p className="text-xs text-slate-400">A horizontal divider line. No configuration needed.</p>
+  return <p className="text-xs text-[hsl(var(--muted-foreground))]">A horizontal divider line. No configuration needed.</p>
 }
 
 export function HiddenForm({ element, onChange }: PresentationalFormProps) {

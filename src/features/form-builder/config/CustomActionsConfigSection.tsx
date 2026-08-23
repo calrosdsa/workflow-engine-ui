@@ -58,7 +58,7 @@ export function CustomActionsConfigSection({ formId, schema, customActions, onCh
   return (
     <div className="space-y-3">
       {actions.length === 0 ? (
-        <p className="text-[11px] text-slate-400">No custom actions configured yet.</p>
+        <p className="text-[11px] text-[hsl(var(--muted-foreground))]">No custom actions configured yet.</p>
       ) : (
         <Accordion
           type="single"
@@ -172,7 +172,7 @@ function CustomActionRow({ formId, schema, action, index, count, onMove, onRemov
           type="button"
           onClick={onRemove}
           title="Remove action"
-          className="rounded-md p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-red-50 hover:text-red-600"
+          className="rounded-md p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
         >
           <Trash2 size={14} />
         </button>

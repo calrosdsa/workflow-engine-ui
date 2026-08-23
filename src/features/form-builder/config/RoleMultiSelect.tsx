@@ -42,7 +42,7 @@ export function RoleMultiSelect({ value, onChange, appId: appIdProp }: RoleMulti
 
   if (!appId) {
     return (
-      <Button variant="outline" disabled className="h-8 w-full justify-between gap-2 px-2.5 text-[13px] font-normal text-slate-400">
+      <Button variant="outline" disabled className="h-8 w-full justify-between gap-2 px-2.5 text-[13px] font-normal text-[hsl(var(--muted-foreground))]">
         No active app
       </Button>
     )
@@ -56,10 +56,10 @@ export function RoleMultiSelect({ value, onChange, appId: appIdProp }: RoleMulti
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className={cn('h-8 w-full justify-between gap-2 px-2.5 text-[13px] font-normal', selected.length === 0 && 'text-slate-400')}
+            className={cn('h-8 w-full justify-between gap-2 px-2.5 text-[13px] font-normal', selected.length === 0 && 'text-[hsl(var(--muted-foreground))]')}
           >
             <span className="flex min-w-0 items-center gap-1.5">
-              <ShieldCheck size={13} className="shrink-0 text-slate-400" />
+              <ShieldCheck size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
               <span className="truncate">
                 {isLoading
                   ? 'Loading roles…'
@@ -68,7 +68,7 @@ export function RoleMultiSelect({ value, onChange, appId: appIdProp }: RoleMulti
                     : `${selected.length} selected`}
               </span>
             </span>
-            <ChevronsUpDown size={13} className="shrink-0 text-slate-400" />
+            <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -80,7 +80,7 @@ export function RoleMultiSelect({ value, onChange, appId: appIdProp }: RoleMulti
             <CommandInput placeholder="Search roles…" />
             <CommandList>
               {isLoading ? (
-                <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-slate-400">
+                <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
                   <Loader2 size={13} className="animate-spin" /> Loading roles…
                 </div>
               ) : (
@@ -95,7 +95,7 @@ export function RoleMultiSelect({ value, onChange, appId: appIdProp }: RoleMulti
                           value={r.name}
                           onSelect={() => toggle(r.id)}
                         >
-                          <Check size={14} className={cn('shrink-0', isSelected ? 'opacity-100 text-indigo-600' : 'opacity-0')} />
+                          <Check size={14} className={cn('shrink-0', isSelected ? 'opacity-100 text-[hsl(var(--primary))]' : 'opacity-0')} />
                           <span className="truncate">{r.name}</span>
                         </CommandItem>
                       )
@@ -113,13 +113,13 @@ export function RoleMultiSelect({ value, onChange, appId: appIdProp }: RoleMulti
           {selected.map((r) => (
             <span
               key={r.id}
-              className="flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 py-1 pl-2 pr-1 text-[11px] text-slate-600"
+              className="flex items-center gap-1 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))] py-1 pl-2 pr-1 text-[11px] text-[hsl(var(--muted-foreground))]"
             >
               {r.name}
               <button
                 type="button"
                 onClick={() => toggle(r.id)}
-                className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
                 title="Remove"
               >
                 <X size={11} />

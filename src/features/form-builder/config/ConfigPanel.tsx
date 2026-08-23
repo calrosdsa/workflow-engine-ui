@@ -44,9 +44,9 @@ import type { VariableDecl } from '@/features/workflows/types'
 export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-[11px] font-medium text-slate-600">{label}</Label>
+      <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{label}</Label>
       {children}
-      {hint && <p className="text-[10px] text-slate-400">{hint}</p>}
+      {hint && <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{hint}</p>}
     </div>
   )
 }
@@ -54,7 +54,7 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
 function ToggleRow({ label, checked, onCheckedChange }: { label: string; checked: boolean; onCheckedChange: (v: boolean) => void }) {
   return (
     <div className="flex items-center justify-between">
-      <Label className="text-[12px] font-normal text-slate-600">{label}</Label>
+      <Label className="text-[12px] font-normal text-[hsl(var(--muted-foreground))]">{label}</Label>
       <Switch checked={checked} onCheckedChange={onCheckedChange} />
     </div>
   )
@@ -84,7 +84,7 @@ export function ConfigPanel({ variables }: { variables: VariableDecl[] }) {
   const section = schema.sections.find((s) => s.id === selectedSectionId) ?? null
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l border-slate-200 bg-white">
+    <aside className="flex w-80 shrink-0 flex-col border-l border-[hsl(var(--border))] bg-[hsl(var(--card))]">
       {element ? (
         <ElementConfig element={element} variables={variables} formId={formId} schema={schema} onChange={(p) => updateElement(element!.id, p)} />
       ) : section ? (
@@ -117,46 +117,46 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
 
   return (
     <>
-      <div className="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-br from-slate-600 to-slate-700 px-4 py-3.5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/30">
-          <SlidersHorizontal size={17} className="text-white" />
+      <div className="flex items-center gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--foreground))] px-4 py-3.5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[hsl(var(--background))]/20 ring-1 ring-[hsl(var(--background))]/30">
+          <SlidersHorizontal size={17} className="text-[hsl(var(--background))]" />
         </div>
         <div>
-          <p className="text-[13px] font-semibold text-white">Form Settings</p>
-          <p className="text-[10px] text-white/60">Additional configuration</p>
+          <p className="text-[13px] font-semibold text-[hsl(var(--background))]">Form Settings</p>
+          <p className="text-[10px] text-[hsl(var(--background))]/60">Additional configuration</p>
         </div>
       </div>
       <ScrollArea className="flex-1">
         <div className="space-y-4 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Additional Form Settings</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Additional Form Settings</p>
           <ToggleRow
             label={`Do you want to create a user with each ${formName} enrollment?`}
             checked={cfg.enabled}
             onCheckedChange={(enabled) => (enabled ? insertAccountSection() : removeAccountSection())}
           />
           {cfg.enabled && (
-            <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Create User</p>
-              <p className="text-[11px] text-slate-500">
+            <div className="space-y-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Create User</p>
+              <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
                 An "Account" section was added to the canvas with Name, Email, and Role fields.
                 Edit those fields directly on the canvas — they behave like any other field.
               </p>
               <div className="space-y-1.5 pt-1">
-                <p className="text-[11px] font-medium text-slate-600">View-only columns</p>
+                <p className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">View-only columns</p>
                 {cfg.viewOnlyColumns.map((col) => (
-                  <div key={col.id} className="flex items-center justify-between rounded-md bg-white px-2.5 py-1.5 text-[12px] text-slate-500 ring-1 ring-slate-200">
+                  <div key={col.id} className="flex items-center justify-between rounded-md bg-[hsl(var(--card))] px-2.5 py-1.5 text-[12px] text-[hsl(var(--muted-foreground))] ring-1 ring-[hsl(var(--border))]">
                     {col.label}
-                    <span className="text-[10px] uppercase tracking-wide text-slate-400">Read only</span>
+                    <span className="text-[10px] uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Read only</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          <div className="h-px bg-slate-100" />
+          <div className="h-px bg-[hsl(var(--border))]" />
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Detail Page</p>
-            <p className="text-[10px] text-slate-400">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Detail Page</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
               Which tabs show on this form's record detail page, in what order, and who can see each one.
             </p>
             {formId ? (
@@ -168,10 +168,10 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
                   className="flex w-full items-center justify-between gap-2 text-[12px]"
                 >
                   <span className="flex items-center gap-2">
-                    <LayoutPanelTop size={14} className="text-slate-400" />
+                    <LayoutPanelTop size={14} className="text-[hsl(var(--muted-foreground))]" />
                     Configure Detail Page
                   </span>
-                  <span className="text-[10px] text-slate-400">{tabCount} tab{tabCount === 1 ? '' : 's'}</span>
+                  <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{tabCount} tab{tabCount === 1 ? '' : 's'}</span>
                 </Button>
                 <Button
                   type="button"
@@ -179,19 +179,19 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
                   onClick={() => setCanvasOpen(true)}
                   className="flex w-full items-center gap-2 text-[12px]"
                 >
-                  <LayoutGrid size={14} className="text-slate-400" />
+                  <LayoutGrid size={14} className="text-[hsl(var(--muted-foreground))]" />
                   Open Canvas Editor
                 </Button>
               </div>
             ) : (
-              <p className="text-[11px] text-slate-400">Save this form first to configure its Detail Page tabs.</p>
+              <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Save this form first to configure its Detail Page tabs.</p>
             )}
           </div>
 
-          <div className="h-px bg-slate-100" />
+          <div className="h-px bg-[hsl(var(--border))]" />
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Custom Actions</p>
-            <p className="text-[10px] text-slate-400">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Custom Actions</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
               Menu items in the record detail's "..." menu that update a field, gated by who can see them and when.
             </p>
             {formId ? (
@@ -202,13 +202,13 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
                 className="flex w-full items-center justify-between gap-2 text-[12px]"
               >
                 <span className="flex items-center gap-2">
-                  <Zap size={14} className="text-slate-400" />
+                  <Zap size={14} className="text-[hsl(var(--muted-foreground))]" />
                   Configure Custom Actions
                 </span>
-                <span className="text-[10px] text-slate-400">{actionCount} action{actionCount === 1 ? '' : 's'}</span>
+                <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{actionCount} action{actionCount === 1 ? '' : 's'}</span>
               </Button>
             ) : (
-              <p className="text-[11px] text-slate-400">Save this form first to configure its custom actions.</p>
+              <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Save this form first to configure its custom actions.</p>
             )}
           </div>
         </div>
@@ -296,13 +296,13 @@ function SectionConfig({ title, description, onChange }: {
 }) {
   return (
     <>
-      <div className="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-br from-slate-600 to-slate-700 px-4 py-3.5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/30">
-          <Layers size={17} className="text-white" />
+      <div className="flex items-center gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--foreground))] px-4 py-3.5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[hsl(var(--background))]/20 ring-1 ring-[hsl(var(--background))]/30">
+          <Layers size={17} className="text-[hsl(var(--background))]" />
         </div>
         <div>
-          <p className="text-[13px] font-semibold text-white">Section</p>
-          <p className="text-[10px] text-white/60">Layout container</p>
+          <p className="text-[13px] font-semibold text-[hsl(var(--background))]">Section</p>
+          <p className="text-[10px] text-[hsl(var(--background))]/60">Layout container</p>
         </div>
       </div>
       <div className="space-y-4 p-4">
@@ -376,13 +376,13 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
     .filter((e) => e.component === 'number')
 
   const header = (
-    <div className="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-br from-indigo-500 to-indigo-600 px-4 py-3.5">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/30">
-        <Icon size={17} className="text-white" />
+    <div className="flex items-center gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--primary))] px-4 py-3.5">
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[hsl(var(--primary-foreground))]/20 ring-1 ring-[hsl(var(--primary-foreground))]/30">
+        <Icon size={17} className="text-[hsl(var(--primary-foreground))]" />
       </div>
       <div className="min-w-0">
-        <p className="truncate text-[13px] font-semibold text-white">{reg.label}</p>
-        <p className="truncate font-mono text-[10px] text-white/60">{element.key}</p>
+        <p className="truncate text-[13px] font-semibold text-[hsl(var(--primary-foreground))]">{reg.label}</p>
+        <p className="truncate font-mono text-[10px] text-[hsl(var(--primary-foreground))]/60">{element.key}</p>
       </div>
     </div>
   )
@@ -401,7 +401,7 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
       {header}
 
       <Tabs defaultValue="general" className="flex min-h-0 flex-1 flex-col">
-        <div className="border-b border-slate-100 px-3 pb-2 pt-2.5">
+        <div className="border-b border-[hsl(var(--border))] px-3 pb-2 pt-2.5">
           <TabsList className="w-full">
             <TabsTrigger value="general" className="flex-1 text-[11px]">General</TabsTrigger>
             {!isPresentational && <TabsTrigger value="validation" className="flex-1 text-[11px]">Rules</TabsTrigger>}
@@ -438,7 +438,7 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                         checked={!!element.isRecordTitle}
                         onCheckedChange={(v) => onChange({ isRecordTitle: v })}
                       />
-                      <p className="text-[10px] text-slate-400">
+                      <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
                         Shown instead of the record ID on the Detail page and wherever another form links to this record. Combine with other title fields to build a composite title.
                       </p>
                     </div>
@@ -457,11 +457,11 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                     </Field>
                   )}
                   {isFormRef && (
-                    <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Form Reference</p>
+                    <div className="space-y-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Form Reference</p>
                       {isParentLink ? (
                         <Field label="Referenced Form" hint="This field links the form to its parent — use “Unlink Dependent Form” from the form list to change or remove this relationship.">
-                          <div className="flex h-8 items-center gap-1.5 rounded-md border border-slate-200 bg-slate-100 px-2.5 text-[13px] text-slate-500">
+                          <div className="flex h-8 items-center gap-1.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-2.5 text-[13px] text-[hsl(var(--muted-foreground))]">
                             <ParentFormName formId={element.formRef} />
                           </div>
                         </Field>
@@ -484,8 +484,8 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                     </div>
                   )}
                   {isLineItemCount && (
-                    <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Line Item Aggregate</p>
+                    <div className="space-y-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Line Item Aggregate</p>
                       <Field label="Grid" hint="Which Line Items grid on this form to aggregate. Only grids that have been saved at least once are shown.">
                         <SelectMenu
                           value={element.formRef ?? ''}
@@ -563,7 +563,7 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                       checked={!!element.unique}
                       onCheckedChange={(v) => onChange({ unique: v })}
                     />
-                    <p className="text-[10px] text-slate-400">No two records may share this value.</p>
+                    <p className="text-[10px] text-[hsl(var(--muted-foreground))]">No two records may share this value.</p>
                   </div>
                 )}
                 {canBeSearchable && (
@@ -573,7 +573,7 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                       checked={!!element.searchable}
                       onCheckedChange={(v) => onChange({ searchable: v })}
                     />
-                    <p className="text-[10px] text-slate-400">Included when users search this form's records.</p>
+                    <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Included when users search this form's records.</p>
                   </div>
                 )}
                 {isTextual && (
@@ -647,7 +647,7 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                   exprLabel="read-only when"
                 />
 
-                <div className="h-px bg-slate-100" />
+                <div className="h-px bg-[hsl(var(--border))]" />
                 <ToggleRow label="Disabled" checked={!!element.behavior.disabled} onCheckedChange={(v) => setBehavior({ disabled: v })} />
                 <Field label="Dynamic Default Value" hint="Expression computed when the form loads.">
                   <ExpressionField
@@ -659,7 +659,7 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                   />
                 </Field>
 
-                <div className="h-px bg-slate-100" />
+                <div className="h-px bg-[hsl(var(--border))]" />
                 {/* Data binding */}
                 <Field label="Data Binding" hint="Where this field's value comes from.">
                   <SelectMenu value={element.binding.source} onValueChange={(v) => setBinding({ source: v as BindingSource })}>
@@ -689,7 +689,7 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                   </Field>
                 )}
 
-                <div className="h-px bg-slate-100" />
+                <div className="h-px bg-[hsl(var(--border))]" />
                 <AdvancedSettingsSection
                   settings={element.advancedSettings ?? []}
                   fields={formFields}
@@ -769,7 +769,7 @@ export function LineItemsConfigTabs({ element, formId, onChange }: {
   return (
     <>
     <Tabs defaultValue="general" className="flex min-h-0 flex-1 flex-col">
-      <div className="border-b border-slate-100 px-3 pb-2 pt-2.5">
+      <div className="border-b border-[hsl(var(--border))] px-3 pb-2 pt-2.5">
         <TabsList className="w-full">
           <TabsTrigger value="general" className="flex-1 text-[11px]">General</TabsTrigger>
           <TabsTrigger value="layout" className="flex-1 text-[11px]">Layout</TabsTrigger>
@@ -792,8 +792,8 @@ export function LineItemsConfigTabs({ element, formId, onChange }: {
               <Input value={element.description ?? ''} onChange={(e) => onChange({ description: e.target.value })} placeholder="Shown under the label" className="h-8 text-sm" />
             </Field>
 
-            <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Data Source</p>
+            <div className="space-y-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Data Source</p>
               <Field label="Source" hint="Existing form: the grid becomes a filtered view into a normal, independently-visible form — it keeps its own workflows/permissions/standalone page. Generated: the original behavior — a hidden child form owned entirely by this grid.">
                 <SelectMenu
                   value={currentMode}
@@ -952,20 +952,20 @@ function AdoptedColumnsPreview({ formId }: { formId?: string }) {
   const { data: targetForm, isLoading } = useFormDef(formId ?? '')
 
   if (!formId) {
-    return <p className="p-3 text-[12px] text-slate-400">Select a form in the General tab first.</p>
+    return <p className="p-3 text-[12px] text-[hsl(var(--muted-foreground))]">Select a form in the General tab first.</p>
   }
   if (isLoading) {
-    return <p className="p-3 text-[12px] text-slate-400">Loading fields…</p>
+    return <p className="p-3 text-[12px] text-[hsl(var(--muted-foreground))]">Loading fields…</p>
   }
   return (
     <div className="space-y-1 p-1">
-      <p className="mb-2 text-[11px] text-slate-400">
+      <p className="mb-2 text-[11px] text-[hsl(var(--muted-foreground))]">
         Columns come from this form's own fields. Edit them on its own page in the Forms list.
       </p>
       {(targetForm?.fields ?? []).map((f) => (
-        <div key={f.name} className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50/50 px-2.5 py-1.5 text-[12px]">
-          <span className="text-slate-700">{f.label || f.name}</span>
-          <span className="font-mono text-[10px] text-slate-400">{f.type}</span>
+        <div key={f.name} className="flex items-center justify-between rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 px-2.5 py-1.5 text-[12px]">
+          <span className="text-[hsl(var(--foreground))]">{f.label || f.name}</span>
+          <span className="font-mono text-[10px] text-[hsl(var(--muted-foreground))]">{f.type}</span>
         </div>
       ))}
     </div>
@@ -980,7 +980,7 @@ function ParentFormName({ formId }: { formId?: string }) {
   const { data: form, isLoading } = useFormDef(formId ?? '')
   return (
     <>
-      <FileText size={13} className="shrink-0 text-slate-400" />
+      <FileText size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
       <span className="truncate">{isLoading ? 'Loading…' : form?.name ?? formId}</span>
     </>
   )
@@ -1003,7 +1003,7 @@ function RuleGroup({ title, mode, options, onModeChange, expression, onExpressio
 }) {
   return (
     <div className="space-y-2">
-      <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{title}</Label>
+      <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{title}</Label>
       <div className="flex flex-col gap-1">
         {options.map(([val, lbl]) => (
           <button
@@ -1011,11 +1011,11 @@ function RuleGroup({ title, mode, options, onModeChange, expression, onExpressio
             onClick={() => onModeChange(val)}
             className={cn(
               'flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-left text-[12px] transition-colors',
-              mode === val ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:border-slate-300',
+              mode === val ? 'border-[hsl(var(--primary))]/40 bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]' : 'border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--border))]',
             )}
           >
-            <span className={cn('flex h-3.5 w-3.5 items-center justify-center rounded-full border', mode === val ? 'border-indigo-500' : 'border-slate-300')}>
-              {mode === val && <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />}
+            <span className={cn('flex h-3.5 w-3.5 items-center justify-center rounded-full border', mode === val ? 'border-[hsl(var(--primary))]' : 'border-[hsl(var(--border))]')}>
+              {mode === val && <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--primary))]" />}
             </span>
             {lbl}
           </button>

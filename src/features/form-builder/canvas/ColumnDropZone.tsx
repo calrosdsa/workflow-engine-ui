@@ -23,7 +23,7 @@ export function ColumnDropZone({ column, sectionId }: ColumnDropZoneProps) {
       style={{ flex: column.ratio }}
       className={cn(
         'min-w-0 rounded-lg border-2 border-dashed p-2 transition-colors',
-        isOver ? 'border-indigo-400 bg-indigo-50/40' : isEmpty ? 'border-slate-200 bg-slate-50/40' : 'border-transparent',
+        isOver ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/5' : isEmpty ? 'border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40' : 'border-transparent',
       )}
     >
       <SortableContext items={column.elements.map((e) => e.id)} strategy={verticalListSortingStrategy}>
@@ -37,7 +37,7 @@ export function ColumnDropZone({ column, sectionId }: ColumnDropZoneProps) {
       {isEmpty && (
         <div className={cn(
           'flex min-h-[72px] items-center justify-center rounded-md text-center text-[11px] transition-colors',
-          isOver ? 'text-indigo-500' : 'text-slate-300',
+          isOver ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--muted-foreground))]',
         )}>
           {isOver ? 'Drop here' : 'Drag components here'}
         </div>

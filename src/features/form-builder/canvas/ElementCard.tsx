@@ -49,28 +49,30 @@ export function ElementCard({ element, sectionId, columnId }: ElementCardProps) 
       style={style}
       onClick={(e) => { e.stopPropagation(); selectElement(element.id) }}
       className={cn(
-        'group relative rounded-lg border bg-white transition-shadow',
-        selected ? 'border-indigo-400 ring-2 ring-indigo-400/25 shadow-sm' : 'border-slate-200 hover:border-slate-300 hover:shadow-sm',
+        'group relative rounded-lg border bg-[hsl(var(--card))] transition-shadow',
+        selected ? 'border-[hsl(var(--primary))] ring-2 ring-[hsl(var(--primary))]/25 shadow-sm' : 'border-[hsl(var(--border))] hover:border-[hsl(var(--border))] hover:shadow-sm',
         isDragging && 'opacity-50 shadow-lg',
       )}
     >
       {/* Hover/selected toolbar */}
       <div className={cn(
-        'absolute -top-3 right-2 z-10 flex items-center gap-0.5 rounded-md border border-slate-200 bg-white px-0.5 py-0.5 shadow-sm transition-opacity',
+        'absolute -top-3 right-2 z-10 flex items-center gap-0.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-0.5 py-0.5 shadow-sm transition-opacity',
         selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
       )}>
         <button
           {...attributes}
           {...listeners}
           onClick={(e) => e.stopPropagation()}
-          className="flex h-6 w-6 cursor-grab items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 active:cursor-grabbing"
+          aria-label="Drag to move"
+          className="flex h-6 w-6 cursor-grab items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 active:cursor-grabbing"
           title="Drag to move"
         >
           <GripVertical size={13} />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); duplicate(element.id) }}
-          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+          aria-label="Duplicate"
+          className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
           title="Duplicate"
         >
           <Copy size={12} />
@@ -78,7 +80,8 @@ export function ElementCard({ element, sectionId, columnId }: ElementCardProps) 
         {!isParentLink && (
           <button
             onClick={(e) => { e.stopPropagation(); remove(element.id) }}
-            className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+            aria-label="Delete"
+            className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
             title="Delete"
           >
             <Trash2 size={12} />
@@ -87,20 +90,20 @@ export function ElementCard({ element, sectionId, columnId }: ElementCardProps) 
       </div>
 
       {/* Type tag */}
-      <div className="flex items-center gap-1.5 border-b border-slate-100 px-2.5 py-1">
-        <Icon size={11} className="text-slate-400" />
-        <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">{reg.label}</span>
-        {element.behavior.required === 'always' && <Asterisk size={8} className="text-red-400" />}
+      <div className="flex items-center gap-1.5 border-b border-[hsl(var(--border))] px-2.5 py-1">
+        <Icon size={11} className="text-[hsl(var(--muted-foreground))]" />
+        <span className="text-[10px] font-medium uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{reg.label}</span>
+        {element.behavior.required === 'always' && <Asterisk size={8} className="text-[hsl(var(--destructive))]" />}
         {isParentLink && (
           <span
-            className="flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-[9px] font-medium text-indigo-600"
+            className="flex items-center gap-1 rounded bg-[hsl(var(--primary))]/15 px-1.5 py-0.5 text-[9px] font-medium text-[hsl(var(--primary))]"
             title="Links this form to its parent — use “Unlink Dependent Form” from the form list to remove the relationship instead"
           >
             <Link2 size={9} />parent link
           </span>
         )}
         {element.behavior.visibility !== 'always' && (
-          <span className="ml-auto rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-medium text-amber-600">conditional</span>
+          <span className="ml-auto rounded bg-[hsl(var(--warning))]/15 px-1.5 py-0.5 text-[9px] font-medium text-[hsl(var(--warning))]">conditional</span>
         )}
       </div>
 

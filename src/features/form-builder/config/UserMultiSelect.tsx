@@ -58,10 +58,10 @@ export function UserMultiSelect({ value, onChange, appId: appIdProp }: UserMulti
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className={cn('h-8 w-full justify-between gap-2 px-2.5 text-[13px] font-normal', selected.length === 0 && 'text-slate-400')}
+            className={cn('h-8 w-full justify-between gap-2 px-2.5 text-[13px] font-normal', selected.length === 0 && 'text-[hsl(var(--muted-foreground))]')}
           >
             <span className="flex min-w-0 items-center gap-1.5">
-              <User size={13} className="shrink-0 text-slate-400" />
+              <User size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
               <span className="truncate">
                 {isLoading
                   ? 'Loading users…'
@@ -70,7 +70,7 @@ export function UserMultiSelect({ value, onChange, appId: appIdProp }: UserMulti
                     : `${selected.length} selected`}
               </span>
             </span>
-            <ChevronsUpDown size={13} className="shrink-0 text-slate-400" />
+            <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -82,7 +82,7 @@ export function UserMultiSelect({ value, onChange, appId: appIdProp }: UserMulti
             <CommandInput placeholder="Search people…" />
             <CommandList>
               {isLoading ? (
-                <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-slate-400">
+                <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
                   <Loader2 size={13} className="animate-spin" /> Loading users…
                 </div>
               ) : (
@@ -97,10 +97,10 @@ export function UserMultiSelect({ value, onChange, appId: appIdProp }: UserMulti
                           value={`${userLabel(u)} ${u.email}`}
                           onSelect={() => toggle(u.id)}
                         >
-                          <Check size={14} className={cn('shrink-0', isSelected ? 'opacity-100 text-indigo-600' : 'opacity-0')} />
+                          <Check size={14} className={cn('shrink-0', isSelected ? 'opacity-100 text-[hsl(var(--primary))]' : 'opacity-0')} />
                           <span className="flex min-w-0 flex-col">
                             <span className="truncate">{userLabel(u)}</span>
-                            <span className="truncate text-[10px] text-slate-400">{u.email}</span>
+                            <span className="truncate text-[10px] text-[hsl(var(--muted-foreground))]">{u.email}</span>
                           </span>
                         </CommandItem>
                       )
@@ -118,13 +118,13 @@ export function UserMultiSelect({ value, onChange, appId: appIdProp }: UserMulti
           {selected.map((u) => (
             <span
               key={u.id}
-              className="flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 py-1 pl-2 pr-1 text-[11px] text-slate-600"
+              className="flex items-center gap-1 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))] py-1 pl-2 pr-1 text-[11px] text-[hsl(var(--muted-foreground))]"
             >
               {userLabel(u)}
               <button
                 type="button"
                 onClick={() => toggle(u.id)}
-                className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
                 title="Remove"
               >
                 <X size={11} />

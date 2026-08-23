@@ -64,9 +64,9 @@ export function AdvancedSettingConditionBuilder({
   const isEmpty = group.conditions.length === 0 && group.groups.length === 0
 
   return (
-    <div className={cn('rounded-xl border p-2.5', depth === 0 ? 'border-slate-200 bg-slate-50/40' : 'border-slate-200 bg-white')}>
+    <div className={cn('rounded-xl border p-2.5', depth === 0 ? 'border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40' : 'border-[hsl(var(--border))] bg-[hsl(var(--card))]')}>
       <div className="mb-2 flex items-center justify-between">
-        <div className="flex gap-1 rounded-lg bg-white p-0.5 border border-slate-200">
+        <div className="flex gap-1 rounded-lg bg-[hsl(var(--card))] p-0.5 border border-[hsl(var(--border))]">
           {(['and', 'or'] as const).map((c) => (
             <button
               key={c}
@@ -74,7 +74,7 @@ export function AdvancedSettingConditionBuilder({
               onClick={() => setCombinator(c)}
               className={cn(
                 'rounded-md px-2.5 py-0.5 text-[11px] font-semibold uppercase transition-colors',
-                group.combinator === c ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600',
+                group.combinator === c ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
               )}
             >
               {c}
@@ -84,7 +84,7 @@ export function AdvancedSettingConditionBuilder({
         {onRemove && (
           <button
             onClick={onRemove}
-            className="flex h-6 w-6 items-center justify-center rounded-lg text-slate-300 hover:bg-red-50 hover:text-red-400"
+            className="flex h-6 w-6 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
             title="Remove group"
           >
             <Trash2 size={12} />
@@ -93,7 +93,7 @@ export function AdvancedSettingConditionBuilder({
       </div>
 
       {isEmpty && (
-        <p className="px-1 py-2 text-center text-[11px] text-slate-400">No conditions yet — settings always apply.</p>
+        <p className="px-1 py-2 text-center text-[11px] text-[hsl(var(--muted-foreground))]">No conditions yet — settings always apply.</p>
       )}
 
       <div className="space-y-1.5">
@@ -109,7 +109,7 @@ export function AdvancedSettingConditionBuilder({
       </div>
 
       {group.groups.length > 0 && (
-        <div className="mt-1.5 space-y-1.5 border-l-2 border-slate-200 pl-2">
+        <div className="mt-1.5 space-y-1.5 border-l-2 border-[hsl(var(--border))] pl-2">
           {group.groups.map((g, idx) => (
             <AdvancedSettingConditionBuilder
               key={g.id}
@@ -124,11 +124,11 @@ export function AdvancedSettingConditionBuilder({
       )}
 
       <div className="mt-2 flex gap-1.5">
-        <Button variant="outline" size="sm" onClick={addCondition} className="h-7 flex-1 gap-1 border-dashed text-[11px] text-slate-500">
+        <Button variant="outline" size="sm" onClick={addCondition} className="h-7 flex-1 gap-1 border-dashed text-[11px] text-[hsl(var(--muted-foreground))]">
           <Plus size={12} /> Condition
         </Button>
         {depth < 3 && (
-          <Button variant="outline" size="sm" onClick={addGroup} className="h-7 gap-1 border-dashed text-[11px] text-slate-500">
+          <Button variant="outline" size="sm" onClick={addGroup} className="h-7 gap-1 border-dashed text-[11px] text-[hsl(var(--muted-foreground))]">
             <FolderPlus size={12} /> Group
           </Button>
         )}
@@ -146,12 +146,12 @@ function ConditionRow({ condition, fields, onChange, onRemove }: {
   const needsValue = opNeedsValue(condition.op)
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-2">
+    <div className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-2">
       <div className="flex items-center gap-1.5">
         <select
           value={condition.field}
           onChange={(e) => onChange({ field: e.target.value })}
-          className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-indigo-400 focus:outline-none"
+          className="min-w-0 flex-1 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-1.5 py-1 text-[11px] text-[hsl(var(--foreground))] focus:border-[hsl(var(--ring))] focus:outline-none"
         >
           <option value="">field…</option>
           {fields.map((f) => (
@@ -161,7 +161,7 @@ function ConditionRow({ condition, fields, onChange, onRemove }: {
         <select
           value={condition.op}
           onChange={(e) => onChange({ op: e.target.value as AdvancedSettingCompareOp })}
-          className="shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-indigo-400 focus:outline-none"
+          className="shrink-0 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-1.5 py-1 text-[11px] text-[hsl(var(--foreground))] focus:border-[hsl(var(--ring))] focus:outline-none"
         >
           {OPERATORS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
@@ -169,7 +169,7 @@ function ConditionRow({ condition, fields, onChange, onRemove }: {
         </select>
         <button
           onClick={onRemove}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-300 hover:bg-red-50 hover:text-red-400"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
           title="Remove condition"
         >
           <Trash2 size={11} />

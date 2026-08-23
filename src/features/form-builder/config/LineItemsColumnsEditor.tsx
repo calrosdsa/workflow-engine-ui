@@ -108,21 +108,21 @@ export function LineItemsColumnsEditor({ columns: sections, onChange, excludeFor
   return (
     <div className="space-y-3">
       {sections.length === 0 && (
-        <p className="text-[11px] text-slate-400">No sections yet — add one below.</p>
+        <p className="text-[11px] text-[hsl(var(--muted-foreground))]">No sections yet — add one below.</p>
       )}
 
       {sections.map((section) => (
-        <div key={section.id} className="overflow-hidden rounded-md border border-slate-200">
-          <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1.5">
-            <Layers size={12} className="shrink-0 text-slate-400" />
+        <div key={section.id} className="overflow-hidden rounded-md border border-[hsl(var(--border))]">
+          <div className="flex items-center gap-1.5 bg-[hsl(var(--muted))] px-2 py-1.5">
+            <Layers size={12} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
             <Input
               value={section.title}
               onChange={(e) => updateSection(section.id, { title: e.target.value })}
-              className="h-6 flex-1 border-transparent bg-transparent px-1 text-[12px] font-medium text-slate-700 hover:border-slate-200 focus:border-indigo-300"
+              className="h-6 flex-1 border-transparent bg-transparent px-1 text-[12px] font-medium text-[hsl(var(--foreground))] hover:border-[hsl(var(--border))] focus:border-[hsl(var(--primary))]/40"
             />
             <SelectMenu value={section.layout} onValueChange={(v) => setSectionLayout(section.id, v as ColumnLayout)}>
-              <SelectTrigger className="h-6 w-auto gap-1 border-slate-200 px-1.5 text-[10px]">
-                <Columns3 size={10} className="text-slate-400" />
+              <SelectTrigger className="h-6 w-auto gap-1 border-[hsl(var(--border))] px-1.5 text-[10px]">
+                <Columns3 size={10} className="text-[hsl(var(--muted-foreground))]" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -134,7 +134,7 @@ export function LineItemsColumnsEditor({ columns: sections, onChange, excludeFor
             <button
               type="button"
               onClick={() => removeSection(section.id)}
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-500"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
               title="Remove section"
             >
               <Trash2 size={11} />
@@ -146,7 +146,7 @@ export function LineItemsColumnsEditor({ columns: sections, onChange, excludeFor
               {section.columns.map((column) => (
                 <div key={column.id} className="space-y-1.5">
                   {section.columns.length > 1 && (
-                    <p className="text-[9px] font-medium uppercase tracking-wide text-slate-400">
+                    <p className="text-[9px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
                       Column {section.columns.indexOf(column) + 1}
                     </p>
                   )}
@@ -155,19 +155,19 @@ export function LineItemsColumnsEditor({ columns: sections, onChange, excludeFor
                     const Icon = reg.icon
                     const isOpen = expanded === field.id
                     return (
-                      <div key={field.id} className="overflow-hidden rounded-md border border-slate-200">
+                      <div key={field.id} className="overflow-hidden rounded-md border border-[hsl(var(--border))]">
                         <button
                           type="button"
                           onClick={() => setExpanded(isOpen ? null : field.id)}
-                          className="flex w-full items-center gap-1.5 bg-white px-2 py-1.5 text-left"
+                          className="flex w-full items-center gap-1.5 bg-[hsl(var(--card))] px-2 py-1.5 text-left"
                         >
-                          {isOpen ? <ChevronDown size={11} className="shrink-0 text-slate-400" /> : <ChevronRight size={11} className="shrink-0 text-slate-400" />}
-                          <Icon size={11} className="shrink-0 text-indigo-400" />
-                          <span className="flex-1 truncate text-[11px] font-medium text-slate-700">{field.label || reg.label}</span>
+                          {isOpen ? <ChevronDown size={11} className="shrink-0 text-[hsl(var(--muted-foreground))]" /> : <ChevronRight size={11} className="shrink-0 text-[hsl(var(--muted-foreground))]" />}
+                          <Icon size={11} className="shrink-0 text-[hsl(var(--primary))]/60" />
+                          <span className="flex-1 truncate text-[11px] font-medium text-[hsl(var(--foreground))]">{field.label || reg.label}</span>
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); removeField(section.id, column.id, field.id) }}
-                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-500"
+                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
                             title="Remove field"
                           >
                             <Trash2 size={10} />
@@ -175,10 +175,10 @@ export function LineItemsColumnsEditor({ columns: sections, onChange, excludeFor
                         </button>
 
                         {isOpen && (
-                          <div className="space-y-3 border-t border-slate-100 p-2.5">
+                          <div className="space-y-3 border-t border-[hsl(var(--border))] p-2.5">
                             <div className="grid grid-cols-2 gap-2">
                               <div className="space-y-1">
-                                <Label className="text-[10px] font-medium text-slate-500">Label</Label>
+                                <Label className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">Label</Label>
                                 <Input
                                   value={field.label}
                                   onChange={(e) => updateField(section.id, column.id, field.id, { label: e.target.value })}
@@ -186,7 +186,7 @@ export function LineItemsColumnsEditor({ columns: sections, onChange, excludeFor
                                 />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-[10px] font-medium text-slate-500">Key</Label>
+                                <Label className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">Key</Label>
                                 <Input
                                   value={field.key}
                                   onChange={(e) => updateField(section.id, column.id, field.id, { key: slugifyKey(e.target.value) })}
@@ -197,7 +197,7 @@ export function LineItemsColumnsEditor({ columns: sections, onChange, excludeFor
 
                             {section.columns.length > 1 && (
                               <div className="space-y-1">
-                                <Label className="text-[10px] font-medium text-slate-500">Column</Label>
+                                <Label className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">Column</Label>
                                 <SelectMenu
                                   value={column.id}
                                   onValueChange={(toColumnId) => moveField(section.id, column.id, toColumnId, field.id)}
@@ -214,7 +214,7 @@ export function LineItemsColumnsEditor({ columns: sections, onChange, excludeFor
 
                             {field.component !== 'line_items' && (
                               <div className="flex items-center justify-between">
-                                <Label className="text-[11px] font-normal text-slate-600">Required</Label>
+                                <Label className="text-[11px] font-normal text-[hsl(var(--muted-foreground))]">Required</Label>
                                 <Switch
                                   checked={field.behavior.required === 'always'}
                                   onCheckedChange={(v) => updateField(section.id, column.id, field.id, { behavior: { ...field.behavior, required: v ? 'always' : 'optional' } })}
@@ -224,7 +224,7 @@ export function LineItemsColumnsEditor({ columns: sections, onChange, excludeFor
 
                             {['select', 'radio', 'multiselect', 'autocomplete'].includes(field.component) && (
                               <div className="space-y-1">
-                                <Label className="text-[10px] font-medium text-slate-500">Options</Label>
+                                <Label className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">Options</Label>
                                 <OptionsEditor
                                   options={field.options ?? []}
                                   onChange={(options) => updateField(section.id, column.id, field.id, { options })}
@@ -233,9 +233,9 @@ export function LineItemsColumnsEditor({ columns: sections, onChange, excludeFor
                             )}
 
                             {field.component === 'form' && (
-                              <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50/50 p-2">
+                              <div className="space-y-2 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 p-2">
                                 <div className="space-y-1">
-                                  <Label className="text-[10px] font-medium text-slate-500">Referenced Form</Label>
+                                  <Label className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">Referenced Form</Label>
                                   <FormReferenceSelect
                                     value={field.formRef}
                                     excludeId={excludeFormId}
@@ -243,7 +243,7 @@ export function LineItemsColumnsEditor({ columns: sections, onChange, excludeFor
                                   />
                                 </div>
                                 <div className="space-y-1">
-                                  <Label className="text-[10px] font-medium text-slate-500">Display Field</Label>
+                                  <Label className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">Display Field</Label>
                                   <DisplayFieldSelect
                                     formId={field.formRef}
                                     value={field.displayField}
@@ -254,8 +254,8 @@ export function LineItemsColumnsEditor({ columns: sections, onChange, excludeFor
                             )}
 
                             {field.component === 'line_items' && (
-                              <div className="space-y-1 border-t border-slate-100 pt-3">
-                                <Label className="text-[10px] font-medium text-slate-500">Nested Sections</Label>
+                              <div className="space-y-1 border-t border-[hsl(var(--border))] pt-3">
+                                <Label className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">Nested Sections</Label>
                                 <LineItemsColumnsEditor
                                   columns={field.lineItemColumns ?? []}
                                   onChange={(lineItemColumns) => updateField(section.id, column.id, field.id, { lineItemColumns })}
@@ -273,18 +273,18 @@ export function LineItemsColumnsEditor({ columns: sections, onChange, excludeFor
                     <Button
                       variant="outline" size="sm"
                       onClick={() => setPickerFor(pickerFor === column.id ? null : column.id)}
-                      className="h-7 w-full gap-1 border-dashed text-[11px] text-slate-500"
+                      className="h-7 w-full gap-1 border-dashed text-[11px] text-[hsl(var(--muted-foreground))]"
                     >
                       <Plus size={11} /> Add Field
                     </Button>
                     {pickerFor === column.id && (
-                      <div className="absolute z-10 mt-1 max-h-64 w-full min-w-[220px] overflow-y-auto rounded-md border border-slate-200 bg-white p-1.5 shadow-lg">
+                      <div className="absolute z-10 mt-1 max-h-64 w-full min-w-[220px] overflow-y-auto rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-1.5 shadow-lg">
                         {COMPONENT_CATEGORIES.map((cat) => {
                           const items = componentsByCategory(cat).filter((c) => c.type !== 'line_item_count')
                           if (items.length === 0) return null
                           return (
                             <div key={cat} className="mb-1.5 last:mb-0">
-                              <p className="px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">{cat}</p>
+                              <p className="px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{cat}</p>
                               <div className="grid grid-cols-2 gap-1">
                                 {items.map((item) => {
                                   const Icon = item.icon
@@ -292,9 +292,9 @@ export function LineItemsColumnsEditor({ columns: sections, onChange, excludeFor
                                     <button
                                       key={item.type}
                                       onClick={() => addField(section.id, column.id, item.type as LineItemColumnComponent)}
-                                      className="flex items-center gap-1.5 rounded px-1.5 py-1 text-left text-[11px] text-slate-600 hover:bg-indigo-50 hover:text-indigo-700"
+                                      className="flex items-center gap-1.5 rounded px-1.5 py-1 text-left text-[11px] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--primary))]/15 hover:text-[hsl(var(--primary))]"
                                     >
-                                      <Icon size={12} className="shrink-0 text-slate-400" />
+                                      <Icon size={12} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
                                       <span className="truncate">{item.label}</span>
                                     </button>
                                   )
@@ -313,7 +313,7 @@ export function LineItemsColumnsEditor({ columns: sections, onChange, excludeFor
         </div>
       ))}
 
-      <Button variant="outline" size="sm" onClick={addSection} className="w-full gap-1.5 border-dashed text-slate-500">
+      <Button variant="outline" size="sm" onClick={addSection} className="w-full gap-1.5 border-dashed text-[hsl(var(--muted-foreground))]">
         <Plus size={12} /> Add Section
       </Button>
     </div>

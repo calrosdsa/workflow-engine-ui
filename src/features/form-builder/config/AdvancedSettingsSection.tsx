@@ -42,31 +42,31 @@ export function AdvancedSettingsSection({ settings, fields, onChange }: Advanced
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Advanced Settings</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Advanced Settings</Label>
         <Button variant="outline" size="sm" onClick={openAdd} className="h-6 gap-1 px-2 text-[11px]">
           <Plus size={11} /> Add
         </Button>
       </div>
 
       {settings.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-slate-200 px-3 py-3 text-center text-[11px] text-slate-400">
+        <p className="rounded-lg border border-dashed border-[hsl(var(--border))] px-3 py-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
           No advanced settings configured.
         </p>
       ) : (
         <div className="space-y-1.5">
           {settings.map((s) => (
-            <div key={s.id} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2">
-              <ListChecks size={13} className="shrink-0 text-slate-400" />
+            <div key={s.id} className="flex items-center gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-2">
+              <ListChecks size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[12px] font-medium text-slate-700">{s.name || 'Untitled'}</p>
-                <p className="truncate text-[10px] text-slate-400">
+                <p className="truncate text-[12px] font-medium text-[hsl(var(--foreground))]">{s.name || 'Untitled'}</p>
+                <p className="truncate text-[10px] text-[hsl(var(--muted-foreground))]">
                   {AUDIENCE_LABELS[s.appliesTo]} · {s.actions.length} action{s.actions.length === 1 ? '' : 's'}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => openEdit(s.id)}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
                 title="Edit"
               >
                 <Pencil size={12} />
@@ -74,7 +74,7 @@ export function AdvancedSettingsSection({ settings, fields, onChange }: Advanced
               <button
                 type="button"
                 onClick={() => remove(s.id)}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-300 hover:bg-red-50 hover:text-red-400"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
                 title="Remove"
               >
                 <Trash2 size={12} />

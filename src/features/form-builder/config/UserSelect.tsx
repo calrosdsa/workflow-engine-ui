@@ -64,12 +64,12 @@ export function UserSelect({ value, onChange, appId: appIdProp }: UserSelectProp
             aria-expanded={open}
             className={cn(
               'h-8 w-full justify-between gap-2 px-2.5 text-[13px] font-normal',
-              !value && 'text-slate-400',
-              isBroken && 'border-amber-300',
+              !value && 'text-[hsl(var(--muted-foreground))]',
+              isBroken && 'border-[hsl(var(--warning))]/40',
             )}
           >
             <span className="flex min-w-0 items-center gap-1.5">
-              <User size={13} className="shrink-0 text-slate-400" />
+              <User size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
               <span className="truncate">
                 {isLoading && !selected
                   ? 'Loading users…'
@@ -80,7 +80,7 @@ export function UserSelect({ value, onChange, appId: appIdProp }: UserSelectProp
                       : 'Select User'}
               </span>
             </span>
-            <ChevronsUpDown size={13} className="shrink-0 text-slate-400" />
+            <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -92,7 +92,7 @@ export function UserSelect({ value, onChange, appId: appIdProp }: UserSelectProp
             <CommandInput placeholder="Search people…" />
             <CommandList>
               {isLoading ? (
-                <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-slate-400">
+                <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
                   <Loader2 size={13} className="animate-spin" /> Loading users…
                 </div>
               ) : (
@@ -108,10 +108,10 @@ export function UserSelect({ value, onChange, appId: appIdProp }: UserSelectProp
                           setOpen(false)
                         }}
                       >
-                        <Check size={14} className={cn('shrink-0', u.id === value ? 'opacity-100 text-indigo-600' : 'opacity-0')} />
+                        <Check size={14} className={cn('shrink-0', u.id === value ? 'opacity-100 text-[hsl(var(--primary))]' : 'opacity-0')} />
                         <span className="flex min-w-0 flex-col">
                           <span className="truncate">{userLabel(u)}</span>
-                          <span className="truncate text-[10px] text-slate-400">{u.email}</span>
+                          <span className="truncate text-[10px] text-[hsl(var(--muted-foreground))]">{u.email}</span>
                         </span>
                       </CommandItem>
                     ))}
@@ -124,7 +124,7 @@ export function UserSelect({ value, onChange, appId: appIdProp }: UserSelectProp
       </Popover>
 
       {isBroken && (
-        <p className="text-[10px] text-amber-600 flex items-center gap-1">
+        <p className="text-[10px] text-[hsl(var(--warning))] flex items-center gap-1">
           <AlertTriangle size={11} className="shrink-0" />
           The stored user (<span className="font-mono">{value}</span>) no longer matches a visible user.
           It's preserved until you pick a new one.
@@ -135,7 +135,7 @@ export function UserSelect({ value, onChange, appId: appIdProp }: UserSelectProp
           <button
             type="button"
             onClick={() => onChange('')}
-            className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-600"
+            className="flex items-center gap-1 text-[10px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           >
             <X size={10} /> Clear
           </button>

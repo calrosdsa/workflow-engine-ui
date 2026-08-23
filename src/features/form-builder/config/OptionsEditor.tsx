@@ -23,7 +23,7 @@ export function OptionsEditor({ options, onChange }: OptionsEditorProps) {
     <div className="space-y-1.5">
       {options.map((opt, i) => (
         <div key={i} className="flex items-center gap-1.5">
-          <GripVertical size={13} className="shrink-0 text-slate-300" />
+          <GripVertical size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]/60" />
           <Input
             value={opt.label}
             onChange={(e) => {
@@ -39,18 +39,18 @@ export function OptionsEditor({ options, onChange }: OptionsEditorProps) {
             value={opt.value}
             onChange={(e) => update(i, { value: e.target.value })}
             placeholder="value"
-            className="h-7 w-28 font-mono text-[11px] text-slate-500"
+            className="h-7 w-28 font-mono text-[11px] text-[hsl(var(--muted-foreground))]"
           />
           <button
             onClick={() => remove(i)}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-500"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
             title="Remove option"
           >
             <Trash2 size={12} />
           </button>
         </div>
       ))}
-      <Button variant="outline" size="sm" onClick={add} className="w-full gap-1.5 border-dashed text-slate-500">
+      <Button variant="outline" size="sm" onClick={add} className="w-full gap-1.5 border-dashed text-[hsl(var(--muted-foreground))]">
         <Plus size={12} /> Add Option
       </Button>
     </div>

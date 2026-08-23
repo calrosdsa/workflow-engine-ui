@@ -222,7 +222,7 @@ function DetailTabRow({ formId, tab, onToggleHidden, onRemove, onPatch, canHide 
             onClick={onRemove}
             disabled={!canHide}
             title={canHide ? 'Remove tab' : 'At least one tab must stay visible'}
-            className="rounded-md p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+            className="rounded-md p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
           >
             <Trash2 size={14} />
           </button>

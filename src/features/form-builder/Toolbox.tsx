@@ -25,19 +25,19 @@ function ToolboxItem({ entry }: { entry: ComponentRegistryEntry }) {
       {...listeners}
       {...attributes}
       className={cn(
-        'group flex w-full items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-left transition-all',
-        'hover:border-indigo-300 hover:bg-indigo-50/50 hover:shadow-sm active:cursor-grabbing cursor-grab',
+        'group flex w-full items-center gap-2.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2.5 py-2 text-left transition-all',
+        'hover:border-[hsl(var(--primary))]/40 hover:bg-[hsl(var(--primary))]/5 hover:shadow-sm active:cursor-grabbing cursor-grab',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
         isDragging && 'opacity-40',
       )}
       title={entry.description}
     >
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-500 transition-colors group-hover:bg-indigo-100 group-hover:text-indigo-600">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] transition-colors group-hover:bg-[hsl(var(--primary))]/15 group-hover:text-[hsl(var(--primary))]">
         <Icon size={15} strokeWidth={2} />
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-[12px] font-medium text-slate-700">{entry.label}</span>
-        <span className="block truncate text-[10px] text-slate-400">{entry.description}</span>
+        <span className="block truncate text-[12px] font-medium text-[hsl(var(--foreground))]">{entry.label}</span>
+        <span className="block truncate text-[10px] text-[hsl(var(--muted-foreground))]">{entry.description}</span>
       </span>
     </button>
   )
@@ -56,11 +56,11 @@ export function Toolbox() {
   const q = search.trim().toLowerCase()
 
   return (
-    <div className="flex h-full w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
-      <div className="border-b border-slate-100 p-3">
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Components</p>
+    <div className="flex h-full w-64 shrink-0 flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+      <div className="border-b border-[hsl(var(--border))] p-3">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Components</p>
         <div className="relative">
-          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search components…" className="h-8 pl-7 text-xs" />
         </div>
       </div>
@@ -74,7 +74,7 @@ export function Toolbox() {
             if (items.length === 0) return null
             return (
               <div key={cat}>
-                <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">{CATEGORY_LABELS[cat]}</p>
+                <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{CATEGORY_LABELS[cat]}</p>
                 <div className="space-y-1.5">
                   {items.map((entry) => <ToolboxItem key={entry.type} entry={entry} />)}
                 </div>
