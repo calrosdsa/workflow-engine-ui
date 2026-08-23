@@ -252,16 +252,16 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-20  flex h-14 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4">
+      <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4">
         <button
           onClick={handleBackClick}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
           title="Back to forms"
         >
           <ArrowLeft size={17} />
         </button>
 
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-sm">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm">
           <FileText size={17} />
         </div>
 
@@ -270,38 +270,38 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Form name"
-            className="h-8 max-w-[240px] border-transparent bg-transparent text-sm font-semibold text-slate-800 hover:border-slate-200 focus:border-indigo-300"
+            className="h-8 max-w-[240px] border-transparent bg-transparent text-sm font-semibold text-[hsl(var(--foreground))] hover:border-[hsl(var(--border))] focus:border-[hsl(var(--ring))]"
           />
-          <div className="flex items-center gap-1 rounded-md bg-slate-50 px-2 py-1">
-            <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">slug</span>
+          <div className="flex items-center gap-1 rounded-md bg-[hsl(var(--muted))] px-2 py-1">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-[hsl(var(--muted-foreground))]">slug</span>
             <input
               value={slug}
               onChange={(e) => { setSlugTouched(true); setSlug(slugifyKey(e.target.value)) }}
               placeholder="table_name"
-              className="w-32 bg-transparent font-mono text-[12px] text-slate-600 outline-none"
+              className="w-32 bg-transparent font-mono text-[12px] text-[hsl(var(--muted-foreground))] outline-none"
               title="Logical identifier for URLs — editable; must stay unique. The physical table is never renamed."
             />
           </div>
         </div>
 
         {/* Column count indicator */}
-        <div className="flex items-center gap-1.5 rounded-md bg-slate-50 px-2.5 py-1.5 text-[11px] text-slate-500" title="Data fields that become SQL columns">
-          <Table2 size={13} className="text-slate-400" />
+        <div className="flex items-center gap-1.5 rounded-md bg-[hsl(var(--muted))] px-2.5 py-1.5 text-[11px] text-[hsl(var(--muted-foreground))]" title="Data fields that become SQL columns">
+          <Table2 size={13} className="text-[hsl(var(--muted-foreground))]" />
           {projection.fields.length} {projection.fields.length === 1 ? 'column' : 'columns'}
         </div>
 
         {parentForm && (
-          <span className="rounded-full bg-indigo-50 px-2 py-1 text-[11px] font-medium text-indigo-600">
+          <span className="rounded-full bg-[hsl(var(--primary))]/15 px-2 py-1 text-[11px] font-medium text-[hsl(var(--primary))]">
             Dependent of {parentForm.name}
           </span>
         )}
 
-        {isDirty && <span className="rounded-full bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-600">Unsaved</span>}
+        {isDirty && <span className="rounded-full bg-[hsl(var(--warning))]/15 px-2 py-1 text-[11px] font-medium text-[hsl(var(--warning))]">Unsaved</span>}
 
         <div className="flex items-center gap-0.5">
           <Button
             variant="ghost" size="icon"
-            className="h-8 w-8 text-slate-500 hover:text-slate-700 disabled:opacity-30"
+            className="h-8 w-8 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] disabled:opacity-30"
             onClick={undo}
             disabled={!canUndo}
             title="Undo (Ctrl+Z)"
@@ -310,7 +310,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
           </Button>
           <Button
             variant="ghost" size="icon"
-            className="h-8 w-8 text-slate-500 hover:text-slate-700 disabled:opacity-30"
+            className="h-8 w-8 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] disabled:opacity-30"
             onClick={redo}
             disabled={!canRedo}
             title="Redo (Ctrl+Shift+Z)"
@@ -322,7 +322,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
         <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)} className="gap-1.5">
           <Eye size={14} /> Preview
         </Button>
-        <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5 bg-indigo-600 text-white hover:bg-indigo-700">
+        <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5">
           {saving ? <Loader2 size={14} className="animate-spin" /> : mode === 'new' ? <FilePlus2 size={14} /> : <Save size={14} />}
           {saving ? (mode === 'new' ? 'Creating…' : 'Saving…') : mode === 'new' ? 'Create Form' : 'Save'}
         </Button>
