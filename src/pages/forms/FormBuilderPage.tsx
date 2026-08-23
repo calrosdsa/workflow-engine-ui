@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
+import { toast } from 'sonner'
 import {
   ArrowLeft, Save, FilePlus2, Eye, AlertCircle, FileText, Loader2, Table2, Redo2, Undo2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useForm, useForms, useCreateForm, useUpdateForm } from '@/features/forms/hooks'
 import { formsApi } from '@/features/forms/api'
 import { useFormBuilderStore, useFormMetaStore, loadForm as loadFormIntoStores, resetFormBuilder, insertParentReferenceField } from '@/features/form-builder/store'
@@ -62,6 +64,14 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   const [parentRefSeeded, setParentRefSeeded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
+  // Guards the one reachable in-app path that would otherwise silently
+  // discard unsaved work: the header's "Back to forms" button. beforeunload
+  // (below) already covers tab-close/refresh/typed-URL navigation, but that
+  // event never fires for TanStack Router's own client-side navigation, so
+  // this in-app path needed its own guard — nothing in this codebase
+  // protects it today (confirmed against DashboardEditorPage.tsx, the
+  // closest sibling builder, which has the same gap).
+  const [confirmingLeave, setConfirmingLeave] = useState(false)
   // Tracks whether the hydration effect below has actually run for the
   // CURRENT loaded form — deliberately separate from React Query's own
   // isLoading, which flips to false the instant `loaded` arrives, i.e. one
@@ -155,6 +165,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
           await formsApi.update(created.id, { ...payload, layout: syncedSchema, parent_form_id: parentFormId })
         }
         markSaved()
+        toast.success(`"${name}" created`)
         navigate({ to: '/applications/$appId/forms/$formId', params: { appId, formId: created.id } })
       } else if (formId) {
         const { changed, schema: syncedSchema } = await syncLineItemsChildren(schema, formId, slug)
@@ -172,6 +183,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
           await updateMutation.mutateAsync(withParent)
         }
         markSaved()
+        toast.success('Form saved')
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
@@ -205,11 +217,36 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
+  // Covers tab close/refresh/typed-URL navigation — mirrors
+  // DashboardEditorPage.tsx's identical guard. Does NOT cover TanStack
+  // Router's own client-side navigation (that event never fires for SPA
+  // nav), which is what handleBackClick below guards separately.
+  useEffect(() => {
+    if (!isDirty) return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault() }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
+
+  const goToFormsList = () => navigate({ to: '/applications/$appId/forms', params: { appId } })
+  const handleBackClick = () => {
+    if (isDirty) {
+      setConfirmingLeave(true)
+    } else {
+      goToFormsList()
+    }
+  }
+
   const saving = createMutation.isPending || updateMutation.isPending
   const parentForm = parentFormId ? allForms?.find((f) => f.id === parentFormId) : undefined
 
   if ((mode === 'edit' && isLoading) || !initialised) {
-    return <div className="flex h-full items-center justify-center"><Spinner /></div>
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        <Spinner />
+        <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading form…</p>
+      </div>
+    )
   }
 
   return (
@@ -217,8 +254,8 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
       {/* Header */}
       <header className="sticky top-0 z-20  flex h-14 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4">
         <button
-          onClick={() => navigate({ to: '/applications/$appId/forms', params: { appId } })}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          onClick={handleBackClick}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
           title="Back to forms"
         >
           <ArrowLeft size={17} />
@@ -287,13 +324,13 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
         </Button>
         <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5 bg-indigo-600 text-white hover:bg-indigo-700">
           {saving ? <Loader2 size={14} className="animate-spin" /> : mode === 'new' ? <FilePlus2 size={14} /> : <Save size={14} />}
-          {mode === 'new' ? 'Create Form' : 'Save'}
+          {saving ? (mode === 'new' ? 'Creating…' : 'Saving…') : mode === 'new' ? 'Create Form' : 'Save'}
         </Button>
       </header>
 
       {/* Error banner */}
       {error && (
-        <div className="flex items-center gap-2 border-b border-red-200 bg-red-50 px-4 py-2 text-[12px] text-red-700">
+        <div className="flex items-center gap-2 border-b border-[hsl(var(--destructive))]/30 bg-[hsl(var(--destructive))]/10 px-4 py-2 text-[12px] text-[hsl(var(--destructive))]">
           <AlertCircle size={14} className="shrink-0" />
           {error}
         </div>
@@ -315,6 +352,17 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
         name={name}
         schema={schema}
         formId={formId}
+      />
+
+      <ConfirmDialog
+        open={confirmingLeave}
+        onOpenChange={setConfirmingLeave}
+        title="Discard unsaved changes?"
+        description="You have unsaved changes to this form. Leaving now will discard them — this can't be undone."
+        confirmLabel="Discard changes"
+        cancelLabel="Keep editing"
+        destructive
+        onConfirm={() => { setConfirmingLeave(false); goToFormsList() }}
       />
     </div>
   )
