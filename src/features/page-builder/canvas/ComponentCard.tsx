@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Copy, Trash2 } from 'lucide-react'
@@ -15,8 +16,12 @@ interface ComponentCardProps {
 
 // Direct mirror of features/form-builder/canvas/ElementCard.tsx — simpler,
 // since there's no "conditional" badge (PageComponents have no visibility
-// behavior, unlike FormElement).
-export function ComponentCard({ component, sectionId, columnId }: ComponentCardProps) {
+// behavior, unlike FormElement) — including its memo() — `component`
+// keeps a stable reference across store mutations that don't touch it now
+// that builder-kit/tree-store.ts's produce() is real Immer (shared by
+// both stores). Still re-renders on its own selectedId store subscription
+// regardless of props, which is correct.
+export const ComponentCard = memo(function ComponentCard({ component, sectionId, columnId }: ComponentCardProps) {
   const selectedId = usePageBuilderStore((s) => s.selectedItemId)
   const selectComponent = usePageBuilderStore((s) => s.selectItem)
   const duplicate = usePageBuilderStore((s) => s.duplicateItemById)
@@ -89,4 +94,4 @@ export function ComponentCard({ component, sectionId, columnId }: ComponentCardP
       </div>
     </div>
   )
-}
+})

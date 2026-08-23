@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
@@ -15,8 +16,14 @@ import { usePageBuilderStore } from '../store'
 import { COLUMN_LAYOUTS, type ColumnLayout, type PageSection } from '../schema'
 import { ColumnDropZone } from './ColumnDropZone'
 
-// Direct mirror of features/form-builder/canvas/SectionCard.tsx.
-export function SectionCard({ section }: { section: PageSection }) {
+// Direct mirror of features/form-builder/canvas/SectionCard.tsx, including
+// its memo() — `section` keeps a stable reference across store mutations
+// that don't touch it now that builder-kit/tree-store.ts's produce() is
+// real Immer (shared by both stores), so React.memo's default shallow
+// prop comparison can actually skip a render here. Still re-renders on
+// its own selectedSectionId store subscription regardless of props, which
+// is correct — a card needs to know if it's the one that's selected.
+export const SectionCard = memo(function SectionCard({ section }: { section: PageSection }) {
   const updateSection = usePageBuilderStore((s) => s.updateSection)
   const setLayout = usePageBuilderStore((s) => s.setSectionLayout)
   const duplicate = usePageBuilderStore((s) => s.duplicateSectionById)
@@ -115,4 +122,4 @@ export function SectionCard({ section }: { section: PageSection }) {
       )}
     </div>
   )
-}
+})
