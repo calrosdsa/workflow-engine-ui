@@ -312,6 +312,14 @@ export interface CreateUserSettings {
  *  zone, differing only in which side it renders on. */
 export type DetailPageLayoutId = 'single' | 'main-right-sidebar' | 'main-left-sidebar'
 
+/** Which direction the record-detail page's TOP-LEVEL tab bar renders in.
+ *  Absent means 'horizontal' — every form's behavior before this setting
+ *  existed. Applies only to the top-level bar (RecordDetailPanel via
+ *  ZonedDetailTabList); a nested 'group' tab type's own child tab bar
+ *  always stays horizontal regardless of this setting — it's a lighter-
+ *  weight sub-navigation, not a second top-level bar. */
+export type DetailTabOrientation = 'horizontal' | 'vertical'
+
 /** The zone id an unset DetailTabConfig.zone always resolves to — a fixed
  *  id, NOT "whichever zone a template happens to list first." Every
  *  DETAIL_PAGE_LAYOUTS template defines a zone with this id (see below), so
@@ -440,6 +448,8 @@ export interface FormSettings {
    *  before the Detail Page Builder existed (one column, no zone concept),
    *  so no migration is needed for existing saved forms. */
   detailLayout?: DetailPageLayoutId
+  /** Absent means 'horizontal' — see DetailTabOrientation's own doc comment. */
+  tabOrientation?: DetailTabOrientation
   /** Absent/undefined (every form today) resolves to an empty list — unlike
    *  detailTabs, there is no "at least one" fallback default, since a
    *  record-detail toolbar with zero custom actions (today's universal

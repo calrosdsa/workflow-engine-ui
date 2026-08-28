@@ -8,12 +8,13 @@
 // own copy — a group's children go through the identical visibility/renderIf/
 // hideWhenEmpty machinery the top-level tab list already has, no special-casing.
 import { useState, type ComponentType } from 'react'
+import { cn } from '@/lib/utils'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { getDetailTab } from './registry'
 import { useCurrentViewer, isTabVisible } from './useTabVisible'
 import { useExpressionRuntimeState, schemaToVariableDecls } from '../expression-context'
 import type { DetailTabRendererProps } from './contract'
-import type { DetailTabConfig } from '@/features/form-builder/schema'
+import type { DetailTabConfig, DetailTabOrientation } from '@/features/form-builder/schema'
 import type { FormSchema } from '@/features/form-builder/schema'
 import type { FieldDef, FormRecord } from '@/features/forms/types'
 
@@ -46,12 +47,19 @@ export interface DetailTabListProps {
    *  site (RecordDetailPanel, GroupTabRenderer) passing nothing is
    *  completely unaffected. */
   rendererOverride?: (type: string) => ComponentType<DetailTabRendererProps<any>> | undefined
+  /** Horizontal (default) or vertical tab bar — FormSettings.tabOrientation.
+   *  Deliberately NOT threaded into a nested call (GroupTabRenderer never
+   *  passes this on): a Tab Group's own child bar always stays horizontal,
+   *  a lighter-weight sub-navigation rather than a second top-level bar
+   *  that also flips orientation. */
+  orientation?: DetailTabOrientation
 }
 
 export function DetailTabList({
   formId, recordId, fields, schema, record, tabConfigs, onNavigateToRecord,
   nested, groupDepth = 0,
   rendererOverride,
+  orientation = 'horizontal',
 }: DetailTabListProps) {
   const viewer = useCurrentViewer()
   const configuredTabs = tabConfigs.filter((t) => !t.hidden && isTabVisible(t.visibility, viewer))
@@ -90,8 +98,21 @@ export function DetailTabList({
     // Tabs' own internal "which value is active" state needs a fresh mount
     // to re-derive a valid defaultValue, or it can end up pointed at a tab
     // that no longer exists in the list.
-    <Tabs key={visibleTabs.map((t) => t.id).join(',') || 'empty'} defaultValue={visibleTabs[0]?.id} className={nested ? 'flex flex-col' : 'flex min-h-0 flex-1 flex-col'}>
-      <div className={nested ? '' : 'border-b px-6 py-2'} style={nested ? undefined : { borderColor: 'hsl(var(--border))' }}>
+    <Tabs
+      key={visibleTabs.map((t) => t.id).join(',') || 'empty'}
+      defaultValue={visibleTabs[0]?.id}
+      orientation={nested ? undefined : orientation}
+      className={cn(
+        nested ? 'flex flex-col' : 'flex min-h-0 flex-1',
+        !nested && (orientation === 'vertical' ? 'flex-row' : 'flex-col'),
+      )}
+    >
+      <div
+        className={cn(
+          nested ? '' : orientation === 'vertical' ? 'shrink-0 border-r px-3 py-4' : 'border-b px-6 py-2',
+        )}
+        style={nested ? undefined : { borderColor: 'hsl(var(--border))' }}
+      >
         <TabsList>
           {visibleTabs.map((t) => {
             const def = getDetailTab(t.type)

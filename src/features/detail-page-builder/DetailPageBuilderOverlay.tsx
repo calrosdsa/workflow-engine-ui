@@ -1,6 +1,6 @@
 // Full-screen overlay for the Detail Page Builder — a real spatial canvas
-// (layout picker + drag zones + per-tab config + live preview), replacing
-// the flat-list Drawer for cases that actually need spatial arrangement.
+// (drag zones + per-tab config + live preview), replacing the flat-list
+// Drawer for cases that actually need spatial arrangement.
 // Deliberately an OVERLAY inside the already-loaded Form Builder, not a
 // separate route: saving detailTabs/detailLayout requires the Form
 // Builder's full in-memory state (name, slug, every field) already
@@ -13,7 +13,7 @@
 // form's Save button (FormBuilderPage's own) is still what persists
 // anything to the backend.
 import { useState } from 'react'
-import { Plus, Eye, Pencil } from 'lucide-react'
+import { Plus, Eye, Pencil, Rows3, Columns3 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -22,11 +22,9 @@ import { cn } from '@/lib/utils'
 import { nanoid } from '@/features/workflows/builder/nanoid'
 import { allDetailTabs, getDetailTab } from '@/features/forms/runtime/detail-tabs/registry'
 import { DetailTabConfigForm } from '@/features/forms/runtime/detail-tabs/DetailTabConfigForm'
-import { pickableFields } from '@/features/forms/runtime/detail-tabs/field-ref/pickable-fields'
 import { DetailPageCanvas } from './canvas/DetailPageCanvas'
-import { LayoutPicker } from './canvas/LayoutPicker'
 import { DetailPagePreview } from './preview/DetailPagePreview'
-import { DETAIL_PAGE_LAYOUTS, DEFAULT_DETAIL_PAGE_ZONE, type DetailTabConfig, type DetailPageLayoutId, type FormSchema } from '@/features/form-builder/schema'
+import type { DetailTabConfig, DetailPageLayoutId, DetailTabOrientation, FormSchema } from '@/features/form-builder/schema'
 import type { FieldDef } from '@/features/forms/types'
 
 interface DetailPageBuilderOverlayProps {
@@ -37,20 +35,25 @@ interface DetailPageBuilderOverlayProps {
   schema: FormSchema
   onChangeTabs: (next: DetailTabConfig[]) => void
   onChangeLayout: (next: DetailPageLayoutId) => void
+  onChangeOrientation: (next: DetailTabOrientation) => void
 }
 
+// The layout picker and "Add Field" (sidebar-only) affordances are
+// deliberately removed from this overlay — sidebar layouts are no longer
+// choosable going forward. A form already saved with a sidebar layout
+// before this change still renders its sidebar zone as-is below (via
+// DetailPageCanvas/zones), since that's existing user data, not something
+// this pass touches — only the ability to newly opt into or add to one.
 export function DetailPageBuilderOverlay({
-  open, onOpenChange, formId, fields, schema, onChangeTabs, onChangeLayout,
+  open, onOpenChange, formId, fields, schema, onChangeTabs, onChangeOrientation,
 }: DetailPageBuilderOverlayProps) {
   const tabs = schema.settings?.detailTabs ?? []
   const layout = schema.settings?.detailLayout ?? 'single'
+  const orientation = schema.settings?.tabOrientation ?? 'horizontal'
   const [selectedTabId, setSelectedTabId] = useState<string | null>(null)
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
 
   const selectedTab = tabs.find((t) => t.id === selectedTabId) ?? null
-  const zones = DETAIL_PAGE_LAYOUTS[layout]?.zones ?? DETAIL_PAGE_LAYOUTS.single.zones
-  const nonMainZones = zones.filter((z) => z.id !== DEFAULT_DETAIL_PAGE_ZONE)
-  const pickableFieldOptions = pickableFields(schema)
 
   const patchTab = (id: string, patch: Partial<DetailTabConfig>) =>
     onChangeTabs(tabs.map((t) => (t.id === id ? { ...t, ...patch } : t)))
@@ -63,22 +66,6 @@ export function DetailPageBuilderOverlay({
     setSelectedTabId(newTab.id)
   }
 
-  const addField = (fieldKey: string, zoneId: string) => {
-    const def = getDetailTab('field_ref')
-    if (!def) return
-    const newTab: DetailTabConfig = { id: nanoid(), type: 'field_ref', config: { fieldKey }, zone: zoneId }
-    onChangeTabs([...tabs, newTab])
-    setSelectedTabId(newTab.id)
-  }
-
-  const handleLayoutChange = (next: DetailPageLayoutId) => {
-    onChangeLayout(next)
-    // If the selected tab's zone no longer exists in the new layout, the
-    // store-level reconciliation (updateDetailLayout) already resets its
-    // `zone` — but the selection itself stays valid either way since the
-    // tab is never removed, only re-homed.
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -89,7 +76,7 @@ export function DetailPageBuilderOverlay({
             <div>
               <DialogTitle>Detail Page Builder</DialogTitle>
               <DialogDescription className="sr-only">
-                Arrange this form's record-detail tabs and fields into main and sidebar zones, with a live preview.
+                Arrange this form's record-detail tabs, with a live preview.
               </DialogDescription>
             </div>
             <div className="mr-8 flex items-center gap-2">
@@ -119,7 +106,37 @@ export function DetailPageBuilderOverlay({
                   <Eye size={12} /> Preview
                 </button>
               </div>
-              {mode === 'edit' && <LayoutPicker value={layout} onChange={handleLayoutChange} />}
+
+              {mode === 'edit' && (
+                <div role="tablist" aria-label="Tab bar orientation" className="flex items-center rounded-md border border-[hsl(var(--border))] p-0.5">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={orientation === 'horizontal'}
+                    onClick={() => onChangeOrientation('horizontal')}
+                    title="Horizontal tabs"
+                    className={cn(
+                      'flex items-center gap-1.5 rounded px-2.5 py-1 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 focus-visible:ring-offset-[hsl(var(--background))]',
+                      orientation === 'horizontal' ? 'bg-[hsl(var(--accent))] text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))]',
+                    )}
+                  >
+                    <Rows3 size={12} /> Horizontal
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={orientation === 'vertical'}
+                    onClick={() => onChangeOrientation('vertical')}
+                    title="Vertical tabs"
+                    className={cn(
+                      'flex items-center gap-1.5 rounded px-2.5 py-1 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 focus-visible:ring-offset-[hsl(var(--background))]',
+                      orientation === 'vertical' ? 'bg-[hsl(var(--accent))] text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))]',
+                    )}
+                  >
+                    <Columns3 size={12} /> Vertical
+                  </button>
+                </div>
+              )}
             </div>
           </DialogHeader>
 
@@ -145,27 +162,6 @@ export function DetailPageBuilderOverlay({
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
-
-                  {nonMainZones.length > 0 && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button type="button" variant="outline" size="sm" className="gap-1.5">
-                          <Plus size={13} /> Add Field
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-64">
-                        {pickableFieldOptions.length === 0 ? (
-                          <p className="px-2 py-1.5 text-[12px] text-[hsl(var(--muted-foreground))]">This form has no fields yet.</p>
-                        ) : (
-                          pickableFieldOptions.map((el) => (
-                            <DropdownMenuItem key={el.key} onClick={() => addField(el.key, nonMainZones[0].id)}>
-                              {el.label}
-                            </DropdownMenuItem>
-                          ))
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
                 </div>
 
                 <DetailPageCanvas

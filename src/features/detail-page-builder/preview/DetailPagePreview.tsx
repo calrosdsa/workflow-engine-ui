@@ -111,6 +111,7 @@ export function DetailPagePreview({ formId, fields, schema }: {
         record={sampleRecord}
         tabConfigs={resolveDetailTabs(schema.settings?.detailTabs)}
         layout={schema.settings?.detailLayout ?? 'single'}
+        orientation={schema.settings?.tabOrientation ?? 'horizontal'}
         rendererOverride={previewRendererOverride}
       />
     </div>

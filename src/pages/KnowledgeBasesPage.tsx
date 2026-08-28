@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Plus, Trash2, ExternalLink, BookOpen, Sparkles, AlertCircle } from 'lucide-react'
+import { toast } from 'sonner'
+import { Plus, Trash2, ExternalLink, BookOpen, Sparkles } from 'lucide-react'
 import { useKnowledgeBases, useCreateKnowledgeBase, useDeleteKnowledgeBase } from '@/features/knowledge/hooks'
 import { ProviderSelect } from '@/features/llm-providers/ProviderSelect'
 import { ManageProvidersDialog } from '@/features/llm-providers/ManageProvidersDialog'
@@ -28,7 +29,18 @@ export function KnowledgeBasesPage() {
 
   const confirmDelete = () => {
     if (!pendingDelete) return
-    deleteMutation.mutate(pendingDelete.id, { onSuccess: () => setPendingDelete(null) })
+    const name = pendingDelete.name
+    deleteMutation.mutate(pendingDelete.id, {
+      onSuccess: () => {
+        toast.success(`"${name}" deleted`)
+        setPendingDelete(null)
+      },
+      onError: (e) => {
+        toast.error('Could not delete knowledge base', {
+          description: e instanceof Error ? e.message : undefined,
+        })
+      },
+    })
   }
 
   return (
@@ -48,12 +60,6 @@ export function KnowledgeBasesPage() {
         </div>
       </div>
       <ManageProvidersDialog open={providersOpen} onOpenChange={setProvidersOpen} />
-
-      {deleteMutation.isError && (
-        <p className="flex items-center gap-1.5 text-xs text-[hsl(var(--destructive))]">
-          <AlertCircle size={13} />Could not delete — please try again.
-        </p>
-      )}
 
       {!ordered.length ? (
         <EmptyState canWrite={canWrite} onCreate={() => setCreateOpen(true)} />
@@ -86,7 +92,7 @@ export function KnowledgeBasesPage() {
   )
 }
 
-const PROVIDER_LABELS: Record<Provider, string> = { openai: 'OpenAI', gemini: 'Gemini' }
+const PROVIDER_LABELS: Record<Provider, string> = { openai: 'OpenAI', gemini: 'Gemini', voyage: 'Voyage' }
 
 function KnowledgeBaseRow({ kb, canWrite, onDelete }: { kb: KnowledgeBaseSummary; canWrite: boolean; onDelete: () => void }) {
   return (
@@ -149,8 +155,14 @@ function CreateKnowledgeBaseDialog({ open, onOpenChange }: { open: boolean; onOp
   const submit = () => {
     createMutation.mutate(form, {
       onSuccess: () => {
+        toast.success(`"${form.name}" created`)
         onOpenChange(false)
         setForm(EMPTY_PAYLOAD)
+      },
+      onError: (e) => {
+        toast.error('Could not create knowledge base', {
+          description: e instanceof Error ? e.message : undefined,
+        })
       },
     })
   }
@@ -210,12 +222,6 @@ function CreateKnowledgeBaseDialog({ open, onOpenChange }: { open: boolean; onOp
               Fixed once created — changing the embedding provider later requires a new knowledge base.
             </p>
           </div>
-
-          {createMutation.isError && (
-            <p className="flex items-center gap-1.5 text-xs text-[hsl(var(--destructive))]">
-              <AlertCircle size={13} />Could not create — please try again.
-            </p>
-          )}
         </div>
 
         <DialogFooter>

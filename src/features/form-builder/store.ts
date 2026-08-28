@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import {
   type FormSchema, type FormElement, type FormSection, type FormColumn,
   type ColumnLayout, type ComponentType, type CreateUserSettings, type DetailTabConfig,
-  type DetailPageLayoutId, type CustomActionConfig,
+  type DetailPageLayoutId, type DetailTabOrientation, type CustomActionConfig,
   DETAIL_PAGE_LAYOUTS, DEFAULT_DETAIL_PAGE_ZONE,
   emptySchema, emptyFormSettings, emptyCreateUserSettings,
 } from './schema'
@@ -70,6 +70,22 @@ export function updateDetailTabs(next: DetailTabConfig[]) {
       settings: {
         ...(s.schema.settings ?? emptyFormSettings()),
         detailTabs: next,
+      },
+    },
+  }))
+  useFormMetaStore.getState().markDirty()
+}
+
+/** Switches FormSchema.settings.tabOrientation (Detail Page Builder header
+ *  toggle) — same one-off replace-the-field pattern as updateDetailTabs,
+ *  no reconciliation needed since orientation doesn't affect zones/tabs. */
+export function updateTabOrientation(next: DetailTabOrientation) {
+  useFormBuilderStore.setState((s) => ({
+    schema: {
+      ...s.schema,
+      settings: {
+        ...(s.schema.settings ?? emptyFormSettings()),
+        tabOrientation: next,
       },
     },
   }))

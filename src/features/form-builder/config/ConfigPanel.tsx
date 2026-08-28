@@ -14,7 +14,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, Dr
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useForm as useFormDef } from '@/features/forms/hooks'
-import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection, updateDetailTabs, updateDetailLayout, updateCustomActions } from '../store'
+import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection, updateDetailTabs, updateDetailLayout, updateTabOrientation, updateCustomActions } from '../store'
 import { DetailPageConfigSection } from './DetailPageConfigSection'
 import { CustomActionsConfigSection } from './CustomActionsConfigSection'
 import { DetailPageBuilderOverlay } from '@/features/detail-page-builder/DetailPageBuilderOverlay'
@@ -280,6 +280,7 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
           schema={schema}
           onChangeTabs={updateDetailTabs}
           onChangeLayout={updateDetailLayout}
+          onChangeOrientation={updateTabOrientation}
         />
       )}
     </>

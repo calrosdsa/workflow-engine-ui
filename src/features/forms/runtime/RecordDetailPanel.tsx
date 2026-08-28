@@ -64,6 +64,7 @@ export function RecordDetailPanel({ formId, recordId, fields, schema, onNavigate
         record={record}
         tabConfigs={configuredTabs}
         layout={schema?.settings?.detailLayout ?? 'single'}
+        orientation={schema?.settings?.tabOrientation ?? 'horizontal'}
         onNavigateToRecord={onNavigateToRecord}
       />
     </div>
