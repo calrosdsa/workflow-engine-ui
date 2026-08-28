@@ -16,7 +16,7 @@ import { useLLMProviders, useCreateLLMProvider, useDeleteLLMProvider } from './h
 import type { LLMProvider, ProviderKind, ProviderType } from './types'
 import type { Provider as CatalogProviderType } from '@/features/knowledge/types'
 
-const PROVIDER_TYPE_LABELS: Record<ProviderType, string> = { openai: 'OpenAI', gemini: 'Gemini' }
+const PROVIDER_TYPE_LABELS: Record<ProviderType, string> = { openai: 'OpenAI', gemini: 'Gemini', voyage: 'Voyage' }
 const KIND_LABELS: Record<ProviderKind, string> = { llm: 'LLM', embedding: 'Embedding', both: 'LLM + Embedding' }
 
 export function ManageProvidersDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
@@ -128,6 +128,26 @@ function CreateProviderDialog({ onClose }: { onClose: () => void }) {
     : (selectedCatalog?.llm_models ?? [])
   const selectedEmbedding = selectedCatalog?.embedding_models.find((m) => m.model === model)
 
+  // Provider types with an empty catalog half for the current `kind` (e.g.
+  // Voyage has no llm_models — it's embedding-only) are hidden from the
+  // Provider dropdown rather than left selectable with a dead-end empty
+  // Model dropdown. Computed from the live catalog, not a hardcoded
+  // provider-type list, so this stays correct if the backend catalog changes.
+  const availableProviderTypes = (catalog ?? []).filter((c) =>
+    kind === 'embedding' ? c.embedding_models.length > 0 : c.llm_models.length > 0,
+  )
+
+  // If the current provider type has no models for the newly-selected kind
+  // (switching "Used for" away from what providerType supports), fall back
+  // to the first provider type that does — mirrors the model-default effect
+  // below, and prevents providerType from pointing at a hidden option.
+  useEffect(() => {
+    if (!catalog) return
+    if (availableProviderTypes.some((c) => c.provider === providerType)) return
+    const fallback = availableProviderTypes[0]?.provider
+    if (fallback) setProviderType(fallback)
+  }, [catalog, kind, providerType, availableProviderTypes])
+
   // Default the model to the catalog's first offered option whenever the
   // catalog arrives or the provider/kind selection changes — <select>'s
   // native "shows the first option" rendering is a DOM-only default, not a
@@ -193,8 +213,9 @@ function CreateProviderDialog({ onClose }: { onClose: () => void }) {
               onChange={(e) => { setProviderType(e.target.value as CatalogProviderType); setModel('') }}
               className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700"
             >
-              <option value="openai">OpenAI</option>
-              <option value="gemini">Gemini</option>
+              {availableProviderTypes.map((c) => (
+                <option key={c.provider} value={c.provider}>{PROVIDER_TYPE_LABELS[c.provider]}</option>
+              ))}
             </select>
           </div>
 

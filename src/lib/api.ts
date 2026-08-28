@@ -1,4 +1,4 @@
-import ky from 'ky'
+import ky, { HTTPError } from 'ky'
 import type { VariableDecl, HttpRequestConfig } from '@/features/workflows/types'
 import { useAuthStore } from '@/stores/auth'
 
@@ -46,6 +46,22 @@ export const api = ky.create({
     ],
   },
 })
+
+/** Extracts the human-readable message from a failed `api.*` call — every
+ *  handler in this backend responds to an error with respond.Error's
+ *  `{"error": "..."}` JSON shape (api/respond/respond.go). ky pre-parses the
+ *  response body into HTTPError.data and consumes the stream doing so — its
+ *  own docs are explicit that `err.response.json()`/`.clone()` no longer
+ *  work at that point, so `data` (not the response) is the only way to read
+ *  it here. Falls back to the raw error's message for a non-HTTP failure
+ *  (network down, aborted) or a body that wasn't this JSON shape. */
+export function extractApiError(err: unknown): string {
+  if (err instanceof HTTPError) {
+    const data = err.data as { error?: string } | undefined
+    if (data?.error) return data.error
+  }
+  return err instanceof Error ? err.message : String(err)
+}
 
 // ---------------------------------------------------------------------------
 // Expression validation / preview

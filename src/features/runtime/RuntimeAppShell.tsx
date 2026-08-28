@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Menu as MenuIcon, X, PencilRuler } from 'lucide-react'
-import { runtimeRouter } from '@/runtime-router'
+import { Menu as MenuIcon, X, PencilRuler, Eye } from 'lucide-react'
+import { runtimeRouter, useRuntimeDraftPreview, exitDraftPreview } from '@/runtime-router'
 import { useAuthStore } from '@/stores/auth'
 import { canViewMenu, hasPermission } from '@/features/auth/permissions'
 import { buildRuntimeNavTree, runtimeAncestors, toMenu } from './nav'
@@ -41,6 +41,7 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
   const breadcrumbs = runtimeAncestors(snapshot.menus, currentMenu.id)
 
   const canViewCurrent = canViewMenu(currentMenu, roleId, permissions)
+  const isDraftPreview = useRuntimeDraftPreview()
 
   const RuntimeRenderer = MENU_TYPE_REGISTRY[currentMenu.menu_type].runtimeRenderer
 
@@ -50,8 +51,23 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
     // — not here — so navigating between this shell and sibling leaf routes
     // (RuntimeRecordPage, RuntimeFormRecordPage) doesn't unmount/remount the
     // provider and cause a light/dark flash. See that file's comment for why.
-    <>
-      <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'hsl(var(--background))', color: 'hsl(var(--foreground))' }}>
+    <div className="flex h-screen flex-col overflow-hidden">
+      {isDraftPreview && (
+        <div
+          className="flex h-8 shrink-0 items-center justify-center gap-2 text-[12px] font-medium"
+          style={{ backgroundColor: 'hsl(var(--warning))', color: 'hsl(var(--warning-foreground))' }}
+        >
+          <Eye size={13} />
+          Previewing draft — unpublished changes are shown here only
+          <button
+            onClick={() => exitDraftPreview(clientId, appId)}
+            className="ml-2 rounded px-1.5 py-0.5 underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+          >
+            Exit preview
+          </button>
+        </div>
+      )}
+      <div className="flex min-h-0 flex-1 overflow-hidden" style={{ backgroundColor: 'hsl(var(--background))', color: 'hsl(var(--foreground))' }}>
         {/* Desktop sidebar */}
         <div className="hidden md:block">
           <RuntimeSidebar
@@ -145,6 +161,6 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
           </main>
         </div>
       </div>
-    </>
+    </div>
   )
 }

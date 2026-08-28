@@ -1,20 +1,24 @@
 import { useState } from 'react'
 import { useSearch } from '@tanstack/react-router'
-import { Palette, ListTree, Smartphone, Settings2 } from 'lucide-react'
+import { Palette, ListTree, Smartphone, Settings2, Bot, History } from 'lucide-react'
 import { ThemeSection } from './sections/ThemeSection'
 import { MenusSection } from './sections/MenusSection'
 import { MobileLayoutSection } from './sections/MobileLayoutSection'
 import { GeneralSettingsSection } from './sections/GeneralSettingsSection'
+import { AgentsSection } from './sections/AgentsSection'
+import { VersionHistorySection } from './sections/VersionHistorySection'
 import { useApplication } from '@/features/applications/hooks'
 import { Spinner } from '@/components/ui/spinner'
 
-type Tab = 'theme' | 'menus' | 'mobile' | 'general'
+type Tab = 'theme' | 'menus' | 'mobile' | 'general' | 'agents' | 'versions'
 
 const TABS: { id: Tab; label: string; icon: typeof Palette }[] = [
   { id: 'theme', label: 'Theme', icon: Palette },
   { id: 'menus', label: 'Menus', icon: ListTree },
   { id: 'mobile', label: 'Mobile Layout', icon: Smartphone },
   { id: 'general', label: 'General', icon: Settings2 },
+  { id: 'agents', label: 'Agents', icon: Bot },
+  { id: 'versions', label: 'Version History', icon: History },
 ]
 
 // Merges the old ApplicationBuilderPage's Theme + Menus + General tabs into
@@ -55,6 +59,8 @@ export function AppDesignPage({ appId }: { appId: string }) {
         {tab === 'menus' && <MenusSection appId={appId} />}
         {tab === 'mobile' && <MobileLayoutSection appId={appId} />}
         {tab === 'general' && <GeneralSettingsSection app={app} />}
+        {tab === 'agents' && <AgentsSection appId={appId} />}
+        {tab === 'versions' && <VersionHistorySection publishedVersion={app.published_version} />}
       </div>
     </div>
   )

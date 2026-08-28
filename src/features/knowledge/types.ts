@@ -1,7 +1,9 @@
-// Mirrors api/knowledgebases/providers.go's Provider enum — the only two
-// supported for now. Each provider's base_url is fixed server-side; the
-// frontend only ever selects a provider + a model from its catalog.
-export type Provider = 'openai' | 'gemini'
+// Mirrors api/knowledgebases/providers.go's Provider enum. Each provider's
+// base_url is fixed server-side; the frontend only ever selects a provider +
+// a model from its catalog. Voyage is embedding-only — its catalog entry's
+// llm_models is empty, so UI that offers a "Used for: LLM" choice should
+// filter Voyage out rather than show a dead-end empty model dropdown.
+export type Provider = 'openai' | 'gemini' | 'voyage'
 
 export interface EmbeddingModelOption {
   model: string

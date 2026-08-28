@@ -253,8 +253,8 @@ const appFormDetailRoute = createRoute({
 const appDesignRoute = createRoute({
   getParentRoute: () => applicationShellRoute,
   path: '/design',
-  validateSearch: (search: Record<string, unknown>): { tab?: 'theme' | 'menus' | 'mobile' | 'general' } => ({
-    tab: search.tab === 'theme' || search.tab === 'menus' || search.tab === 'mobile' || search.tab === 'general' ? search.tab : undefined,
+  validateSearch: (search: Record<string, unknown>): { tab?: 'theme' | 'menus' | 'mobile' | 'general' | 'agents' | 'versions' } => ({
+    tab: search.tab === 'theme' || search.tab === 'menus' || search.tab === 'mobile' || search.tab === 'general' || search.tab === 'agents' || search.tab === 'versions' ? search.tab : undefined,
   }),
   component: () => <AppDesignPage appId={applicationShellRoute.useParams().appId} />,
 })

@@ -10,6 +10,7 @@ import {
 } from '@/features/app-settings/hooks'
 import { usePermission } from '@/features/auth/permissions'
 import { IntegrationsSubsection } from '@/features/integrations/IntegrationsSubsection'
+import { ApiKeysSubsection } from '@/features/api-keys/ApiKeysSubsection'
 import type { CredentialSummary, CredentialType, AppVariable } from '@/features/app-settings/types'
 
 export function GlobalSettingsSection() {
@@ -18,6 +19,8 @@ export function GlobalSettingsSection() {
       <CredentialsSubsection />
       <div className="h-px bg-slate-100" />
       <VariablesSubsection />
+      <div className="h-px bg-slate-100" />
+      <ApiKeysSubsection />
       <div className="h-px bg-slate-100" />
       <IntegrationsSubsection />
     </div>

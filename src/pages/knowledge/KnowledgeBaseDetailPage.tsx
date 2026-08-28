@@ -332,7 +332,7 @@ function DocumentGraphPanel({ kbId, docId }: { kbId: string; docId: string }) {
   )
 }
 
-const PROVIDER_LABELS: Record<string, string> = { openai: 'OpenAI', gemini: 'Gemini' }
+const PROVIDER_LABELS: Record<string, string> = { openai: 'OpenAI', gemini: 'Gemini', voyage: 'Voyage' }
 
 // Provider and embedding model are fixed at creation (see
 // UpdateKnowledgeBasePayload's doc comment — embedding dimension is baked

@@ -91,7 +91,7 @@ export default defineConfig({
     port: process.env.PORT ? Number(process.env.PORT) : 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8090',
         rewrite: (p) => p.replace(/^\/api/, ''),
       },
     },

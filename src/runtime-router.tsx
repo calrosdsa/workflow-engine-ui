@@ -14,6 +14,7 @@ import { ThemeProvider } from '@/features/theme/ThemeProvider'
 import { mergeTheme } from '@/features/theme/default-theme'
 import { Toaster } from '@/components/ui/sonner'
 import { RuntimeAppShell } from '@/features/runtime/RuntimeAppShell'
+import { ChatLauncher } from '@/features/runtime/ChatLauncher'
 import { RuntimeRecordPage } from '@/features/runtime/RuntimeRecordPage'
 import { RuntimeFormRecordPage } from '@/features/runtime/RuntimeFormRecordPage'
 import { RuntimeFormCreatePage } from '@/features/runtime/RuntimeFormCreatePage'
@@ -64,6 +65,62 @@ function useRuntimeSnapshotContext(): AppSnapshot {
   return ctx
 }
 
+// Whether this tab is currently previewing DRAFT (unpublished) design —
+// exposed via context alongside the snapshot itself so RuntimeAppShell can
+// show a persistent "Previewing draft" banner with an exit action.
+const RuntimeDraftPreviewContext = createContext(false)
+
+export function useRuntimeDraftPreview(): boolean {
+  return useContext(RuntimeDraftPreviewContext)
+}
+
+// Draft-preview mode is tracked per (clientId, appId) in sessionStorage,
+// NOT in the URL's query string — RuntimeLink (every in-app nav link:
+// sidebar, breadcrumbs, record links, "back" navigation) builds its `to`
+// as a plain path with no seam for carrying a query param along, and
+// retrofitting every call site across the runtime feature to thread one
+// through would be a much larger, easy-to-miss-a-spot change for what is
+// fundamentally a whole-session toggle, not a per-URL one. Instead, the
+// ENTRY point (a `?preview=draft` query param, set by the "Preview Draft"
+// link in the builder's ApplicationDesignShell) is read once here and
+// converted into a sessionStorage flag; every subsequent load in this tab
+// — including a hard refresh — keeps reading the flag, until "Exit Preview"
+// clears it. sessionStorage (not localStorage) is deliberate: closing the
+// tab should not leave a stale draft-preview mode silently active next
+// time this app is opened in a new tab.
+function draftPreviewStorageKey(clientId: string, appId: string): string {
+  return `runtime-draft-preview:${clientId}:${appId}`
+}
+
+export function isDraftPreviewActive(clientId: string, appId: string): boolean {
+  try {
+    return sessionStorage.getItem(draftPreviewStorageKey(clientId, appId)) === '1'
+  } catch {
+    // Private-browsing/storage-blocked contexts can throw on access —
+    // fail closed to the published view rather than crash the route.
+    return false
+  }
+}
+
+function setDraftPreviewActive(clientId: string, appId: string, active: boolean): void {
+  try {
+    const key = draftPreviewStorageKey(clientId, appId)
+    if (active) sessionStorage.setItem(key, '1')
+    else sessionStorage.removeItem(key)
+  } catch {
+    // Ignore — worst case draft preview just doesn't persist across loads.
+  }
+}
+
+// Clears the flag and does a FULL page reload (not runtimeRouter.navigate)
+// so the loader re-runs from a clean slate and re-fetches the published
+// snapshot — simpler and more robust than trying to invalidate/re-run just
+// this one route's loader in place.
+export function exitDraftPreview(clientId: string, appId: string): void {
+  setDraftPreviewActive(clientId, appId, false)
+  window.location.href = `/${clientId}/${appId}`
+}
+
 const runtimeRootRoute = createRootRoute({ component: () => <Outlet /> })
 
 // Per the selective-gating decision: this route's beforeLoad calls
@@ -79,7 +136,18 @@ const runtimeRootRoute = createRootRoute({ component: () => <Outlet /> })
 const runtimeAppRoute = createRoute({
   getParentRoute: () => runtimeRootRoute,
   path: '/$clientId/$appId',
-  beforeLoad: async ({ params }) => {
+  validateSearch: (search: Record<string, unknown>): { preview?: 'draft' } => ({
+    preview: search.preview === 'draft' ? 'draft' : undefined,
+  }),
+  beforeLoad: async ({ params, search }) => {
+    // A `?preview=draft` on ANY load (not just the very first) re-arms the
+    // flag — so re-clicking "Preview Draft" from the builder while already
+    // previewing (e.g. after publishing, to switch back) works the same as
+    // the very first entry, not just a no-op because the flag was already
+    // set from a previous visit.
+    if (search.preview === 'draft') {
+      setDraftPreviewActive(params.clientId, params.appId, true)
+    }
     try {
       const me = await authApi.me()
       useAuthStore.getState().setSession(me)
@@ -107,9 +175,31 @@ const runtimeAppRoute = createRoute({
     }
   },
   loader: async ({ params }) => {
+    // beforeLoad already ran and (if `?preview=draft` was present) armed
+    // the sessionStorage flag — read it here rather than `search.preview`
+    // directly so a plain reload/re-navigation within an already-active
+    // preview session (no query param on the URL any more) still fetches
+    // the draft, not the published snapshot.
+    const draft = isDraftPreviewActive(params.clientId, params.appId)
     try {
-      return await runtimeApi.getPublishedSnapshot(params.clientId, params.appId)
+      const snapshot = draft
+        ? await runtimeApi.getDraftSnapshot()
+        : await runtimeApi.getPublishedSnapshot(params.clientId, params.appId)
+      return { snapshot, draft }
     } catch {
+      // Draft preview specifically can fail with a 403 (permission was
+      // revoked, or an anonymous visitor followed a stale preview link) —
+      // fall back to the published view instead of a hard 404 in that
+      // case, since the app itself may be perfectly reachable normally.
+      if (draft) {
+        setDraftPreviewActive(params.clientId, params.appId, false)
+        try {
+          const snapshot = await runtimeApi.getPublishedSnapshot(params.clientId, params.appId)
+          return { snapshot, draft: false }
+        } catch {
+          throw notFound()
+        }
+      }
       // 404 (never published) or any other failure — treat uniformly as
       // "there's nothing here" rather than leaking a raw error state.
       throw notFound()
@@ -121,24 +211,35 @@ const runtimeAppRoute = createRoute({
 function RuntimeAppRouteComponent() {
   // Inferred locally from THIS route's own `loader` return type above —
   // correct without needing the global Register.
-  const snapshot = runtimeAppRoute.useLoaderData()
+  const { snapshot, draft } = runtimeAppRoute.useLoaderData()
   const theme = mergeTheme(snapshot.theme)
   return (
     <RuntimeSnapshotContext.Provider value={snapshot}>
-      {/* Single shared ThemeProvider for the whole runtime session, scoped
-          here rather than in each leaf page (RuntimeAppShell/RuntimeRecordPage/
-          RuntimeFormRecordPage). Those three are separate route matches, so
-          navigating between them (e.g. a reference-field link from a Search
-          menu to a form's own detail page) unmounts one leaf and mounts the
-          next — if each owned its own ThemeProvider, the outgoing instance's
-          cleanup strips .dark/CSS vars from #runtime-root a tick before the
-          incoming instance's effect re-applies them, producing a visible
-          light/dark flash on every such navigation. One provider that
-          outlives all of them removes that gap entirely. */}
-      <ThemeProvider theme={theme} scopeElement={document.getElementById('runtime-root')}>
-        <Outlet />
-        <Toaster position="bottom-right" />
-      </ThemeProvider>
+      <RuntimeDraftPreviewContext.Provider value={draft}>
+        {/* Single shared ThemeProvider for the whole runtime session, scoped
+            here rather than in each leaf page (RuntimeAppShell/RuntimeRecordPage/
+            RuntimeFormRecordPage). Those three are separate route matches, so
+            navigating between them (e.g. a reference-field link from a Search
+            menu to a form's own detail page) unmounts one leaf and mounts the
+            next — if each owned its own ThemeProvider, the outgoing instance's
+            cleanup strips .dark/CSS vars from #runtime-root a tick before the
+            incoming instance's effect re-applies them, producing a visible
+            light/dark flash on every such navigation. One provider that
+            outlives all of them removes that gap entirely. */}
+        <ThemeProvider theme={theme} scopeElement={document.getElementById('runtime-root')}>
+          <Outlet />
+          {/* offset shifts toasts up so they never overlap ChatLauncher's own
+              fixed bottom-right bubble (FR-D4-001 v0.2's resolved layout
+              decision: the launcher is the persistent fixture, toasts are
+              transient, so the transient element yields position). Applied
+              unconditionally rather than only when an Agent is enabled — a
+              fixed offset with no bubble present just leaves a little extra
+              bottom margin, simpler than conditioning this on ChatLauncher's
+              own (async) visibility check. */}
+          <Toaster position="bottom-right" offset={{ bottom: 88 }} />
+          <ChatLauncher />
+        </ThemeProvider>
+      </RuntimeDraftPreviewContext.Provider>
     </RuntimeSnapshotContext.Provider>
   )
 }

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { FilterBuilder, newGroup } from '../FilterBuilder'
 import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenceSelect'
@@ -30,6 +31,10 @@ export function normaliseTriggerConfig(raw: unknown): TriggerConfig {
     webhook_token:         r.webhook_token ?? '',
     source_definition_id:  r.source_definition_id ?? '',
     enabled:               r.enabled ?? true,
+    expose_as_tool:        r.expose_as_tool ?? false,
+    tool_name:             r.tool_name ?? '',
+    tool_description:      r.tool_description ?? '',
+    tool_parameters:       r.tool_parameters ?? [],
   }
 }
 
@@ -121,6 +126,13 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
           })}
         </div>
       </div>
+
+      <div className="h-px bg-slate-100" />
+
+      {/* Expose as tool — FR-C8-004. Orthogonal to Mode: this workflow keeps
+          whatever mode already governs its normal dispatch and can ALSO be
+          made callable as an Agent tool. */}
+      <ExposeAsToolFields config={config} variables={variables} set={set} />
 
       <div className="h-px bg-slate-100" />
 
@@ -261,6 +273,119 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
             Leave blank to react to any workflow's failed execution in this app. When set, only that workflow's
             failures dispatch this trigger.
           </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ExposeAsToolFields — FR-C8-004's toggle plus conditional name/description/
+// parameter-selection block, following the same `set({...})` patch pattern
+// every other mode's field block above already uses. Parameter selection
+// reuses this form's own `variables` prop (the workflow's own declared
+// Variables, sourced from VariablesPanel.tsx's builder-store state) rather
+// than a new variable-listing component, per FR-C8-004 §3's own resolved
+// design.
+function ExposeAsToolFields({
+  config,
+  variables,
+  set,
+}: {
+  config: TriggerConfig
+  variables: VariableDecl[]
+  set: (patch: Partial<TriggerConfig>) => void
+}) {
+  const parameters = config.tool_parameters ?? []
+  const selectedNames = new Set(parameters.map((p) => p.variable_name))
+
+  const toggleParameter = (name: string, checked: boolean) => {
+    if (checked) {
+      set({ tool_parameters: [...parameters, { variable_name: name, description: '' }] })
+    } else {
+      set({ tool_parameters: parameters.filter((p) => p.variable_name !== name) })
+    }
+  }
+
+  const updateParamDescription = (name: string, description: string) => {
+    set({ tool_parameters: parameters.map((p) => (p.variable_name === name ? { ...p, description } : p)) })
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2">
+        <div>
+          <Label className="text-[12px] font-semibold text-slate-700">Expose as Tool</Label>
+          <p className="text-[10px] text-slate-400">Let an Agent call this workflow directly, in addition to however it's normally triggered above.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => set({ expose_as_tool: !config.expose_as_tool })}
+          className={cn(
+            'relative h-5 w-9 shrink-0 rounded-full transition-colors',
+            config.expose_as_tool ? 'bg-emerald-500' : 'bg-slate-300',
+          )}
+        >
+          <span className={cn(
+            'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform',
+            config.expose_as_tool ? 'translate-x-4' : 'translate-x-0.5',
+          )} />
+        </button>
+      </div>
+
+      {config.expose_as_tool && (
+        <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3">
+          <div className="space-y-1.5">
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tool Name</Label>
+            <Input
+              value={config.tool_name ?? ''}
+              onChange={(e) => set({ tool_name: e.target.value })}
+              placeholder="e.g. Send Invoice"
+              className="h-8 text-[12px]"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tool Description</Label>
+            <textarea
+              value={config.tool_description ?? ''}
+              onChange={(e) => set({ tool_description: e.target.value })}
+              rows={3}
+              placeholder="What this tool does and when an Agent should call it…"
+              className="w-full resize-y rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12px] text-slate-700 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Parameters</Label>
+            {variables.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-400">
+                This workflow has no declared Variables yet — add one in the Variables panel to expose it as a tool parameter.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {variables.map((v) => {
+                  const selected = selectedNames.has(v.name)
+                  const param = parameters.find((p) => p.variable_name === v.name)
+                  return (
+                    <div key={v.name} className="rounded-lg border border-slate-200 p-2">
+                      <label className="flex items-center gap-2">
+                        <Checkbox checked={selected} onCheckedChange={(c) => toggleParameter(v.name, c === true)} />
+                        <span className="font-mono text-[11px] text-slate-700">{v.name}</span>
+                        <span className="text-[10px] text-slate-400">({v.type})</span>
+                      </label>
+                      {selected && (
+                        <Input
+                          value={param?.description ?? ''}
+                          onChange={(e) => updateParamDescription(v.name, e.target.value)}
+                          placeholder="What should the model fill in here?"
+                          className="mt-1.5 h-7 text-[11px]"
+                        />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <p className="text-[10px] text-slate-400">Leave every Variable unchecked for a tool that needs no input.</p>
+          </div>
         </div>
       )}
     </div>

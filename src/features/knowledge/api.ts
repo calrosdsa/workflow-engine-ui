@@ -7,7 +7,20 @@ import type {
 } from './types'
 
 export const knowledgeApi = {
-  providers: () => api.get('knowledge-bases/providers').json<ProviderCatalogEntry[]>(),
+  // Normalizes llm_models/embedding_models to [] when the backend sends JSON
+  // null (an empty Go slice with no `omitempty` still round-trips as null,
+  // not [] — see providers.go's ProviderVoyage entry) — every consumer
+  // (e.g. ManageProvidersDialog's availableProviderTypes) reads
+  // `.length`/`.map` on these fields unconditionally per ProviderCatalogEntry's
+  // non-nullable string[] type, so this is the one place that promise needs
+  // to actually hold rather than trusting every future catalog entry to
+  // remember `[]string{}` over `nil` on the Go side.
+  providers: () => api.get('knowledge-bases/providers').json<ProviderCatalogEntry[]>()
+    .then((entries) => entries.map((e) => ({
+      ...e,
+      llm_models: e.llm_models ?? [],
+      embedding_models: e.embedding_models ?? [],
+    }))),
 
   list:   () => api.get('knowledge-bases').json<KnowledgeBaseSummary[]>(),
   get:    (id: string) => api.get(`knowledge-bases/${id}`).json<KnowledgeBase>(),

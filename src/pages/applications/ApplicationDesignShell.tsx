@@ -1,10 +1,14 @@
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { ArrowLeft, LayoutDashboard, Workflow, FileText, Palette, KeyRound, Rocket, Loader2, AlertCircle, ListTree } from 'lucide-react'
+import { toast } from 'sonner'
+import { ArrowLeft, LayoutDashboard, Workflow, FileText, Palette, KeyRound, Rocket, Save, Loader2, AlertCircle, ListTree, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { useApplication, usePublishApplication } from '@/features/applications/hooks'
+import { useApplication, useApplicationVersions, usePublishApplication, useSaveVersion } from '@/features/applications/hooks'
 import { usePermission } from '@/features/auth/permissions'
+import { runtimeUrlFor } from '@/features/runtime/urls'
 import { useState } from 'react'
 import type { ValidationIssue } from '@/features/applications/types'
 
@@ -41,29 +45,59 @@ function isFormEditRoute(pathname: string, appId: string): boolean {
 export function ApplicationDesignShell({ appId }: { appId: string }) {
   const navigate = useNavigate()
   const { data: app, isLoading } = useApplication()
+  const { data: versions } = useApplicationVersions()
   const publishMutation = usePublishApplication()
+  const saveVersionMutation = useSaveVersion()
   const canPublish = usePermission('application:publish')
+  const canWrite = usePermission('application:write')
+  // Everyone who reached this shell at all already holds application:design
+  // (it's the same permission that gates the runtime's "Edit Design" link
+  // INTO here — see RuntimeAppShell.tsx's canDesign check), but check it
+  // explicitly anyway rather than reusing canWrite, since it's the exact
+  // permission the backend's GET /application/draft-snapshot route is
+  // actually gated on.
+  const canPreviewDraft = usePermission('application:design')
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const hideShellChrome = isWorkflowEditRoute(pathname, appId) || isFormEditRoute(pathname, appId)
 
   const [publishIssues, setPublishIssues] = useState<ValidationIssue[] | null>(null)
   const [publishError, setPublishError] = useState<string | null>(null)
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false)
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Spinner /></div>
   if (!app) return null
 
   if (hideShellChrome) return <Outlet />
 
-  const handlePublish = async () => {
+  // Newest version's major_version is the current highest — versions come
+  // back newest-first (see VersionStore.List's own ORDER BY). 0 means this
+  // app has never had any version at all yet, so the first publish is v1.
+  const currentMajor = versions?.[0]?.major_version ?? 0
+
+  const handlePublish = async (requestedVersion?: number) => {
     setPublishIssues(null)
     setPublishError(null)
     try {
-      await publishMutation.mutateAsync()
+      await publishMutation.mutateAsync(requestedVersion != null ? { version: requestedVersion } : undefined)
+      setPublishDialogOpen(false)
       window.open(`/${app.client_id}/${app.id}`, '_blank', 'noopener,noreferrer')
     } catch (e) {
       const { issues, message } = await extractPublishError(e)
       if (issues) setPublishIssues(issues)
       else setPublishError(message ?? 'Publishing failed. Please try again.')
+    }
+  }
+
+  // Quick checkpoint with no label/description — the full Save Version
+  // dialog (with label/description fields) lives in the Version History
+  // tab; this header button is the low-friction, frequent path, matching
+  // git's "commit with no message" default.
+  const handleQuickSaveVersion = async () => {
+    try {
+      const result = await saveVersionMutation.mutateAsync({})
+      toast.success(`Checkpoint v${result.major_version}.${result.minor_version} saved`)
+    } catch (e) {
+      toast.error('Could not save version', { description: e instanceof Error ? e.message : undefined })
     }
   }
 
@@ -116,19 +150,55 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           {app.published_version != null && (
             <span className="hidden shrink-0 whitespace-nowrap rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-600 sm:inline-block">
-              Live v{app.published_version}
+              Live v{versions?.find((v) => v.version_number === app.published_version)?.major_version ?? currentMajor}.0
             </span>
+          )}
+          {canPreviewDraft && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => window.open(`${runtimeUrlFor(app.client_id, app.id)}?preview=draft`, '_blank', 'noopener,noreferrer')}
+              title="Preview Draft — see your unpublished changes live, without publishing"
+              className="h-8 w-8 shrink-0"
+            >
+              <Eye size={14} />
+            </Button>
+          )}
+          {canWrite && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleQuickSaveVersion}
+              disabled={saveVersionMutation.isPending}
+              title="Save Version — a deliberate checkpoint, doesn't publish"
+              className="gap-1.5 px-2"
+            >
+              {saveVersionMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              {/* One breakpoint later than every other header label (lg, not
+               *  sm) — this button is the newest addition to an already
+               *  fully-budgeted header (see this header's own doc comment:
+               *  776px of content with zero slack at sm+), so its own label
+               *  is the one that gives way first under medium widths rather
+               *  than reintroducing the horizontal-overflow bug that
+               *  comment describes fixing. */}
+              <span className="hidden lg:inline">Save Version</span>
+            </Button>
           )}
           {canPublish && (
             <Button
               size="sm"
-              onClick={handlePublish}
+              onClick={() => setPublishDialogOpen(true)}
               disabled={publishMutation.isPending}
               title="Launch Application"
-              className="gap-1.5 bg-indigo-600 px-2 text-white hover:bg-indigo-700 sm:px-3"
+              className="gap-1.5 bg-indigo-600 px-2 text-white hover:bg-indigo-700"
             >
               {publishMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Rocket size={14} />}
-              <span className="hidden sm:inline">Launch Application</span>
+              {/* Moved from sm to lg alongside Save Version's own label —
+               *  see that button's comment: adding a second header action
+               *  used up this header's last slack at sm+, so both labels
+               *  now collapse together rather than one staying full-text
+               *  while the other goes icon-only. */}
+              <span className="hidden lg:inline">Launch Application</span>
             </Button>
           )}
         </div>
@@ -158,7 +228,83 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
       <div className="min-h-0 flex-1 overflow-y-auto">
         <Outlet />
       </div>
+
+      <PublishDialog
+        open={publishDialogOpen}
+        onOpenChange={setPublishDialogOpen}
+        currentMajor={currentMajor}
+        onPublish={handlePublish}
+        isPending={publishMutation.isPending}
+      />
     </div>
+  )
+}
+
+function PublishDialog({
+  open, onOpenChange, currentMajor, onPublish, isPending,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  currentMajor: number
+  onPublish: (requestedVersion?: number) => void
+  isPending: boolean
+}) {
+  const suggestedNext = currentMajor + 1
+  const [versionText, setVersionText] = useState('')
+
+  // Reset the field to the freshly-suggested default each time the dialog
+  // opens, rather than remembering whatever was typed the last time it was
+  // closed without publishing.
+  const handleOpenChange = (next: boolean) => {
+    if (next) setVersionText('')
+    onOpenChange(next)
+  }
+
+  const parsed = versionText.trim() === '' ? null : Number(versionText)
+  const isValid = parsed === null || (Number.isInteger(parsed) && parsed > currentMajor)
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="w-full max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Launch Application</DialogTitle>
+          <DialogDescription>
+            {currentMajor > 0
+              ? `Currently live: v${currentMajor}.0. Publishing starts a new major version.`
+              : 'This will be the first published version of this app.'}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="px-6 py-2">
+          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">
+            Version number (optional)
+          </label>
+          <Input
+            value={versionText}
+            onChange={(e) => setVersionText(e.target.value)}
+            placeholder={`${suggestedNext} (default)`}
+            inputMode="numeric"
+            className="font-mono"
+          />
+          {!isValid && (
+            <p className="mt-1 flex items-center gap-1.5 text-[12px] text-[hsl(var(--destructive))]">
+              <AlertCircle size={12} /> Must be a whole number greater than {currentMajor}.
+            </p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={isPending}>Cancel</Button>
+          <Button
+            size="sm"
+            className="gap-1.5 bg-indigo-600 text-white hover:bg-indigo-700"
+            onClick={() => onPublish(parsed ?? undefined)}
+            disabled={!isValid || isPending}
+          >
+            {isPending ? <Loader2 size={13} className="animate-spin" /> : <Rocket size={13} />}
+            Launch v{parsed ?? suggestedNext}.0
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

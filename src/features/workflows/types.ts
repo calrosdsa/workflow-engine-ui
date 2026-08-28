@@ -24,6 +24,8 @@ export type NodeType =
   | 'knowledge_retrieval'
   | 'knowledge_ingest'
   | 'debug'
+  | 'run_agent'
+  | 'send_to_session'
 
 export type PortKind = 'data' | 'control' | 'trigger'
 
@@ -503,6 +505,33 @@ export interface TriggerConfig {
   source_definition_id?: string
 
   enabled: boolean
+
+  // expose_as_tool (FR-C8-004) — orthogonal to mode: this workflow keeps
+  // whatever mode already governs its normal dispatch and can ALSO be made
+  // callable as an Agent tool. Off by default.
+  expose_as_tool?: boolean
+  tool_name?: string
+  tool_description?: string
+  tool_parameters?: ToolParameter[]
+}
+
+// ToolParameter mirrors internal/graph/configs_trigger.go's ToolParameter —
+// one of this workflow's own declared Variables, exposed as one input of
+// its tool-calling surface (FR-C8-004).
+export interface ToolParameter {
+  variable_name: string
+  description: string
+}
+
+// ExposedTool mirrors api/workflows/handler.go's exposedToolResponse — one
+// workflow exposed as an Agent tool, as read by the Agent editor's Tools
+// section (FR-C8-004).
+export interface ExposedTool {
+  definition_id: string
+  workflow_name: string
+  tool_name: string
+  description: string
+  parameters: ToolParameter[]
 }
 
 // ---------------------------------------------------------------------------
@@ -570,6 +599,34 @@ export interface KnowledgeIngestConfig {
   file_name?: string
   file_name_expr?: string
   output_var: string
+}
+
+// ---------------------------------------------------------------------------
+// run_agent / send_to_session — mirrors internal/graph/configs.go's
+// RunAgentConfig/SendToSessionConfig (FR-B2-029/030). input_mappings is
+// deliberately NOT surfaced here — FR-C5-013 v0.2 dropped it from
+// RunAgentForm after confirming Subflow's own mapping editor has no
+// equivalent "target's declared variables" concept for an Agent to map
+// into; the backend field stays unset from this UI.
+// ---------------------------------------------------------------------------
+
+export type TaskMode = 'literal' | 'expression'
+
+export interface RunAgentConfig {
+  agent_id: string
+  task_mode: TaskMode
+  task?: string
+  task_expr?: string
+  output_var: string
+}
+
+export interface SendToSessionConfig {
+  session_id_mode: ValueMode
+  session_id?: string
+  session_id_expr?: string
+  content_mode: ValueMode
+  content?: string
+  content_expr?: string
 }
 
 // ---------------------------------------------------------------------------

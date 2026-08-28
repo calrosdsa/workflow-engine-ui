@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import type { WorkflowDefinition, CreateWorkflowPayload, UpdateWorkflowPayload, ReorderWorkflowsPayload } from './types'
+import type { WorkflowDefinition, CreateWorkflowPayload, UpdateWorkflowPayload, ReorderWorkflowsPayload, ExposedTool } from './types'
 
 export const workflowsApi = {
   list: () => api.get('workflows').json<WorkflowDefinition[]>(),
@@ -15,4 +15,8 @@ export const workflowsApi = {
 
   reorder: (payload: ReorderWorkflowsPayload) =>
     api.patch('workflows/reorder', { json: payload }),
+
+  // Gated assistant:read, not workflows:read — see api/workflows'
+  // ExposedAsTools handler doc comment (FR-C8-004).
+  exposedAsTools: () => api.get('workflows/exposed-as-tools').json<ExposedTool[]>(),
 }

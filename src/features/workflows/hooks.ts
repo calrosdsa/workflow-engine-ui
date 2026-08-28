@@ -11,6 +11,13 @@ export function useWorkflows() {
   return useQuery({ queryKey: workflowKeys.all, queryFn: workflowsApi.list })
 }
 
+// Backs the Agent editor's Tools section (FR-C8-004) — a separate query key
+// from workflowKeys.all since it's gated assistant:read, not workflows:read,
+// and a different set of callers invalidate/consume it.
+export function useExposedTools() {
+  return useQuery({ queryKey: ['workflows', 'exposed-as-tools'] as const, queryFn: workflowsApi.exposedAsTools })
+}
+
 export function useWorkflow(id: string) {
   return useQuery({
     queryKey: workflowKeys.detail(id),

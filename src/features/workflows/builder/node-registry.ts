@@ -21,6 +21,8 @@ import {
   BookOpen,
   BookOpenCheck,
   Bug,
+  Bot,
+  MessageCircle,
   type LucideIcon,
 } from 'lucide-react'
 import type {
@@ -28,6 +30,7 @@ import type {
   UpsertRecordsConfig, UpdateRecordsConfig, DeleteRecordsConfig, HttpRequestConfig,
   TriggerConfig, ShowMessageConfig, TransformConfig, SaveRecordsConfig, NotificationConfig,
   KnowledgeRetrievalConfig, KnowledgeIngestConfig, DebugConfig, SubflowConfig,
+  RunAgentConfig, SendToSessionConfig,
 } from '../types'
 import type { NodeOutputSchema } from './node-output-schema'
 import { TriggerForm, normaliseTriggerConfig } from './node-forms/TriggerForm'
@@ -47,6 +50,8 @@ import { NotificationForm, normaliseNotificationConfig } from './node-forms/Noti
 import { KnowledgeRetrievalForm, normaliseKnowledgeRetrievalConfig } from './node-forms/KnowledgeRetrievalForm'
 import { KnowledgeIngestForm, normaliseKnowledgeIngestConfig } from './node-forms/KnowledgeIngestForm'
 import { DebugForm, normaliseDebugConfig } from './node-forms/DebugForm'
+import { RunAgentForm, normaliseRunAgentConfig } from './node-forms/RunAgentForm'
+import { SendToSessionForm, normaliseSendToSessionConfig } from './node-forms/SendToSessionForm'
 import { NoAdditionalConfig, LoopEndNoConfig } from './node-forms/NoConfigNeeded'
 
 // The fixed prop shape every node type's config form receives — unused props
@@ -67,7 +72,7 @@ export interface NodeFormProps {
 // Node picker category tabs. Only meaningful for PALETTE_NODES members —
 // non-addable types (entry/trigger/exit/loop_end/subflow) leave `category`
 // unset since they never appear in the picker.
-export type NodeCategory = 'Data' | 'Logic' | 'Integrations' | 'Notify' | 'Knowledge' | 'Debug'
+export type NodeCategory = 'Data' | 'Logic' | 'Integrations' | 'Notify' | 'Knowledge' | 'Debug' | 'Agent'
 
 export interface NodeRegistryEntry {
   label: string
@@ -277,6 +282,24 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     normalise: (raw) => normaliseDebugConfig(raw),
     category: 'Debug',
   },
+  run_agent: {
+    label: 'Run Agent', icon: Bot,
+    color: 'bg-indigo-600', gradient: 'bg-gradient-to-br from-indigo-600 to-violet-700',
+    accent: '#4f46e5', textColor: 'text-indigo-700', ring: 'bg-indigo-50',
+    description: 'Start an Agent run and wait for its result',
+    form: RunAgentForm as unknown as ComponentType<NodeFormProps>,
+    normalise: (raw) => normaliseRunAgentConfig(raw),
+    category: 'Agent',
+  },
+  send_to_session: {
+    label: 'Send to Session', icon: MessageCircle,
+    color: 'bg-indigo-500', gradient: 'bg-gradient-to-br from-indigo-500 to-blue-600',
+    accent: '#6366f1', textColor: 'text-indigo-700', ring: 'bg-indigo-50',
+    description: 'Post a message into an existing Agent session',
+    form: SendToSessionForm as unknown as ComponentType<NodeFormProps>,
+    normalise: (raw) => normaliseSendToSessionConfig(raw),
+    category: 'Agent',
+  },
 }
 
 // These three accept NodeType | (string & {}) — see store.ts's addNode doc
@@ -324,6 +347,7 @@ export function defaultConfig(type: NodeType | (string & {})):
   | UpsertRecordsConfig | UpdateRecordsConfig | DeleteRecordsConfig | HttpRequestConfig
   | TriggerConfig | ShowMessageConfig | TransformConfig | SaveRecordsConfig | NotificationConfig
   | KnowledgeRetrievalConfig | KnowledgeIngestConfig | DebugConfig | SubflowConfig
+  | RunAgentConfig | SendToSessionConfig
   | Record<string, never> {
   switch (type) {
     case 'trigger':
@@ -381,6 +405,10 @@ export function defaultConfig(type: NodeType | (string & {})):
       } satisfies KnowledgeIngestConfig
     case 'debug':
       return {} satisfies DebugConfig
+    case 'run_agent':
+      return { agent_id: '', task_mode: 'literal', task: '', output_var: '' } satisfies RunAgentConfig
+    case 'send_to_session':
+      return { session_id_mode: 'static', session_id: '', content_mode: 'static', content: '' } satisfies SendToSessionConfig
     default:
       return {}
   }
@@ -401,6 +429,7 @@ export const PALETTE_NODES: NodeType[] = [
   'set_variable', 'condition', 'fetch_records', 'upsert_records', 'update_records',
   'delete_records', 'transform', 'save_records', 'iterator', 'http_request', 'show_message',
   'notification', 'knowledge_retrieval', 'knowledge_ingest', 'merge', 'debug', 'subflow',
+  'run_agent', 'send_to_session',
 ]
 
 // Node picker category tabs, derived from each PALETTE_NODES member's own
@@ -410,7 +439,7 @@ export const PALETTE_NODES: NodeType[] = [
 // registry authoring bug, not a runtime condition to degrade gracefully
 // from, so it throws immediately at module load rather than silently
 // omitting that type from every tab.
-const CATEGORY_ORDER: NodeCategory[] = ['Data', 'Logic', 'Integrations', 'Notify', 'Knowledge', 'Debug']
+const CATEGORY_ORDER: NodeCategory[] = ['Data', 'Logic', 'Integrations', 'Notify', 'Knowledge', 'Agent', 'Debug']
 
 export const NODE_CATEGORIES: { label: string; types: NodeType[] }[] = [
   { label: 'All', types: PALETTE_NODES },
