@@ -42,18 +42,32 @@ export function parseLayout(layout: unknown): FormSchema {
  *  data. New elements (no matching backend field) simply stay column-less and
  *  get one assigned by the backend on the next save. */
 export function toBuilder(def: FormDefinition): BuilderFormState {
-  const schema = parseLayout(def.layout)
+  const parsed = parseLayout(def.layout)
   const columnByKey = new Map<string, string>()
   for (const f of def.fields ?? ([] as FieldDef[])) {
     if (f.column) columnByKey.set(f.name, f.column)
   }
-  for (const section of schema.sections) {
-    for (const column of section.columns) {
-      for (const el of column.elements) {
-        const col = columnByKey.get(el.key)
-        if (col) el.column = col
-      }
-    }
+  // Builds fresh section/column/element objects rather than mutating what
+  // parseLayout returned in place — that object may alias the schema still
+  // living in the form-builder's Zustand store, which Immer's `produce`
+  // (features/builder-kit/tree-store.ts) deep-freezes as a side effect of
+  // any canvas edit. Mutating a frozen `el` here threw "Cannot assign to
+  // read only property 'column'" in production use, right after a save
+  // (toPayload embeds `state.schema` into the request verbatim, and that
+  // same reference round-trips back as `def.layout` once the update
+  // mutation's cache settles) — confirmed live.
+  const schema: FormSchema = {
+    ...parsed,
+    sections: parsed.sections.map((section) => ({
+      ...section,
+      columns: section.columns.map((column) => ({
+        ...column,
+        elements: column.elements.map((el) => {
+          const col = columnByKey.get(el.key)
+          return col ? { ...el, column: col } : el
+        }),
+      })),
+    })),
   }
   return {
     name: def.name,
