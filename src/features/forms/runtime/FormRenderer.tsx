@@ -36,6 +36,13 @@ function emptyDefaults(schema: FormSchema): Record<string, unknown> {
     // sending '' for an unset one 500s with "invalid input syntax for type
     // uuid" (see nullsToEmptyStrings above for the full explanation).
     else if (reg.fieldType === 'reference') out[el.key] = null
+    // 'file' (File Upload / Image Upload, FR-C1-012) is a real Postgres
+    // JSONB column, same as 'json' above — sending '' 500s with "invalid
+    // input syntax for type json". schema-to-zod's file case is itself
+    // `.nullable()`, so null is the correct unset representation, not ''.
+    // Confirmed live: submitting the runtime Add User form with an untouched
+    // Image Upload field 500'd until this branch was added.
+    else if (reg.fieldType === 'file') out[el.key] = null
     else out[el.key] = ''
   }
   return out
@@ -61,7 +68,12 @@ function nullsToEmptyStrings(schema: FormSchema, values: Record<string, unknown>
   const out: Record<string, unknown> = { ...values }
   for (const el of iterElements(schema)) {
     const reg = COMPONENT_REGISTRY[el.component]
-    if (!reg.dataBearing || reg.fieldType === 'json' || reg.fieldType === 'boolean' || reg.fieldType === 'reference') continue
+    // 'file' excluded for the same reason as 'reference'/'json'/'boolean':
+    // its physical column is JSONB, and schema-to-zod's file case is
+    // `.nullable()` — a loaded record's unset file field is a real SQL NULL
+    // and must stay null, not get coerced to '' (which 500s as invalid JSON
+    // on the next save).
+    if (!reg.dataBearing || reg.fieldType === 'json' || reg.fieldType === 'boolean' || reg.fieldType === 'reference' || reg.fieldType === 'file') continue
     if (out[el.key] === null) out[el.key] = ''
   }
   return out
