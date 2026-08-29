@@ -11,10 +11,17 @@ export interface ContentOwner {
 }
 
 export const contentApi = {
-  upload: (owner: ContentOwner, file: File) => {
+  // fieldName is optional — omit it for a non-form-field upload (e.g. an
+  // app_asset). When set and owner.ownerKind is 'form_record', the backend
+  // looks up that field's MaxFileSizeBytes/AllowedMimeTypes rule (FR-C1-012)
+  // and rejects the upload before storing anything if it's violated —
+  // omitting fieldName skips that check entirely, matching pre-FR-C1-012
+  // behavior.
+  upload: (owner: ContentOwner, file: File, fieldName?: string) => {
     const form = new FormData()
     form.append('owner_kind', owner.ownerKind)
     form.append('owner_resource_id', owner.ownerResourceId)
+    if (fieldName) form.append('field_name', fieldName)
     form.append('file', file)
     // Same Content-Type-deletion requirement as features/knowledge/api.ts's
     // uploadFile — the shared `api` instance defaults to application/json,

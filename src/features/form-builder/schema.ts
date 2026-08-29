@@ -63,6 +63,13 @@ export interface ElementValidation {
   max?: number
   pattern?: string          // regex
   customMessage?: string
+  // 'file'/'image' only (FR-C1-012) — maps to backend FieldDef's
+  // MaxFileSizeBytes/AllowedMimeTypes (internal/forms/field/types.go).
+  // maxFileSizeBytes stores bytes even though the config panel's own input
+  // is authored in MB, matching the backend's own unit — conversion happens
+  // at the UI boundary (ConfigPanel), not here.
+  maxFileSizeBytes?: number
+  allowedMimeTypes?: string[]
 }
 
 export interface ElementBehavior {

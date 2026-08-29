@@ -14,8 +14,10 @@ import { Upload, X, FileIcon, Loader2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { contentApi } from '@/features/content/api'
 import type { FileFieldValue } from '@/features/content/types'
+import type { FormElement } from '@/features/form-builder/schema'
 
 interface FileFieldInputProps {
+  el: FormElement
   isImage: boolean
   formId?: string
   field: { value: unknown; onChange: (v: unknown) => void }
@@ -28,10 +30,33 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export function FileFieldInput({ isImage, formId, field, disabled }: FileFieldInputProps) {
+// preflightCheck mirrors the backend's own rule (api/content's Upload
+// handler, FR-C1-012) client-side, so an obviously-doomed upload never even
+// starts — the backend check is still the real, bypass-proof enforcement
+// point (see contentApi.upload's own doc comment); this is purely a faster,
+// friendlier error for the common case of picking an oversized or
+// wrong-type file by mistake.
+function preflightCheck(file: File, el: FormElement): string | null {
+  const { maxFileSizeBytes, allowedMimeTypes } = el.validation
+  if (maxFileSizeBytes && file.size > maxFileSizeBytes) {
+    return `File exceeds the maximum size of ${formatSize(maxFileSizeBytes)}.`
+  }
+  if (allowedMimeTypes?.length && !allowedMimeTypes.includes(file.type)) {
+    return `File type must be one of: ${allowedMimeTypes.join(', ')}.`
+  }
+  return null
+}
+
+export function FileFieldInput({ el, isImage, formId, field, disabled }: FileFieldInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const value = field.value as FileFieldValue | null | undefined
+
+  // A configured AllowedMimeTypes rule is the more specific constraint —
+  // prefer it over the generic isImage-driven 'image/*' fallback.
+  const acceptAttr = el.validation.allowedMimeTypes?.length
+    ? el.validation.allowedMimeTypes.join(',')
+    : (isImage ? 'image/*' : undefined)
 
   const upload = useMutation({
     mutationFn: (file: File) => {
@@ -40,7 +65,7 @@ export function FileFieldInput({ isImage, formId, field, disabled }: FileFieldIn
       // any one record instance, so upload works fine on a not-yet-saved
       // Create form the same as an existing record's Edit form.
       if (!formId) throw new Error('No form context available for this upload.')
-      return contentApi.upload({ ownerKind: 'form_record', ownerResourceId: formId }, file)
+      return contentApi.upload({ ownerKind: 'form_record', ownerResourceId: formId }, file, el.key)
     },
     onSuccess: (obj) => {
       setError(null)
@@ -57,6 +82,11 @@ export function FileFieldInput({ isImage, formId, field, disabled }: FileFieldIn
   const handleFiles = (files: FileList | null) => {
     const file = files?.[0]
     if (!file) return
+    const preflightError = preflightCheck(file, el)
+    if (preflightError) {
+      setError(preflightError)
+      return
+    }
     upload.mutate(file)
   }
 
@@ -126,7 +156,7 @@ export function FileFieldInput({ isImage, formId, field, disabled }: FileFieldIn
         <input
           ref={inputRef}
           type="file"
-          accept={isImage ? 'image/*' : undefined}
+          accept={acceptAttr}
           className="hidden"
           onChange={(e) => handleFiles(e.target.files)}
         />
@@ -150,7 +180,7 @@ export function FileFieldInput({ isImage, formId, field, disabled }: FileFieldIn
       <input
         ref={inputRef}
         type="file"
-        accept={isImage ? 'image/*' : undefined}
+        accept={acceptAttr}
         className="hidden"
         disabled={disabled}
         onChange={(e) => handleFiles(e.target.files)}

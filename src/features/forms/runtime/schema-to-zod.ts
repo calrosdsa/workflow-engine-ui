@@ -69,19 +69,40 @@ export function fieldSchema(el: FormElement): z.ZodTypeAny {
     case 'json':
       base = z.any()
       break
-    case 'file':
+    case 'file': {
       // FileFieldValue shape (see internal/forms/field's TypeFile doc
       // comment and features/content/types.ts) — an object, not a string,
       // so it must NOT fall into the default string-based case below (that
       // would reject every real upload at validation time). null covers the
       // unset/cleared state (FileFieldInput's "Remove" writes null).
+      const maxFileSizeBytes = el.validation.maxFileSizeBytes
+      const allowedMimeTypes = el.validation.allowedMimeTypes
+      // Same MaxFileSizeBytes/AllowedMimeTypes rule as the backend
+      // (internal/forms/validator's TypeFile case, FR-C1-012) — a redundant,
+      // frontend-only re-check of the SAVED record's value, not the upload
+      // itself (FileFieldInput's own preflightCheck + the backend's Upload
+      // handler are what actually stop a bad file from being stored; this
+      // exists only so a record edited to reference a since-changed-rule
+      // value, or a record loaded from before a rule was tightened, is still
+      // caught at save time rather than silently passing this form's own
+      // validation).
       base = z.object({
         content_id: z.string(),
         filename: z.string(),
         content_type: z.string(),
         size_bytes: z.number(),
-      }).nullable()
+      })
+        .superRefine((v, ctx) => {
+          if (maxFileSizeBytes !== undefined && v.size_bytes > maxFileSizeBytes) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: el.validation.customMessage ?? 'File exceeds the maximum allowed size.' })
+          }
+          if (allowedMimeTypes?.length && !allowedMimeTypes.includes(v.content_type)) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: el.validation.customMessage ?? 'File type is not allowed.' })
+          }
+        })
+        .nullable()
       break
+    }
     default: {
       let str = z.string()
       if (el.validation.minLength !== undefined) str = str.min(el.validation.minLength, el.validation.customMessage)

@@ -192,6 +192,7 @@ export function FieldInput({ el, field, formId, disabled }: {
     case 'image':
       return (
         <FileFieldInput
+          el={el}
           isImage={el.component === 'image'}
           formId={formId}
           field={field}

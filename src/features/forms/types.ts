@@ -59,6 +59,15 @@ export interface FieldDef {
    *  column ("tsv", generated server-side from all searchable fields).
    *  Only meaningful for text-like types (string/text/email/phone). */
   searchable?: boolean
+  /** Caps an uploaded file's size, in bytes, for type === 'file' fields.
+   *  Enforced server-side (api/content's Upload handler, before any bytes
+   *  are stored — the real gate) and re-checked at record-save time
+   *  (internal/forms/validator). See FR-C1-012. */
+  max_file_size_bytes?: number
+  /** Restricts which content types a type === 'file' field accepts, by
+   *  exact match (e.g. "image/jpeg"). Empty/absent means any type is
+   *  accepted. Same server-side enforcement as max_file_size_bytes. */
+  allowed_mime_types?: string[]
 }
 
 export interface FormDefinition {

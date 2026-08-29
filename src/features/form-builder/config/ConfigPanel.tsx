@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { SlidersHorizontal, Layers, FileText, LayoutPanelTop, LayoutGrid, Zap } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -57,6 +57,30 @@ function ToggleRow({ label, checked, onCheckedChange }: { label: string; checked
       <Label className="text-[12px] font-normal text-[hsl(var(--muted-foreground))]">{label}</Label>
       <Switch checked={checked} onCheckedChange={onCheckedChange} />
     </div>
+  )
+}
+
+// Local text-editing state, committed to the comma-separated array only on
+// blur — element.validation.allowedMimeTypes is the source of truth, but
+// deriving the input's `value` from array.join(', ') on every keystroke
+// would reformat mid-typing (e.g. typing "image/jpeg, i" re-splits/re-joins
+// before the second type is finished) and fight the user's cursor. Syncs
+// from the external value when it changes for a reason other than this
+// input's own edits (e.g. switching selected elements).
+function AllowedMimeTypesField({ value, onCommit }: { value: string[] | undefined; onCommit: (types: string[]) => void }) {
+  const [text, setText] = useState((value ?? []).join(', '))
+  useEffect(() => setText((value ?? []).join(', ')), [value])
+
+  return (
+    <Field label="Allowed File Types" hint="Comma-separated MIME types, e.g. image/jpeg, image/png — leave blank to allow any type">
+      <Input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => onCommit(text.split(',').map((t) => t.trim()).filter(Boolean))}
+        placeholder="image/jpeg, image/png"
+        className="h-8 font-mono text-[11px]"
+      />
+    </Field>
   )
 }
 
@@ -341,6 +365,7 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
   const hasOptions = ['select', 'radio', 'multiselect', 'autocomplete'].includes(element.component)
   const isNumeric = element.component === 'number'
   const isTextual = ['text', 'textarea', 'email', 'url', 'password', 'phone'].includes(element.component)
+  const isFileUpload = ['file', 'image'].includes(element.component)
   const isFormRef = element.component === 'form'
   const parentFormId = useFormMetaStore((s) => s.parentFormId)
   const isParentLink = isFormRef && isParentLinkElement(element, parentFormId)
@@ -601,6 +626,25 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                   <Field label="Regex Pattern" hint="e.g. ^[A-Z]{2}\d{4}$">
                     <Input value={element.validation.pattern ?? ''} onChange={(e) => setValidation({ pattern: e.target.value })} className="h-8 font-mono text-[11px]" />
                   </Field>
+                )}
+                {isFileUpload && (
+                  <>
+                    <Field label="Max File Size (MB)" hint="Leave blank for no per-field limit">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={element.validation.maxFileSizeBytes ? element.validation.maxFileSizeBytes / (1024 * 1024) : ''}
+                        onChange={(e) => setValidation({
+                          maxFileSizeBytes: e.target.value === '' ? undefined : Math.round(Number(e.target.value) * 1024 * 1024),
+                        })}
+                        className="h-8 text-sm"
+                      />
+                    </Field>
+                    <AllowedMimeTypesField
+                      value={element.validation.allowedMimeTypes}
+                      onCommit={(types) => setValidation({ allowedMimeTypes: types.length ? types : undefined })}
+                    />
+                  </>
                 )}
                 <Field label="Custom Validation Message">
                   <Input value={element.validation.customMessage ?? ''} onChange={(e) => setValidation({ customMessage: e.target.value })} placeholder="Shown when invalid" className="h-8 text-sm" />

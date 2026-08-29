@@ -136,6 +136,16 @@ function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | nul
     field.searchable = true
   }
 
+  // File/Image Upload's size/type rule (FR-C1-012) — unlike minLength/
+  // maxLength/pattern (frontend-Zod-only, never projected to FieldDef at
+  // all), these two ARE backend-enforced (api/content's Upload handler is
+  // the real gate, before any bytes are stored), so they must reach the
+  // saved FieldDef or the backend has nothing to look up.
+  if (reg.fieldType === 'file') {
+    if (el.validation.maxFileSizeBytes !== undefined) field.max_file_size_bytes = el.validation.maxFileSizeBytes
+    if (el.validation.allowedMimeTypes && el.validation.allowedMimeTypes.length > 0) field.allowed_mime_types = el.validation.allowedMimeTypes
+  }
+
   // SQL default — only emit for primitive static defaults we can express safely.
   const def = staticDefaultLiteral(el)
   if (def !== undefined) field.default = def
