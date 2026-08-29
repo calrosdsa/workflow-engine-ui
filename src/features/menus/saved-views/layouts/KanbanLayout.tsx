@@ -37,6 +37,7 @@ import { resolveRecordTitle } from '@/features/forms/runtime/record-title'
 import { formatValue, formatSystemDatetime } from '@/features/forms/runtime/format-value'
 import { RoleValueLabel } from '@/features/forms/runtime/RoleValueLabel'
 import { resolveEnumLabel } from '@/features/forms/runtime/enum-labels'
+import { FileCellDisplay } from '@/features/forms/runtime/FileCellDisplay'
 import { useKanbanColumn } from '@/features/forms/runtime/useKanbanColumn'
 import { useUpdateRecord } from '@/features/forms/hooks'
 import { formsApi } from '@/features/forms/api'
@@ -512,6 +513,8 @@ function KanbanCard({ record, fields, bodyFields, roleField, enumLabels, onClick
                   ? <RoleValueLabel roleId={record[f.name]} />
                   : f.type === 'enum'
                   ? resolveEnumLabel(enumLabels, f.name, record[f.name])
+                  : f.type === 'file'
+                  ? <FileCellDisplay value={record[f.name]} />
                   : formatValue(record[f.name])}
               </span>
             </div>

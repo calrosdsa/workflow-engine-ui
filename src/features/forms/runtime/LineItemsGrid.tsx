@@ -40,6 +40,8 @@ import { usePermission } from '@/features/auth/permissions'
 import { formatValue } from './format-value'
 import { resolveReferenceLabel } from './record-title'
 import { ReferenceValueLabel } from './ReferenceValueLabel'
+import { FileCellDisplay } from './FileCellDisplay'
+import { FileFieldInput } from './FileFieldInput'
 import { COLUMN_LAYOUTS } from '@/features/form-builder/schema'
 import { iterLineItemElements } from '@/features/form-builder/lineItemsSync'
 import { parseLayout } from '@/features/form-builder/serialize'
@@ -874,6 +876,18 @@ function SummaryRow({ row, columns, colWidths, canReorder, canDelete, canDuplica
             <button type="button" onClick={onEdit} className="rounded text-[hsl(var(--muted-foreground))] underline-offset-2 transition-colors hover:text-[hsl(var(--primary))] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]">
               {(Array.isArray(row[c.key]) ? (row[c.key] as unknown[]).length : 0)} row(s)
             </button>
+          ) : c.component === 'file' || c.component === 'image' ? (
+            // Same "never truly inline, always click-to-open" treatment as
+            // line_items above — RowFieldInput's inline table-cell context
+            // has no parentFormId (SummaryRowProps carries none), which
+            // FileFieldInput needs for its upload's owner_resource_id; real
+            // upload/replace only works in the row-editor Drawer, where
+            // RowFieldInput IS given parentFormId (see that function's own
+            // 'file'/'image' case). Before this, a file/image column fell
+            // through to formatValue's JSON.stringify fallback here.
+            <button type="button" onClick={onEdit} className="block w-full text-left">
+              <FileCellDisplay value={row[c.key]} />
+            </button>
           ) : isInline ? (
             <RowFieldInput column={c} value={row[c.key]} disabled={disabled} onChange={(v) => onUpdate({ [c.key]: v })} />
           ) : c.component === 'form' ? (
@@ -966,6 +980,11 @@ function CardRow({ row, columns, canReorder, canDelete, canDuplicate, canSelect,
               {c.component === 'line_items' ? (
                 <button type="button" onClick={onEdit} className="rounded text-[hsl(var(--muted-foreground))] underline-offset-2 transition-colors hover:text-[hsl(var(--primary))] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]">
                   {(Array.isArray(row[c.key]) ? (row[c.key] as unknown[]).length : 0)} row(s)
+                </button>
+              ) : c.component === 'file' || c.component === 'image' ? (
+                // Same reasoning as SummaryRow's identical branch above.
+                <button type="button" onClick={onEdit} className="block w-full text-left">
+                  <FileCellDisplay value={row[c.key]} />
                 </button>
               ) : isInline ? (
                 <RowFieldInput column={c} value={row[c.key]} disabled={disabled} onChange={(v) => onUpdate({ [c.key]: v })} />
@@ -1211,6 +1230,24 @@ function RowFieldInput({ column, value, disabled, parentFormId, onChange }: {
     }
     case 'form':
       return <ReferenceFieldInput column={column} value={value as string} disabled={disabled} onChange={onChange} />
+    case 'file':
+    case 'image':
+      // Previously fell through to `default:` below — casting a
+      // FileFieldValue object to string produced the literal text
+      // "[object Object]" in a plain <Input>, and typing into it would have
+      // corrupted the field's stored value entirely (not just a display
+      // bug, a broken editor). parentFormId is this grid's own effective
+      // form id (see this function's own param doc comment) — exactly what
+      // FileFieldInput needs for its upload's owner_resource_id.
+      return (
+        <FileFieldInput
+          el={column}
+          isImage={column.component === 'image'}
+          formId={parentFormId}
+          field={{ value, onChange }}
+          disabled={disabled}
+        />
+      )
     default:
       return <Input value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
   }

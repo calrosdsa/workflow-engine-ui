@@ -17,6 +17,7 @@ import { resolveRecordTitle } from './record-title'
 import { formatSystemDatetime } from './format-value'
 import { RecordReferenceLink } from './RecordReferenceLink'
 import { RoleValueLabel } from './RoleValueLabel'
+import { FileCellDisplay } from './FileCellDisplay'
 import { buildEnumLabels, resolveEnumLabel } from './enum-labels'
 import { parseLayout } from '@/features/form-builder/serialize'
 import { CardLayout } from '@/features/menus/saved-views/layouts/CardLayout'
@@ -257,6 +258,14 @@ export function RecordsTable({
     // this is the read-only List-column counterpart.
     const isRoleField = key === form.create_user_role_field
     const isEnum = field?.type === 'enum'
+    // 'file' (File Upload / Image Upload, FR-C1-012) stores a
+    // {content_id, filename, content_type, size_bytes} object — without this
+    // case it fell through to DataTable's own generic formatCell fallback,
+    // which JSON.stringify's any object value, showing the raw JSON blob
+    // instead of a thumbnail/file chip (same bug class as
+    // FieldValueDisplay.tsx's Detail Page fix, this table's own read-only
+    // column render).
+    const isFile = field?.type === 'file'
     return {
       key,
       label: field?.label ?? key,
@@ -269,6 +278,8 @@ export function RecordsTable({
         ? (row: FormRecord) => formatSystemDatetime(row[key])
         : isEnum
         ? (row: FormRecord) => resolveEnumLabel(enumLabels, key, row[key])
+        : isFile
+        ? (row: FormRecord) => <FileCellDisplay value={row[key]} />
         : undefined,
     }
   })

@@ -13,7 +13,8 @@ import { useRecordDetail, useAuditLog, useLinkedRecords } from './record-detail-
 import { InlineFieldEditor } from './InlineFieldEditor'
 import { COLUMN_LAYOUTS } from '@/features/form-builder/schema'
 import { COMPONENT_REGISTRY } from '@/features/form-builder/component-registry'
-import { formatValue } from './format-value'
+import { formatValue, formatFileOrValue } from './format-value'
+import { FileCellDisplay } from './FileCellDisplay'
 import { resolveReferenceLabel } from './record-title'
 import { ReferenceValueLabel } from './ReferenceValueLabel'
 import { buildEnumLabels, resolveEnumLabel } from './enum-labels'
@@ -184,6 +185,8 @@ export function DetailsTab({
           <div style={{ color: 'hsl(var(--foreground))' }}>
             {f.type === 'reference' ? (
               <ReferenceValueLabel formId={f.reference_table} recordId={record[f.name]} displayField={f.display_field} />
+            ) : f.type === 'file' ? (
+              <FileCellDisplay value={record[f.name]} />
             ) : (
               formatValue(record[f.name])
             )}
@@ -312,9 +315,9 @@ export function AuditLogTab({ formId, recordId, fields, schema }: { formId: stri
                   <div key={field} className="flex items-center justify-between gap-3">
                     <span className="shrink-0" style={{ color: 'hsl(var(--muted-foreground))' }}>{fieldLabel(field)}</span>
                     <span className="truncate text-right" style={{ color: 'hsl(var(--foreground))' }}>
-                      {fieldIsEnum(field) ? resolveEnumLabel(enumLabels, field, change.old) : formatValue(change.old)}
+                      {fieldIsEnum(field) ? resolveEnumLabel(enumLabels, field, change.old) : formatFileOrValue(change.old)}
                       {' '}<span style={{ color: 'hsl(var(--muted-foreground))' }}>→</span>{' '}
-                      {fieldIsEnum(field) ? resolveEnumLabel(enumLabels, field, change.new) : formatValue(change.new)}
+                      {fieldIsEnum(field) ? resolveEnumLabel(enumLabels, field, change.new) : formatFileOrValue(change.new)}
                     </span>
                   </div>
                 ))}
