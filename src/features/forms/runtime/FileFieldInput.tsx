@@ -1,0 +1,166 @@
+// File Upload / Image Upload field input — backs FieldRenderer's 'file' and
+// 'image' cases (both map to the same backend field.TypeFile; image-vs-file
+// is a frontend MIME-filter/preview distinction only, isImage below, not a
+// separate FormElement.component-driven schema field). Uploads through
+// contentApi (internal/content, Garage-backed) scoped to
+// owner_kind=form_record / owner_resource_id=formId, then writes the
+// resulting content_id back into the record via field.onChange — same
+// async-resolve-then-write-id shape ReferenceFieldAutocomplete already uses
+// for Form Reference fields, just uploading bytes instead of picking an
+// existing record.
+import { useRef, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { Upload, X, FileIcon, Loader2, AlertCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { contentApi } from '@/features/content/api'
+import type { FileFieldValue } from '@/features/content/types'
+
+interface FileFieldInputProps {
+  isImage: boolean
+  formId?: string
+  field: { value: unknown; onChange: (v: unknown) => void }
+  disabled: boolean
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+export function FileFieldInput({ isImage, formId, field, disabled }: FileFieldInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [error, setError] = useState<string | null>(null)
+  const value = field.value as FileFieldValue | null | undefined
+
+  const upload = useMutation({
+    mutationFn: (file: File) => {
+      // formId here is the FORM DEFINITION's id (FormRenderer's own prop,
+      // not a specific record) — content.Owner scopes to the form, not to
+      // any one record instance, so upload works fine on a not-yet-saved
+      // Create form the same as an existing record's Edit form.
+      if (!formId) throw new Error('No form context available for this upload.')
+      return contentApi.upload({ ownerKind: 'form_record', ownerResourceId: formId }, file)
+    },
+    onSuccess: (obj) => {
+      setError(null)
+      field.onChange({
+        content_id: obj.id,
+        filename: obj.filename,
+        content_type: obj.content_type,
+        size_bytes: obj.size_bytes,
+      } satisfies FileFieldValue)
+    },
+    onError: (err) => setError(err instanceof Error ? err.message : 'Upload failed'),
+  })
+
+  const handleFiles = (files: FileList | null) => {
+    const file = files?.[0]
+    if (!file) return
+    upload.mutate(file)
+  }
+
+  if (upload.isPending) {
+    return (
+      <div className="flex h-24 flex-col items-center justify-center gap-2 rounded-md border border-dashed border-[hsl(var(--border))] text-[12px] text-[hsl(var(--muted-foreground))]">
+        <Loader2 size={16} className="animate-spin" />
+        Uploading…
+      </div>
+    )
+  }
+
+  if (value?.content_id) {
+    return (
+      <div className="space-y-1.5">
+        {isImage ? (
+          <div className="relative w-fit">
+            <img
+              src={contentApi.downloadUrl(value.content_id)}
+              alt={value.filename}
+              className="h-24 w-auto rounded-md border border-[hsl(var(--border))] object-cover"
+            />
+            {!disabled && (
+              <button
+                type="button"
+                onClick={() => field.onChange(null)}
+                className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                title="Remove image"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-2 rounded-md border border-[hsl(var(--border))] px-2.5 py-1.5">
+            <a
+              href={contentApi.downloadUrl(value.content_id)}
+              target="_blank"
+              rel="noreferrer"
+              className="flex min-w-0 items-center gap-1.5 text-[13px] text-[hsl(var(--foreground))] hover:underline"
+            >
+              <FileIcon size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
+              <span className="truncate">{value.filename}</span>
+            </a>
+            <span className="shrink-0 text-[11px] text-[hsl(var(--muted-foreground))]">{formatSize(value.size_bytes)}</span>
+            {!disabled && (
+              <button
+                type="button"
+                onClick={() => field.onChange(null)}
+                className="shrink-0 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                title="Remove file"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        )}
+        {!disabled && (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="text-[11px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:underline"
+          >
+            Replace
+          </button>
+        )}
+        <input
+          ref={inputRef}
+          type="file"
+          accept={isImage ? 'image/*' : undefined}
+          className="hidden"
+          onChange={(e) => handleFiles(e.target.files)}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-1">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={disabled}
+        onClick={() => inputRef.current?.click()}
+        className="gap-1.5"
+      >
+        <Upload size={13} />
+        {isImage ? 'Upload image' : 'Upload file'}
+      </Button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={isImage ? 'image/*' : undefined}
+        className="hidden"
+        disabled={disabled}
+        onChange={(e) => handleFiles(e.target.files)}
+      />
+      {error && (
+        <p className="flex items-center gap-1 text-[11px] text-red-600">
+          <AlertCircle size={11} className="shrink-0" />
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}

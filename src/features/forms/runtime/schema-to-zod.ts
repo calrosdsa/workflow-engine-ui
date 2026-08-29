@@ -8,9 +8,12 @@ import type { FormSchema, FormElement } from '@/features/form-builder/schema'
  *  Deliberately excludes: 'form' (needs ReferenceFieldAutocomplete's own
  *  search popover — a real candidate, but separate, follow-up scope),
  *  'line_items' (a whole grid, never single-field-writable), 'line_item_count'
- *  (virtual/computed, never a real input), 'file'/'image' (currently a
- *  URL-text-field stub with no real upload backend — writing to a stub
- *  would be misleading), and every presentational type (no value to write). */
+ *  (virtual/computed, never a real input), 'file'/'image' (FileFieldInput
+ *  needs a real file picker + upload flow, not a bare value input — a
+ *  standalone single-field editor/update_field target for these would need
+ *  its own upload UI, not just a value write; separate, follow-up scope,
+ *  same reasoning as 'form' above), and every presentational type (no value
+ *  to write). */
 const SINGLE_FIELD_WRITABLE_TYPES = new Set<FormElement['component']>([
   'text', 'textarea', 'richtext', 'number', 'email', 'url', 'password', 'phone',
   'date', 'time', 'datetime',
@@ -66,6 +69,19 @@ export function fieldSchema(el: FormElement): z.ZodTypeAny {
     case 'json':
       base = z.any()
       break
+    case 'file':
+      // FileFieldValue shape (see internal/forms/field's TypeFile doc
+      // comment and features/content/types.ts) — an object, not a string,
+      // so it must NOT fall into the default string-based case below (that
+      // would reject every real upload at validation time). null covers the
+      // unset/cleared state (FileFieldInput's "Remove" writes null).
+      base = z.object({
+        content_id: z.string(),
+        filename: z.string(),
+        content_type: z.string(),
+        size_bytes: z.number(),
+      }).nullable()
+      break
     default: {
       let str = z.string()
       if (el.validation.minLength !== undefined) str = str.min(el.validation.minLength, el.validation.customMessage)
@@ -88,7 +104,11 @@ export function fieldSchema(el: FormElement): z.ZodTypeAny {
     // reference values alone rather than coercing them to '' like every
     // other string-shaped field) — '' isn't a valid uuid and 500s at the DB
     // layer, so null has to be an accepted value here too, not just ''.
-    base = reg.fieldType === 'reference' ? base.optional().nullable().or(z.literal('')) : base.optional().or(z.literal(''))
+    // 'file' is the same shape of exception, for the same reason: its unset
+    // state is JSONB null (FileFieldInput's "Remove" writes null), and '' is
+    // not a valid FileFieldValue object either.
+    const nullableTypes = reg.fieldType === 'reference' || reg.fieldType === 'file'
+    base = nullableTypes ? base.optional().nullable().or(z.literal('')) : base.optional().or(z.literal(''))
   }
   return base
 }

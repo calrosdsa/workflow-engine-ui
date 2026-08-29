@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { DatePicker, DateTimePicker } from '@/components/ui/date-time-picker'
 import { TimePicker } from '@/components/ui/time-picker'
 import { ReferenceFieldAutocomplete } from './ReferenceFieldAutocomplete'
+import { FileFieldInput } from './FileFieldInput'
 import { LineItemsGrid } from './LineItemsGrid'
 import { useAuthStore } from '@/stores/auth'
 import { useRoles } from '@/features/roles/hooks'
@@ -27,11 +28,11 @@ interface FieldRendererProps {
 // Dispatches each ComponentType to a controlled input wired via react-hook-form's
 // Controller. Heading/paragraph/divider/spacer render as static presentational
 // blocks (no RHF wiring, no runtime-state gating — they carry no value so
-// visibility toggling doesn't apply). No file-upload backend endpoint exists
-// yet in this codebase, so file/image render as a URL-entry fallback matching
-// field.TypeFile's documented {name,url,size,mime} shape — real upload
-// infrastructure is out of scope for the App Builder and should be its own
-// follow-up.
+// visibility toggling doesn't apply). file/image upload through
+// internal/content (Garage-backed, see FileFieldInput) and write a
+// FileFieldValue ({content_id, filename, content_type, size_bytes}) back —
+// see field.TypeFile's doc comment (internal/forms/field/types.go) for the
+// backend's authoritative shape.
 export function FieldRenderer({ element: el, control, formId, runtimeState, error }: FieldRendererProps) {
   if (['heading', 'paragraph', 'divider', 'spacer'].includes(el.component)) {
     return <PresentationalElement element={el} />
@@ -190,11 +191,10 @@ export function FieldInput({ el, field, formId, disabled }: {
     case 'file':
     case 'image':
       return (
-        <Input
-          value={(field.value as { url?: string } | undefined)?.url ?? ''}
-          onChange={(e) => field.onChange({ url: e.target.value })}
-          onBlur={field.onBlur}
-          placeholder="https://…"
+        <FileFieldInput
+          isImage={el.component === 'image'}
+          formId={formId}
+          field={field}
           disabled={disabled}
         />
       )
