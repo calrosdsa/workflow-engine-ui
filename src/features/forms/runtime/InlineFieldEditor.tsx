@@ -35,9 +35,24 @@ import type { FormRecord } from '@/features/forms/types'
  *  Shared with FR-D2-017's update_field custom action via
  *  isFieldSingleWritable, not duplicated — that action type reuses the same
  *  static half, evaluated at Form Builder config time where no "current
- *  viewer" exists to check canEdit against. */
+ *  viewer" exists to check canEdit against.
+ *
+ *  'file'/'image' are deliberately NOT part of isFieldSingleWritable's own
+ *  SINGLE_FIELD_WRITABLE_TYPES (see that file's doc comment) — that set also
+ *  gates update_field, a bare-value-write action with no upload UI, where a
+ *  file/image target genuinely doesn't make sense. But FileFieldInput IS a
+ *  real, self-contained interactive control here (it owns its own upload/
+ *  preflight/preview flow, unlike a plain value input) — this was flagged as
+ *  "separate, follow-up scope" by isFieldSingleWritable's own comment, and
+ *  never built until now. Checked as its own explicit allowance, alongside
+ *  (not instead of) the shared static check, so update_field's exclusion is
+ *  untouched. */
 function isFieldEligible(el: FormElement, canEdit: boolean): boolean {
   if (!canEdit) return false
+  if (el.component === 'file' || el.component === 'image') {
+    return el.behavior.readOnly !== 'always' && el.behavior.readOnly !== 'expression'
+      && el.behavior.visibility !== 'hidden' && el.behavior.visibility !== 'expression'
+  }
   return isFieldSingleWritable(el)
 }
 
