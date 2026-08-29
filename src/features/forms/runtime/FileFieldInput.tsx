@@ -9,7 +9,7 @@
 // for Form Reference fields, just uploading bytes instead of picking an
 // existing record.
 import { useRef, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { Upload, X, FileIcon, Loader2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { contentApi } from '@/features/content/api'
@@ -90,6 +90,22 @@ export function FileFieldInput({ el, isImage, formId, field, disabled }: FileFie
     upload.mutate(file)
   }
 
+  // Preview/download MUST use a presigned URL, not contentApi.downloadUrl —
+  // GET /content/{id} requires X-Client-ID/X-App-ID headers (RequireTenant
+  // has no cookie-only/header-less tenant resolution path,
+  // internal/middleware/tenant.go), which a plain <img src>/<a href> has no
+  // way to attach (those are native browser resource loads, never routed
+  // through ky's beforeRequest hook) — confirmed live: an <img> pointed at
+  // downloadUrl 401'd every time. A presigned URL is self-contained
+  // (signed query params, no header requirement) and is exactly what this
+  // endpoint exists for.
+  const presigned = useQuery({
+    queryKey: ['content', value?.content_id, 'presigned-url'],
+    queryFn: () => contentApi.presignedUrl(value!.content_id),
+    enabled: !!value?.content_id,
+    staleTime: 10 * 60 * 1000, // well under the presign endpoint's own TTL (15min default, FR-F-008) so a stale cached URL doesn't linger past expiry
+  })
+
   if (upload.isPending) {
     return (
       <div className="flex h-24 flex-col items-center justify-center gap-2 rounded-md border border-dashed border-[hsl(var(--border))] text-[12px] text-[hsl(var(--muted-foreground))]">
@@ -104,11 +120,17 @@ export function FileFieldInput({ el, isImage, formId, field, disabled }: FileFie
       <div className="space-y-1.5">
         {isImage ? (
           <div className="relative w-fit">
-            <img
-              src={contentApi.downloadUrl(value.content_id)}
-              alt={value.filename}
-              className="h-24 w-auto rounded-md border border-[hsl(var(--border))] object-cover"
-            />
+            {presigned.data?.url ? (
+              <img
+                src={presigned.data.url}
+                alt={value.filename}
+                className="h-24 w-auto rounded-md border border-[hsl(var(--border))] object-cover"
+              />
+            ) : (
+              <div className="flex h-24 w-24 items-center justify-center rounded-md border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]">
+                <Loader2 size={16} className="animate-spin" />
+              </div>
+            )}
             {!disabled && (
               <button
                 type="button"
@@ -123,9 +145,10 @@ export function FileFieldInput({ el, isImage, formId, field, disabled }: FileFie
         ) : (
           <div className="flex items-center justify-between gap-2 rounded-md border border-[hsl(var(--border))] px-2.5 py-1.5">
             <a
-              href={contentApi.downloadUrl(value.content_id)}
+              href={presigned.data?.url ?? '#'}
               target="_blank"
               rel="noreferrer"
+              onClick={(e) => { if (!presigned.data?.url) e.preventDefault() }}
               className="flex min-w-0 items-center gap-1.5 text-[13px] text-[hsl(var(--foreground))] hover:underline"
             >
               <FileIcon size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />

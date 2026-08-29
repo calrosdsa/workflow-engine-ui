@@ -39,13 +39,25 @@ export const knowledgeApi = {
   uploadFile: (kbId: string, file: File) => {
     const form = new FormData()
     form.append('file', file)
-    // The shared `api` instance defaults Content-Type to application/json
-    // (see lib/api.ts), which ky merges into every request's headers rather
-    // than replacing — so it must be deleted here, not just omitted, or the
-    // browser never gets to set the multipart/form-data boundary itself.
+    // The shared `api` instance sets Content-Type: application/json at
+    // client-construction time (lib/api.ts) — deleting it via a
+    // beforeRequest hook does NOT work for a FormData body: by the time
+    // that hook runs, ky has already constructed the Request (Ky.js builds
+    // `this.request` before hooks run), and the browser bakes the
+    // multipart boundary into the body/headers at THAT construction point,
+    // not lazily. A header deleted afterward doesn't undo that framing —
+    // confirmed live via features/content/api.ts's contentApi.upload (this
+    // exact code, copied from here) producing net::ERR_CONNECTION_RESET on
+    // every real upload with the hook-based deletion, while an unmodified
+    // raw fetch() with an identical FormData body succeeded immediately.
+    // The correct fix is ky's own documented mechanism: `undefined` in
+    // per-call header options is a real deletion signal BEFORE Request
+    // construction (utils/merge.js's mergeHeaders), letting ky's own
+    // FormData auto-detection set the correct multipart Content-Type +
+    // boundary itself.
     return api.post(`knowledge-bases/${kbId}/documents/upload`, {
       body: form,
-      hooks: { beforeRequest: [(request) => { request.headers.delete('Content-Type') }] },
+      headers: { 'Content-Type': undefined },
     }).json<{ doc_id: string; status: string; duplicate: boolean }>()
   },
   deleteDocument: (kbId: string, docId: string) => api.delete(`knowledge-bases/${kbId}/documents/${docId}`),
