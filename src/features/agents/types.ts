@@ -14,7 +14,12 @@ export interface Agent {
   name: string
   description: string
   instructions: string
+  // provider_id identifies which Instance (credential/vendor) this Agent
+  // calls; model_id identifies which specific model on that Instance — the
+  // Model Providers screen's Instance/Model split (an Instance can expose
+  // several models now, model_id is the one this Agent actually uses).
   provider_id: string
+  model_id: string
   skills: Skill[]
   enabled: boolean
   // session_ttl_days overrides the platform-wide default retention window
@@ -27,7 +32,7 @@ export interface Agent {
 
 export interface CreateAgentPayload {
   name: string
-  provider_id: string
+  model_id: string
 }
 
 export interface UpdateAgentPayload {

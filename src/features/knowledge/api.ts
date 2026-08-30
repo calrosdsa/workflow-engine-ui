@@ -9,12 +9,12 @@ import type {
 export const knowledgeApi = {
   // Normalizes llm_models/embedding_models to [] when the backend sends JSON
   // null (an empty Go slice with no `omitempty` still round-trips as null,
-  // not [] — see providers.go's ProviderVoyage entry) — every consumer
-  // (e.g. ManageProvidersDialog's availableProviderTypes) reads
-  // `.length`/`.map` on these fields unconditionally per ProviderCatalogEntry's
-  // non-nullable string[] type, so this is the one place that promise needs
-  // to actually hold rather than trusting every future catalog entry to
-  // remember `[]string{}` over `nil` on the Go side.
+  // not [] — see internal/provider/catalog.go's ProviderVoyage entry) —
+  // every consumer reads `.length`/`.map` on these fields unconditionally
+  // per ProviderCatalogEntry's non-nullable string[] type, so this is the
+  // one place that promise needs to actually hold rather than trusting
+  // every future catalog entry to remember `[]string{}` over `nil` on the
+  // Go side.
   providers: () => api.get('knowledge-bases/providers').json<ProviderCatalogEntry[]>()
     .then((entries) => entries.map((e) => ({
       ...e,

@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { Link, useParams } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { Plus, Trash2, ExternalLink, BookOpen, Sparkles } from 'lucide-react'
+import { Plus, Trash2, ExternalLink, BookOpen } from 'lucide-react'
 import { useKnowledgeBases, useCreateKnowledgeBase, useDeleteKnowledgeBase } from '@/features/knowledge/hooks'
-import { ProviderSelect } from '@/features/llm-providers/ProviderSelect'
-import { ManageProvidersDialog } from '@/features/llm-providers/ManageProvidersDialog'
+import { ModelPicker } from '@/features/model-providers/ModelPicker'
 import { usePermission } from '@/features/auth/permissions'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
@@ -20,7 +19,6 @@ export function KnowledgeBasesPage() {
   const deleteMutation = useDeleteKnowledgeBase()
   const canWrite = usePermission('knowledge:write')
   const [createOpen, setCreateOpen] = useState(false)
-  const [providersOpen, setProvidersOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<KnowledgeBaseSummary | null>(null)
 
   if (isLoading) return <PageLoader />
@@ -51,15 +49,11 @@ export function KnowledgeBasesPage() {
           <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">{ordered.length} knowledge base{ordered.length === 1 ? '' : 's'}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setProvidersOpen(true)} className="gap-1.5">
-            <Sparkles size={16} />Providers
-          </Button>
           {canWrite && (
             <Button onClick={() => setCreateOpen(true)} className="gap-1.5"><Plus size={16} />New Knowledge Base</Button>
           )}
         </div>
       </div>
-      <ManageProvidersDialog open={providersOpen} onOpenChange={setProvidersOpen} />
 
       {!ordered.length ? (
         <EmptyState canWrite={canWrite} onCreate={() => setCreateOpen(true)} />
@@ -144,14 +138,14 @@ function PageLoader() {
 }
 
 const EMPTY_PAYLOAD: CreateKnowledgeBasePayload = {
-  name: '', description: '', llm_provider_id: '', embedding_provider_id: '',
+  name: '', description: '', llm_model_id: '', embedding_model_id: '',
 }
 
 function CreateKnowledgeBaseDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const [form, setForm] = useState<CreateKnowledgeBasePayload>(EMPTY_PAYLOAD)
   const createMutation = useCreateKnowledgeBase()
 
-  const canSubmit = form.name.trim() !== '' && form.llm_provider_id !== '' && form.embedding_provider_id !== ''
+  const canSubmit = form.name.trim() !== '' && form.llm_model_id !== '' && form.embedding_model_id !== ''
 
   const submit = () => {
     createMutation.mutate(form, {
@@ -191,23 +185,23 @@ function CreateKnowledgeBaseDialog({ open, onOpenChange }: { open: boolean; onOp
           </div>
 
           <div>
-            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">LLM Provider</Label>
-            <ProviderSelect
-              value={form.llm_provider_id || undefined}
-              onChange={(id) => setForm({ ...form, llm_provider_id: id ?? '' })}
-              kind="llm"
+            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">LLM Model</Label>
+            <ModelPicker
+              value={form.llm_model_id || undefined}
+              onChange={(id) => setForm({ ...form, llm_model_id: id ?? '' })}
+              capability="llm"
             />
           </div>
 
           <div>
-            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Embedding Provider</Label>
-            <ProviderSelect
-              value={form.embedding_provider_id || undefined}
-              onChange={(id) => setForm({ ...form, embedding_provider_id: id ?? '' })}
-              kind="embedding"
+            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Embedding Model</Label>
+            <ModelPicker
+              value={form.embedding_model_id || undefined}
+              onChange={(id) => setForm({ ...form, embedding_model_id: id ?? '' })}
+              capability="embedding"
             />
             <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
-              Fixed once created — changing the embedding provider later requires a new knowledge base.
+              Fixed once created — changing the embedding model later requires a new knowledge base.
             </p>
           </div>
         </div>

@@ -20,6 +20,7 @@ import { AppDesignPage } from '@/pages/applications/AppDesignPage'
 import { DashboardEditorPage } from '@/pages/applications/DashboardEditorPage'
 import { GlobalSettingsSection } from '@/pages/applications/sections/GlobalSettingsSection'
 import { TeamPage } from '@/pages/team/TeamPage'
+import { ModelProvidersPage } from '@/pages/ModelProvidersPage'
 import { KnowledgeBasesPage } from '@/pages/KnowledgeBasesPage'
 import { KnowledgeBaseDetailPage } from '@/pages/knowledge/KnowledgeBaseDetailPage'
 import { FormRendererHarness } from '@/pages/dev/FormRendererHarness'
@@ -129,6 +130,17 @@ const teamRoute = createRoute({
     }
   },
   component: TeamPage,
+})
+
+// Global: Model Providers (client-wide credentials + models — see
+// features/model-providers). No beforeLoad permission gate, unlike teamRoute
+// above: a providers:read-only user should still see the page (a read-only
+// view), matching every other resource page's convention of gating writes
+// in-page via usePermission rather than redirecting the whole route.
+const modelProvidersRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/model-providers',
+  component: ModelProvidersPage,
 })
 
 // ---------------------------------------------------------------------------
@@ -321,6 +333,7 @@ const routeTree = rootRoute.addChildren([
   shellRoute.addChildren([
     homeRoute,
     teamRoute,
+    modelProvidersRoute,
     applicationShellRoute.addChildren([
       applicationIndexRoute,
       appWorkflowsRoute,

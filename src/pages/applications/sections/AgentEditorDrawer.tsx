@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { useLLMProviders } from '@/features/llm-providers/hooks'
+import { useAllProviderModels } from '@/features/model-providers/hooks'
 import { useUpdateAgent } from '@/features/agents/hooks'
 import { MCPToolsSubsection } from '@/features/agent-mcp/MCPToolsSubsection'
 import { WorkflowToolsSubsection } from '@/features/agent-mcp/WorkflowToolsSubsection'
@@ -42,8 +42,9 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
     agent.session_ttl_days === null ? '' : String(agent.session_ttl_days),
   )
   const updateMutation = useUpdateAgent(agent.id)
-  const { data: providers } = useLLMProviders()
-  const providerName = providers?.find((p) => p.id === agent.provider_id)?.name
+  const { data: allModels } = useAllProviderModels()
+  const model = allModels?.find((m) => m.id === agent.model_id)
+  const modelLabel = model ? `${model.instance_name} · ${model.model}` : undefined
 
   const trimmedTTLInput = sessionTTLDaysInput.trim()
   const ttlIsValid = trimmedTTLInput === '' || (/^\d+$/.test(trimmedTTLInput) && Number(trimmedTTLInput) > 0)
@@ -99,17 +100,17 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
             </div>
 
             <div>
-              <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Model Provider</Label>
-              {/* Provider is not updatable through this pass' PUT /agents
-                  payload (agents.UpdateAgentParams has no provider_id field)
-                  — shown read-only here rather than offering a picker that
-                  would silently fail to save a change. */}
+              <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Model</Label>
+              {/* Not updatable through this pass' PUT /agents payload
+                  (agents.UpdateAgentParams has no model_id field) — shown
+                  read-only here rather than offering a picker that would
+                  silently fail to save a change. */}
               <div className="flex h-8 items-center gap-1.5 rounded-md border border-[hsl(var(--input))] bg-[hsl(var(--muted))]/40 px-2.5 text-[12px] text-[hsl(var(--foreground))]">
                 <Sparkles size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
-                <span className="truncate">{providerName ?? agent.provider_id}</span>
+                <span className="truncate">{modelLabel ?? agent.model_id}</span>
               </div>
               <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
-                Provider changes aren't supported yet — create a new Agent to use a different provider.
+                Model changes aren't supported yet — create a new Agent to use a different model.
               </p>
             </div>
 

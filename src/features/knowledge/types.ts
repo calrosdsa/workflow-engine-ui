@@ -53,13 +53,16 @@ export interface KnowledgeBase extends KnowledgeBaseSummary {
 export interface CreateKnowledgeBasePayload {
   name: string
   description: string
-  // llm_provider_id/embedding_provider_id reference a saved
-  // features/llm-providers LLMProvider — the preferred way to supply model
-  // config, resolved server-side into provider/credential/model. The legacy
-  // provider/credential_name/*_model fields still exist on the wire (backend
-  // accepts either), but the create form only ever sends provider IDs now.
-  llm_provider_id: string
-  embedding_provider_id: string
+  // llm_model_id/embedding_model_id reference one saved
+  // features/model-providers ProviderModel each — the preferred way to
+  // supply model config, resolved server-side into provider/credential/
+  // model. The legacy provider/credential_name/*_model fields (and the
+  // older llm_provider_id/embedding_provider_id, which resolve via an
+  // Instance's default model of that capability) still exist on the wire
+  // for backward compatibility, but the create form only ever sends model
+  // IDs now.
+  llm_model_id: string
+  embedding_model_id: string
 }
 
 // FR-C9-002: a KB always belongs to exactly one owning app (set implicitly

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Plus, Trash2, Bot, Loader2 } from 'lucide-react'
 import { useAgents, useCreateAgent, useUpdateAgent, useDeleteAgent } from '@/features/agents/hooks'
-import { ProviderSelect } from '@/features/llm-providers/ProviderSelect'
+import { ModelPicker } from '@/features/model-providers/ModelPicker'
 import { usePermission } from '@/features/auth/permissions'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
@@ -162,20 +162,20 @@ function EmptyState({ canWrite, onCreate }: { canWrite: boolean; onCreate: () =>
 
 function CreateAgentDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const [name, setName] = useState('')
-  const [providerId, setProviderId] = useState<string | undefined>(undefined)
+  const [modelId, setModelId] = useState<string | undefined>(undefined)
   const createMutation = useCreateAgent()
 
-  const canSubmit = name.trim().length > 0 && !!providerId
+  const canSubmit = name.trim().length > 0 && !!modelId
 
   const submit = () => {
-    if (!canSubmit || !providerId) return
+    if (!canSubmit || !modelId) return
     createMutation.mutate(
-      { name: name.trim(), provider_id: providerId },
+      { name: name.trim(), model_id: modelId },
       {
         onSuccess: () => {
           toast.success(`"${name.trim()}" created`)
           setName('')
-          setProviderId(undefined)
+          setModelId(undefined)
           onOpenChange(false)
         },
         onError: (e) => {
@@ -202,8 +202,8 @@ function CreateAgentDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           </div>
 
           <div>
-            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Model Provider</Label>
-            <ProviderSelect value={providerId} onChange={setProviderId} kind="llm" accentClassName="text-[hsl(var(--primary))]" />
+            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Model</Label>
+            <ModelPicker value={modelId} onChange={setModelId} capability="llm" accentClassName="text-[hsl(var(--primary))]" />
           </div>
         </div>
 
