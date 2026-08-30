@@ -37,6 +37,10 @@ export interface KnowledgeBase extends KnowledgeBaseSummary {
   llm_model: string
   embedding_model: string
   embedding_dim: number
+  // FR-C9-002: whether the CALLER's own app owns this KB — the Sharing
+  // Settings section only renders when true; a false value means this KB
+  // was reached via a sharing grant from another app.
+  owned_by_app: boolean
 }
 
 // credential_name must reference a saved "bearer" credential (holding
@@ -56,12 +60,14 @@ export interface CreateKnowledgeBasePayload {
   // accepts either), but the create form only ever sends provider IDs now.
   llm_provider_id: string
   embedding_provider_id: string
-  // Shared creates a client-wide KB, visible from every app under the
-  // client, instead of one scoped to just the currently active app.
-  // Defaults to true in the create form — knowledge bases are shared by
-  // default per the App Builder's nav restructure.
-  shared?: boolean
 }
+
+// FR-C9-002: a KB always belongs to exactly one owning app (set implicitly
+// at creation from the active app — there is no create-time sharing
+// choice). Visibility is the separate, editable grant controlling what
+// every OTHER app under the client may do with it, changed from the
+// Sharing Settings section on the detail page (see sharing.ts).
+export type KnowledgeBaseVisibility = 'private' | 'read_only' | 'full_access'
 
 // Provider and embedding settings can't be changed after creation — rag-
 // engine rejects an embedding dimension change outright, and swapping
@@ -171,4 +177,27 @@ export interface QueryKnowledgeBaseResponse {
   context: string
   chunks: QueryResponseChunk[]
   references: QueryResponseReference[]
+}
+
+// FR-C9-002 sharing endpoints — see api/knowledgebases/sharing.go.
+export interface SharingResponse {
+  visibility: KnowledgeBaseVisibility
+}
+
+export interface AppUsage {
+  app_id: string
+  app_name: string
+  workflows: string[]
+  agents: string[]
+}
+
+export interface SharingUsageResponse {
+  apps: AppUsage[]
+}
+
+// The 409 body PATCH .../sharing returns when a narrowing change would
+// remove another app's access and the caller hasn't confirmed yet.
+export interface SharingInUseError {
+  error: 'in_use'
+  apps: AppUsage[]
 }

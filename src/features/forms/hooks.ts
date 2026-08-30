@@ -1,13 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { formsApi } from './api'
 import { unlinkDependentForm } from './unlinkDependentForm'
-import type { CreateFormPayload, UpdateFormPayload, FormRecord, FormDefinition } from './types'
+import type { CreateFormPayload, UpdateFormPayload, FormRecord, FormDefinition, FormVisibility } from './types'
 
 export const formKeys = {
   all:     ['forms'] as const,
   detail:  (id: string) => ['forms', id] as const,
   records: (id: string) => ['forms', id, 'records'] as const,
   record:  (fid: string, rid: string) => ['forms', fid, 'records', rid] as const,
+  sharing: (id: string) => ['forms', id, 'sharing'] as const,
 }
 
 export function useForms() {
@@ -100,11 +101,30 @@ export function useUnlinkForm() {
   })
 }
 
-/** "Share This Form In Other Apps" — clones the definition into another app
- *  under the same client. */
-export function useShareForm() {
+// FR-C1-013: Share Settings. useSharing 404s (via the query's own error
+// state) for a form this app doesn't own — the Share Settings dialog only
+// opens when that's not the case, so a real 404 here is unexpected rather
+// than a normal "not the owner" path.
+// enabled additionally requires the caller to opt in (ShareSettingsDialog
+// passes `open`) — ShareSettingsDialog mounts once per form row up front
+// (so the "..." menu can open it instantly), and without this, every form
+// on the page would eagerly fetch its sharing state on every Forms list
+// visit, not just the one row whose dialog is actually opened.
+export function useSharing(formId: string, enabled = true) {
+  return useQuery({ queryKey: formKeys.sharing(formId), queryFn: () => formsApi.getSharing(formId), enabled: !!formId && enabled })
+}
+
+// Not a useQuery — the usage check only ever runs on-demand, right before a
+// narrowing sharing change, never passively when the dialog opens.
+export function useSharingUsage(formId: string) {
+  return useMutation({ mutationFn: () => formsApi.getSharingUsage(formId) })
+}
+
+export function useSetSharing(formId: string) {
+  const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, targetAppId }: { id: string; targetAppId: string }) => formsApi.share(id, targetAppId),
+    mutationFn: (visibility: FormVisibility) => formsApi.setSharing(formId, visibility),
+    onSuccess: () => qc.invalidateQueries({ queryKey: formKeys.sharing(formId) }),
   })
 }
 

@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import type { FormDefinition, CreateFormPayload, UpdateFormPayload, FormRecord, AuditLogResponse, LinkedRecordsResponse, CommentEntry, CommentsResponse } from './types'
+import type { FormDefinition, CreateFormPayload, UpdateFormPayload, FormRecord, AuditLogResponse, LinkedRecordsResponse, CommentEntry, CommentsResponse, FormVisibility, FormSharingResponse, FormSharingUsageResponse } from './types'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
 
 export interface SearchRecordsRequest {
@@ -76,8 +76,14 @@ export const formsApi = {
   // --- tree actions ("..." menu on a form node) ---
   copy:   (id: string) => api.post(`forms/${id}/copy`).json<FormDefinition>(),
   unlink: (id: string) => api.post(`forms/${id}/unlink`).json<FormDefinition>(),
-  share:  (id: string, targetAppId: string) =>
-    api.post(`forms/${id}/share`, { json: { target_app_id: targetAppId } }).json<FormDefinition>(),
+
+  // FR-C1-013: Share Settings — replaces the removed one-time "share" clone
+  // action. Owning-app-only server-side (a non-owning app's call 404s the
+  // same as any form it can't see the settings of).
+  getSharing: (id: string) => api.get(`forms/${id}/sharing`).json<FormSharingResponse>(),
+  getSharingUsage: (id: string) => api.get(`forms/${id}/sharing/usage`).json<FormSharingUsageResponse>(),
+  setSharing: (id: string, visibility: FormVisibility) =>
+    api.patch(`forms/${id}/sharing`, { json: { visibility } }).json<FormSharingResponse>(),
 
   // --- records ---
   listRecords:   (formId: string, filters?: Record<string, string>) => {

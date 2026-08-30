@@ -3,7 +3,7 @@ import type {
   KnowledgeBase, KnowledgeBaseSummary, ProviderCatalogEntry,
   CreateKnowledgeBasePayload, UpdateKnowledgeBasePayload,
   KnowledgeDocument, ListDocumentsResponse, QueryKnowledgeBasePayload, QueryKnowledgeBaseResponse,
-  DocumentGraphResponse,
+  DocumentGraphResponse, KnowledgeBaseVisibility, SharingResponse, SharingUsageResponse,
 } from './types'
 
 export const knowledgeApi = {
@@ -69,4 +69,12 @@ export const knowledgeApi = {
 
   query: (kbId: string, p: QueryKnowledgeBasePayload) =>
     api.post(`knowledge-bases/${kbId}/query`, { json: p }).json<QueryKnowledgeBaseResponse>(),
+
+  // FR-C9-002: Sharing Settings — owning-app-only server-side (a non-owning
+  // app's call 404s the same as any KB it can't see the settings of).
+  getSharing: (kbId: string) => api.get(`knowledge-bases/${kbId}/sharing`).json<SharingResponse>(),
+  getSharingUsage: (kbId: string) =>
+    api.get(`knowledge-bases/${kbId}/sharing/usage`).json<SharingUsageResponse>(),
+  setSharing: (kbId: string, visibility: KnowledgeBaseVisibility) =>
+    api.patch(`knowledge-bases/${kbId}/sharing`, { json: { visibility } }).json<SharingResponse>(),
 }

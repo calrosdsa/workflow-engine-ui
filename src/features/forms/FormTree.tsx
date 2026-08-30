@@ -5,7 +5,7 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { useCopyForm, useUnlinkForm, useDeleteForm } from './hooks'
-import { ShareFormDialog } from './ShareFormDialog'
+import { ShareSettingsDialog } from './ShareSettingsDialog'
 import { AddDependentFormDialog } from './AddDependentFormDialog'
 import type { FormDefinition } from './types'
 
@@ -62,8 +62,8 @@ export function FormTree({ appId, appName, forms, canWrite }: FormTreeProps) {
   return (
     <div className="flex items-start gap-0 overflow-x-auto pb-8">
       <div className="flex shrink-0 items-center">
-        <div className="flex h-20 w-40 shrink-0 flex-col items-center justify-center rounded-xl border border-slate-200 bg-white text-center shadow-sm">
-          <span className="text-sm font-semibold text-slate-800">{appName}</span>
+        <div className="flex h-20 w-40 shrink-0 flex-col items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-center shadow-sm">
+          <span className="text-sm font-semibold text-[hsl(var(--foreground))]">{appName}</span>
         </div>
       </div>
 
@@ -92,14 +92,14 @@ function TreeTrunk({ count }: { count: number }) {
     <div className="relative w-6 shrink-0" style={{ height: totalHeight }}>
       {count > 1 && (
         <div
-          className="absolute left-0 w-px bg-indigo-200"
+          className="absolute left-0 w-px bg-[hsl(var(--border))]"
           style={{ top: ROW_CENTER, height: totalHeight - ROW_HEIGHT }}
         />
       )}
       {Array.from({ length: count }, (_, i) => (
         <div
           key={i}
-          className="absolute left-0 h-px w-6 bg-indigo-200"
+          className="absolute left-0 h-px w-6 bg-[hsl(var(--border))]"
           style={{ top: i * (ROW_HEIGHT + ROW_GAP) + ROW_CENTER }}
         />
       ))}
@@ -117,23 +117,23 @@ function FormNode({ appId, node, canWrite }: { appId: string; node: TreeNode; ca
 
   return (
     <div className="flex items-start gap-0">
-      <div className="group flex w-72 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm transition-colors hover:border-indigo-300">
-        <Database size={15} className="shrink-0 text-indigo-500" />
+      <div className="group flex w-72 shrink-0 items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2.5 shadow-sm transition-colors hover:border-[hsl(var(--primary))]/40">
+        <Database size={15} className="shrink-0 text-[hsl(var(--primary))]" />
         <Link
           to="/applications/$appId/forms/$formId"
           params={{ appId, formId: form.id }}
           className="min-w-0 flex-1"
         >
-          <p className="truncate text-[13px] font-medium text-slate-800">{form.name}</p>
+          <p className="truncate text-[13px] font-medium text-[hsl(var(--foreground))]">{form.name}</p>
           {form.description && (
-            <p className="truncate text-[11px] text-slate-400">{form.description}</p>
+            <p className="truncate text-[11px] text-[hsl(var(--muted-foreground))]">{form.description}</p>
           )}
         </Link>
 
         <Link
           to="/applications/$appId/forms/$formId/records"
           params={{ appId, formId: form.id }}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
           title="View records"
         >
           <Table2 size={14} />
@@ -143,7 +143,7 @@ function FormNode({ appId, node, canWrite }: { appId: string; node: TreeNode; ca
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 opacity-0 hover:bg-slate-100 hover:text-slate-600 group-hover:opacity-100 data-[state=open]:opacity-100 data-[state=open]:bg-slate-100"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[hsl(var(--muted-foreground))] opacity-0 hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] group-hover:opacity-100 data-[state=open]:opacity-100 data-[state=open]:bg-[hsl(var(--muted))]"
                 title="Form actions"
               >
                 <MoreHorizontal size={15} />
@@ -176,7 +176,7 @@ function FormNode({ appId, node, canWrite }: { appId: string; node: TreeNode; ca
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setShareOpen(true)}>
-                Share This Form In Other Apps
+                Share Settings
               </DropdownMenuItem>
               {form.parent_form_id && (
                 <DropdownMenuItem
@@ -201,7 +201,7 @@ function FormNode({ appId, node, canWrite }: { appId: string; node: TreeNode; ca
         </div>
       )}
 
-      <ShareFormDialog formId={form.id} open={shareOpen} onOpenChange={setShareOpen} />
+      <ShareSettingsDialog formId={form.id} open={shareOpen} onOpenChange={setShareOpen} />
       <AddDependentFormDialog defaultParentId={form.id} open={addDependentOpen} onOpenChange={setAddDependentOpen} />
     </div>
   )

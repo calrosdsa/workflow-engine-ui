@@ -113,21 +113,6 @@ const homeRoute = createRoute({
 })
 
 // ---------------------------------------------------------------------------
-// Global: Knowledge Bases (client-wide, not nested under any one app)
-// ---------------------------------------------------------------------------
-const knowledgeBasesRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/knowledge-bases',
-  component: KnowledgeBasesPage,
-})
-
-const knowledgeBaseDetailRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/knowledge-bases/$kbId',
-  component: KnowledgeBaseDetailPage,
-})
-
-// ---------------------------------------------------------------------------
 // Global: Team (client-wide users + per-app roles) — reached from global
 // chrome, not nested under any app. Super-Admin-only: a non-super-admin
 // landing here directly (bookmark, stale link) is bounced to Home rather
@@ -276,6 +261,22 @@ const appSettingsRoute = createRoute({
   component: GlobalSettingsSection,
 })
 
+// FR-C9-002: Knowledge Bases move from a global, client-wide route to a
+// per-app nested one, matching Workflows/Forms above — a KB now always
+// belongs to exactly one owning app, so its screens belong under that
+// app's own URL space, not the left GLOBAL sidebar.
+const appKnowledgeBasesRoute = createRoute({
+  getParentRoute: () => applicationShellRoute,
+  path: '/knowledge-bases',
+  component: KnowledgeBasesPage,
+})
+
+const appKnowledgeBaseDetailRoute = createRoute({
+  getParentRoute: () => applicationShellRoute,
+  path: '/knowledge-bases/$kbId',
+  component: KnowledgeBaseDetailPage,
+})
+
 // ---------------------------------------------------------------------------
 // Dev-only verification harnesses (not linked from any nav)
 // ---------------------------------------------------------------------------
@@ -319,8 +320,6 @@ const routeTree = rootRoute.addChildren([
   portalRoute,
   shellRoute.addChildren([
     homeRoute,
-    knowledgeBasesRoute,
-    knowledgeBaseDetailRoute,
     teamRoute,
     applicationShellRoute.addChildren([
       applicationIndexRoute,
@@ -336,6 +335,8 @@ const routeTree = rootRoute.addChildren([
       appDesignRoute,
       dashboardEditorRoute,
       appSettingsRoute,
+      appKnowledgeBasesRoute,
+      appKnowledgeBaseDetailRoute,
     ]),
     formRendererHarnessRoute,
     pageBuilderHarnessRoute,

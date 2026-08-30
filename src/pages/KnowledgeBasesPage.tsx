@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useParams } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { Plus, Trash2, ExternalLink, BookOpen, Sparkles } from 'lucide-react'
 import { useKnowledgeBases, useCreateKnowledgeBase, useDeleteKnowledgeBase } from '@/features/knowledge/hooks'
@@ -12,10 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
 import type { CreateKnowledgeBasePayload, KnowledgeBaseSummary, Provider } from '@/features/knowledge/types'
 
 export function KnowledgeBasesPage() {
+  const { appId } = useParams({ strict: false }) as { appId?: string }
   const { data: kbs, isLoading } = useKnowledgeBases()
   const deleteMutation = useDeleteKnowledgeBase()
   const canWrite = usePermission('knowledge:write')
@@ -48,7 +48,7 @@ export function KnowledgeBasesPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Knowledge Bases</h1>
-          <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">{ordered.length} knowledge bases · shared across every application</p>
+          <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">{ordered.length} knowledge base{ordered.length === 1 ? '' : 's'}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => setProvidersOpen(true)} className="gap-1.5">
@@ -69,6 +69,7 @@ export function KnowledgeBasesPage() {
             <KnowledgeBaseRow
               key={kb.id}
               kb={kb}
+              appId={appId ?? ''}
               canWrite={canWrite}
               onDelete={() => setPendingDelete(kb)}
             />
@@ -94,7 +95,7 @@ export function KnowledgeBasesPage() {
 
 const PROVIDER_LABELS: Record<Provider, string> = { openai: 'OpenAI', gemini: 'Gemini', voyage: 'Voyage' }
 
-function KnowledgeBaseRow({ kb, canWrite, onDelete }: { kb: KnowledgeBaseSummary; canWrite: boolean; onDelete: () => void }) {
+function KnowledgeBaseRow({ kb, appId, canWrite, onDelete }: { kb: KnowledgeBaseSummary; appId: string; canWrite: boolean; onDelete: () => void }) {
   return (
     <div className="group flex items-center gap-3 px-4 py-3">
       <BookOpen size={16} className="shrink-0 text-[hsl(var(--primary))]" />
@@ -105,7 +106,7 @@ function KnowledgeBaseRow({ kb, canWrite, onDelete }: { kb: KnowledgeBaseSummary
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        <Link to="/knowledge-bases/$kbId" params={{ kbId: kb.id }}>
+        <Link to="/applications/$appId/knowledge-bases/$kbId" params={{ appId, kbId: kb.id }}>
           <Button variant="ghost" size="icon" aria-label={`Open ${kb.name}`} title={`Open ${kb.name}`}>
             <ExternalLink size={14} />
           </Button>
@@ -143,7 +144,7 @@ function PageLoader() {
 }
 
 const EMPTY_PAYLOAD: CreateKnowledgeBasePayload = {
-  name: '', description: '', llm_provider_id: '', embedding_provider_id: '', shared: true,
+  name: '', description: '', llm_provider_id: '', embedding_provider_id: '',
 }
 
 function CreateKnowledgeBaseDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
@@ -174,7 +175,8 @@ function CreateKnowledgeBaseDialog({ open, onOpenChange }: { open: boolean; onOp
           <DialogTitle>New Knowledge Base</DialogTitle>
           <DialogDescription>
             Pick a saved LLM provider and embedding provider — the API key is resolved server-side and never leaves
-            the backend.
+            the backend. This knowledge base belongs to the app you're currently working in; you can share it with
+            other apps afterward from its Sharing Settings.
           </DialogDescription>
         </DialogHeader>
 
@@ -187,20 +189,6 @@ function CreateKnowledgeBaseDialog({ open, onOpenChange }: { open: boolean; onOp
             <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Description (optional)</Label>
             <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Product support articles and FAQs" />
           </div>
-
-          <label className="flex items-start gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-3">
-            <Checkbox
-              checked={form.shared ?? true}
-              onCheckedChange={(checked) => setForm({ ...form, shared: checked === true })}
-              className="mt-0.5"
-            />
-            <span className="text-sm">
-              <span className="block font-medium text-[hsl(var(--foreground))]">Share across every app</span>
-              <span className="block text-[11px] text-[hsl(var(--muted-foreground))]">
-                Available to every application under this client. Uncheck to keep this knowledge base private to the app you're currently working in.
-              </span>
-            </span>
-          </label>
 
           <div>
             <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">LLM Provider</Label>

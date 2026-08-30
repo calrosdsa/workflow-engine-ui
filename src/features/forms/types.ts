@@ -177,3 +177,21 @@ export interface LinkedRecordGroup {
 export interface LinkedRecordsResponse {
   groups: LinkedRecordGroup[]
 }
+
+// FR-C1-013 sharing endpoints — see api/forms/sharing.go. Mirrors
+// features/knowledge/types.ts's identical KB sharing shapes (FR-C9-002).
+export type FormVisibility = 'private' | 'read_only' | 'full_access'
+
+export interface FormSharingResponse {
+  visibility: FormVisibility
+}
+
+export interface FormAppUsage {
+  app_id: string
+  app_name: string
+  workflows: string[]
+}
+
+export interface FormSharingUsageResponse {
+  apps: FormAppUsage[]
+}
