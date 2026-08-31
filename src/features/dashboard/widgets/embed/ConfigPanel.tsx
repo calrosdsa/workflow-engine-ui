@@ -12,7 +12,7 @@ export function EmbedConfigPanel({ config, onChange }: WidgetConfigPanelProps<Em
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-slate-600">Webpage URL</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Webpage URL</Label>
         <Input
           value={config.url}
           onChange={(e) => onChange({ ...config, url: e.target.value })}
@@ -22,7 +22,7 @@ export function EmbedConfigPanel({ config, onChange }: WidgetConfigPanelProps<Em
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-slate-600">Pass through identity (SSO)</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Pass through identity (SSO)</Label>
         <SelectMenu
           value={config.integrationId ?? '__none__'}
           onValueChange={(v) => onChange({ ...config, integrationId: v === '__none__' ? undefined : v })}
@@ -35,7 +35,7 @@ export function EmbedConfigPanel({ config, onChange }: WidgetConfigPanelProps<Em
             ))}
           </SelectContent>
         </SelectMenu>
-        <p className="text-[10px] text-slate-400">
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
           {ssoIntegrations.length === 0
             ? 'No integrations are configured for signed launch yet — add one in App Settings.'
             : "The selected integration's shared secret must match what the embedded page verifies against."}

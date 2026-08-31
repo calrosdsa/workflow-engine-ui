@@ -48,8 +48,8 @@ export function AddNodeEdge({
               }}
               className={[
                 'flex h-5 w-5 items-center justify-center rounded-full',
-                'border-2 border-blue-400 bg-white text-blue-500 shadow-sm',
-                'transition-all duration-150 hover:bg-blue-50',
+                'border-2 border-[hsl(var(--primary))]/60 bg-[hsl(var(--card))] text-[hsl(var(--primary))] shadow-sm',
+                'transition-all duration-150 hover:bg-[hsl(var(--primary))]/10',
                 hovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75',
               ].join(' ')}
               title="Insert node here"

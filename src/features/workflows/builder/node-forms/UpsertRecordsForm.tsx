@@ -33,30 +33,30 @@ export function UpsertRecordsForm({ config, variables, nodeContext, onChange }: 
     <div className="space-y-4">
       {/* Form picker */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Form / Table</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Form / Table</Label>
         <FormReferenceSelect value={config.form_id || undefined} onChange={(id) => set({ form_id: id ?? '' })} />
       </div>
 
       {/* Unique-field match info */}
       {config.form_id && (
         uniqueFields.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-amber-300 bg-amber-50 p-2.5 text-[11px] text-amber-700">
+          <p className="rounded-lg border border-dashed border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-2.5 text-[11px] text-[hsl(var(--warning))]">
             This form has no unique fields. Mark at least one field unique in the form builder to use upsert.
           </p>
         ) : (
-          <p className="rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[11px] text-slate-500">
+          <p className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-2.5 text-[11px] text-[hsl(var(--muted-foreground))]">
             Matches on: {uniqueFields.map((f) => f.label || f.name).join(', ')}
           </p>
         )
       )}
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       {/* Values */}
       <div className="space-y-2">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Field values</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Field values</Label>
         {!config.form_id ? (
-          <p className="rounded-lg border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-400">Select a form to set field values.</p>
+          <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">Select a form to set field values.</p>
         ) : (
           <ValuesEditor
             values={config.values}
@@ -66,7 +66,7 @@ export function UpsertRecordsForm({ config, variables, nodeContext, onChange }: 
             onChange={(values) => set({ values })}
           />
         )}
-        <p className="text-[10px] text-slate-400">
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
           Outputs <span className="font-mono">action</span> ("created" or "updated") and <span className="font-mono">record</span> to downstream nodes.
         </p>
       </div>

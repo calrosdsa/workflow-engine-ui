@@ -17,11 +17,11 @@ export function GlobalSettingsSection() {
   return (
     <div className="mx-auto max-w-2xl space-y-10 p-6">
       <CredentialsSubsection />
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
       <VariablesSubsection />
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
       <ApiKeysSubsection />
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
       <IntegrationsSubsection />
     </div>
   )
@@ -41,8 +41,8 @@ function CredentialsSubsection() {
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-800">Credentials</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Credentials</h2>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">
             Saved authentication credentials the HTTP Request node can reference by name. Values are encrypted
             and never shown again after saving.
           </p>
@@ -57,7 +57,7 @@ function CredentialsSubsection() {
       {isLoading ? (
         <div className="flex h-24 items-center justify-center"><Spinner /></div>
       ) : !credentials?.length ? (
-        <div className="rounded-lg border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">
+        <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
           No credentials yet.
         </div>
       ) : (
@@ -86,18 +86,16 @@ function CredentialRow({ credential, canWrite, onDelete, deleting }: {
   deleting: boolean
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500">
-        <KeyRound size={14} />
-      </div>
+    <div className="flex items-center gap-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3">
+      <KeyRound size={16} className="shrink-0 text-[hsl(var(--primary))]" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-slate-800">{credential.name}</p>
-        <p className="text-xs text-slate-400">{CREDENTIAL_TYPE_LABELS[credential.type]}</p>
+        <p className="truncate text-sm font-medium text-[hsl(var(--foreground))]">{credential.name}</p>
+        <p className="text-xs text-[hsl(var(--muted-foreground))]">{CREDENTIAL_TYPE_LABELS[credential.type]}</p>
       </div>
       {canWrite && (
         <Button
           variant="ghost" size="icon" disabled={deleting}
-          className="shrink-0 text-slate-300 hover:bg-red-50 hover:text-red-500"
+          className="shrink-0 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
           onClick={onDelete}
         >
           {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
@@ -152,16 +150,16 @@ function CredentialFormDialog({ onClose }: { onClose: () => void }) {
 
         <div className="space-y-3 px-6 py-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Name</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name</label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. stripe_api" className="font-mono text-xs" />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Type</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Type</label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value as CredentialType)}
-              className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700"
+              className="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1.5 text-sm text-[hsl(var(--foreground))]"
             >
               <option value="bearer">Bearer token</option>
               <option value="basic">Basic auth</option>
@@ -172,11 +170,11 @@ function CredentialFormDialog({ onClose }: { onClose: () => void }) {
           {type === 'basic' && (
             <>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Username</label>
+                <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Username</label>
                 <Input value={username} onChange={(e) => setUsername(e.target.value)} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Password</label>
+                <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Password</label>
                 <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
             </>
@@ -184,7 +182,7 @@ function CredentialFormDialog({ onClose }: { onClose: () => void }) {
 
           {type === 'bearer' && (
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Token</label>
+              <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Token</label>
               <Input type="password" value={token} onChange={(e) => setToken(e.target.value)} className="font-mono text-xs" />
             </div>
           )}
@@ -192,19 +190,19 @@ function CredentialFormDialog({ onClose }: { onClose: () => void }) {
           {type === 'api_key' && (
             <>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Key</label>
+                <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Key</label>
                 <Input type="password" value={apiKeyValue} onChange={(e) => setApiKeyValue(e.target.value)} className="font-mono text-xs" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Param name</label>
+                <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Param name</label>
                 <Input value={apiKeyParamName} onChange={(e) => setApiKeyParamName(e.target.value)} placeholder="e.g. X-API-Key" className="font-mono text-xs" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Send as</label>
+                <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Send as</label>
                 <select
                   value={apiKeyLocation}
                   onChange={(e) => setApiKeyLocation(e.target.value as 'header' | 'query')}
-                  className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700"
+                  className="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1.5 text-sm text-[hsl(var(--foreground))]"
                 >
                   <option value="header">Header</option>
                   <option value="query">Query param</option>
@@ -214,7 +212,7 @@ function CredentialFormDialog({ onClose }: { onClose: () => void }) {
           )}
 
           {upsertMutation.isError && (
-            <p className="flex items-center gap-1 text-xs text-red-600"><AlertCircle size={13} />Failed to save credential</p>
+            <p className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={13} />Failed to save credential</p>
           )}
         </div>
 
@@ -244,10 +242,10 @@ function VariablesSubsection() {
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-800">Global variables</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Global variables</h2>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">
             Non-secret values shared across every workflow, addressable from any expression as{' '}
-            <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px]">AppSettings["name"]</code>.
+            <code className="rounded bg-[hsl(var(--muted))] px-1 py-0.5 text-[11px]">AppSettings["name"]</code>.
           </p>
         </div>
         {canWrite && (
@@ -260,7 +258,7 @@ function VariablesSubsection() {
       {isLoading ? (
         <div className="flex h-24 items-center justify-center"><Spinner /></div>
       ) : !variables?.length && !adding ? (
-        <div className="rounded-lg border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">
+        <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
           No global variables yet.
         </div>
       ) : (
@@ -296,12 +294,10 @@ function VariableRow({ variable, canWrite, onDelete, deleting }: {
   }
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-50 text-cyan-600">
-        <Braces size={14} />
-      </div>
+    <div className="flex items-center gap-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3">
+      <Braces size={16} className="shrink-0 text-[hsl(var(--primary))]" />
       <div className="min-w-0 flex-1 space-y-0.5">
-        <p className="truncate font-mono text-xs font-medium text-slate-800">{variable.name}</p>
+        <p className="truncate font-mono text-xs font-medium text-[hsl(var(--foreground))]">{variable.name}</p>
         <Input
           value={value}
           onChange={(e) => setValue(e.target.value)}
@@ -313,7 +309,7 @@ function VariableRow({ variable, canWrite, onDelete, deleting }: {
       {canWrite && (
         <Button
           variant="ghost" size="icon" disabled={deleting}
-          className="shrink-0 text-slate-300 hover:bg-red-50 hover:text-red-500"
+          className="shrink-0 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
           onClick={onDelete}
         >
           {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
@@ -335,16 +331,14 @@ function NewVariableRow({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-dashed border-indigo-200 bg-indigo-50/30 p-3">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-50 text-cyan-600">
-        <Braces size={14} />
-      </div>
+    <div className="flex items-center gap-3 rounded-lg border border-dashed border-[hsl(var(--primary))]/40 bg-[hsl(var(--primary))]/5 p-3">
+      <Braces size={16} className="shrink-0 text-[hsl(var(--primary))]" />
       <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="name" className="w-32 shrink-0 font-mono text-xs" />
       <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder="value" className="min-w-0 flex-1 font-mono text-xs" />
       <Button size="sm" onClick={handleSave} disabled={!name.trim() || upsertMutation.isPending} className="shrink-0 gap-1">
         {upsertMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
       </Button>
-      <Button variant="ghost" size="sm" onClick={onDone} className="shrink-0 text-slate-400">Cancel</Button>
+      <Button variant="ghost" size="sm" onClick={onDone} className="shrink-0 text-[hsl(var(--muted-foreground))]">Cancel</Button>
     </div>
   )
 }

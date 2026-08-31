@@ -32,8 +32,8 @@ export function ChartRenderer({ config }: WidgetRendererProps<ChartWidgetConfig>
   if (!config.formId || (needsGroupBy && !config.groupBy?.field)) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-1.5 p-3 text-center">
-        <BarChart3 size={18} className="text-slate-300" />
-        <p className="text-xs text-slate-400">
+        <BarChart3 size={18} style={{ color: 'hsl(var(--muted-foreground))' }} />
+        <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
           {needsGroupBy ? 'Choose a form and a field to group by.' : 'Choose a form to aggregate.'}
         </p>
       </div>
@@ -43,7 +43,7 @@ export function ChartRenderer({ config }: WidgetRendererProps<ChartWidgetConfig>
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 size={18} className="animate-spin text-slate-300" />
+        <Loader2 size={18} className="animate-spin" style={{ color: 'hsl(var(--muted-foreground))' }} />
       </div>
     )
   }
@@ -51,15 +51,15 @@ export function ChartRenderer({ config }: WidgetRendererProps<ChartWidgetConfig>
   if (isError) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-1.5 p-3 text-center">
-        <AlertCircle size={18} className="text-red-300" />
-        <p className="text-xs text-red-500">Couldn't load chart data.</p>
+        <AlertCircle size={18} style={{ color: 'hsl(var(--destructive))' }} />
+        <p className="text-xs" style={{ color: 'hsl(var(--destructive))' }}>Couldn't load chart data.</p>
       </div>
     )
   }
 
   const groups = data?.groups ?? []
   if (groups.length === 0) {
-    return <div className="flex h-full items-center justify-center p-3 text-xs text-slate-400">No data yet.</div>
+    return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No data yet.</div>
   }
 
   if (config.chartType === 'stat') {
@@ -121,7 +121,7 @@ function StatTile({ config, value }: { config: ChartWidgetConfig; value: number 
   return (
     <div className="flex h-full flex-col items-center justify-center gap-1 p-3 text-center">
       <span className="text-3xl font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{formatted}</span>
-      <span className="text-xs text-slate-400">{seriesLabel(config, 0)}</span>
+      <span className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{seriesLabel(config, 0)}</span>
     </div>
   )
 }

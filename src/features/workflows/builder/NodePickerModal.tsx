@@ -76,14 +76,14 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
   return (
     // Backdrop
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="relative flex max-h-[540px] w-[600px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
+      <div className="relative flex max-h-[540px] w-[600px] flex-col overflow-hidden rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl shadow-black/30">
 
         {/* Header */}
-        <div className="flex items-center gap-2.5 border-b border-slate-100 px-4 py-3.5">
-          <Search size={16} className="shrink-0 text-slate-400" />
+        <div className="flex items-center gap-2.5 border-b border-[hsl(var(--border))] px-4 py-3.5">
+          <Search size={16} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
           <input
             ref={searchRef}
             value={search}
@@ -96,12 +96,12 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
               }
             }}
             placeholder="Search nodes…"
-            className="flex-1 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+            className="flex-1 bg-transparent text-sm text-[hsl(var(--foreground))] outline-none placeholder:text-[hsl(var(--muted-foreground))]"
           />
           {search && candidates.length > 0 && (
-            <kbd className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400">↵</kbd>
+            <kbd className="rounded border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-semibold text-[hsl(var(--muted-foreground))]">↵</kbd>
           )}
-          <button onClick={onClose} className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1">
+          <button onClick={onClose} className="rounded-md p-1 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1">
             <X size={15} />
           </button>
         </div>
@@ -116,8 +116,8 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
                 className={cn(
                   'rounded-lg px-3 py-1.5 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
                   activeTab === i
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700',
+                    ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm'
+                    : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]',
                 )}
               >
                 {tab.label}
@@ -130,8 +130,8 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
         <div className="overflow-y-auto p-4">
           {candidates.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-center">
-              <Search size={24} className="text-slate-300" />
-              <p className="text-sm text-slate-400">No nodes match "{search}"</p>
+              <Search size={24} className="text-[hsl(var(--muted-foreground))]" />
+              <p className="text-sm text-[hsl(var(--muted-foreground))]">No nodes match "{search}"</p>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-2.5">
@@ -139,14 +139,14 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
                 const label = candidateLabel(c)
                 const description = candidateDescription(c)
                 const Icon = c.kind === 'builtin' ? NODE_REGISTRY[c.type].icon : Plug
-                const gradient = c.kind === 'builtin' ? NODE_REGISTRY[c.type].gradient : 'bg-slate-600'
+                const gradient = c.kind === 'builtin' ? NODE_REGISTRY[c.type].gradient : 'bg-[hsl(var(--foreground))]/70'
                 return (
                   <button
                     key={c.type}
                     onClick={() => onSelect(c.type)}
                     className={cn(
-                      'group flex flex-col items-start gap-2.5 rounded-xl border border-slate-200 p-3.5 text-left',
-                      'transition-all hover:border-slate-300 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5',
+                      'group flex flex-col items-start gap-2.5 rounded-xl border border-[hsl(var(--border))] p-3.5 text-left',
+                      'transition-all hover:border-[hsl(var(--muted-foreground))]/40 hover:bg-[hsl(var(--muted))] hover:shadow-md hover:-translate-y-0.5',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
                     )}
                   >
@@ -157,8 +157,8 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
                       <Icon size={18} strokeWidth={2.25} />
                     </div>
                     <div>
-                      <p className="text-[13px] font-semibold text-slate-800">{label}</p>
-                      <p className="mt-0.5 text-[10px] leading-snug text-slate-400">{description}</p>
+                      <p className="text-[13px] font-semibold text-[hsl(var(--foreground))]">{label}</p>
+                      <p className="mt-0.5 text-[10px] leading-snug text-[hsl(var(--muted-foreground))]">{description}</p>
                     </div>
                   </button>
                 )

@@ -39,9 +39,9 @@ export function KeyValueRows({
   const removeRow = (id: string) => onChange(rows.filter((r) => r.id !== id))
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-2.5">
+    <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-2.5">
       {rows.length === 0 && (
-        <p className="px-1 py-2 text-center text-[11px] text-slate-400">No rows yet.</p>
+        <p className="px-1 py-2 text-center text-[11px] text-[hsl(var(--muted-foreground))]">No rows yet.</p>
       )}
 
       <div className="space-y-1.5">
@@ -58,7 +58,7 @@ export function KeyValueRows({
         ))}
       </div>
 
-      <Button variant="outline" size="sm" onClick={addRow} className="mt-2 h-7 w-full gap-1 border-dashed text-[11px] text-slate-500">
+      <Button variant="outline" size="sm" onClick={addRow} className="mt-2 h-7 w-full gap-1 border-dashed text-[11px] text-[hsl(var(--muted-foreground))]">
         <Plus size={12} /> {addLabel}
       </Button>
     </div>
@@ -77,7 +77,7 @@ function KeyValueRow({ row, variables, nodeContext, keyPlaceholder, onChange, on
   const isExpr = row.value_mode === 'expression'
 
   return (
-    <div className={cn('rounded-lg border border-slate-200 bg-white p-2', !row.enabled && 'opacity-50')}>
+    <div className={cn('rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-2', !row.enabled && 'opacity-50')}>
       <div className="flex items-center gap-1.5">
         <Checkbox
           checked={row.enabled}
@@ -92,7 +92,7 @@ function KeyValueRow({ row, variables, nodeContext, keyPlaceholder, onChange, on
         />
         <button
           onClick={onRemove}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-300 hover:bg-red-50 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
           title="Remove row"
         >
           <Trash2 size={11} />
@@ -100,7 +100,7 @@ function KeyValueRow({ row, variables, nodeContext, keyPlaceholder, onChange, on
       </div>
 
       <div className="mt-1.5 space-y-1.5">
-        <div className="flex gap-1 rounded-md bg-slate-100 p-0.5">
+        <div className="flex gap-1 rounded-md bg-[hsl(var(--muted))] p-0.5">
           {(['static', 'expression'] as const).map((m) => (
             <button
               key={m}
@@ -108,7 +108,7 @@ function KeyValueRow({ row, variables, nodeContext, keyPlaceholder, onChange, on
               onClick={() => onChange({ value_mode: m })}
               className={cn(
                 'flex-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
-                (row.value_mode ?? 'static') === m ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400',
+                (row.value_mode ?? 'static') === m ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]',
               )}
             >
               {m === 'static' ? 'Value' : 'Expression'}
@@ -122,12 +122,12 @@ function KeyValueRow({ row, variables, nodeContext, keyPlaceholder, onChange, on
               value={row.expression ?? ''}
               onChange={(e) => onChange({ expression: e.target.value })}
               placeholder='Vars["name"]'
-              className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-2 py-1 font-mono text-[11px] text-slate-700 placeholder:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+              className="min-w-0 flex-1 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2 py-1 font-mono text-[11px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
             />
             <button
               onClick={() => setEditorOpen(true)}
               title="Open expression editor"
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-slate-200 text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
             >
               <Code2 size={12} />
             </button>

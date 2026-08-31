@@ -77,16 +77,16 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
       tabIndex={0}
       className={cn(
         'group relative flex h-full flex-col overflow-hidden rounded-lg transition-shadow',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-1',
-        instance.chrome === 'card' && 'border border-slate-200 bg-white shadow-sm',
-        selected && 'ring-2 ring-indigo-400 ring-offset-1',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--primary))]/60 focus-visible:ring-offset-1',
+        instance.chrome === 'card' && 'border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-sm',
+        selected && 'ring-2 ring-[hsl(var(--primary))]/60 ring-offset-1',
       )}
       onClick={(e) => { e.stopPropagation(); onSelect() }}
       onKeyDown={handleKeyDown}
     >
       {(instance.chrome === 'card' && (instance.title || def)) && (
-        <div className="widget-drag-handle flex shrink-0 cursor-grab items-center justify-between border-b border-slate-100 px-3 py-1.5 active:cursor-grabbing">
-          <span className="truncate text-[11px] font-semibold text-slate-600">
+        <div className="widget-drag-handle flex shrink-0 cursor-grab items-center justify-between border-b border-[hsl(var(--border))] px-3 py-1.5 active:cursor-grabbing">
+          <span className="truncate text-[11px] font-semibold text-[hsl(var(--foreground))]/80">
             {instance.title || def?.label}
           </span>
         </div>
@@ -112,7 +112,7 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
           so it never competes for space with the widget's own content. */}
       <div
         className={cn(
-          'absolute right-1 top-1 flex items-center gap-0.5 rounded-md border border-slate-200 bg-white/95 p-0.5 opacity-0 shadow-sm transition-opacity',
+          'absolute right-1 top-1 flex items-center gap-0.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))]/95 p-0.5 opacity-0 shadow-sm transition-opacity',
           'group-hover:opacity-100',
           selected && 'opacity-100',
         )}
@@ -121,7 +121,7 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
           type="button"
           title="Configure"
           onClick={(e) => { e.stopPropagation(); onSelect() }}
-          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+          className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
         >
           <Settings2 size={13} />
         </button>
@@ -129,7 +129,7 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
           type="button"
           title="Duplicate"
           onClick={(e) => { e.stopPropagation(); onDuplicate() }}
-          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+          className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
         >
           <Copy size={13} />
         </button>
@@ -137,7 +137,7 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
           type="button"
           title="Delete"
           onClick={(e) => { e.stopPropagation(); onDelete() }}
-          className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+          className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
         >
           <Trash2 size={13} />
         </button>
@@ -148,10 +148,10 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
 
 function UnavailableWidget({ type }: { type: string }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-1.5 bg-slate-50 p-4 text-center">
-      <AlertTriangle size={18} className="text-slate-300" />
-      <p className="text-[11px] font-medium text-slate-500">Unavailable widget</p>
-      <p className="text-[10px] text-slate-400">Type "{type}" is not registered. Your layout is preserved.</p>
+    <div className="flex h-full flex-col items-center justify-center gap-1.5 bg-[hsl(var(--muted))] p-4 text-center">
+      <AlertTriangle size={18} className="text-[hsl(var(--muted-foreground))]/60" />
+      <p className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Unavailable widget</p>
+      <p className="text-[10px] text-[hsl(var(--muted-foreground))]/70">Type "{type}" is not registered. Your layout is preserved.</p>
     </div>
   )
 }
@@ -180,8 +180,8 @@ function TilePlaceholder({ def, instance, clientId, appId }: {
   }
   return (
     <div className="h-full animate-pulse p-3">
-      <div className="mb-2 h-3 w-2/3 rounded bg-slate-100" />
-      <div className="h-3 w-1/2 rounded bg-slate-100" />
+      <div className="mb-2 h-3 w-2/3 rounded bg-[hsl(var(--muted))]" />
+      <div className="h-3 w-1/2 rounded bg-[hsl(var(--muted))]" />
     </div>
   )
 }

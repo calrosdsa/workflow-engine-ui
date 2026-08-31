@@ -104,6 +104,17 @@ export interface FormDefinition {
    *  on every child-form save. 0/absent means "no bound" for either. */
   line_items_min_rows?: number
   line_items_max_rows?: number
+  /** The app that OWNS this form. Differs from the caller's own app only
+   *  for a form reached through a cross-app link (see is_linked). */
+  owner_app_id?: string
+  /** The owning app's sharing grant. Present on list/link responses; what
+   *  it permits a NON-owning app to do is enforced server-side, never here. */
+  visibility?: FormVisibility
+  /** True when this form reached the current app through an app_form_links
+   *  opt-in rather than by being owned by it — set only on the forms list
+   *  and the link response, since only there does "the current app" mean
+   *  anything. Never read it as "somebody, somewhere, linked this form." */
+  is_linked?: boolean
   created_at: string
   updated_at: string
   migration_warnings?: string[]
@@ -194,4 +205,18 @@ export interface FormAppUsage {
 
 export interface FormSharingUsageResponse {
   apps: FormAppUsage[]
+}
+
+// Cross-app form links — the borrowing app's side of the same sharing model
+// (see api/forms/links.go). Mirrors linkableForm's wire shape exactly.
+export interface LinkableForm {
+  id: string
+  name: string
+  slug: string
+  description?: string
+  visibility: FormVisibility
+  owner_app_id: string
+  owner_app_name: string
+  field_count: number
+  updated_at: string
 }

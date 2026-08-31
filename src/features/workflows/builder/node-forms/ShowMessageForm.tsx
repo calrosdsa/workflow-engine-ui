@@ -16,9 +16,9 @@ export function normaliseShowMessageConfig(raw: unknown): ShowMessageConfig {
 }
 
 const MESSAGE_TYPES: { value: MessageType; label: string; activeClass: string }[] = [
-  { value: 'success', label: 'Success', activeClass: 'bg-emerald-500 text-white' },
-  { value: 'error',   label: 'Error',   activeClass: 'bg-red-500 text-white' },
-  { value: 'info',    label: 'Info',    activeClass: 'bg-sky-500 text-white' },
+  { value: 'success', label: 'Success', activeClass: 'bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))]' },
+  { value: 'error',   label: 'Error',   activeClass: 'bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))]' },
+  { value: 'info',    label: 'Info',    activeClass: 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]' },
 ]
 
 export interface ShowMessageFormProps {
@@ -33,8 +33,8 @@ export function ShowMessageForm({ config, onChange }: ShowMessageFormProps) {
     <div className="space-y-4">
       {/* Message type */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Message Type</Label>
-        <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Message Type</Label>
+        <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
           {MESSAGE_TYPES.map((t) => (
             <button
               key={t.value}
@@ -42,7 +42,7 @@ export function ShowMessageForm({ config, onChange }: ShowMessageFormProps) {
               onClick={() => set({ message_type: t.value })}
               className={cn(
                 'flex-1 rounded-md py-1 text-[11px] font-medium transition-colors',
-                config.message_type === t.value ? `${t.activeClass} shadow-sm` : 'text-slate-500 hover:text-slate-700',
+                config.message_type === t.value ? `${t.activeClass} shadow-sm` : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
               )}
             >
               {t.label}
@@ -50,7 +50,7 @@ export function ShowMessageForm({ config, onChange }: ShowMessageFormProps) {
           ))}
         </div>
         {config.message_type === 'error' && (
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
             Inside a Trigger's Before mode, an error message here blocks the write. In After/AfterAsync/on-demand runs it's a non-fatal warning.
           </p>
         )}
@@ -62,36 +62,36 @@ export function ShowMessageForm({ config, onChange }: ShowMessageFormProps) {
           node's expression assignment — this field itself is a literal
           string end to end. */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Message</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Message</Label>
         <div className="relative">
-          <MessageSquare size={11} className="absolute left-2.5 top-2.5 text-indigo-400" />
+          <MessageSquare size={11} className="absolute left-2.5 top-2.5 text-[hsl(var(--primary))]" />
           <textarea
             value={config.message}
             onChange={(e) => set({ message: e.target.value })}
             rows={4}
             placeholder={config.is_html ? '<p>Order confirmed.</p>' : 'Order confirmed.'}
-            className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 py-2 pl-7 pr-3 text-[12px] text-slate-700 placeholder:text-slate-300 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            className="w-full resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))] py-2 pl-7 pr-3 text-[12px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/60 focus:border-[hsl(var(--primary))] focus:bg-[hsl(var(--card))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
           />
         </div>
-        <p className="text-[10px] text-slate-400">
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
           Plain text or HTML only — not evaluated as an expression. For a dynamic value, build the string with a Set Variable node first.
         </p>
       </div>
 
       {/* is_html toggle */}
-      <label className="flex items-center gap-2 text-[12px] text-slate-600">
+      <label className="flex items-center gap-2 text-[12px] text-[hsl(var(--foreground))]/80">
         <input
           type="checkbox"
           checked={config.is_html ?? false}
           onChange={(e) => set({ is_html: e.target.checked })}
-          className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-500 focus:ring-indigo-400"
+          className="h-3.5 w-3.5 rounded border-[hsl(var(--border))] text-[hsl(var(--primary))] focus:ring-[hsl(var(--primary))]/40"
         />
         Message contains HTML
       </label>
 
       {/* Timeout */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Auto-dismiss Timeout (ms)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Auto-dismiss Timeout (ms)</Label>
         <Input
           type="number"
           min={0}

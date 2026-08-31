@@ -9,6 +9,7 @@ export const formKeys = {
   records: (id: string) => ['forms', id, 'records'] as const,
   record:  (fid: string, rid: string) => ['forms', fid, 'records', rid] as const,
   sharing: (id: string) => ['forms', id, 'sharing'] as const,
+  linkable: ['forms', 'linkable'] as const,
 }
 
 export function useForms() {
@@ -125,6 +126,54 @@ export function useSetSharing(formId: string) {
   return useMutation({
     mutationFn: (visibility: FormVisibility) => formsApi.setSharing(formId, visibility),
     onSuccess: () => qc.invalidateQueries({ queryKey: formKeys.sharing(formId) }),
+  })
+}
+
+// --- cross-app links (see api/forms/links.go) --------------------------------
+
+/** Forms other apps under this client have shared and this app hasn't
+ *  linked. `enabled` lets the picker fetch only while it's open, matching
+ *  useSharing's own opt-in — this list is a snapshot of another app's
+ *  choices and goes stale the moment they change it, so there's no value in
+ *  holding it warm. */
+export function useLinkableForms(enabled = true) {
+  return useQuery({
+    queryKey: formKeys.linkable,
+    queryFn: formsApi.listLinkable,
+    enabled,
+    // Always refetch on open: a form listed here can be un-shared between
+    // one open and the next, and linking a stale row 409s.
+    staleTime: 0,
+  })
+}
+
+export function useLinkSharedForm() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => formsApi.link(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: formKeys.all })
+      qc.invalidateQueries({ queryKey: formKeys.linkable })
+      // A linked form adds its View/Create/Edit/Delete entries to this app's
+      // per-form permission catalog exactly like an owned one does.
+      qc.invalidateQueries({ queryKey: ['permissions'] })
+    },
+  })
+}
+
+/** "Remove from this app" — drops the link only. Deliberately NOT named
+ *  unlink in the UI: this app's existing "Unlink Dependent Form" action
+ *  means something entirely different (detach a child from its parent), and
+ *  the two sit on the same menu. */
+export function useUnlinkSharedForm() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => formsApi.unlinkShared(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: formKeys.all })
+      qc.invalidateQueries({ queryKey: formKeys.linkable })
+      qc.invalidateQueries({ queryKey: ['permissions'] })
+    },
   })
 }
 

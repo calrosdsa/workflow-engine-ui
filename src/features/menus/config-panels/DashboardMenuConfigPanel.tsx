@@ -27,21 +27,21 @@ export function DashboardMenuConfigPanel({ menu, appId }: DashboardMenuConfigPan
   const widgetCount = schema.widgets.length
 
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-slate-200 bg-slate-50/60 p-8 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50">
-        <LayoutDashboard size={22} className="text-indigo-500" />
+    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-8 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[hsl(var(--primary))]/10">
+        <LayoutDashboard size={22} className="text-[hsl(var(--primary))]" />
       </div>
       <div>
-        <p className="text-sm font-medium text-slate-700">
+        <p className="text-sm font-medium text-[hsl(var(--foreground))]/80">
           {widgetCount === 0 ? 'This dashboard is empty' : `${widgetCount} widget${widgetCount === 1 ? '' : 's'} on this dashboard`}
         </p>
-        <p className="mt-1 max-w-xs text-xs text-slate-400">
+        <p className="mt-1 max-w-xs text-xs text-[hsl(var(--muted-foreground))]">
           Open the full-screen editor to drag, resize, and arrange widgets with room to work.
         </p>
       </div>
       <Button
         type="button"
-        className="gap-1.5 bg-indigo-600 text-white hover:bg-indigo-700"
+        className="gap-1.5"
         onClick={() => navigate({ to: '/applications/$appId/design/dashboards/$menuId', params: { appId, menuId: menu.id } })}
       >
         <SquareArrowOutUpRight size={14} />

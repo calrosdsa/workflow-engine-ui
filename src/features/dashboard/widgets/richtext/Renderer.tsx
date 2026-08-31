@@ -23,10 +23,10 @@ const MARKDOWN_COMPONENTS: Components = {
   ul: (props) => <ul className="mb-3 list-disc space-y-1 pl-5 last:mb-0" {...props} />,
   ol: (props) => <ol className="mb-3 list-decimal space-y-1 pl-5 last:mb-0" {...props} />,
   li: (props) => <li style={{ color: 'hsl(var(--foreground))' }} {...props} />,
-  a: (props) => <a className="text-indigo-600 underline hover:text-indigo-700" target="_blank" rel="noopener noreferrer" {...props} />,
+  a: (props) => <a className="underline" style={{ color: 'hsl(var(--primary))' }} target="_blank" rel="noopener noreferrer" {...props} />,
   strong: (props) => <strong className="font-semibold" {...props} />,
-  code: (props) => <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.9em]" {...props} />,
-  blockquote: (props) => <blockquote className="mb-3 border-l-2 border-slate-200 pl-3 italic text-slate-500 last:mb-0" {...props} />,
+  code: (props) => <code className="rounded px-1 py-0.5 font-mono text-[0.9em]" style={{ backgroundColor: 'hsl(var(--muted))' }} {...props} />,
+  blockquote: (props) => <blockquote className="mb-3 border-l-2 pl-3 italic last:mb-0" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }} {...props} />,
 }
 
 export function RichTextRenderer({ config, mode }: WidgetRendererProps<RichTextWidgetConfig>) {
@@ -34,7 +34,7 @@ export function RichTextRenderer({ config, mode }: WidgetRendererProps<RichTextW
   // — empty markdown renders zero visible pixels ('plain' chrome), which is
   // fine at runtime but leaves a builder tile impossible to locate by eye.
   if (!config.markdown.trim() && mode === 'builder') {
-    return <p className="p-3 text-sm italic text-slate-300">Empty — click to add Markdown</p>
+    return <p className="p-3 text-sm italic text-[hsl(var(--muted-foreground))]">Empty — click to add Markdown</p>
   }
   return (
     <div className="p-3 text-sm">

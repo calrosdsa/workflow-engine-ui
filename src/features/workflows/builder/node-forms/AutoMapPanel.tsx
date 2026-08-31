@@ -20,14 +20,14 @@ type PanelState =
   | { phase: 'reviewing'; schemaName: string; statusLine: string; durationMs: number; fields: InferredField[]; inferred: InferredSchema }
 
 const TYPE_BADGE_CLASS: Record<ResponseFieldType, string> = {
-  string: 'bg-slate-100 text-slate-600',
-  integer: 'bg-blue-50 text-blue-600',
-  float: 'bg-blue-50 text-blue-600',
-  boolean: 'bg-amber-50 text-amber-600',
-  datetime: 'bg-purple-50 text-purple-600',
-  time: 'bg-purple-50 text-purple-600',
-  object: 'bg-slate-100 text-slate-500',
-  list: 'bg-cyan-50 text-cyan-600',
+  string: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
+  integer: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]',
+  float: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]',
+  boolean: 'bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]',
+  datetime: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]',
+  time: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]',
+  object: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
+  list: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]',
 }
 
 export function AutoMapPanel({ config, variables, onAddSchema }: {
@@ -75,7 +75,7 @@ export function AutoMapPanel({ config, variables, onAddSchema }: {
         size="sm"
         onClick={send}
         disabled={state.phase === 'loading'}
-        className="h-8 w-full gap-1.5 border-dashed text-[11.5px] text-cyan-600 hover:text-cyan-700"
+        className="h-8 w-full gap-1.5 border-dashed text-[11.5px] text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]"
       >
         {state.phase === 'loading' ? <Loader2 size={13} className="animate-spin" /> : <Play size={12} />}
         {state.phase === 'loading' ? 'Sending…' : 'Send request and auto-map'}
@@ -85,16 +85,16 @@ export function AutoMapPanel({ config, variables, onAddSchema }: {
 
   if (state.phase === 'error') {
     return (
-      <div className="rounded-xl border border-red-100 bg-red-50/60 p-3">
+      <div className="rounded-xl border border-[hsl(var(--destructive))]/20 bg-[hsl(var(--destructive))]/10 p-3">
         <div className="flex items-start gap-2">
-          <AlertTriangle size={13} className="mt-0.5 shrink-0 text-red-400" />
-          <p className="text-[11.5px] text-red-700">{state.message}</p>
+          <AlertTriangle size={13} className="mt-0.5 shrink-0 text-[hsl(var(--destructive))]" />
+          <p className="text-[11.5px] text-[hsl(var(--destructive))]">{state.message}</p>
         </div>
         <Button
           variant="outline"
           size="sm"
           onClick={send}
-          className="mt-2.5 h-7 gap-1.5 text-[11px] text-slate-500 hover:text-slate-700"
+          className="mt-2.5 h-7 gap-1.5 text-[11px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
         >
           <RefreshCw size={11} /> Retry
         </Button>
@@ -121,25 +121,25 @@ export function AutoMapPanel({ config, variables, onAddSchema }: {
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200">
-      <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2">
-        <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10.5px] font-semibold text-emerald-700">
+    <div className="overflow-hidden rounded-xl border border-[hsl(var(--border))]">
+      <div className="flex items-center gap-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-3 py-2">
+        <span className="rounded bg-[hsl(var(--success))]/15 px-1.5 py-0.5 text-[10.5px] font-semibold text-[hsl(var(--success))]">
           {state.statusLine.split(' · ')[0]}
         </span>
-        <span className="text-[11px] text-slate-400">{state.statusLine.split(' · ').slice(1).join(' · ')}</span>
+        <span className="text-[11px] text-[hsl(var(--muted-foreground))]">{state.statusLine.split(' · ').slice(1).join(' · ')}</span>
       </div>
 
-      <div className="space-y-2.5 border-b border-slate-200 p-3">
+      <div className="space-y-2.5 border-b border-[hsl(var(--border))] p-3">
         <Input
           value={state.schemaName}
           onChange={(e) => setState({ ...state, schemaName: e.target.value })}
           placeholder="Schema name, e.g. Users"
           className="h-7 text-[12px] font-semibold"
         />
-        <p className="text-[10px] text-slate-400">Review the fields below, then add them as a schema.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Review the fields below, then add them as a schema.</p>
 
         {state.fields.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-400">
+          <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
             No mappable fields found in the response.
           </p>
         ) : (
@@ -157,7 +157,7 @@ export function AutoMapPanel({ config, variables, onAddSchema }: {
       </div>
 
       <div className="flex items-center justify-between px-3 py-2.5">
-        <span className="text-[10.5px] text-slate-400">
+        <span className="text-[10.5px] text-[hsl(var(--muted-foreground))]">
           {selectedCount} of {state.fields.length} field{state.fields.length === 1 ? '' : 's'} selected
         </span>
         <div className="flex gap-2">
@@ -168,7 +168,7 @@ export function AutoMapPanel({ config, variables, onAddSchema }: {
             size="sm"
             onClick={addToSchema}
             disabled={selectedCount === 0}
-            className="h-7 bg-cyan-500 text-[11px] text-white hover:bg-cyan-600"
+            className="h-7 text-[11px]"
           >
             Add to schema
           </Button>
@@ -191,11 +191,11 @@ function FieldReviewRow({ field, depth = 0, onChange, onChangeNested }: {
 }) {
   const isList = field.type === 'list'
   return (
-    <div className={depth > 0 ? 'border-l-2 border-cyan-100 pl-2.5' : undefined}>
+    <div className={depth > 0 ? 'border-l-2 border-[hsl(var(--primary))]/20 pl-2.5' : undefined}>
       <div className="grid grid-cols-[1fr_60px_1fr_20px] items-center gap-2 py-1">
         <div className="flex items-center gap-1.5 overflow-hidden">
-          {isList && <Braces size={10} className="shrink-0 text-cyan-400" />}
-          <code className="truncate font-mono text-[11px] text-slate-500" title={field.path}>{field.path}</code>
+          {isList && <Braces size={10} className="shrink-0 text-[hsl(var(--primary))]" />}
+          <code className="truncate font-mono text-[11px] text-[hsl(var(--muted-foreground))]" title={field.path}>{field.path}</code>
         </div>
         <span className={cn('w-fit rounded px-1.5 py-0.5 text-[10px] font-medium capitalize', TYPE_BADGE_CLASS[field.type])}>
           {field.type === 'list' ? 'list' : field.type}
@@ -214,12 +214,12 @@ function FieldReviewRow({ field, depth = 0, onChange, onChangeNested }: {
         />
       </div>
       {!isList && field.sample !== undefined && field.selected && (
-        <p className="truncate pb-1 pl-0.5 font-mono text-[10px] text-slate-300">= {formatSample(field.sample)}</p>
+        <p className="truncate pb-1 pl-0.5 font-mono text-[10px] text-[hsl(var(--muted-foreground))]/70">= {formatSample(field.sample)}</p>
       )}
       {isList && (
         <div className="space-y-0.5 pb-1 pl-3">
           {(field.fields ?? []).length === 0 ? (
-            <p className="text-[10px] text-slate-300">No fields found on this list's items.</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]/70">No fields found on this list's items.</p>
           ) : (
             (field.fields ?? []).map((nf) => (
               <FieldReviewRow

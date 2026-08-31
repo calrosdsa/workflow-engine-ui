@@ -7,11 +7,11 @@ import { useExecutionOverlayStore } from './execution-overlay-store'
 import { useBuilderStore } from './store'
 
 export const statusDot: Record<ExecutionStatus, string> = {
-  PENDING:   'bg-amber-400',
-  RUNNING:   'bg-blue-500',
-  COMPLETED: 'bg-emerald-500',
-  FAILED:    'bg-red-500',
-  CANCELLED: 'bg-slate-400',
+  PENDING:   'bg-[hsl(var(--warning))]',
+  RUNNING:   'bg-[hsl(var(--primary))]',
+  COMPLETED: 'bg-[hsl(var(--success))]',
+  FAILED:    'bg-[hsl(var(--destructive))]',
+  CANCELLED: 'bg-[hsl(var(--muted-foreground))]',
 }
 
 // This sidebar is a compact, fixed-height scrollable list, not a full
@@ -33,13 +33,13 @@ export function ExecutionsSidebar({ workflowId }: { workflowId: string }) {
   return (
     <aside
       className={[
-        'relative flex shrink-0 flex-col border-l border-slate-200 bg-white transition-all duration-200',
+        'relative flex shrink-0 flex-col border-l border-[hsl(var(--border))] bg-[hsl(var(--card))] transition-all duration-200',
         open ? 'w-64' : 'w-10',
       ].join(' ')}
     >
       <button
         onClick={toggle}
-        className="absolute -left-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+        className="absolute -left-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] shadow-sm transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
         title={open ? 'Collapse executions' : 'Expand executions'}
       >
         {open ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
@@ -47,8 +47,8 @@ export function ExecutionsSidebar({ workflowId }: { workflowId: string }) {
 
       {!open && (
         <div className="flex flex-1 flex-col items-center gap-2 pt-4">
-          <History size={15} className="text-slate-400" />
-          <span className="rotate-90 select-none whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+          <History size={15} className="text-[hsl(var(--muted-foreground))]" />
+          <span className="rotate-90 select-none whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
             Executions
           </span>
         </div>
@@ -56,18 +56,18 @@ export function ExecutionsSidebar({ workflowId }: { workflowId: string }) {
 
       {open && (
         <>
-          <div className="flex items-center justify-between border-b border-slate-100 px-3.5 py-3">
+          <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-3.5 py-3">
             <div className="flex items-center gap-2">
-              <History size={14} className="text-slate-400" />
-              <span className="text-[13px] font-semibold text-slate-700">Executions</span>
+              <History size={14} className="text-[hsl(var(--muted-foreground))]" />
+              <span className="text-[13px] font-semibold text-[hsl(var(--foreground))]">Executions</span>
               {total > 0 && (
-                <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">{total}</span>
+                <span className="rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-bold text-[hsl(var(--muted-foreground))]">{total}</span>
               )}
             </div>
             {selectedExecutionId && (
               <button
                 onClick={() => select(null)}
-                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
                 title="Clear overlay"
               >
                 <X size={11} />Clear
@@ -77,11 +77,11 @@ export function ExecutionsSidebar({ workflowId }: { workflowId: string }) {
 
           <div className="flex-1 overflow-y-auto">
             {isLoading && (
-              <div className="flex items-center justify-center py-8"><Spinner className="h-4 w-4 text-slate-400" /></div>
+              <div className="flex items-center justify-center py-8"><Spinner className="h-4 w-4 text-[hsl(var(--muted-foreground))]" /></div>
             )}
 
             {!isLoading && (!executions || executions.length === 0) && (
-              <p className="px-3.5 py-6 text-center text-[11px] text-slate-400">
+              <p className="px-3.5 py-6 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
                 No executions yet. Click "Run" to trigger this workflow.
               </p>
             )}
@@ -113,19 +113,19 @@ function ExecutionRow({ execution, selected, onClick }: {
     <button
       onClick={onClick}
       className={[
-        'flex w-full flex-col gap-1 border-b border-slate-50 px-3.5 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[hsl(var(--ring))]',
-        selected ? 'bg-blue-50' : 'hover:bg-slate-50',
+        'flex w-full flex-col gap-1 border-b border-[hsl(var(--border))]/50 px-3.5 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[hsl(var(--ring))]',
+        selected ? 'bg-[hsl(var(--primary))]/10' : 'hover:bg-[hsl(var(--muted))]',
       ].join(' ')}
     >
       <div className="flex items-center gap-1.5">
         <span className={['h-1.5 w-1.5 shrink-0 rounded-full', statusDot[execution.status]].join(' ')} />
-        <span className="text-[11px] font-semibold text-slate-700">{execution.status}</span>
-        {!isTerminal && <Spinner className="h-3 w-3 text-blue-400" />}
-        <span className="ml-auto font-mono text-[9px] text-slate-300">{execution.execution_id.slice(0, 8)}</span>
+        <span className="text-[11px] font-semibold text-[hsl(var(--foreground))]">{execution.status}</span>
+        {!isTerminal && <Spinner className="h-3 w-3 text-[hsl(var(--primary))]" />}
+        <span className="ml-auto font-mono text-[9px] text-[hsl(var(--muted-foreground))]/70">{execution.execution_id.slice(0, 8)}</span>
       </div>
-      <div className="flex items-center justify-between text-[10px] text-slate-400">
+      <div className="flex items-center justify-between text-[10px] text-[hsl(var(--muted-foreground))]">
         <span>{new Date(execution.created_at).toLocaleString()}</span>
-        {durationMs !== null && <span className="font-medium text-slate-500">{formatDuration(durationMs)}</span>}
+        {durationMs !== null && <span className="font-medium text-[hsl(var(--muted-foreground))]">{formatDuration(durationMs)}</span>}
       </div>
     </button>
   )

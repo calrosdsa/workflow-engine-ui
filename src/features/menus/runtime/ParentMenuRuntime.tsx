@@ -32,7 +32,7 @@ export function ParentMenuRuntime({ menu, menus = [], onNavigate }: ParentMenuRu
   const children = node?.children ?? []
 
   if (children.length === 0) {
-    return <div className="p-6 text-sm text-gray-400">"{menu.name}" has no sections yet.</div>
+    return <div className="p-6 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>"{menu.name}" has no sections yet.</div>
   }
 
   return (
@@ -43,12 +43,13 @@ export function ParentMenuRuntime({ menu, menus = [], onNavigate }: ParentMenuRu
           <button
             key={child.id}
             onClick={() => onNavigate?.(child.slug)}
-            className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 text-left shadow-sm transition-shadow hover:shadow-md"
+            className="flex items-center gap-3 rounded-lg border p-4 text-left shadow-sm transition-shadow hover:shadow-md"
+            style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--card))' }}
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-indigo-600">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: 'hsl(var(--primary) / 0.1)', color: 'hsl(var(--primary))' }}>
               <Icon size={18} />
             </div>
-            <span className="min-w-0 truncate text-sm font-medium text-gray-800">{child.name}</span>
+            <span className="min-w-0 truncate text-sm font-medium" style={{ color: 'hsl(var(--foreground))' }}>{child.name}</span>
           </button>
         )
       })}

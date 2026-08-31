@@ -19,8 +19,8 @@ export function NodePalette() {
   }
 
   return (
-    <div className="absolute left-3 top-3 z-10 flex w-44 flex-col gap-1 rounded-2xl border border-slate-200/80 bg-white/80 p-2 shadow-lg shadow-slate-900/5 backdrop-blur-md">
-      <p className="px-1.5 pb-0.5 pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Add Node</p>
+    <div className="absolute left-3 top-3 z-10 flex w-44 flex-col gap-1 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))]/80 p-2 shadow-lg shadow-black/10 backdrop-blur-md">
+      <p className="px-1.5 pb-0.5 pt-1 text-[10px] font-bold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Add Node</p>
       {PALETTE_NODES.map((type) => {
         const reg = NODE_REGISTRY[type]
         const Icon = reg.icon
@@ -32,7 +32,7 @@ export function NodePalette() {
             onClick={() => addNode(type)}
             className={cn(
               'group flex cursor-grab items-center gap-2.5 rounded-xl px-2 py-1.5',
-              'transition-colors hover:bg-slate-100 active:cursor-grabbing',
+              'transition-colors hover:bg-[hsl(var(--muted))] active:cursor-grabbing',
               'select-none',
             )}
             title={reg.description}
@@ -43,7 +43,7 @@ export function NodePalette() {
             )}>
               <Icon size={14} strokeWidth={2.25} />
             </div>
-            <span className="text-[13px] font-medium text-slate-700">{reg.label}</span>
+            <span className="text-[13px] font-medium text-[hsl(var(--foreground))]">{reg.label}</span>
           </div>
         )
       })}
@@ -55,7 +55,7 @@ export function NodePalette() {
           for a newly-deployed connector to appear here. */}
       {(connectorEntries ?? []).length > 0 && (
         <>
-          <div className="mx-1.5 my-1 h-px bg-slate-100" />
+          <div className="mx-1.5 my-1 h-px bg-[hsl(var(--border))]" />
           {connectorEntries!.map((c) => (
             <div
               key={c.type}
@@ -64,15 +64,15 @@ export function NodePalette() {
               onClick={() => addNode(c.type)}
               className={cn(
                 'group flex cursor-grab items-center gap-2.5 rounded-xl px-2 py-1.5',
-                'transition-colors hover:bg-slate-100 active:cursor-grabbing',
+                'transition-colors hover:bg-[hsl(var(--muted))] active:cursor-grabbing',
                 'select-none',
               )}
               title={c.description}
             >
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-600 text-white shadow-sm transition-transform group-hover:scale-105">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--foreground))]/70 text-white shadow-sm transition-transform group-hover:scale-105">
                 <Plug size={14} strokeWidth={2.25} />
               </div>
-              <span className="text-[13px] font-medium text-slate-700">{c.label}</span>
+              <span className="text-[13px] font-medium text-[hsl(var(--foreground))]">{c.label}</span>
             </div>
           ))}
         </>

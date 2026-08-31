@@ -98,7 +98,7 @@ export function UsersSection() {
                 <RotateCw size={14} />
               </Button>
               <Button
-                variant="ghost" size="icon" title="Revoke invitation" className="text-red-500 hover:bg-red-50 hover:text-red-700"
+                variant="ghost" size="icon" title="Revoke invitation" className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
                 onClick={() => setRevokeTarget(r)}
               >
                 <XCircle size={14} />
@@ -115,7 +115,7 @@ export function UsersSection() {
               <Pencil size={14} />
             </Button>
             <Button
-              variant="ghost" size="icon" title="Revoke access" className="text-red-500 hover:bg-red-50 hover:text-red-700"
+              variant="ghost" size="icon" title="Revoke access" className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
               onClick={() => setRevokeTarget(r)}
             >
               <Trash2 size={14} />

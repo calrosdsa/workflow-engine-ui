@@ -20,7 +20,7 @@ export function DashboardMenuRuntime({ menu, clientId, appId, menus, onNavigate 
   const schema = parseDashboardSchema(config.schema)
 
   if (schema.widgets.length === 0) {
-    return <div className="p-6 text-sm text-gray-400">"{menu.name}" has no widgets yet.</div>
+    return <div className="p-6 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>"{menu.name}" has no widgets yet.</div>
   }
 
   return (

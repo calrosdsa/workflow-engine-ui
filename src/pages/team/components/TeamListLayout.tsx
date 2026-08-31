@@ -31,26 +31,26 @@ export function TeamListLayout({
     // actual list below the fold) and the toolbar stacks its two controls
     // instead of forcing them side by side.
     <div className="flex h-full min-h-0 flex-col md:flex-row">
-      <aside className="shrink-0 overflow-x-auto overflow-y-hidden border-b border-gray-200 bg-white p-3 md:w-56 md:overflow-x-hidden md:overflow-y-auto md:border-b-0 md:border-r">
+      <aside className="shrink-0 overflow-x-auto overflow-y-hidden border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3 md:w-56 md:overflow-x-hidden md:overflow-y-auto md:border-b-0 md:border-r">
         <div className="flex gap-1 md:block md:space-y-0.5">
           <button
             onClick={() => onSelectApp(null)}
             className={cn(
               'flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors md:w-full',
-              selectedAppId === null ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50',
+              selectedAppId === null ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]' : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]',
             )}
           >
             <Layers size={14} />
             All
           </button>
-          <div className="flex gap-1 md:mt-0.5 md:block md:space-y-0.5 md:border-l md:border-gray-200 md:pl-3">
+          <div className="flex gap-1 md:mt-0.5 md:block md:space-y-0.5 md:border-l md:border-[hsl(var(--border))] md:pl-3">
             {apps.map((app) => (
               <button
                 key={app.id}
                 onClick={() => onSelectApp(app.id)}
                 className={cn(
                   'shrink-0 whitespace-nowrap rounded-md px-2 py-1.5 text-left text-sm transition-colors md:block md:w-full md:truncate',
-                  selectedAppId === app.id ? 'bg-indigo-50 font-medium text-indigo-700' : 'text-gray-600 hover:bg-gray-50',
+                  selectedAppId === app.id ? 'bg-[hsl(var(--primary))]/10 font-medium text-[hsl(var(--primary))]' : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]',
                 )}
               >
                 {app.name}
@@ -61,14 +61,14 @@ export function TeamListLayout({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex shrink-0 flex-col gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex shrink-0 flex-col gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           {primaryAction ? (
-            <Button size="sm" className="bg-emerald-500 text-white hover:bg-emerald-600" onClick={primaryAction.onClick}>
+            <Button size="sm" onClick={primaryAction.onClick}>
               {primaryAction.label}
             </Button>
           ) : <span />}
           <div className="relative w-full sm:w-64">
-            <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
             <Input
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}

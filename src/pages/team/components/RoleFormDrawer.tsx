@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
@@ -134,44 +135,44 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
 
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-6">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Name this Role *</label>
+            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name this Role *</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Please name this Role..." />
           </div>
 
           <div>
-            <label className="flex cursor-pointer items-center gap-2">
+            <Label className="flex cursor-pointer items-center gap-2 font-normal">
               <Switch checked={canDesign} onCheckedChange={toggleAppDesign} />
-              <span className="text-xs text-gray-500">Switch off to disable App design permissions</span>
-            </label>
+              <span className="text-xs text-[hsl(var(--muted-foreground))]">Switch off to disable App design permissions</span>
+            </Label>
           </div>
 
           <div>
-            <p className="mb-2 text-xs font-medium text-gray-600">What permissions should this role have?</p>
-            <Accordion type="multiple" defaultValue={Object.keys(grouped)} className="rounded-md border border-gray-200">
+            <p className="mb-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">What permissions should this role have?</p>
+            <Accordion type="multiple" defaultValue={Object.keys(grouped)} className="rounded-md border border-[hsl(var(--border))]">
               {Object.entries(grouped).map(([resource, defs]) => {
                 const selectedCount = defs.filter((d) => permissions.includes(d.key)).length
                 const allChecked = selectedCount === defs.length
                 const someChecked = selectedCount > 0 && !allChecked
 
                 return (
-                  <AccordionItem key={resource} value={resource} className="border-b border-gray-100 px-3 last:border-b-0">
+                  <AccordionItem key={resource} value={resource} className="border-b border-[hsl(var(--border))] px-3 last:border-b-0">
                     <div className="flex items-center gap-2 py-1">
                       <Checkbox
                         checked={allChecked ? true : someChecked ? 'indeterminate' : false}
                         onCheckedChange={(c) => toggleGroup(defs, c === true)}
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <AccordionTrigger className="py-2 normal-case tracking-normal text-sm font-medium text-gray-800">
+                      <AccordionTrigger className="py-2 normal-case tracking-normal text-sm font-medium text-[hsl(var(--foreground))]">
                         {resource}
                       </AccordionTrigger>
                     </div>
                     <AccordionContent>
                       <div className="space-y-1.5 pl-6">
                         {defs.map((p) => (
-                          <label key={p.key} className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                          <Label key={p.key} className="flex cursor-pointer items-center gap-2 text-sm font-normal text-[hsl(var(--foreground))]">
                             <Checkbox checked={permissions.includes(p.key)} onCheckedChange={(c) => toggleOne(p.key, c === true)} />
                             {p.label}
-                          </label>
+                          </Label>
                         ))}
                       </div>
                     </AccordionContent>
@@ -180,7 +181,7 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
               })}
 
               {Object.keys(formsByForm).length > 0 && (
-                <AccordionItem value="forms-records" className="border-b border-gray-100 px-3 last:border-b-0">
+                <AccordionItem value="forms-records" className="border-b border-[hsl(var(--border))] px-3 last:border-b-0">
                   <div className="flex items-center gap-2 py-1">
                     <Checkbox
                       checked={
@@ -193,7 +194,7 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
                       onCheckedChange={(c) => toggleGroup(formDefs, c === true)}
                       onClick={(e) => e.stopPropagation()}
                     />
-                    <AccordionTrigger className="py-2 normal-case tracking-normal text-sm font-medium text-gray-800">
+                    <AccordionTrigger className="py-2 normal-case tracking-normal text-sm font-medium text-[hsl(var(--foreground))]">
                       Forms (records)
                     </AccordionTrigger>
                   </div>
@@ -205,24 +206,24 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
                         const someChecked = selectedCount > 0 && !allChecked
 
                         return (
-                          <AccordionItem key={formId} value={formId} className="border-b border-gray-100 px-2 last:border-b-0">
+                          <AccordionItem key={formId} value={formId} className="border-b border-[hsl(var(--border))] px-2 last:border-b-0">
                             <div className="flex items-center gap-2 py-1">
                               <Checkbox
                                 checked={allChecked ? true : someChecked ? 'indeterminate' : false}
                                 onCheckedChange={(c) => toggleGroup(defs, c === true)}
                                 onClick={(e) => e.stopPropagation()}
                               />
-                              <AccordionTrigger className="py-1.5 normal-case tracking-normal text-sm text-gray-700">
+                              <AccordionTrigger className="py-1.5 normal-case tracking-normal text-sm text-[hsl(var(--foreground))]">
                                 {formName(defs)}
                               </AccordionTrigger>
                             </div>
                             <AccordionContent>
                               <div className="space-y-1.5 pl-6">
                                 {defs.map((p) => (
-                                  <label key={p.key} className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                                  <Label key={p.key} className="flex cursor-pointer items-center gap-2 text-sm font-normal text-[hsl(var(--foreground))]">
                                     <Checkbox checked={permissions.includes(p.key)} onCheckedChange={(c) => toggleOne(p.key, c === true)} />
                                     {actionLabel(p)}
-                                  </label>
+                                  </Label>
                                 ))}
                               </div>
                             </AccordionContent>
@@ -238,41 +239,41 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
 
           {maskableForms.length > 0 && (
             <div>
-              <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-gray-600">
-                <EyeOff size={13} className="text-gray-400" />
+              <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))]">
+                <EyeOff size={13} className="text-[hsl(var(--muted-foreground))]" />
                 Hide fields from this role
               </p>
-              <p className="mb-2 text-[11px] text-gray-400">
+              <p className="mb-2 text-[11px] text-[hsl(var(--muted-foreground))]">
                 Checked fields never appear on any record this role reads — the field itself, not just editing it, is hidden.
               </p>
-              <Accordion type="multiple" className="rounded-md border border-gray-200">
+              <Accordion type="multiple" className="rounded-md border border-[hsl(var(--border))]">
                 {maskableForms.map((form) => {
                   const hidden = hiddenFields[form.id] ?? []
                   const allChecked = form.fields.length > 0 && hidden.length === form.fields.length
                   const someChecked = hidden.length > 0 && !allChecked
 
                   return (
-                    <AccordionItem key={form.id} value={form.id} className="border-b border-gray-100 px-3 last:border-b-0">
+                    <AccordionItem key={form.id} value={form.id} className="border-b border-[hsl(var(--border))] px-3 last:border-b-0">
                       <div className="flex items-center gap-2 py-1">
                         <Checkbox
                           checked={allChecked ? true : someChecked ? 'indeterminate' : false}
                           onCheckedChange={(c) => toggleHiddenFieldGroup(form.id, form.fields.map((f) => f.name), c === true)}
                           onClick={(e) => e.stopPropagation()}
                         />
-                        <AccordionTrigger className="py-2 normal-case tracking-normal text-sm font-medium text-gray-800">
+                        <AccordionTrigger className="py-2 normal-case tracking-normal text-sm font-medium text-[hsl(var(--foreground))]">
                           {form.name}
                         </AccordionTrigger>
                       </div>
                       <AccordionContent>
                         <div className="space-y-1.5 pl-6">
                           {form.fields.map((field) => (
-                            <label key={field.name} className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                            <Label key={field.name} className="flex cursor-pointer items-center gap-2 text-sm font-normal text-[hsl(var(--foreground))]">
                               <Checkbox
                                 checked={hidden.includes(field.name)}
                                 onCheckedChange={(c) => toggleHiddenField(form.id, field.name, c === true)}
                               />
                               {field.label}
-                            </label>
+                            </Label>
                           ))}
                         </div>
                       </AccordionContent>
@@ -283,12 +284,12 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
             </div>
           )}
 
-          {error && <p className="text-xs text-red-600">{error}</p>}
+          {error && <p className="text-xs text-[hsl(var(--destructive))]">{error}</p>}
         </div>
 
         <DrawerFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button className="bg-emerald-500 text-white hover:bg-emerald-600" onClick={handleSave} disabled={isPending}>
+          <Button onClick={handleSave} disabled={isPending}>
             {isPending && <Spinner className="h-4 w-4" />}
             Save
           </Button>

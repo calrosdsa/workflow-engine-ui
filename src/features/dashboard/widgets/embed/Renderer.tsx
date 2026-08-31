@@ -39,7 +39,7 @@ export function EmbedRenderer({ config, mode }: WidgetRendererProps<EmbedWidgetC
   const { data: integration } = useIntegrationRuntimeInfo(config.integrationId)
 
   if (!config.url) {
-    return <div className="flex h-full items-center justify-center p-3 text-xs text-slate-400">No webpage URL has been configured yet.</div>
+    return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No webpage URL has been configured yet.</div>
   }
 
   return (
@@ -148,17 +148,17 @@ function EmbedFrame({ url, integration, builderMode }: { url: string; integratio
   if (status === 'checking' || oidcPending) {
     return (
       <div className="flex h-full w-full items-center justify-center">
-        <Loader2 size={20} className="animate-spin text-gray-300" />
+        <Loader2 size={20} className="animate-spin" style={{ color: 'hsl(var(--muted-foreground))' }} />
       </div>
     )
   }
 
   if (status === 'blocked') {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-white text-center">
-        <ExternalLink size={32} className="text-gray-300" />
-        <p className="text-sm font-medium text-gray-700">This page can't be displayed here</p>
-        {reason && <p className="max-w-sm text-xs text-gray-400">{reason}</p>}
+      <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-center" style={{ backgroundColor: 'hsl(var(--card))' }}>
+        <ExternalLink size={32} style={{ color: 'hsl(var(--muted-foreground))' }} />
+        <p className="text-sm font-medium" style={{ color: 'hsl(var(--foreground))' }}>This page can't be displayed here</p>
+        {reason && <p className="max-w-sm text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{reason}</p>}
         <a href={url} target="_blank" rel="noopener noreferrer">
           <Button type="button" size="sm" className="gap-1.5">
             <ExternalLink size={13} /> Open in a new tab
@@ -171,7 +171,7 @@ function EmbedFrame({ url, integration, builderMode }: { url: string; integratio
   return (
     <div className="flex h-full w-full flex-col">
       {builderMode && ssoFailed && (
-        <div className="flex shrink-0 items-center gap-1.5 border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] text-amber-700">
+        <div className="flex shrink-0 items-center gap-1.5 border-b px-3 py-1.5 text-[11px]" style={{ borderColor: 'hsl(var(--warning) / 0.3)', backgroundColor: 'hsl(var(--warning) / 0.1)', color: 'hsl(var(--warning))' }}>
           <AlertTriangle size={12} className="shrink-0" />
           {integration?.auth_mode === 'oidc'
             ? "Couldn't sign in automatically — loaded without SSO. Check the integration's OIDC configuration, or the user may not have an active session with the identity provider."

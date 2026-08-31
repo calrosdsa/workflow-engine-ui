@@ -76,12 +76,12 @@ export function HttpRequestForm({ config, variables, nodeContext, onChange }: Ht
     <div className="space-y-4">
       {/* Method + URL bar */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Request</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Request</Label>
         <div className="flex gap-1.5">
           <select
             value={config.method}
             onChange={(e) => set({ method: e.target.value as HTTPMethod })}
-            className="w-24 shrink-0 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[12px] font-semibold text-slate-700 focus:border-cyan-400 focus:outline-none"
+            className="w-24 shrink-0 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2 py-1.5 text-[12px] font-semibold text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none"
           >
             {METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
           </select>
@@ -111,7 +111,7 @@ export function HttpRequestForm({ config, variables, nodeContext, onChange }: Ht
         />
       </div>
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       <Tabs defaultValue="params">
         <TabsList className="w-full">
@@ -152,7 +152,7 @@ export function HttpRequestForm({ config, variables, nodeContext, onChange }: Ht
         </TabsContent>
       </Tabs>
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       <ResponseSchemaSection
         config={config}
@@ -161,10 +161,10 @@ export function HttpRequestForm({ config, variables, nodeContext, onChange }: Ht
         onChange={(response_schemas) => set({ response_schemas })}
       />
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Timeout (ms)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Timeout (ms)</Label>
         <Input
           type="number"
           min={0}
@@ -176,14 +176,14 @@ export function HttpRequestForm({ config, variables, nodeContext, onChange }: Ht
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Store In (optional)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Store In (optional)</Label>
         <Input
           value={config.output_var ?? ''}
           onChange={(e) => set({ output_var: e.target.value })}
           placeholder="e.g. api_response"
           className="h-8 font-mono text-[12px]"
         />
-        <p className="text-[10px] text-slate-400">
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
           The response (status/headers/body) is always available downstream as this node's output — this only
           also mirrors it into a workflow variable.
         </p>
@@ -199,7 +199,7 @@ export function HttpRequestForm({ config, variables, nodeContext, onChange }: Ht
 
 function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMode) => void }) {
   return (
-    <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+    <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
       {(['static', 'expression'] as const).map((m) => (
         <button
           key={m}
@@ -207,7 +207,7 @@ function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMo
           onClick={() => onChange(m)}
           className={cn(
             'flex-1 rounded-md py-1 text-[11px] font-medium transition-colors',
-            mode === m ? 'bg-cyan-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700',
+            mode === m ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
           )}
         >
           {m === 'static' ? 'Static' : 'Expression'}
@@ -258,26 +258,26 @@ function ResponseSchemaSection({ config, variables, schemas, onChange }: {
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center gap-1.5 text-left"
       >
-        <Table2 size={12} className="text-cyan-500" />
-        <Label className="cursor-pointer text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        <Table2 size={12} className="text-[hsl(var(--primary))]" />
+        <Label className="cursor-pointer text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
           Output Schema
         </Label>
         {schemas.length > 0 && (
-          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+          <span className="rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))]">
             {schemas.length}
           </span>
         )}
-        <span className="ml-auto text-slate-400">
+        <span className="ml-auto text-[hsl(var(--muted-foreground))]">
           {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
         </span>
       </button>
 
       {open && (
         <div className="space-y-2.5">
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
             Map JSONPath into named, typed fields — they'll show up as their own entry in the downstream
-            expression editor, e.g. <span className="font-mono text-cyan-600">Users → Id</span>. A{' '}
-            <span className="font-mono text-cyan-600">List Of Objects</span> schema becomes a real array you
+            expression editor, e.g. <span className="font-mono text-[hsl(var(--primary))]">Users → Id</span>. A{' '}
+            <span className="font-mono text-[hsl(var(--primary))]">List Of Objects</span> schema becomes a real array you
             can drop into an Iterator's source list, with each field autocompleting inside the loop body.
           </p>
 
@@ -296,7 +296,7 @@ function ResponseSchemaSection({ config, variables, schemas, onChange }: {
             variant="outline"
             size="sm"
             onClick={addSchema}
-            className="h-7 w-full gap-1.5 border-dashed text-[11px] text-slate-500 hover:text-slate-700"
+            className="h-7 w-full gap-1.5 border-dashed text-[11px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           >
             <Plus size={12} /> Add New Schema
           </Button>
@@ -319,12 +319,12 @@ function SchemaCard({ schema, onChange, onRemove }: {
   const removeField = (id: string) => onChange({ fields: schema.fields.filter((f) => f.id !== id) })
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50/60">
+    <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40">
       {/* Card header */}
-      <div className="flex items-center gap-1.5 border-b border-slate-200 px-2.5 py-2">
+      <div className="flex items-center gap-1.5 border-b border-[hsl(var(--border))] px-2.5 py-2">
         <button
           onClick={onRemove}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-red-50 hover:text-red-400"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
           title="Remove schema"
         >
           <Trash2 size={12} />
@@ -337,7 +337,7 @@ function SchemaCard({ schema, onChange, onRemove }: {
         />
         <button
           onClick={() => setOpen((o) => !o)}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]"
           title={open ? 'Collapse' : 'Expand'}
         >
           {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
@@ -349,8 +349,8 @@ function SchemaCard({ schema, onChange, onRemove }: {
           {/* Type + Source */}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <p className="text-[10px] font-medium text-slate-400">Type</p>
-              <div className="flex gap-1 rounded-lg bg-white border border-slate-200 p-1">
+              <p className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">Type</p>
+              <div className="flex gap-1 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))] p-1">
                 {(['list', 'single'] as ResponseSchemaKind[]).map((k) => (
                   <button
                     key={k}
@@ -358,7 +358,7 @@ function SchemaCard({ schema, onChange, onRemove }: {
                     onClick={() => onChange({ kind: k })}
                     className={cn(
                       'flex-1 rounded-md py-1 text-[10.5px] font-medium transition-colors',
-                      schema.kind === k ? 'bg-cyan-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700',
+                      schema.kind === k ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
                     )}
                   >
                     {k === 'list' ? 'List Of Objects' : 'Single Object'}
@@ -367,8 +367,8 @@ function SchemaCard({ schema, onChange, onRemove }: {
               </div>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-medium text-slate-400">Source</p>
-              <div className="flex gap-1 rounded-lg bg-white border border-slate-200 p-1">
+              <p className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">Source</p>
+              <div className="flex gap-1 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))] p-1">
                 {(['body', 'headers'] as ResponseSchemaSource[]).map((src) => (
                   <button
                     key={src}
@@ -376,7 +376,7 @@ function SchemaCard({ schema, onChange, onRemove }: {
                     onClick={() => onChange({ source: src })}
                     className={cn(
                       'flex-1 rounded-md py-1 text-[10.5px] font-medium capitalize transition-colors',
-                      schema.source === src ? 'bg-cyan-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700',
+                      schema.source === src ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
                     )}
                   >
                     {src}
@@ -389,7 +389,7 @@ function SchemaCard({ schema, onChange, onRemove }: {
           {/* Field rows */}
           <div className="space-y-1.5">
             {schema.fields.length === 0 && (
-              <p className="rounded-lg border border-dashed border-slate-200 p-2.5 text-center text-[10.5px] text-slate-400">
+              <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-2.5 text-center text-[10.5px] text-[hsl(var(--muted-foreground))]">
                 No fields yet — add one below.
               </p>
             )}
@@ -404,7 +404,7 @@ function SchemaCard({ schema, onChange, onRemove }: {
             ))}
           </div>
 
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
             Declared type is applied on a best-effort basis (e.g. a numeric string becomes a real number) —
             a value that can't be converted is published as extracted rather than failing the request.
           </p>
@@ -413,7 +413,7 @@ function SchemaCard({ schema, onChange, onRemove }: {
             variant="outline"
             size="sm"
             onClick={addField}
-            className="h-7 w-full gap-1.5 border-dashed text-[11px] text-slate-500 hover:text-slate-700"
+            className="h-7 w-full gap-1.5 border-dashed text-[11px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           >
             <Plus size={12} /> Add field
           </Button>
@@ -450,7 +450,7 @@ function SchemaFieldRow({ field, source, depth = 0, onChange, onRemove }: {
   const removeNested = (id: string) => onChange({ fields: nested.filter((f) => f.id !== id) })
 
   return (
-    <div className={depth > 0 ? 'border-l-2 border-cyan-100 pl-2.5' : undefined}>
+    <div className={depth > 0 ? 'border-l-2 border-[hsl(var(--primary))]/20 pl-2.5' : undefined}>
       <div className="flex items-center gap-1.5">
         <Input
           value={field.path}
@@ -458,14 +458,14 @@ function SchemaFieldRow({ field, source, depth = 0, onChange, onRemove }: {
           placeholder={source === 'headers' ? 'header name, e.g. content-type' : isList ? 'JSONPath to the array, e.g. items' : 'JSONPath, e.g. address.geo.lat'}
           className="h-7 min-w-0 flex-1 font-mono text-[11px]"
         />
-        <span className="shrink-0 text-[11px] text-slate-300">=</span>
+        <span className="shrink-0 text-[11px] text-[hsl(var(--muted-foreground))]/60">=</span>
         <select
           value={field.type}
           onChange={(e) => {
             const type = e.target.value as ResponseFieldType
             onChange({ type, fields: type === 'list' ? (field.fields ?? []) : undefined })
           }}
-          className="h-7 shrink-0 rounded-md border border-slate-200 bg-white px-1.5 text-[11px] capitalize text-slate-700 focus:border-cyan-400 focus:outline-none"
+          className="h-7 shrink-0 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-1.5 text-[11px] capitalize text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none"
         >
           {fieldTypeOptionsFor(source).map((t) => <option key={t} value={t}>{t === 'list' ? 'List of objects' : t}</option>)}
         </select>
@@ -477,7 +477,7 @@ function SchemaFieldRow({ field, source, depth = 0, onChange, onRemove }: {
         />
         <button
           onClick={onRemove}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-300 hover:bg-red-50 hover:text-red-400"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
           title="Remove field"
         >
           <Trash2 size={11} />
@@ -487,7 +487,7 @@ function SchemaFieldRow({ field, source, depth = 0, onChange, onRemove }: {
       {isList && (
         <div className="mt-1.5 space-y-1.5 pl-3">
           {nested.length === 0 && (
-            <p className="rounded-lg border border-dashed border-slate-200 p-2 text-center text-[10px] text-slate-400">
+            <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-2 text-center text-[10px] text-[hsl(var(--muted-foreground))]">
               No fields yet for each item in this list.
             </p>
           )}
@@ -505,7 +505,7 @@ function SchemaFieldRow({ field, source, depth = 0, onChange, onRemove }: {
             variant="outline"
             size="sm"
             onClick={addNested}
-            className="h-6 w-full gap-1.5 border-dashed text-[10.5px] text-slate-500 hover:text-slate-700"
+            className="h-6 w-full gap-1.5 border-dashed text-[10.5px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           >
             <Plus size={11} /> Add nested field
           </Button>
@@ -529,7 +529,7 @@ function BodyTab({ config, variables, nodeContext, onChange }: {
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+      <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
         {(['none', 'json', 'form', 'raw'] as const).map((m) => (
           <button
             key={m}
@@ -537,7 +537,7 @@ function BodyTab({ config, variables, nodeContext, onChange }: {
             onClick={() => onChange({ body_mode: m as HTTPBodyMode })}
             className={cn(
               'flex-1 rounded-md py-1 text-[11px] font-medium capitalize transition-colors',
-              mode === m ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600',
+              mode === m ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
             )}
           >
             {m}
@@ -546,7 +546,7 @@ function BodyTab({ config, variables, nodeContext, onChange }: {
       </div>
 
       {mode === 'none' && (
-        <p className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-[11px] text-slate-400">
+        <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-4 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
           This request has no body.
         </p>
       )}
@@ -580,7 +580,7 @@ function BodyTab({ config, variables, nodeContext, onChange }: {
               onChange={(e) => onChange({ body_value: e.target.value })}
               placeholder={mode === 'json' ? '{\n  "key": "value"\n}' : 'raw body text…'}
               rows={6}
-              className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 font-mono text-[11px] text-slate-700 placeholder:text-slate-300 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-100"
+              className="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2.5 py-2 font-mono text-[11px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/60 focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
             />
           )}
         </div>
@@ -625,7 +625,7 @@ function AuthTab({ config, variables, nodeContext, onChange }: {
       <select
         value={authType}
         onChange={(e) => onChange({ auth_type: e.target.value as HTTPAuthType })}
-        className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-slate-700 focus:border-cyan-400 focus:outline-none"
+        className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2.5 py-1.5 text-[12px] font-medium text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none"
       >
         {(Object.keys(AUTH_TYPE_LABELS) as HTTPAuthType[]).map((t) => (
           <option key={t} value={t}>{AUTH_TYPE_LABELS[t]}</option>
@@ -633,7 +633,7 @@ function AuthTab({ config, variables, nodeContext, onChange }: {
       </select>
 
       {authType === 'none' && (
-        <p className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-[11px] text-slate-400">
+        <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-4 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
           No authentication.
         </p>
       )}
@@ -684,7 +684,7 @@ function AuthTab({ config, variables, nodeContext, onChange }: {
       {authType === 'api_key' && (
         <div className="space-y-2">
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-slate-500">Key name</label>
+            <label className="mb-1 block text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Key name</label>
             <Input
               value={config.auth_api_key_name ?? ''}
               onChange={(e) => onChange({ auth_api_key_name: e.target.value })}
@@ -692,7 +692,7 @@ function AuthTab({ config, variables, nodeContext, onChange }: {
               className="h-7 font-mono text-[11px]"
             />
           </div>
-          <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+          <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
             {(['header', 'query'] as const).map((loc) => (
               <button
                 key={loc}
@@ -700,7 +700,7 @@ function AuthTab({ config, variables, nodeContext, onChange }: {
                 onClick={() => onChange({ auth_api_key_location: loc })}
                 className={cn(
                   'flex-1 rounded-md py-1 text-[11px] font-medium capitalize transition-colors',
-                  (config.auth_api_key_location ?? 'header') === loc ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400',
+                  (config.auth_api_key_location ?? 'header') === loc ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]',
                 )}
               >
                 {loc}
@@ -724,7 +724,7 @@ function AuthTab({ config, variables, nodeContext, onChange }: {
 
       {authType === 'credential' && (
         <div className="space-y-1.5">
-          <label className="mb-1 block text-[11px] font-medium text-slate-500">Credential</label>
+          <label className="mb-1 block text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Credential</label>
           <CredentialSelect
             value={config.auth_credential || undefined}
             onChange={(name) => onChange({ auth_credential: name ?? '' })}
@@ -754,7 +754,7 @@ function StaticOrExprField({
 }) {
   return (
     <div className="space-y-1">
-      <label className="block text-[11px] font-medium text-slate-500">{label}</label>
+      <label className="block text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{label}</label>
       <ModeToggle mode={mode} onChange={onModeChange} />
       {mode === 'expression' ? (
         <ExpressionField

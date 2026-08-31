@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { MENU_TYPE_REGISTRY } from '@/features/menus/menu-registry'
+import { resolveMenuIcon } from '@/features/menus/menu-icons'
 import { RuntimeLink } from './RuntimeLink'
 import { cn } from '@/lib/utils'
 import type { MenuTreeNode } from '@/features/menus/types'
@@ -43,7 +44,10 @@ function NavItem({ node, clientId, appId, activeMenuId, onNavigate, depth }: {
   depth: number
 }) {
   const entry = MENU_TYPE_REGISTRY[node.menu_type]
-  const Icon = entry.icon
+  // The author's chosen icon (features/menus/menu-icons.ts) wins over the
+  // menu type's own; an unset icon, or a name this build's catalog doesn't
+  // carry, falls back to exactly what rendered before icons were settable.
+  const Icon = resolveMenuIcon(node.icon) ?? entry.icon
   const hasChildren = node.children.length > 0
   const collapsedDefault = node.menu_type === 'parent' && (node.config as { collapsed_by_default?: boolean }).collapsed_by_default
   const [open, setOpen] = useState(!collapsedDefault)

@@ -1,14 +1,21 @@
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { ArrowLeft, LayoutDashboard, Workflow, FileText, Palette, KeyRound, Rocket, Save, Loader2, AlertCircle, ListTree, Eye, Lock } from 'lucide-react'
+import { ArrowLeft, LayoutDashboard, Workflow, FileText, Palette, KeyRound, Rocket, Save, Loader2, AlertCircle, ListTree, Eye, LogOut, Sun, Moon, BookOpen, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { useApplication, useApplicationVersions, usePublishApplication, useSaveVersion } from '@/features/applications/hooks'
 import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
 import { usePermission } from '@/features/auth/permissions'
+import { useLogout } from '@/features/auth/hooks'
+import { useAuthStore } from '@/stores/auth'
+import { useBuilderTheme } from '@/features/theme/useBuilderTheme'
 import { runtimeUrlFor } from '@/features/runtime/urls'
 import { useState } from 'react'
 import type { ValidationIssue } from '@/features/applications/types'
@@ -25,7 +32,11 @@ const NAV_ITEMS = [
   { to: '/applications/$appId/workflows', label: 'Workflows', icon: Workflow, exact: false },
   { to: '/applications/$appId/forms', label: 'Forms', icon: FileText, exact: false },
   { to: '/applications/$appId/design', label: 'App Design', icon: Palette, exact: false },
-  { to: '/applications/$appId/settings', label: 'Settings', icon: KeyRound, exact: false },
+  // FR-C9-002: now a real per-app nested route — a KB always belongs to
+  // exactly one owning app, so this is app-scoped like every other item
+  // here, not a link out to a global page.
+  { to: '/applications/$appId/knowledge-bases', label: 'Knowledge Base', icon: BookOpen, exact: false },
+  // { to: '/applications/$appId/settings', label: 'Settings', icon: KeyRound, exact: false },
 ] as const
 
 // The Workflow Builder (/applications/$appId/workflows/$workflowId) owns its
@@ -116,18 +127,29 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
        *  the app name collapse to icon-only below `sm`, freeing enough width
        *  that all 5 destinations plus the Live badge and Launch button fit
        *  without any of them needing an overflow menu. */}
-      <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-white px-2 sm:gap-3 sm:px-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate({ to: '/' })} title="Back to Home">
+      <header className="grid h-20 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4">
+        {/* <Button variant="ghost" size="icon" onClick={() => navigate({ to: '/' })} title="Back to Home">
           <ArrowLeft size={16} />
-        </Button>
-        <div className="flex min-w-0 shrink-0 items-center gap-2">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+        </Button> */}
+        <div className="flex min-w-0 items-center gap-2 justify-self-start">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
             <ListTree size={14} />
           </div>
-          <span className="hidden max-w-[160px] truncate text-sm font-semibold text-slate-800 sm:inline" title={app.name}>{app.name}</span>
+          <span className="hidden max-w-[160px] truncate text-sm font-semibold text-[hsl(var(--foreground))] sm:inline" title={app.name}>{app.name}</span>
         </div>
 
-        <nav className="flex items-center gap-0.5 sm:ml-2 sm:gap-1">
+        {/* Centered in the header via the grid's own [1fr_auto_1fr] track
+         *  layout (an auto-width middle column, flanked by two equal
+         *  flexible side columns) rather than ml-auto/absolute-centering —
+         *  this keeps the nav visually centered on the FULL header width
+         *  regardless of how wide the logo/app-name or the right-side
+         *  actions happen to be, instead of centering only within the space
+         *  left over after them. */}
+        <nav className="relative flex items-center gap-0.5 justify-self-center sm:gap-1">
+          {/* One shared floating pill, CSS-anchor-positioned against whichever
+           *  item currently carries `nav-pill-anchor` below — see index.css's
+           *  .nav-pill / .nav-pill-anchor doc comment (design.md § Motion). */}
+          <div className="nav-pill" aria-hidden />
           {NAV_ITEMS.map(({ to, label, icon: Icon, exact }) => {
             const target = to.replace('$appId', appId)
             const active = exact ? pathname === target : pathname.startsWith(target)
@@ -139,8 +161,9 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
                 aria-label={label}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-md p-2 text-sm font-medium transition-colors sm:px-3 sm:py-1.5',
-                  active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50',
+                  'relative z-[1] flex items-center gap-1.5 rounded-full p-2 text-sm font-medium transition-colors sm:px-3 sm:py-1.5 lg:py-3',
+                  active && 'nav-pill-anchor',
+                  active ? 'text-[hsl(var(--background))]' : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]',
                 )}
               >
                 <Icon size={14} />
@@ -150,12 +173,7 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
           })}
         </nav>
 
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-          {app.published_version != null && (
-            <span className="hidden shrink-0 whitespace-nowrap rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-600 sm:inline-block">
-              Live v{versions?.find((v) => v.version_number === app.published_version)?.major_version ?? currentMajor}.0
-            </span>
-          )}
+        <div className="flex shrink-0 items-center gap-1.5 justify-self-end sm:gap-2">
           {canPreviewDraft && (
             <Button
               variant="outline"
@@ -167,33 +185,13 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
               <Eye size={14} />
             </Button>
           )}
-          {canWrite && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleQuickSaveVersion}
-              disabled={saveVersionMutation.isPending}
-              title="Save Version — a deliberate checkpoint, doesn't publish"
-              className="gap-1.5 px-2"
-            >
-              {saveVersionMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              {/* One breakpoint later than every other header label (lg, not
-               *  sm) — this button is the newest addition to an already
-               *  fully-budgeted header (see this header's own doc comment:
-               *  776px of content with zero slack at sm+), so its own label
-               *  is the one that gives way first under medium widths rather
-               *  than reintroducing the horizontal-overflow bug that
-               *  comment describes fixing. */}
-              <span className="hidden lg:inline">Save Version</span>
-            </Button>
-          )}
           {canPublish && (
             <Button
               size="sm"
               onClick={() => setPublishDialogOpen(true)}
               disabled={publishMutation.isPending}
-              title="Launch Application"
-              className="gap-1.5 bg-indigo-600 px-2 text-white hover:bg-indigo-700"
+              title="Publish Application"
+              className="gap-1.5 px-2"
             >
               {publishMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Rocket size={14} />}
               {/* Moved from sm to lg alongside Save Version's own label —
@@ -201,9 +199,11 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
                *  used up this header's last slack at sm+, so both labels
                *  now collapse together rather than one staying full-text
                *  while the other goes icon-only. */}
-              <span className="hidden lg:inline">Launch Application</span>
+              <span className="hidden lg:inline">Publish Application</span>
             </Button>
           )}
+          <ThemeToggle />
+          <AccountMenu />
         </div>
       </header>
 
@@ -223,21 +223,21 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
       )}
 
       {publishIssues && publishIssues.length > 0 && (
-        <div className="border-b border-red-200 bg-red-50 px-4 py-3 text-[12px] text-red-700">
+        <div className="border-b border-[hsl(var(--destructive))]/30 bg-[hsl(var(--destructive))]/10 px-4 py-3 text-[12px] text-[hsl(var(--destructive))]">
           <div className="mb-1 flex items-center gap-2 font-medium">
             <AlertCircle size={14} className="shrink-0" />
             Application cannot be published — fix these issues first:
           </div>
           <ul className="ml-6 list-disc space-y-0.5">
             {publishIssues.map((issue, i) => (
-              <li key={i}><span className="font-mono text-[11px] text-red-500">{issue.path}</span> — {issue.message}</li>
+              <li key={i}><span className="font-mono text-[11px] opacity-80">{issue.path}</span> — {issue.message}</li>
             ))}
           </ul>
         </div>
       )}
 
       {publishError && (
-        <div className="flex items-center gap-2 border-b border-red-200 bg-red-50 px-4 py-3 text-[12px] font-medium text-red-700">
+        <div className="flex items-center gap-2 border-b border-[hsl(var(--destructive))]/30 bg-[hsl(var(--destructive))]/10 px-4 py-3 text-[12px] font-medium text-[hsl(var(--destructive))]">
           <AlertCircle size={14} className="shrink-0" />
           {publishError}
         </div>
@@ -255,6 +255,79 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
         isPending={publishMutation.isPending}
       />
     </div>
+  )
+}
+
+// Builder-shell light/dark switcher — see useBuilderTheme.ts. Icon shows the
+// mode a click WOULD switch to (sun while dark, moon while light), matching
+// the convention every other icon-toggle button in this codebase already
+// uses for its title text (e.g. the theme-editor preview's own sun/moon/
+// monitor trio in ThemeSection.tsx).
+function ThemeToggle() {
+  const { theme, toggle } = useBuilderTheme()
+  return (
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={toggle}
+      title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      className="h-8 w-8 shrink-0"
+    >
+      {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+    </Button>
+  )
+}
+
+// Account identity + logout — the "DU"-style circular avatar every screen
+// implicitly needs, but which this codebase never actually built anywhere
+// (no avatar_url/profile_picture concept exists in the data model — a
+// circular initials badge is the only real option). Reads the same
+// session the rest of the app already keys off (Sidebar.tsx, HomePage.tsx),
+// so it stays correct across every membership/client switch without its
+// own fetch. useLogout() is the existing, fully-wired mutation
+// (features/auth/hooks.ts) — clears the store, redirects to /login — not a
+// new one invented for this menu.
+function AccountMenu() {
+  const session = useAuthStore((s) => s.session)
+  const logoutMutation = useLogout()
+  if (!session) return null
+
+  const fullName = `${session.first_name ?? ''} ${session.last_name ?? ''}`.trim()
+  const initials = (fullName || session.email).slice(0, 2).toUpperCase()
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          title={fullName || session.email}
+          aria-label="Account menu"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[11px] font-semibold text-[hsl(var(--primary-foreground))] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))]"
+        >
+          {initials}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <div className="flex items-center gap-2 px-2 py-1.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[11px] font-semibold text-[hsl(var(--primary-foreground))]">
+            {initials}
+          </div>
+          <div className="min-w-0">
+            {fullName && <p className="truncate text-[13px] font-medium text-[hsl(var(--foreground))]">{fullName}</p>}
+            <p className="truncate text-[12px] text-[hsl(var(--muted-foreground))]">{session.email}</p>
+          </div>
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          destructive
+          disabled={logoutMutation.isPending}
+          onSelect={() => logoutMutation.mutate()}
+        >
+          {logoutMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <LogOut size={14} />}
+          Log out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
@@ -313,7 +386,7 @@ function PublishDialog({
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={isPending}>Cancel</Button>
           <Button
             size="sm"
-            className="gap-1.5 bg-indigo-600 text-white hover:bg-indigo-700"
+            className="gap-1.5"
             onClick={() => onPublish(parsed ?? undefined)}
             disabled={!isValid || isPending}
           >

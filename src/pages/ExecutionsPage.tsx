@@ -41,8 +41,8 @@ export function ExecutionsPage() {
     <div className="p-6 space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Executions</h1>
-          <p className="text-sm text-gray-500 mt-1">{total} total</p>
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Executions</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">{total} total</p>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {STATUS_FILTERS.map((s) => (
@@ -51,7 +51,7 @@ export function ExecutionsPage() {
               onClick={() => changeStatus(s)}
               className={[
                 'rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                status === s ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
+                status === s ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]' : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/70',
               ].join(' ')}
             >
               {s === 'ALL' ? 'All' : s}
@@ -63,23 +63,23 @@ export function ExecutionsPage() {
       {isLoading ? (
         <div className="flex h-64 items-center justify-center"><Spinner /></div>
       ) : !executions.length ? (
-        <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center text-gray-500">
+        <div className="rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center text-[hsl(var(--muted-foreground))]">
           {status === 'ALL'
             ? 'No executions yet. Trigger a workflow from the Workflows page.'
             : `No ${status.toLowerCase()} executions.`}
         </div>
       ) : (
         <>
-          <div className="rounded-lg border bg-white overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-x-auto">
+            <table className="min-w-full divide-y divide-[hsl(var(--border))]">
+              <thead className="bg-[hsl(var(--muted))]">
                 <tr>
                   {['Execution ID', 'Status', 'Started', 'Finished', 'Duration'].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-[hsl(var(--border))]">
                 {executions.map((ex) => {
                   const started  = ex.started_at  ? new Date(ex.started_at)  : null
                   const finished = ex.finished_at ? new Date(ex.finished_at) : null
@@ -88,12 +88,12 @@ export function ExecutionsPage() {
                     : '—'
 
                   return (
-                    <tr key={ex.execution_id} className="hover:bg-gray-50">
+                    <tr key={ex.execution_id} className="hover:bg-[hsl(var(--muted))]">
                       <td className="px-4 py-3">
                         <Link
                           to="/applications/$appId/executions/$executionId"
                           params={{ appId: appId ?? '', executionId: ex.execution_id }}
-                          className="font-mono text-xs text-blue-600 hover:underline"
+                          className="font-mono text-xs text-[hsl(var(--primary))] hover:underline"
                         >
                           {ex.execution_id.slice(0, 12)}…
                         </Link>
@@ -101,13 +101,13 @@ export function ExecutionsPage() {
                       <td className="px-4 py-3">
                         <Badge variant={statusVariant[ex.status]}>{ex.status}</Badge>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
+                      <td className="px-4 py-3 text-sm text-[hsl(var(--muted-foreground))]">
                         {started ? started.toLocaleString() : '—'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
+                      <td className="px-4 py-3 text-sm text-[hsl(var(--muted-foreground))]">
                         {finished ? finished.toLocaleString() : '—'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{duration}</td>
+                      <td className="px-4 py-3 text-sm text-[hsl(var(--muted-foreground))]">{duration}</td>
                     </tr>
                   )
                 })}
@@ -115,7 +115,7 @@ export function ExecutionsPage() {
             </table>
           </div>
 
-          <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className="flex items-center justify-between text-xs text-[hsl(var(--muted-foreground))]">
             <span>Page {page} of {totalPages}</span>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="h-7 gap-1 px-2">

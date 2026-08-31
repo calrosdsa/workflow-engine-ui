@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Database, MoreHorizontal, ListTree, Table2 } from 'lucide-react'
+import { Database, MoreHorizontal, ListTree, Table2, Link2, Unlink } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
-import { useCopyForm, useUnlinkForm, useDeleteForm } from './hooks'
+import { useCopyForm, useUnlinkForm, useDeleteForm, useUnlinkSharedForm } from './hooks'
 import { ShareSettingsDialog } from './ShareSettingsDialog'
 import { AddDependentFormDialog } from './AddDependentFormDialog'
 import type { FormDefinition } from './types'
@@ -114,20 +114,51 @@ function FormNode({ appId, node, canWrite }: { appId: string; node: TreeNode; ca
   const copyMutation = useCopyForm()
   const unlinkMutation = useUnlinkForm()
   const deleteMutation = useDeleteForm()
+  const unlinkSharedMutation = useUnlinkSharedForm()
+
+  // A form borrowed from another app (see api/forms/links.go). This app may
+  // use its records under the owner's grant, but the DEFINITION belongs to
+  // the owner: editing, sharing, deleting and adding dependents are all the
+  // owner's business, so this menu offers none of them. (The server would
+  // reject most of them anyway — this is so the menu doesn't offer actions
+  // that only fail.)
+  const isLinked = form.is_linked === true
+  const isReadOnlyLink = isLinked && form.visibility === 'read_only'
 
   return (
     <div className="flex items-start gap-0">
-      <div className="group flex w-72 shrink-0 items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2.5 shadow-sm transition-colors hover:border-[hsl(var(--primary))]/40">
-        <Database size={15} className="shrink-0 text-[hsl(var(--primary))]" />
+      {/* Height is pinned to ROW_HEIGHT rather than derived from padding so
+          the trunk connector's arithmetic is true by construction. A row with
+          a second line of text (a description, or a linked form's origin)
+          measured 57.6px against the constant's assumed 45.6, which drifted
+          every tick below it — latent for described forms, and reliable once
+          linked forms began always carrying a second line. */}
+      <div
+        style={{ height: ROW_HEIGHT }}
+        className="group flex w-72 shrink-0 items-center gap-2 overflow-hidden rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 shadow-sm transition-colors hover:border-[hsl(var(--primary))]/40"
+      >
+        {isLinked ? (
+          <Link2
+            size={15}
+            className="shrink-0 text-[hsl(var(--muted-foreground))]"
+            aria-label="Shared from another app"
+          />
+        ) : (
+          <Database size={15} className="shrink-0 text-[hsl(var(--primary))]" />
+        )}
         <Link
           to="/applications/$appId/forms/$formId"
           params={{ appId, formId: form.id }}
           className="min-w-0 flex-1"
         >
           <p className="truncate text-[13px] font-medium text-[hsl(var(--foreground))]">{form.name}</p>
-          {form.description && (
+          {isLinked ? (
+            <p className="truncate text-[11px] text-[hsl(var(--muted-foreground))]">
+              Shared from another app{isReadOnlyLink ? ' · read only' : ''}
+            </p>
+          ) : form.description ? (
             <p className="truncate text-[11px] text-[hsl(var(--muted-foreground))]">{form.description}</p>
-          )}
+          ) : null}
         </Link>
 
         <Link
@@ -150,41 +181,62 @@ function FormNode({ appId, node, canWrite }: { appId: string; node: TreeNode; ca
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setAddDependentOpen(true)} className="flex items-center gap-2">
-                <ListTree size={13} /> Add Dependent Form
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/applications/$appId/forms/$formId" params={{ appId, formId: form.id }} className="flex items-center gap-2">
-                  Edit This Form
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/applications/$appId/forms/$formId/records" params={{ appId, formId: form.id }} className="flex items-center gap-2">
-                  View Records
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => copyMutation.mutate(form.id)} disabled={copyMutation.isPending}>
-                Copy Form
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                destructive
-                onClick={() => {
-                  if (confirm(`Delete "${form.name}"? This cannot be undone.`)) deleteMutation.mutate(form.id)
-                }}
-              >
-                Delete This Form
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setShareOpen(true)}>
-                Share Settings
-              </DropdownMenuItem>
-              {form.parent_form_id && (
-                <DropdownMenuItem
-                  onClick={() => unlinkMutation.mutate(form.id)}
-                  disabled={unlinkMutation.isPending}
-                >
-                  Unlink Dependent Form
-                </DropdownMenuItem>
+              {isLinked ? (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link to="/applications/$appId/forms/$formId/records" params={{ appId, formId: form.id }} className="flex items-center gap-2">
+                      View Records
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    destructive
+                    onClick={() => unlinkSharedMutation.mutate(form.id)}
+                    disabled={unlinkSharedMutation.isPending}
+                    className="flex items-center gap-2"
+                  >
+                    <Unlink size={13} /> Remove from This App
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem onClick={() => setAddDependentOpen(true)} className="flex items-center gap-2">
+                    <ListTree size={13} /> Add Dependent Form
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/applications/$appId/forms/$formId" params={{ appId, formId: form.id }} className="flex items-center gap-2">
+                      Edit This Form
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/applications/$appId/forms/$formId/records" params={{ appId, formId: form.id }} className="flex items-center gap-2">
+                      View Records
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => copyMutation.mutate(form.id)} disabled={copyMutation.isPending}>
+                    Copy Form
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    destructive
+                    onClick={() => {
+                      if (confirm(`Delete "${form.name}"? This cannot be undone.`)) deleteMutation.mutate(form.id)
+                    }}
+                  >
+                    Delete This Form
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setShareOpen(true)}>
+                    Share Settings
+                  </DropdownMenuItem>
+                  {form.parent_form_id && (
+                    <DropdownMenuItem
+                      onClick={() => unlinkMutation.mutate(form.id)}
+                      disabled={unlinkMutation.isPending}
+                    >
+                      Unlink Dependent Form
+                    </DropdownMenuItem>
+                  )}
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -201,8 +253,15 @@ function FormNode({ appId, node, canWrite }: { appId: string; node: TreeNode; ca
         </div>
       )}
 
-      <ShareSettingsDialog formId={form.id} open={shareOpen} onOpenChange={setShareOpen} />
-      <AddDependentFormDialog defaultParentId={form.id} open={addDependentOpen} onOpenChange={setAddDependentOpen} />
+      {/* Both are owner-only actions, and neither is reachable from a linked
+          form's menu — not mounting them keeps a borrowed row from holding a
+          Share Settings dialog whose endpoint would 404 for this app. */}
+      {!isLinked && (
+        <>
+          <ShareSettingsDialog formId={form.id} open={shareOpen} onOpenChange={setShareOpen} />
+          <AddDependentFormDialog defaultParentId={form.id} open={addDependentOpen} onOpenChange={setAddDependentOpen} />
+        </>
+      )}
     </div>
   )
 }

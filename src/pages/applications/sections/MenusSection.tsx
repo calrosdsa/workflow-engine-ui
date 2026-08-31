@@ -12,10 +12,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Spinner } from '@/components/ui/spinner'
 import { useMenus, useCreateMenu, useUpdateMenu, useDeleteMenu, useReorderMenus, useMoveMenu, useSetHiddenFromNav } from '@/features/menus/hooks'
 import { buildMenuTree } from '@/features/menus/tree'
 import { MENU_TYPE_REGISTRY } from '@/features/menus/menu-registry'
+import { resolveMenuIcon } from '@/features/menus/menu-icons'
+import { MenuIconPicker } from '@/features/menus/MenuIconPicker'
 import { usePermission } from '@/features/auth/permissions'
 import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
 import { usePermissionsCatalog } from '@/features/permissions/hooks'
@@ -338,9 +341,9 @@ export function MenuTree({ tree, hiddenMenus, allMenus, selectedId, onSelect, on
   const activeVisible = activeId ? rows.find((r) => r.node.id === activeId) : null
   const activeHidden = activeId ? hiddenMenus.find((m) => m.id === activeId) : null
   const activeOverlay = activeVisible
-    ? { name: activeVisible.node.name, menuType: activeVisible.node.menu_type }
+    ? { name: activeVisible.node.name, menuType: activeVisible.node.menu_type, icon: activeVisible.node.icon }
     : activeHidden
-      ? { name: activeHidden.name, menuType: activeHidden.menu_type }
+      ? { name: activeHidden.name, menuType: activeHidden.menu_type, icon: activeHidden.icon }
       : null
 
   return (
@@ -389,7 +392,7 @@ export function MenuTree({ tree, hiddenMenus, allMenus, selectedId, onSelect, on
       <DragOverlay dropAnimation={{ duration: 150, easing: 'cubic-bezier(0.2,0,0,1)' }}>
         {activeOverlay && (
           <div className="flex items-center gap-1.5 rounded-md border border-[hsl(var(--primary))]/40 bg-[hsl(var(--card))] px-2 py-1 text-[13px] font-medium text-[hsl(var(--foreground))] shadow-lg">
-            {(() => { const Icon = MENU_TYPE_REGISTRY[activeOverlay.menuType].icon; return <Icon size={13} className="shrink-0 text-[hsl(var(--primary))]" /> })()}
+            {(() => { const Icon = resolveMenuIcon(activeOverlay.icon) ?? MENU_TYPE_REGISTRY[activeOverlay.menuType].icon; return <Icon size={13} className="shrink-0 text-[hsl(var(--primary))]" /> })()}
             {activeOverlay.name}
           </div>
         )}
@@ -481,7 +484,9 @@ function HiddenMenuRow({ menu, selected, onSelect, onRestore }: {
   onSelect: () => void
   onRestore: () => void
 }) {
-  const Icon = MENU_TYPE_REGISTRY[menu.menu_type].icon
+  // The menu's own chosen icon wins; the menu TYPE's icon is the fallback,
+  // which is also what an unset icon and an unknown name both resolve to.
+  const Icon = resolveMenuIcon(menu.icon) ?? MENU_TYPE_REGISTRY[menu.menu_type].icon
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: menu.id })
 
   const style = { transform: CSS.Translate.toString(transform), transition }
@@ -535,7 +540,7 @@ function MenuRow({ node, depth, index, siblingCount, selected, hasChildren, isCo
   onMove: (dir: -1 | 1) => void
   onAddChild: () => void
 }) {
-  const Icon = MENU_TYPE_REGISTRY[node.menu_type].icon
+  const Icon = resolveMenuIcon(node.icon) ?? MENU_TYPE_REGISTRY[node.menu_type].icon
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver, active } = useSortable({ id: node.id })
 
   const style = {
@@ -738,6 +743,7 @@ function MenuDetail({ menu, appId, onDeleted, onBack }: { menu: Menu; appId: str
 
   const [name, setName] = useState(menu.name)
   const [slug, setSlug] = useState(menu.slug)
+  const [icon, setIcon] = useState<string | undefined>(menu.icon || undefined)
   const [requiredPermission, setRequiredPermission] = useState(menu.required_permission ?? '')
   const [permissionMode, setPermissionMode] = useState<PermissionMode>(menu.permission_mode)
   const [requiredRoleIds, setRequiredRoleIds] = useState<string[]>(menu.required_role_ids)
@@ -772,16 +778,37 @@ function MenuDetail({ menu, appId, onDeleted, onBack }: { menu: Menu; appId: str
         menu_type: menu.menu_type,
         slug,
         name,
-        icon: menu.icon,
+        icon,
         sort_order: menu.sort_order,
         config,
         required_permission: requiredPermission || undefined,
         permission_mode: permissionMode,
         required_role_ids: permissionMode === 'role' ? requiredRoleIds : [],
+        // Round-tripped, not omitted. The backend's menuRequest.HiddenFromNav
+        // is a plain bool, so leaving it out of the body reads as `false` and
+        // silently UNHIDES the menu — which for an auto-paired Add menu
+        // (created hidden, meant to be reached only via its Search menu's
+        // "Create" button) meant saving any unrelated edit put it in the
+        // runtime nav. This panel never edits the flag, so it echoes back
+        // whatever the row already had, the same way useMoveMenu and
+        // useSetHiddenFromNav already do for the fields they don't change.
+        hidden_from_nav: menu.hidden_from_nav,
       })
       if (menu.menu_type === 'search' && resourceFormId) {
+        // `{ ...menu, name, slug }`, not `menu`: the `menu` prop still holds
+        // the server's PRE-edit state, while `name`/`slug` are the local
+        // edits that the mutation above just persisted. Passing the raw prop
+        // meant the paired Add menu was named from the stale value — the
+        // overwhelmingly common case being a brand-new Search menu renamed
+        // from its "New Search" default and given a form in one save, which
+        // produced a menu literally called "Add New Search". That name is not
+        // cosmetic: AddMenuRuntime renders it as the runtime page heading and
+        // breadcrumb, so end users saw "Add New Search" on the create page of
+        // a menu the author had named "Tasks". The slug has the same defect
+        // (the pair is slugged `${searchMenu.slug}-add`) and is fixed here
+        // with it.
         await ensurePairedAddMenu({
-          allMenus: allMenus ?? [], searchMenu: menu, formId: resourceFormId,
+          allMenus: allMenus ?? [], searchMenu: { ...menu, name, slug }, formId: resourceFormId,
           permissionMode, requiredRoleIds, createMutation,
         })
       }
@@ -820,25 +847,35 @@ function MenuDetail({ menu, appId, onDeleted, onBack }: { menu: Menu; appId: str
           <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Slug</label>
           <Input value={slug} onChange={(e) => { setSlug(e.target.value); setSaved(false) }} className="font-mono text-xs" disabled={!canWrite} />
         </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Icon</label>
+          <MenuIconPicker
+            value={icon}
+            onChange={(next) => { setIcon(next); setSaved(false) }}
+            fallbackIcon={MENU_TYPE_REGISTRY[menu.menu_type].icon}
+            disabled={!canWrite}
+          />
+          <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
+            Shown in the menu tree here and in the app&apos;s runtime sidebar.
+          </p>
+        </div>
       </div>
 
       <div>
         <label className="mb-2 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Permission</label>
-        <div className="flex items-center gap-4">
+        <RadioGroup
+          value={permissionMode}
+          onValueChange={(v) => { setPermissionMode(v as PermissionMode); setSaved(false) }}
+          className="flex items-center gap-4"
+          disabled={!canWrite}
+        >
           {(['all', 'role'] as const).map((mode) => (
             <label key={mode} className="flex items-center gap-1.5 text-sm text-[hsl(var(--foreground))]">
-              <input
-                type="radio"
-                name={`permission-mode-${menu.id}`}
-                checked={permissionMode === mode}
-                disabled={!canWrite}
-                onChange={() => { setPermissionMode(mode); setSaved(false) }}
-                className="text-[hsl(var(--primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
-              />
+              <RadioGroupItem value={mode} />
               {mode === 'all' ? 'For All' : 'Specific Role'}
             </label>
           ))}
-        </div>
+        </RadioGroup>
 
         {permissionMode === 'role' && (
           <div className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-md border border-[hsl(var(--border))] p-2">

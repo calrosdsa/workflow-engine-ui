@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useSearch } from '@tanstack/react-router'
-import { Palette, ListTree, Smartphone, Settings2, Bot, History, GitBranch, Store } from 'lucide-react'
+import { Palette, ListTree, Smartphone, Settings2, Bot, History, GitBranch, FileBarChart, Store } from 'lucide-react'
 import { ThemeSection } from './sections/ThemeSection'
 import { MenusSection } from './sections/MenusSection'
 import { MobileLayoutSection } from './sections/MobileLayoutSection'
@@ -9,21 +9,20 @@ import { AgentsSection } from './sections/AgentsSection'
 import { VersionHistorySection } from './sections/VersionHistorySection'
 import { EnvironmentLinkSection } from './sections/EnvironmentLinkSection'
 import { MarketplaceSection } from './sections/MarketplaceSection'
+import { ReportsSection } from './sections/ReportsSection'
 import { useApplication } from '@/features/applications/hooks'
 import { Spinner } from '@/components/ui/spinner'
 
-type Tab = 'theme' | 'menus' | 'mobile' | 'general' | 'agents' | 'versions' | 'environment' | 'marketplace'
+type Tab = 'theme' | 'menus' | 'mobile' | 'general' | 'agents' | 'versions' | 'environment' | 'reports' | 'marketplace'
 
 const TABS: { id: Tab; label: string; icon: typeof Palette }[] = [
   { id: 'theme', label: 'Theme', icon: Palette },
   { id: 'menus', label: 'Menus', icon: ListTree },
   { id: 'mobile', label: 'Mobile Layout', icon: Smartphone },
+  { id: 'reports', label: 'Reports', icon: FileBarChart },
   { id: 'general', label: 'General', icon: Settings2 },
   { id: 'agents', label: 'Agents', icon: Bot },
   { id: 'versions', label: 'Version History', icon: History },
-  // Both are app-design-scoped meta-concerns, so they belong here alongside
-  // Version History rather than as new top-level NAV_ITEMS entries (which
-  // are reserved for content-editing destinations).
   { id: 'environment', label: 'Environment Link', icon: GitBranch },
   { id: 'marketplace', label: 'Marketplace', icon: Store },
 ]
@@ -44,7 +43,7 @@ export function AppDesignPage({ appId }: { appId: string }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-1 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-2">
+      <div className="flex items-center justify-center gap-1 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-2">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -65,6 +64,7 @@ export function AppDesignPage({ appId }: { appId: string }) {
         {tab === 'theme' && <ThemeSection />}
         {tab === 'menus' && <MenusSection appId={appId} />}
         {tab === 'mobile' && <MobileLayoutSection appId={appId} />}
+        {tab === 'reports' && <ReportsSection appId={appId} />}
         {tab === 'general' && <GeneralSettingsSection app={app} />}
         {tab === 'agents' && <AgentsSection appId={appId} />}
         {tab === 'versions' && <VersionHistorySection publishedVersion={app.published_version} />}

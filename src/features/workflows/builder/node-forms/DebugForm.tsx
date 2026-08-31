@@ -50,32 +50,32 @@ export function DebugForm({ config, variables, nodeContext, onChange }: DebugFor
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Label (optional)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Label (optional)</Label>
         <Input
           value={config.label ?? ''}
           onChange={(e) => onChange({ ...config, label: e.target.value })}
           placeholder="e.g. after fetching records"
           className="h-8 text-[12px]"
         />
-        <p className="text-[10px] text-slate-400">
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
           Shown alongside this node's captured snapshot when viewing a past execution — useful for telling multiple debug nodes apart.
         </p>
       </div>
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="flex items-center justify-between">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Watches (optional)</Label>
-        <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Watches (optional)</Label>
+        <span className="rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))]">
           {watches.length}
         </span>
       </div>
-      <p className="-mt-2 text-[10px] text-slate-400">
+      <p className="-mt-2 text-[10px] text-[hsl(var(--muted-foreground))]">
         Each watch evaluates an expression at this point in the graph and captures the result — for narrowing in on one specific value instead of scanning the whole variable dump. Has no effect on control flow or variable state, and a bad expression is captured as its own error, never fails this node.
       </p>
 
       {watches.length === 0 && (
-        <div className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400">
+        <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-4 text-center text-xs text-[hsl(var(--muted-foreground))]">
           No watches yet — click Add below.
         </div>
       )}
@@ -97,7 +97,7 @@ export function DebugForm({ config, variables, nodeContext, onChange }: DebugFor
         variant="outline"
         size="sm"
         onClick={add}
-        className="w-full gap-1.5 border-dashed text-slate-500 hover:text-slate-700"
+        className="w-full gap-1.5 border-dashed text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
       >
         <Plus size={13} />
         Add Watch
@@ -132,20 +132,20 @@ interface WatchRowProps {
 
 function WatchRow({ index, watch, onChange, onDelete, onOpenEditor }: WatchRowProps) {
   return (
-    <div className="group relative rounded-xl border border-slate-200 bg-slate-50/60 p-3 transition-shadow hover:shadow-sm">
+    <div className="group relative rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-3 transition-shadow hover:shadow-sm">
       <div className="mb-2.5 flex items-center gap-2">
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-500">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--muted))] text-[10px] font-bold text-[hsl(var(--muted-foreground))]">
           {index + 1}
         </span>
         <input
           value={watch.name}
           onChange={(e) => onChange({ name: e.target.value })}
           placeholder="Name (e.g. total)"
-          className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-slate-700 placeholder:text-slate-300 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+          className="flex-1 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2.5 py-1.5 text-[12px] font-medium text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/60 focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
         />
         <button
           onClick={onDelete}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-red-50 hover:text-red-400"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
           title="Remove watch"
         >
           <Trash2 size={12} />
@@ -154,19 +154,19 @@ function WatchRow({ index, watch, onChange, onDelete, onOpenEditor }: WatchRowPr
 
       <div className="flex items-start gap-1.5">
         <div className="relative flex-1">
-          <Braces size={11} className="absolute left-2.5 top-2 text-indigo-400" />
+          <Braces size={11} className="absolute left-2.5 top-2 text-[hsl(var(--primary))]" />
           <textarea
             value={watch.expression}
             onChange={(e) => onChange({ expression: e.target.value })}
             placeholder='e.g. Vars["count"] + 1'
             rows={2}
-            className="w-full resize-y rounded-lg border border-slate-200 bg-white py-1.5 pl-7 pr-2 font-mono text-[11px] text-slate-700 placeholder:text-slate-300 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            className="w-full resize-y rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] py-1.5 pl-7 pr-2 font-mono text-[11px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/60 focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
           />
         </div>
         <button
           onClick={onOpenEditor}
           title="Open expression editor"
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] transition-colors hover:border-[hsl(var(--primary))]/50 hover:bg-[hsl(var(--primary))]/10 hover:text-[hsl(var(--primary))]"
         >
           <Code2 size={13} />
         </button>

@@ -23,8 +23,8 @@ export function IntegrationsSubsection() {
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-800">Embedded integrations</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Embedded integrations</h2>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">
             External web apps a dashboard's Embed widget can iframe in, optionally passing through the current
             user's identity instead of requiring a separate login.
           </p>
@@ -39,7 +39,7 @@ export function IntegrationsSubsection() {
       {isLoading ? (
         <div className="flex h-24 items-center justify-center"><Spinner /></div>
       ) : !integrations?.length ? (
-        <div className="rounded-lg border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">
+        <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
           No integrations yet.
         </div>
       ) : (
@@ -76,26 +76,24 @@ function IntegrationRow({ integration, canWrite, onEdit, onDelete, deleting }: {
   deleting: boolean
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-500">
-        <Globe size={14} />
-      </div>
+    <div className="flex items-center gap-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3">
+      <Globe size={16} className="shrink-0 text-[hsl(var(--primary))]" />
       <button type="button" onClick={onEdit} disabled={!canWrite} className="min-w-0 flex-1 text-left disabled:cursor-default">
-        <p className="truncate text-sm font-medium text-slate-800">{integration.name}</p>
-        <p className="truncate text-xs text-slate-400">
+        <p className="truncate text-sm font-medium text-[hsl(var(--foreground))]">{integration.name}</p>
+        <p className="truncate text-xs text-[hsl(var(--muted-foreground))]">
           {integration.base_url} · {AUTH_MODE_LABELS[integration.auth_mode]}
           {integration.auth_mode === 'signed_launch' && !integration.has_shared_secret && (
-            <span className="ml-1 text-amber-600">· no secret configured</span>
+            <span className="ml-1 text-[hsl(var(--warning))]">· no secret configured</span>
           )}
           {integration.auth_mode === 'oidc' && (!integration.oidc_issuer_url || !integration.oidc_client_id) && (
-            <span className="ml-1 text-amber-600">· incomplete OIDC configuration</span>
+            <span className="ml-1 text-[hsl(var(--warning))]">· incomplete OIDC configuration</span>
           )}
         </p>
       </button>
       {canWrite && (
         <Button
           variant="ghost" size="icon" disabled={deleting}
-          className="shrink-0 text-slate-300 hover:bg-red-50 hover:text-red-500"
+          className="shrink-0 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
           onClick={onDelete}
         >
           {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
@@ -172,35 +170,35 @@ function IntegrationFormDialog({ integration, onClose }: { integration?: Embedde
 
         <div className="max-h-[60vh] space-y-3 overflow-y-auto px-6 py-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Name</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name</label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Support Portal" />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Base URL</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Base URL</label>
             <Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://partner.example.com" className="font-mono text-xs" />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Allowed origins</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Allowed origins</label>
             <textarea
               value={allowedOriginsText}
               onChange={(e) => setAllowedOriginsText(e.target.value)}
               placeholder="https://partner.example.com"
               rows={2}
-              className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 font-mono text-xs text-slate-700"
+              className="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1.5 font-mono text-xs text-[hsl(var(--foreground))]"
             />
-            <p className="mt-1 text-[11px] text-gray-400">
+            <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
               One exact origin per line. The Embed SDK handshake only responds to messages from these origins.
             </p>
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Authentication</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Authentication</label>
             <select
               value={authMode}
               onChange={(e) => setAuthMode(e.target.value as IntegrationAuthMode)}
-              className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700"
+              className="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1.5 text-sm text-[hsl(var(--foreground))]"
             >
               <option value="none">No SSO — plain embed</option>
               <option value="signed_launch">Signed launch — pass through the current user's identity</option>
@@ -211,25 +209,25 @@ function IntegrationFormDialog({ integration, onClose }: { integration?: Embedde
           {authMode === 'oidc' && (
             <>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Issuer URL</label>
+                <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Issuer URL</label>
                 <Input
                   value={oidcIssuerUrl}
                   onChange={(e) => setOidcIssuerUrl(e.target.value)}
                   placeholder="https://accounts.example.com"
                   className="font-mono text-xs"
                 />
-                <p className="mt-1 text-[11px] text-gray-400">
+                <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
                   The endpoints are discovered automatically from {'"issuer"'}/.well-known/openid-configuration.
                 </p>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Client ID</label>
+                <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Client ID</label>
                 <Input value={oidcClientId} onChange={(e) => setOidcClientId(e.target.value)} className="font-mono text-xs" />
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">
+                <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">
                   Client secret {isEdit && '(leave blank to keep the current one)'}
                 </label>
                 <Input
@@ -242,14 +240,14 @@ function IntegrationFormDialog({ integration, onClose }: { integration?: Embedde
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Scopes</label>
+                <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Scopes</label>
                 <Input
                   value={oidcScopesText}
                   onChange={(e) => setOidcScopesText(e.target.value)}
                   placeholder="openid email profile"
                   className="font-mono text-xs"
                 />
-                <p className="mt-1 text-[11px] text-gray-400">Space-separated. {'"openid"'} is always required.</p>
+                <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">Space-separated. {'"openid"'} is always required.</p>
               </div>
             </>
           )}
@@ -257,7 +255,7 @@ function IntegrationFormDialog({ integration, onClose }: { integration?: Embedde
           {authMode === 'signed_launch' && (
             <>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">
+                <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">
                   Shared secret {isEdit && '(leave blank to keep the current one)'}
                 </label>
                 <Input
@@ -270,22 +268,22 @@ function IntegrationFormDialog({ integration, onClose }: { integration?: Embedde
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-gray-600">Claims to include</label>
+                <label className="mb-1.5 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Claims to include</label>
                 <div className="space-y-1.5">
-                  <label className="flex items-center gap-2 text-[12px] text-slate-700">
+                  <label className="flex items-center gap-2 text-[12px] text-[hsl(var(--foreground))]">
                     <Checkbox checked={claimEmail} onCheckedChange={(c) => setClaimEmail(c === true)} />Email
                   </label>
-                  <label className="flex items-center gap-2 text-[12px] text-slate-700">
+                  <label className="flex items-center gap-2 text-[12px] text-[hsl(var(--foreground))]">
                     <Checkbox checked={claimName} onCheckedChange={(c) => setClaimName(c === true)} />Name
                   </label>
-                  <label className="flex items-center gap-2 text-[12px] text-slate-700">
+                  <label className="flex items-center gap-2 text-[12px] text-[hsl(var(--foreground))]">
                     <Checkbox checked={claimRoles} onCheckedChange={(c) => setClaimRoles(c === true)} />Role
                   </label>
                 </div>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Token lifetime (seconds)</label>
+                <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Token lifetime (seconds)</label>
                 <Input
                   type="number" min={5} max={3600}
                   value={tokenTTL}
@@ -297,20 +295,20 @@ function IntegrationFormDialog({ integration, onClose }: { integration?: Embedde
           )}
 
           {mutation.isError && (
-            <p className="flex items-center gap-1 text-xs text-red-600"><AlertCircle size={13} />Failed to save integration</p>
+            <p className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={13} />Failed to save integration</p>
           )}
 
           {authMode === 'signed_launch' && (
-            <p className="flex items-start gap-1.5 rounded-md bg-slate-50 p-2 text-[11px] text-slate-500">
-              <ShieldCheck size={13} className="mt-px shrink-0 text-slate-400" />
+            <p className="flex items-start gap-1.5 rounded-md bg-[hsl(var(--muted))] p-2 text-[11px] text-[hsl(var(--muted-foreground))]">
+              <ShieldCheck size={13} className="mt-px shrink-0 text-[hsl(var(--muted-foreground))]" />
               The token is short-lived and audience-scoped to this integration. It never carries more than the
               claims checked above.
             </p>
           )}
 
           {authMode === 'oidc' && (
-            <p className="flex items-start gap-1.5 rounded-md bg-slate-50 p-2 text-[11px] text-slate-500">
-              <ShieldCheck size={13} className="mt-px shrink-0 text-slate-400" />
+            <p className="flex items-start gap-1.5 rounded-md bg-[hsl(var(--muted))] p-2 text-[11px] text-[hsl(var(--muted-foreground))]">
+              <ShieldCheck size={13} className="mt-px shrink-0 text-[hsl(var(--muted-foreground))]" />
               A hidden, invisible sign-in attempt runs when the widget loads. If the end user doesn't already have
               an active session with this identity provider, the embed loads without SSO rather than showing an
               interactive login prompt.

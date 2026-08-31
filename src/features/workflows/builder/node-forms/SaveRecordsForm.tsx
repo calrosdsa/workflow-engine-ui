@@ -35,28 +35,28 @@ export function SaveRecordsForm({ config, variables, nodeContext, onChange }: Sa
     <div className="space-y-4">
       {/* Target form */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Form / Table</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Form / Table</Label>
         <FormReferenceSelect value={config.form_id || undefined} onChange={(id) => set({ form_id: id ?? '' })} />
       </div>
 
       {/* Unique-field match info */}
       {config.form_id && (
         uniqueFields.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-amber-300 bg-amber-50 p-2.5 text-[11px] text-amber-700">
+          <p className="rounded-lg border border-dashed border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-2.5 text-[11px] text-[hsl(var(--warning))]">
             This form has no unique fields. Mark at least one field unique in the form builder to use save_records.
           </p>
         ) : (
-          <p className="rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[11px] text-slate-500">
+          <p className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-2.5 text-[11px] text-[hsl(var(--muted-foreground))]">
             Matches on: {uniqueFields.map((f) => f.label || f.name).join(', ')}
           </p>
         )
       )}
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       {/* Source list */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Records to save</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Records to save</Label>
         <ExpressionField
           value={config.source_expr ?? ''}
           onChange={(v) => set({ source_expr: v })}
@@ -65,12 +65,12 @@ export function SaveRecordsForm({ config, variables, nodeContext, onChange }: Sa
           placeholder='e.g. NodeOutputs["transform1"]["records"]'
           label="records to save"
         />
-        <p className="text-[10px] text-slate-400">
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
           Must resolve to a list of records shaped to this form's fields — e.g. a Transform node's <span className="font-mono">records</span> output. All records are upserted in one call.
         </p>
       </div>
 
-      <p className="text-[10px] text-slate-400">
+      <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
         Outputs <span className="font-mono">records</span>, <span className="font-mono">created</span>, <span className="font-mono">updated</span>, and <span className="font-mono">count</span> to downstream nodes.
       </p>
     </div>

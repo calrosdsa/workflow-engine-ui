@@ -6,7 +6,8 @@
 import { LineItemsGrid } from './LineItemsGrid'
 import { ReferenceValueLabel } from './ReferenceValueLabel'
 import { FileFieldInput } from './FileFieldInput'
-import { formatValue } from './format-value'
+import { formatFieldValue } from './format-value'
+import { resolveOptionLabel } from './enum-labels'
 import type { FormElement } from '@/features/form-builder/schema'
 import type { FormRecord } from '@/features/forms/types'
 
@@ -45,5 +46,22 @@ export function FieldValueDisplay({ el, record, formId }: {
       />
     )
   }
-  return <div style={{ color: 'hsl(var(--foreground))' }}>{formatValue(record[el.key])}</div>
+  // 'select'/'radio' (FieldType 'enum') store the OPTION VALUE ("open"), not
+  // its label ("Open") — RecordsTable/CardLayout/KanbanLayout already
+  // special-case this via resolveEnumLabel (keyed off a schema-wide
+  // enumLabels map built by buildEnumLabels); this was the remaining
+  // read-only surface with the same el.component/field-type branch chain
+  // that fell through to the generic formatter instead, showing the raw
+  // stored value ("open") rather than the label ("Open") on the Detail Page.
+  // resolveOptionLabel is the single-element counterpart — el.options is
+  // already in hand here, so no schema-wide map needs to be threaded in.
+  if (el.component === 'select' || el.component === 'radio') {
+    return <div style={{ color: 'hsl(var(--foreground))' }}>{resolveOptionLabel(el.options, record[el.key])}</div>
+  }
+  // formatFieldValue, not formatValue: a 'date'/'time'/'datetime' component's
+  // value is an RFC3339 string and rendered raw here for the same reason it
+  // was in RecordsTable — the generic formatter has no field type to key off.
+  // el.component carries the same 'date'/'time'/'datetime' names FieldType
+  // uses, so it can be passed straight through.
+  return <div style={{ color: 'hsl(var(--foreground))' }}>{formatFieldValue(record[el.key], el.component)}</div>
 }

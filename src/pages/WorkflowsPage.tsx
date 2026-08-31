@@ -37,11 +37,11 @@ const MODE_LABEL: Record<string, string> = {
 }
 
 const MODE_STYLE: Record<string, string> = {
-  before: 'bg-amber-50 text-amber-700 border-amber-200',
-  after: 'bg-blue-50 text-blue-700 border-blue-200',
-  after_async: 'bg-violet-50 text-violet-700 border-violet-200',
-  scheduled: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  on_demand: 'bg-gray-50 text-gray-600 border-gray-200',
+  before: 'bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))] border-[hsl(var(--warning))]/30',
+  after: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] border-[hsl(var(--primary))]/30',
+  after_async: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] border-[hsl(var(--primary))]/30',
+  scheduled: 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] border-[hsl(var(--success))]/30',
+  on_demand: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] border-[hsl(var(--border))]',
 }
 
 export function WorkflowsPage() {
@@ -95,8 +95,8 @@ export function WorkflowsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Workflow Definitions</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Workflow Definitions</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
             {ordered.length} definitions · drag to set execution order
           </p>
         </div>
@@ -108,7 +108,7 @@ export function WorkflowsPage() {
       </div>
 
       {triggeredId && (
-        <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
+        <div className="rounded-md bg-[hsl(var(--primary))]/10 border border-[hsl(var(--primary))]/30 p-3 text-sm text-[hsl(var(--primary))]">
           Execution triggered — <Link to="/applications/$appId/executions/$executionId" params={{ appId, executionId: triggeredId }} className="underline font-medium">track it here</Link>
         </div>
       )}
@@ -116,8 +116,8 @@ export function WorkflowsPage() {
       {!ordered.length ? (
         <EmptyState canWrite={canWrite} appId={appId} />
       ) : (
-        <div className="rounded-lg border border-gray-200 bg-white">
-          <p className="border-b border-gray-100 bg-gray-50/60 px-4 py-2 text-xs text-gray-500">
+        <div className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+          <p className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/60 px-4 py-2 text-xs text-[hsl(var(--muted-foreground))]">
             When multiple workflows trigger on the same record event, they run top-to-bottom in this order —
             a Before/After workflow only fires for events that happen after it in the list.
           </p>
@@ -129,7 +129,7 @@ export function WorkflowsPage() {
             onDragCancel={() => setActiveId(null)}
           >
             <SortableContext items={ordered.map((w) => w.id)} strategy={verticalListSortingStrategy}>
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-[hsl(var(--border))]">
                 {ordered.map((wf, index) => (
                   <WorkflowRow
                     key={wf.id}
@@ -155,8 +155,8 @@ export function WorkflowsPage() {
 
             <DragOverlay dropAnimation={{ duration: 150, easing: 'cubic-bezier(0.2,0,0,1)' }}>
               {activeWorkflow && (
-                <div className="flex items-center gap-2 rounded-md border border-indigo-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-lg">
-                  <GripVertical size={14} className="text-indigo-400" />
+                <div className="flex items-center gap-2 rounded-md border border-[hsl(var(--primary))]/40 bg-[hsl(var(--card))] px-3 py-2 text-sm font-medium text-[hsl(var(--foreground))] shadow-lg">
+                  <GripVertical size={14} className="text-[hsl(var(--primary))]" />
                   {activeWorkflow.name}
                 </div>
               )}
@@ -193,21 +193,21 @@ function WorkflowRow({
 
   const modeKey = triggerCfg?.mode
   const modeLabel = modeKey ? MODE_LABEL[modeKey] ?? modeKey : null
-  const modeStyle = modeKey ? MODE_STYLE[modeKey] ?? 'bg-gray-50 text-gray-600 border-gray-200' : null
+  const modeStyle = modeKey ? MODE_STYLE[modeKey] ?? 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] border-[hsl(var(--border))]' : null
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={cn('group flex items-center gap-3 px-4 py-3', isDragging && 'opacity-50 bg-gray-50')}
+      className={cn('group flex items-center gap-3 px-4 py-3', isDragging && 'opacity-50 bg-[hsl(var(--muted))]')}
     >
-      <span className="w-6 shrink-0 text-center text-xs font-mono text-gray-300">{index + 1}</span>
+      <span className="w-6 shrink-0 text-center text-xs font-mono text-[hsl(var(--muted-foreground))]/60">{index + 1}</span>
 
       <button
         {...attributes}
         {...listeners}
         title="Drag to reorder"
-        className="shrink-0 cursor-grab touch-none rounded p-1 text-gray-300 hover:text-gray-500 active:cursor-grabbing disabled:opacity-30"
+        className="shrink-0 cursor-grab touch-none rounded p-1 text-[hsl(var(--muted-foreground))]/60 hover:text-[hsl(var(--muted-foreground))] active:cursor-grabbing disabled:opacity-30"
         disabled={!canWrite}
       >
         <GripVertical size={16} />
@@ -215,14 +215,14 @@ function WorkflowRow({
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="truncate font-medium text-gray-900">{wf.name}</span>
+          <span className="truncate font-medium text-[hsl(var(--foreground))]">{wf.name}</span>
           {modeLabel && (
             <span className={cn('shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium', modeStyle)}>
               {modeLabel}
             </span>
           )}
         </div>
-        <p className="mt-0.5 truncate text-xs text-gray-400">
+        <p className="mt-0.5 truncate text-xs text-[hsl(var(--muted-foreground))]">
           {formName && triggerCfg?.event_type ? `${formName} · ${triggerCfg.event_type}` : null}
           {formName && triggerCfg?.event_type ? ' · ' : ''}
           {wf.definition.nodes?.length ?? 0} nodes · Updated {new Date(wf.updated_at).toLocaleDateString()}
@@ -231,10 +231,10 @@ function WorkflowRow({
 
       {canWrite && (
         <span className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
-          <button title="Move up" disabled={index === 0} onClick={() => onMove(-1)} className="rounded p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30">
+          <button title="Move up" disabled={index === 0} onClick={() => onMove(-1)} className="rounded p-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] disabled:opacity-30">
             ▲
           </button>
-          <button title="Move down" disabled={index === count - 1} onClick={() => onMove(1)} className="rounded p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30">
+          <button title="Move down" disabled={index === count - 1} onClick={() => onMove(1)} className="rounded p-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] disabled:opacity-30">
             ▼
           </button>
         </span>
@@ -251,7 +251,7 @@ function WorkflowRow({
           <Button variant="ghost" size="icon"><ExternalLink size={14} /></Button>
         </Link>
         {canWrite && (
-          <Button size="sm" variant="outline" onClick={onDelete} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+          <Button size="sm" variant="outline" onClick={onDelete} className="text-[hsl(var(--destructive))] hover:text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10">
             <Trash2 size={14} />
           </Button>
         )}
@@ -262,8 +262,8 @@ function WorkflowRow({
 
 function EmptyState({ canWrite, appId }: { canWrite: boolean; appId: string }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-      <p className="text-gray-500 mb-4">No workflow definitions yet</p>
+    <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center">
+      <p className="text-[hsl(var(--muted-foreground))] mb-4">No workflow definitions yet</p>
       {canWrite && (
         <Link to="/applications/$appId/workflows/new" params={{ appId }}>
           <Button variant="outline"><Plus size={16} />Create your first workflow</Button>

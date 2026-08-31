@@ -90,14 +90,14 @@ export function NodeConfigPanel() {
   return (
     <aside
       className={cn(
-        'relative flex shrink-0 flex-col border-l border-slate-200 bg-white transition-all duration-200',
+        'relative flex shrink-0 flex-col border-l border-[hsl(var(--border))] bg-[hsl(var(--card))] transition-all duration-200',
         !configPanelOpen ? 'w-10' : configPanelWide ? 'w-[640px]' : 'w-80',
       )}
     >
       {/* Toggle button */}
       <button
         onClick={toggleConfigPanel}
-        className="absolute -left-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-600"
+        className="absolute -left-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] shadow-sm transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
         title={configPanelOpen ? 'Collapse config' : 'Expand config'}
       >
         {configPanelOpen ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
@@ -108,7 +108,7 @@ export function NodeConfigPanel() {
       {configPanelOpen && (
         <button
           onClick={toggleConfigPanelWide}
-          className="absolute -left-3 top-16 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-600"
+          className="absolute -left-3 top-16 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] shadow-sm transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
           title={configPanelWide ? 'Narrow config panel' : 'Widen config panel'}
         >
           {configPanelWide ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
@@ -118,8 +118,8 @@ export function NodeConfigPanel() {
       {/* Collapsed state */}
       {!configPanelOpen && (
         <div className="flex flex-1 flex-col items-center gap-2 pt-4">
-          <SlidersHorizontal size={15} className="text-slate-400" />
-          <span className="rotate-90 select-none whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+          <SlidersHorizontal size={15} className="text-[hsl(var(--muted-foreground))]" />
+          <span className="rotate-90 select-none whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
             Config
           </span>
         </div>
@@ -128,10 +128,10 @@ export function NodeConfigPanel() {
       {/* Expanded — no node selected */}
       {configPanelOpen && !node && (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100">
-            <Settings size={22} className="text-slate-300" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[hsl(var(--muted))]">
+            <Settings size={22} className="text-[hsl(var(--muted-foreground))]" />
           </div>
-          <p className="text-sm text-slate-400">Select a node<br />to configure it</p>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">Select a node<br />to configure it</p>
         </div>
       )}
 
@@ -155,7 +155,7 @@ export function NodeConfigPanel() {
             <div className="space-y-5 p-4">
               {/* Label */}
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Label</Label>
+                <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Label</Label>
                 <Input
                   value={node.data.label}
                   onChange={(e) => updateNodeLabel(node.id, e.target.value)}
@@ -163,7 +163,7 @@ export function NodeConfigPanel() {
                 />
               </div>
 
-              <div className="h-px bg-slate-100" />
+              <div className="h-px bg-[hsl(var(--border))]" />
 
               {/* Type-specific config — one unconditional dispatch through the
                   registry, no per-type branching left in this file. */}
@@ -185,20 +185,20 @@ export function NodeConfigPanel() {
           node," not as a built-in with the wrong colors. */}
       {configPanelOpen && node && !reg && connectorEntry && (
         <>
-          <div className="flex items-center gap-3 border-b border-slate-100 bg-slate-700 px-4 py-3.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20">
-              <Plug size={17} strokeWidth={2.25} className="text-white" />
+          <div className="flex items-center gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--foreground))]/10 px-4 py-3.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--foreground))]/10 ring-1 ring-[hsl(var(--foreground))]/15">
+              <Plug size={17} strokeWidth={2.25} className="text-[hsl(var(--foreground))]" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold text-white">{connectorEntry.label}</p>
-              <p className="truncate font-mono text-[10px] text-white/60">{node.id}</p>
+              <p className="truncate text-[13px] font-semibold text-[hsl(var(--foreground))]">{connectorEntry.label}</p>
+              <p className="truncate font-mono text-[10px] text-[hsl(var(--muted-foreground))]">{node.id}</p>
             </div>
           </div>
 
           <ScrollArea className="flex-1">
             <div className="space-y-5 p-4">
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Label</Label>
+                <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Label</Label>
                 <Input
                   value={node.data.label}
                   onChange={(e) => updateNodeLabel(node.id, e.target.value)}
@@ -206,7 +206,7 @@ export function NodeConfigPanel() {
                 />
               </div>
 
-              <div className="h-px bg-slate-100" />
+              <div className="h-px bg-[hsl(var(--border))]" />
 
               <SchemaForm
                 schema={connectorEntry.configSchema}
@@ -230,14 +230,14 @@ export function NodeConfigPanel() {
           exist here. */}
       {configPanelOpen && node && !reg && !connectorEntry && (
         <div className="flex flex-1 flex-col gap-3 p-4">
-          <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
-            <Plug size={16} className="shrink-0 text-amber-500" />
-            <p className="text-[12px] leading-snug text-amber-700">
+          <div className="flex items-center gap-3 rounded-xl border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/10 px-3 py-2.5">
+            <Plug size={16} className="shrink-0 text-[hsl(var(--warning))]" />
+            <p className="text-[12px] leading-snug text-[hsl(var(--warning))]">
               Unknown node type <span className="font-mono">{nodeTypeKey}</span> — its connector is not currently registered.
             </p>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Label</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Label</Label>
             <Input
               value={node.data.label}
               onChange={(e) => updateNodeLabel(node.id, e.target.value)}
@@ -245,8 +245,8 @@ export function NodeConfigPanel() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Stored configuration (read-only)</Label>
-            <pre className="max-h-64 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[11px] text-slate-600">
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Stored configuration (read-only)</Label>
+            <pre className="max-h-64 overflow-auto rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-2.5 text-[11px] text-[hsl(var(--muted-foreground))]">
               {JSON.stringify(node.data.configuration, null, 2)}
             </pre>
           </div>

@@ -36,7 +36,7 @@ export function CustomMenuRuntime({ menu, onNavigate }: CustomMenuRuntimeProps) 
   const schema = parsePageSchema(config.schema)
 
   if (schema.sections.length === 0) {
-    return <div className="p-6 text-sm text-gray-400">"{menu.name}" has no content yet.</div>
+    return <div className="p-6 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>"{menu.name}" has no content yet.</div>
   }
 
   return (
@@ -193,23 +193,23 @@ function EmbedFrame({ url, integrationId }: { url: string; integrationId?: strin
   }, [url, integrationId])
 
   if (!url) {
-    return <div className="p-6 text-sm text-gray-400">No webpage URL has been configured for this page yet.</div>
+    return <div className="p-6 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>No webpage URL has been configured for this page yet.</div>
   }
 
   if (status === 'checking') {
     return (
       <div className="flex h-full w-full items-center justify-center">
-        <Loader2 size={20} className="animate-spin text-gray-300" />
+        <Loader2 size={20} className="animate-spin" style={{ color: 'hsl(var(--muted-foreground))' }} />
       </div>
     )
   }
 
   if (status === 'blocked') {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-white p-6 text-center">
-        <ExternalLink size={32} className="text-gray-300" />
-        <p className="text-sm font-medium text-gray-700">This page can't be displayed here</p>
-        {reason && <p className="max-w-sm text-xs text-gray-400">{reason}</p>}
+      <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-6 text-center" style={{ backgroundColor: 'hsl(var(--card))' }}>
+        <ExternalLink size={32} style={{ color: 'hsl(var(--muted-foreground))' }} />
+        <p className="text-sm font-medium" style={{ color: 'hsl(var(--foreground))' }}>This page can't be displayed here</p>
+        {reason && <p className="max-w-sm text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{reason}</p>}
         {/* min-h-11 (44px) matches the platform touch-target floor — this
             is the one control on this screen a phone user has to hit. */}
         <a href={url} target="_blank" rel="noopener noreferrer">

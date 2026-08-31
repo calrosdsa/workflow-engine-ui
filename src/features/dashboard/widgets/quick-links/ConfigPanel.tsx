@@ -39,7 +39,7 @@ export function QuickLinksConfigPanel({ config, onChange }: WidgetConfigPanelPro
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-slate-600">Layout</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Layout</Label>
         <SelectMenu value={config.display} onValueChange={(v) => onChange({ ...config, display: v as QuickLinksWidgetConfig['display'] })}>
           <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -52,14 +52,14 @@ export function QuickLinksConfigPanel({ config, onChange }: WidgetConfigPanelPro
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label className="text-[11px] font-medium text-slate-600">Links</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Links</Label>
           <Button type="button" size="sm" variant="outline" className="h-6 gap-1 px-2 text-[11px]" onClick={addLink}>
             <Plus size={11} /> Add
           </Button>
         </div>
 
         {config.links.length === 0 && (
-          <p className="rounded-md border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-400">
+          <p className="rounded-md border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
             No links yet — add one above.
           </p>
         )}
@@ -93,28 +93,28 @@ function LinkEditor({
   onRemove: () => void
 }) {
   return (
-    <div className="space-y-2 rounded-md border border-slate-200 p-2.5">
+    <div className="space-y-2 rounded-md border border-[hsl(var(--border))] p-2.5">
       <div className="flex items-center gap-1.5">
         <Input value={link.label} onChange={(e) => onChange({ label: e.target.value })} placeholder="Label" className="h-7 flex-1 text-xs" />
-        <button type="button" disabled={isFirst} onClick={() => onMove(-1)} className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 disabled:opacity-30">
+        <button type="button" disabled={isFirst} onClick={() => onMove(-1)} className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] disabled:opacity-30">
           <ArrowUp size={12} />
         </button>
-        <button type="button" disabled={isLast} onClick={() => onMove(1)} className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 disabled:opacity-30">
+        <button type="button" disabled={isLast} onClick={() => onMove(1)} className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] disabled:opacity-30">
           <ArrowDown size={12} />
         </button>
-        <button type="button" onClick={onRemove} className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-600">
+        <button type="button" onClick={onRemove} className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]">
           <Trash2 size={12} />
         </button>
       </div>
 
-      <div className="flex gap-1 rounded-md bg-slate-100 p-0.5">
+      <div className="flex gap-1 rounded-md bg-[hsl(var(--muted))] p-0.5">
         {(['url', 'menu'] as const).map((k) => (
           <button
             key={k}
             type="button"
             onClick={() => onChange({ kind: k })}
             className={`flex-1 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
-              link.kind === k ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400'
+              link.kind === k ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]'
             }`}
           >
             {k === 'url' ? 'External URL' : 'Menu / Form'}

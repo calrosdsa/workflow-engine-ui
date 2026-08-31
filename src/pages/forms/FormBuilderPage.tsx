@@ -10,7 +10,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useForm, useForms, useCreateForm, useUpdateForm } from '@/features/forms/hooks'
 import { formsApi } from '@/features/forms/api'
-import { useFormBuilderStore, useFormMetaStore, loadForm as loadFormIntoStores, resetFormBuilder, insertParentReferenceField } from '@/features/form-builder/store'
+import { useFormBuilderStore, useFormMetaStore, loadForm as loadFormIntoStores, resetFormBuilder, insertParentReferenceField, applyStagedForm } from '@/features/form-builder/store'
 import { Toolbox } from '@/features/form-builder/Toolbox'
 import { FormBuilderDnd } from '@/features/form-builder/canvas/FormBuilderDnd'
 import { FormCanvas } from '@/features/form-builder/canvas/FormCanvas'
@@ -43,8 +43,11 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   const params = useParams({ strict: false }) as { appId?: string; formId?: string }
   const appId = params.appId ?? ''
   const formId = mode === 'edit' ? params.formId : undefined
-  const search = useSearch({ strict: false }) as { parentFormId?: string }
+  const search = useSearch({ strict: false }) as { parentFormId?: string; seed?: string }
   const parentFormId = mode === 'new' ? search.parentFormId : undefined
+  // Token for a form staged by the JSON specification import — see
+  // form-builder/store.ts's applyStagedForm.
+  const seedToken = mode === 'new' ? search.seed : undefined
 
   const { data: loaded, isLoading } = useForm(formId ?? '')
   const { data: allForms } = useForms()
@@ -64,6 +67,9 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   } = useFormMetaStore()
 
   const [slugTouched, setSlugTouched] = useState(false)
+  // Whether the current /forms/new visit was seeded from a JSON spec — see
+  // the hydration effect and the slug-derive effect below.
+  const seededRef = useRef(false)
   const [parentRefSeeded, setParentRefSeeded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
@@ -107,16 +113,37 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
       setSlugTouched(true) // existing slug is locked anyway
       setInitialised(true)
     } else if (mode === 'new') {
-      resetFormBuilder()
-      setSlugTouched(false)
+      // A form staged by the JSON specification import (ImportFormJsonDialog)
+      // takes the place of the reset — otherwise arriving on this route would
+      // wipe the very spec that sent us here. Keyed on the ?seed= token, so
+      // re-running this effect (StrictMode does, twice) re-applies the same
+      // spec rather than resetting over it. No token, or a stale one, is the
+      // ordinary case and resets exactly as before.
+      const seeded = applyStagedForm(seedToken)
+      // Recorded in a ref as well as in state because the slug-derive effect
+      // below runs in this SAME commit, where setSlugTouched's new value is
+      // not yet visible — reading the stale `false` there, with an equally
+      // stale `name`, is what overwrote an imported spec's slug with
+      // "untitled_form". A ref is current the moment it's assigned, and
+      // effects run in declaration order, so this one is set before that
+      // effect reads it.
+      seededRef.current = seeded
+      if (!seeded) resetFormBuilder()
+      // An imported spec brings its own slug, so leave it alone; a genuinely
+      // blank form keeps deriving its slug from the name as you type.
+      setSlugTouched(seeded)
       setParentRefSeeded(false)
       setInitialised(true)
     }
-  }, [mode, loaded, parentFormId])
+  }, [mode, loaded, parentFormId, seedToken])
 
   // Auto-derive slug from name until the user edits it (new forms only).
+  // A form seeded from a JSON specification is excluded outright: it arrives
+  // with a slug the spec chose, and deriving one from the name would discard
+  // it. Gated on the ref, not on seedToken itself, so a STALE token (a
+  // reload, a shared link) still auto-derives like any blank form.
   useEffect(() => {
-    if (mode === 'new' && !slugTouched) setSlug(slugifyKey(name))
+    if (mode === 'new' && !slugTouched && !seededRef.current) setSlug(slugifyKey(name))
   }, [name, slugTouched, mode, setSlug])
 
   // Seed a new dependent form with a Form Reference field back to its parent

@@ -47,28 +47,28 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-slate-600">Form</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Form</Label>
         <FormReferenceSelect value={config.formId} onChange={(formId) => patch({ formId: formId ?? '', columns: [] })} />
       </div>
 
       {form && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-medium text-slate-600">Visible columns</Label>
-          <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-slate-200 p-2">
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Visible columns</Label>
+          <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-[hsl(var(--border))] p-2">
             {form.fields.map((f) => (
-              <label key={f.name} className="flex items-center gap-2 text-[12px] text-slate-700">
+              <Label key={f.name} className="flex items-center gap-2 text-[12px] font-normal text-[hsl(var(--foreground))]">
                 <Checkbox checked={config.columns.includes(f.name)} onCheckedChange={(checked) => toggleColumn(f.name, checked === true)} />
                 {f.label || f.name}
-              </label>
+              </Label>
             ))}
-            {form.fields.length === 0 && <p className="text-[11px] text-slate-400">This form has no data fields yet.</p>}
+            {form.fields.length === 0 && <p className="text-[11px] text-[hsl(var(--muted-foreground))]">This form has no data fields yet.</p>}
           </div>
         </div>
       )}
 
       {form && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-medium text-slate-600">Default filter</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Default filter</Label>
           <FilterBuilder
             group={ensureGroupIds(config.defaultFilter)}
             fields={form.fields}
@@ -80,7 +80,7 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
 
       {form && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-medium text-slate-600">Default sort</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Default sort</Label>
           <SortRuleList
             rules={ensureSortIds(config.defaultSort)}
             fields={form.fields.map((f) => ({ name: f.name, label: f.label }))}
@@ -90,7 +90,7 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
       )}
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-slate-600">Rows per page</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Rows per page</Label>
         <Input
           type="number"
           min={1}
@@ -101,25 +101,25 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
         />
       </div>
 
-      <label className="flex items-center gap-2 text-[12px] text-slate-700">
+      <Label className="flex items-center gap-2 text-[12px] font-normal text-[hsl(var(--foreground))]">
         <Checkbox checked={config.allowUserFilter} onCheckedChange={(c) => patch({ allowUserFilter: c === true })} />
         Let viewers filter this table
-      </label>
+      </Label>
 
-      <label className="flex items-center gap-2 text-[12px] text-slate-700">
+      <Label className="flex items-center gap-2 text-[12px] font-normal text-[hsl(var(--foreground))]">
         <Checkbox checked={config.rowClick === 'record'} onCheckedChange={(c) => patch({ rowClick: c === true ? 'record' : 'none' })} />
         Clicking a row opens its details
-      </label>
+      </Label>
 
       {form && (
-        <div className="space-y-1.5 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Record scoping</p>
-          <p className="text-[10px] text-slate-400">
+        <div className="space-y-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Record scoping</p>
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
             Only applies when this widget is placed on a form's Detail Page (a "Custom" tab, FR-D2-015) — ignored on an
             ordinary Dashboard. Pick a reference field on this form that points back at the record the tab is attached to.
           </p>
           {referenceFields.length === 0 ? (
-            <p className="text-[11px] text-slate-400">This form has no reference fields.</p>
+            <p className="text-[11px] text-[hsl(var(--muted-foreground))]">This form has no reference fields.</p>
           ) : (
             <SelectMenu
               value={config.scopeToRecord?.fieldName ?? '__none__'}
@@ -154,24 +154,22 @@ function SortRuleList({ rules, fields, onChange }: {
     <div className="space-y-1.5">
       {rules.map((r) => (
         <div key={r.id} className="flex items-center gap-1.5">
-          <select
-            value={r.field}
-            onChange={(e) => updateRule(r.id, { field: e.target.value })}
-            className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700"
-          >
-            {fields.map((f) => (
-              <option key={f.name} value={f.name}>{f.label || f.name}</option>
-            ))}
-          </select>
-          <select
-            value={r.dir}
-            onChange={(e) => updateRule(r.id, { dir: e.target.value as 'asc' | 'desc' })}
-            className="shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700"
-          >
-            <option value="asc">Ascending</option>
-            <option value="desc">Descending</option>
-          </select>
-          <button type="button" onClick={() => removeRule(r.id)} className="shrink-0 rounded px-1.5 py-1 text-[11px] text-slate-400 hover:text-red-500">
+          <SelectMenu value={r.field} onValueChange={(v) => updateRule(r.id, { field: v })}>
+            <SelectTrigger className="h-7 min-w-0 flex-1 text-[11px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {fields.map((f) => (
+                <SelectItem key={f.name} value={f.name} className="text-xs">{f.label || f.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </SelectMenu>
+          <SelectMenu value={r.dir} onValueChange={(v) => updateRule(r.id, { dir: v as 'asc' | 'desc' })}>
+            <SelectTrigger className="h-7 w-32 shrink-0 text-[11px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="asc" className="text-xs">Ascending</SelectItem>
+              <SelectItem value="desc" className="text-xs">Descending</SelectItem>
+            </SelectContent>
+          </SelectMenu>
+          <button type="button" onClick={() => removeRule(r.id)} className="shrink-0 rounded px-1.5 py-1 text-[11px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]">
             ✕
           </button>
         </div>
@@ -179,7 +177,7 @@ function SortRuleList({ rules, fields, onChange }: {
       <button
         type="button"
         onClick={addRule}
-        className="w-full rounded-md border border-dashed border-slate-200 py-1 text-[11px] text-slate-500 hover:border-slate-300"
+        className="w-full rounded-md border border-dashed border-[hsl(var(--border))] py-1 text-[11px] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--muted-foreground))]/40"
       >
         + Sort rule
       </button>

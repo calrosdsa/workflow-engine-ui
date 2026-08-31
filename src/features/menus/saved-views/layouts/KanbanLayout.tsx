@@ -34,10 +34,11 @@ import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Loader2 } from 'lucide-react'
 import { useQueryClient, type InfiniteData } from '@tanstack/react-query'
 import { resolveRecordTitle } from '@/features/forms/runtime/record-title'
-import { formatValue, formatSystemDatetime } from '@/features/forms/runtime/format-value'
+import { formatFieldValue, formatSystemDatetime } from '@/features/forms/runtime/format-value'
 import { RoleValueLabel } from '@/features/forms/runtime/RoleValueLabel'
 import { resolveEnumLabel } from '@/features/forms/runtime/enum-labels'
 import { FileCellDisplay } from '@/features/forms/runtime/FileCellDisplay'
+import { ReferenceValueLabel } from '@/features/forms/runtime/ReferenceValueLabel'
 import { useKanbanColumn } from '@/features/forms/runtime/useKanbanColumn'
 import { useUpdateRecord } from '@/features/forms/hooks'
 import { formsApi } from '@/features/forms/api'
@@ -405,7 +406,7 @@ function KanbanColumn({ formId, groupFieldName, columnKey, label, filter, sort, 
             <span
               {...sortable.attributes}
               {...sortable.listeners}
-              className="cursor-grab touch-none text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+              className="cursor-grab touch-none hover:opacity-70 active:cursor-grabbing"
               style={{ color: 'hsl(var(--muted-foreground))' }}
             >
               <GripVertical size={12} />
@@ -515,7 +516,9 @@ function KanbanCard({ record, fields, bodyFields, roleField, enumLabels, onClick
                   ? resolveEnumLabel(enumLabels, f.name, record[f.name])
                   : f.type === 'file'
                   ? <FileCellDisplay value={record[f.name]} />
-                  : formatValue(record[f.name])}
+                  : f.type === 'reference'
+                  ? <ReferenceValueLabel formId={f.reference_table} recordId={record[f.name]} displayField={f.display_field} />
+                  : formatFieldValue(record[f.name], f.type)}
               </span>
             </div>
           ))}

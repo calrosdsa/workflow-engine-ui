@@ -44,12 +44,12 @@ export function DropZone({ position, active, onDragOver, onDrop, onDragLeave }: 
           'rounded-full transition-all duration-150',
           BAR_GEOMETRY[position],
           active
-            ? 'bg-blue-500 shadow-[0_0_0_3px_rgba(59,130,246,0.25)]'
-            : 'bg-blue-200/40',
+            ? 'bg-[hsl(var(--primary))] shadow-[0_0_0_3px_hsl(var(--primary)/0.25)]'
+            : 'bg-[hsl(var(--primary))]/25',
         )}
       />
       {active && (
-        <div className="absolute flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-white text-[11px] font-bold shadow-md ring-2 ring-white">
+        <div className="absolute flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[11px] font-bold shadow-md ring-2 ring-[hsl(var(--card))]">
           +
         </div>
       )}

@@ -63,7 +63,7 @@ export function RecordReferencePicker({ field, value, onChange, disabled }: Reco
     enabled: !!targetFormId && !!value,
   })
 
-  if (!targetFormId) return <p className="text-[11px] text-amber-600">No target form configured for this reference field.</p>
+  if (!targetFormId) return <p className="text-[11px] text-[hsl(var(--warning))]">No target form configured for this reference field.</p>
 
   const options = results?.records ?? []
   const selectedLabel = currentRecord ? resolveReferenceLabel(targetForm?.fields, currentRecord, field.display_field) : value || undefined
@@ -77,13 +77,13 @@ export function RecordReferencePicker({ field, value, onChange, disabled }: Reco
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className={cn('h-7 min-w-0 flex-1 justify-between gap-1.5 px-2 text-[12px] font-normal', !value && 'text-slate-400')}
+          className={cn('h-7 min-w-0 flex-1 justify-between gap-1.5 px-2 text-[12px] font-normal', !value && 'text-[hsl(var(--muted-foreground))]')}
         >
           <span className="flex min-w-0 items-center gap-1.5">
-            <FileText size={12} className="shrink-0 text-slate-400" />
+            <FileText size={12} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
             <span className="truncate">{selectedLabel ?? 'Search…'}</span>
           </span>
-          <ChevronsUpDown size={12} className="shrink-0 text-slate-400" />
+          <ChevronsUpDown size={12} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -96,7 +96,7 @@ export function RecordReferencePicker({ field, value, onChange, disabled }: Reco
           />
           <CommandList>
             {isLoading ? (
-              <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-slate-500">
+              <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
                 <Loader2 size={13} className="animate-spin" /> Searching…
               </div>
             ) : (
@@ -114,7 +114,7 @@ export function RecordReferencePicker({ field, value, onChange, disabled }: Reco
                           setOpen(false)
                         }}
                       >
-                        <Check size={14} className={cn('shrink-0', id === value ? 'opacity-100 text-indigo-600' : 'opacity-0')} />
+                        <Check size={14} className={cn('shrink-0', id === value ? 'opacity-100 text-[hsl(var(--primary))]' : 'opacity-0')} />
                         <span className="truncate">{resolveReferenceLabel(targetForm?.fields, r, field.display_field)}</span>
                       </CommandItem>
                     )
@@ -125,12 +125,12 @@ export function RecordReferencePicker({ field, value, onChange, disabled }: Reco
           </CommandList>
         </Command>
         {value && (
-          <div className="flex items-center justify-between gap-2 border-t border-slate-200 px-2.5 py-1.5">
-            <span className="truncate text-[11px] text-slate-500">{selectedLabel}</span>
+          <div className="flex items-center justify-between gap-2 border-t border-[hsl(var(--border))] px-2.5 py-1.5">
+            <span className="truncate text-[11px] text-[hsl(var(--muted-foreground))]">{selectedLabel}</span>
             <button
               type="button"
               onClick={() => onChange(null)}
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
               title="Clear selection"
             >
               <X size={12} />

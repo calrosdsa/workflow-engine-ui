@@ -23,7 +23,7 @@ export function normaliseRunAgentConfig(raw: unknown): RunAgentConfig {
 
 function TaskModeToggle({ mode, onChange }: { mode: TaskMode; onChange: (m: TaskMode) => void }) {
   return (
-    <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+    <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
       {(['literal', 'expression'] as const).map((m) => (
         <button
           key={m}
@@ -31,7 +31,7 @@ function TaskModeToggle({ mode, onChange }: { mode: TaskMode; onChange: (m: Task
           onClick={() => onChange(m)}
           className={cn(
             'flex-1 rounded-md py-1 text-[11px] font-medium transition-colors',
-            mode === m ? 'bg-violet-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700',
+            mode === m ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
           )}
         >
           {m === 'literal' ? 'Static' : 'Expression'}
@@ -54,14 +54,14 @@ export function RunAgentForm({ config, variables, nodeContext, onChange }: RunAg
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Agent</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Agent</Label>
         <AgentSelect value={config.agent_id || undefined} onChange={(id) => set({ agent_id: id ?? '' })} />
       </div>
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Task</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Task</Label>
         <TaskModeToggle mode={config.task_mode ?? 'literal'} onChange={(m) => set({ task_mode: m })} />
         {config.task_mode === 'expression' ? (
           <ExpressionField
@@ -78,23 +78,23 @@ export function RunAgentForm({ config, variables, nodeContext, onChange }: RunAg
             onChange={(e) => set({ task: e.target.value })}
             rows={4}
             placeholder="e.g. Draft a reply to this support ticket…"
-            className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] text-slate-700 placeholder:text-slate-300 focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100"
+            className="w-full resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-3 py-2 text-[12px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/60 focus:border-[hsl(var(--primary))] focus:bg-[hsl(var(--card))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
           />
         )}
-        <p className="text-[10px] text-slate-400">The message/task text sent to the Agent to start this run.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">The message/task text sent to the Agent to start this run.</p>
       </div>
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Output Variable</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Output Variable</Label>
         <Input
           value={config.output_var}
           onChange={(e) => set({ output_var: e.target.value })}
           placeholder="agent_result"
           className="h-8 font-mono text-[12px]"
         />
-        <p className="text-[10px] text-slate-400">The Agent's final answer is written here once the run completes.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">The Agent's final answer is written here once the run completes.</p>
       </div>
     </div>
   )

@@ -8,16 +8,16 @@ export function ImageConfigPanel({ config, onChange }: WidgetConfigPanelProps<Im
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-slate-600">Image URL</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Image URL</Label>
         <Input value={config.src} onChange={(e) => onChange({ ...config, src: e.target.value })} placeholder="https://…" className="h-8 text-sm" />
-        <p className="text-[10px] text-slate-400">No file upload yet — paste a direct link to an image.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">No file upload yet — paste a direct link to an image.</p>
       </div>
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-slate-600">Alt Text</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Alt Text</Label>
         <Input value={config.alt} onChange={(e) => onChange({ ...config, alt: e.target.value })} className="h-8 text-sm" />
       </div>
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-slate-600">Width</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Width</Label>
         <SelectMenu value={config.width} onValueChange={(v) => onChange({ ...config, width: v as ImageWidgetConfig['width'] })}>
           <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>

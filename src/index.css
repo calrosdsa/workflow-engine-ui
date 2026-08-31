@@ -50,47 +50,143 @@
   /* Radix data-state helpers used by the overlay */
   [data-state="open"]   .animate-in  { animation-name: fade-in;  }
   [data-state="closed"] .animate-out { animation-name: fade-out; }
+
+  /* Sliding-pill nav (design.md § Motion/Microinteractions, studied from
+     docs/design/ragflow-dna.md's "Nav mechanism" section) — a single active-
+     indicator pill that slides between nav items via CSS Anchor Positioning
+     rather than a background-color swap on the link itself. Reused at two
+     scales per the DNA: this is the primary/40px-tall/full-radius variant;
+     a sub-tab/28px/5px-radius variant would reuse the same two classes with
+     different sizing, not a new mechanism.
+
+     Each nav item gets `nav-pill-anchor` (anchor-name) and, only on the
+     active item, `nav-pill-target` (the element the floating pill positions
+     itself against). The pill itself is one shared sibling element that
+     moves via `position: absolute; position-anchor` + inset-area/anchor()
+     rather than being re-parented into whichever link is active.
+
+     Transition is narrowed to `transform, background-color` — the DNA's own
+     Notes section flags RAGFlow's real `transition-all` on this exact
+     mechanism as an anti-pattern to fix, not copy. */
+  .nav-pill-anchor {
+    anchor-name: --nav-pill-anchor;
+    position: relative;
+  }
+  .nav-pill {
+    position: absolute;
+    position-anchor: --nav-pill-anchor;
+    top: anchor(top);
+    left: anchor(left);
+    right: anchor(right);
+    bottom: anchor(bottom);
+    border-radius: 9999px;
+    background-color: hsl(var(--foreground));
+    box-shadow: inset 0 -2px 0 0 hsl(var(--primary));
+    transition: top 200ms cubic-bezier(0.16, 1, 0.3, 1), left 200ms cubic-bezier(0.16, 1, 0.3, 1), right 200ms cubic-bezier(0.16, 1, 0.3, 1), bottom 200ms cubic-bezier(0.16, 1, 0.3, 1), background-color 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 0;
+  }
+  /* Anchor Positioning isn't supported in every browser yet (Firefox, Safari
+     as of this writing) — @supports keeps the fallback from ever showing a
+     pill mispositioned via stale absolute coordinates: without anchor
+     support, the floating pill never renders at all, and the active item
+     falls back to a plain static background on itself instead (no slide,
+     but still a clear, correctly-colored active state — never a nav with no
+     visible indicator at all). */
+  @supports not (position-anchor: --nav-pill-anchor) {
+    .nav-pill { display: none; }
+    .nav-pill-anchor {
+      background-color: hsl(var(--foreground));
+      box-shadow: inset 0 -2px 0 0 hsl(var(--primary));
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-pill { transition: opacity 150ms ease-out; }
+  }
 }
 
 @layer base {
   :root {
-    /* Without this, native form controls (input/select) render with the
-       OS/browser's dark UA chrome whenever the user's system is in dark
-       mode, even though our own --background/--foreground stay light —
-       causing text inputs and selects to look broken on an otherwise
-       light-themed page. .dark (below) sets this to `dark` instead. */
+    /* Builder shell theme, replaced 2026-08-29 per workflow-engine-ui/design.md
+       (Hallmark redesign, studied DNA: docs/design/ragflow-dna.md). Was a
+       light shadcn/ui default ("The Instrument Panel", see DESIGN.md) —
+       now RAGFlow's dark palette, adopted as this shell's one fixed theme.
+       Values below are exact HSL conversions of the studied hex/rgb source;
+       see design.md's Theme section for the full per-variable mapping. */
+    color-scheme: dark;
+    --background: 240 4% 8%;              /* #161618 */
+    --foreground: 240 2% 97%;             /* #f6f6f7 */
+    --card: 240 4% 8%;                    /* same as background — flat cards, border+shadow only for separation */
+    --card-foreground: 240 2% 97%;
+    --popover: 240 4% 8%;
+    --popover-foreground: 240 2% 97%;
+    --primary: 175 100% 37%;              /* rgb(0,190,180) — RAGFlow's --accent-primary, theme-invariant */
+    --primary-foreground: 240 4% 8%;
+    --secondary: 0 0% 100% / 5%;
+    --secondary-foreground: 240 2% 97%;
+    --muted: 0 0% 100% / 5%;
+    --muted-foreground: 240 2% 71%;       /* #b2b5b7 */
+    --accent: 0 0% 100% / 5%;
+    --accent-foreground: 240 2% 97%;
+    --destructive: 359 63% 57%;           /* rgb(216,73,75) — RAGFlow's --state-error */
+    --destructive-foreground: 240 2% 97%;
+    --success: 142 46% 43%;               /* rgb(59,160,92) */
+    --success-foreground: 240 2% 97%;
+    --warning: 38 89% 53%;                /* rgb(250,173,20) */
+    --warning-foreground: 240 4% 8%;
+    --border: 0 0% 100% / 10%;            /* 0.8px hairline, RAGFlow's own alpha */
+    --input: 0 0% 100% / 10%;
+    --ring: 175 100% 37%;                 /* same as --primary — RAGFlow reuses one color for accent + focus */
+    --radius: 0.4375rem;                  /* 7px, RAGFlow's card radius (was 0.5rem/8px) */
+    --sidebar: 240 4% 8%;
+    --sidebar-foreground: 240 2% 97%;
+
+    /* New tokens, not part of the prior system — two gradients, kept as
+       gradients per design.md's own warning against flattening a two-stop
+       gradient into a single HSL value. Reserved for their one declared
+       job each; do not repurpose either as a general accent. */
+    --gradient-brand: linear-gradient(to left, #40ebe3, #4a51ff);
+    --gradient-upsell: linear-gradient(to right, #00beb4, #43ffa4);
+  }
+
+  /* Builder-shell light mode, added per ragflow-dna.md's own "Light mode"
+     section — a previously out-of-scope future feature (design.md's Theme
+     section explicitly deferred a toggle) now built from that section's
+     already-studied, confirmed values rather than an invented palette.
+     Toggled via a `.light` class on <html> (features/theme/useBuilderTheme.ts)
+     — the inverse of the usual next-themes `.dark`-as-override convention,
+     because :root above IS already this shell's dark palette; `.light` is
+     the override layer here, not the default.
+
+     Per the DNA: only the neutral scale mechanically inverts (background/
+     foreground/card/popover/border/input/muted/secondary/accent + their
+     foregrounds, and the nav-pill's fill-swap target). Brand/accent/status
+     tokens (--primary, --destructive, --success, --warning, --ring, both
+     gradients) are confirmed theme-invariant in the DNA and are deliberately
+     NOT redeclared here — they fall through from :root unchanged. */
+  .light {
     color-scheme: light;
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 0 0% 100%;              /* #ffffff */
+    --foreground: 240 5% 9%;              /* rgb(22,22,24) */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 240 5% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    /* Success/warning were missing from this token set entirely — every
-       status-colored surface (Badge's success/warning variants, and any
-       future one) fell back to raw Tailwind green-100/yellow-100 literals
-       instead. Values picked to sit alongside the existing palette's
-       saturation/lightness range (compare --destructive's 84.2%/60.2%). */
-    --success: 142 71% 45%;
-    --success-foreground: 355 100% 97%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 48 96% 12%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
-    --sidebar: 222.2 47.4% 11.2%;
-    --sidebar-foreground: 210 40% 98%;
+    --popover-foreground: 240 5% 9%;
+    --secondary: 0 0% 0% / 5%;
+    --secondary-foreground: 240 5% 9%;
+    --muted: 0 0% 0% / 5%;
+    --muted-foreground: 240 2% 40%;
+    --accent: 0 0% 0% / 5%;
+    --accent-foreground: 240 5% 9%;
+    --border: 0 0% 0% / 10%;
+    /* DNA's own confirmed asymmetry: --bg-input does NOT mirror --bg-card's
+       clean inversion in RAGFlow itself (light mode leaves it fully
+       transparent, a real gap in RAGFlow's own token discipline). Applying
+       the DNA's own recommended fix rather than reproducing the gap. */
+    --input: 0 0% 0% / 5%;
+    /* Sticky-header-style surfaces (one step off the page, not literally
+       inverted-in-place) per the DNA's sticky-table-header note. */
+    --sidebar: 240 2% 97%;
+    --sidebar-foreground: 240 5% 9%;
   }
 
   /* Static class-based dark-mode fallback (next-themes/shadcn convention:
@@ -98,8 +194,19 @@
      from-scratch dark-mode CSS this codebase needed — ThemeProvider's
      runtime logic (features/theme/ThemeProvider.tsx) layers app-specific
      colors on top of these via inline custom properties, which win the
-     cascade without !important. */
-  .dark {
+     cascade without !important.
+
+     `:not(.react-flow)` guard: React Flow's own `colorMode="dark"` prop
+     (Layout.tsx's <ReactFlow>) stamps a literal `dark` class directly onto
+     its own `.react-flow` root div — an unrelated, coincidental name
+     collision with this shadcn/next-themes convention. Without the guard,
+     this whole legacy shadcn-blue palette silently overrides the canvas's
+     actual --background/--card/etc. (locally, on that one div and its
+     descendants), which is what caused the workflow canvas to render in
+     the wrong dark theme instead of this shell's real RAGFlow-studied
+     tokens. The runtime ThemeProvider never puts `.dark` on a `.react-flow`
+     element, so this guard changes nothing for its real, intended usage. */
+  .dark:not(.react-flow) {
     color-scheme: dark;
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;

@@ -25,12 +25,12 @@ export function ExecutionDetailPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Execution Detail</h1>
-          <p className="font-mono text-xs text-gray-400 mt-1">{execution.execution_id}</p>
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Execution Detail</h1>
+          <p className="font-mono text-xs text-[hsl(var(--muted-foreground))] mt-1">{execution.execution_id}</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={statusVariant[execution.status]}>{execution.status}</Badge>
-          {!isTerminal && <Spinner className="h-4 w-4 text-blue-500" />}
+          {!isTerminal && <Spinner className="h-4 w-4 text-[hsl(var(--primary))]" />}
         </div>
       </div>
 
@@ -47,10 +47,10 @@ export function ExecutionDetailPage() {
       </div>
 
       {execution.error_message && (
-        <Card className="border-red-200 bg-red-50">
-          <CardHeader><CardTitle className="text-red-700 text-sm">Error</CardTitle></CardHeader>
+        <Card className="border-[hsl(var(--destructive))]/30 bg-[hsl(var(--destructive))]/10">
+          <CardHeader><CardTitle className="text-[hsl(var(--destructive))] text-sm">Error</CardTitle></CardHeader>
           <CardContent>
-            <pre className="text-xs text-red-600 whitespace-pre-wrap">{execution.error_message}</pre>
+            <pre className="text-xs text-[hsl(var(--destructive))] whitespace-pre-wrap">{execution.error_message}</pre>
           </CardContent>
         </Card>
       )}
@@ -59,7 +59,7 @@ export function ExecutionDetailPage() {
         <Card>
           <CardHeader><CardTitle>Final Variables</CardTitle></CardHeader>
           <CardContent>
-            <pre className="rounded-md bg-gray-50 p-4 text-xs overflow-auto">
+            <pre className="rounded-md bg-[hsl(var(--muted))] p-4 text-xs overflow-auto">
               {JSON.stringify(execution.final_variables, null, 2)}
             </pre>
           </CardContent>
@@ -81,8 +81,8 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
 function Row({ label, value, mono }: { label: string; value?: string; mono?: boolean }) {
   return (
     <div className="flex justify-between gap-4 text-sm">
-      <span className="text-gray-500 shrink-0">{label}</span>
-      <span className={mono ? 'font-mono text-xs text-gray-700 truncate' : 'text-gray-700'}>{value ?? '—'}</span>
+      <span className="text-[hsl(var(--muted-foreground))] shrink-0">{label}</span>
+      <span className={mono ? 'font-mono text-xs text-[hsl(var(--foreground))] truncate' : 'text-[hsl(var(--foreground))]'}>{value ?? '—'}</span>
     </div>
   )
 }

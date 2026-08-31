@@ -19,17 +19,17 @@ export function DashboardPage() {
   const { data: forms } = useForms()
 
   const stats = [
-    { label: 'Workflow Definitions', value: workflows?.length ?? 0,   icon: Workflow,    color: 'text-blue-600',   bg: 'bg-blue-50' },
-    { label: 'Total Executions',     value: totalExecutions ?? 0,     icon: Play,        color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Completed',            value: completed ?? 0,           icon: CheckCircle, color: 'text-green-600',  bg: 'bg-green-50' },
-    { label: 'Form Definitions',     value: forms?.length ?? 0,       icon: FileText,    color: 'text-orange-600', bg: 'bg-orange-50' },
+    { label: 'Workflow Definitions', value: workflows?.length ?? 0,   icon: Workflow,    color: 'text-[hsl(var(--primary))]',   bg: 'bg-[hsl(var(--primary))]/10' },
+    { label: 'Total Executions',     value: totalExecutions ?? 0,     icon: Play,        color: 'text-[hsl(var(--primary))]', bg: 'bg-[hsl(var(--primary))]/10' },
+    { label: 'Completed',            value: completed ?? 0,           icon: CheckCircle, color: 'text-[hsl(var(--success))]',  bg: 'bg-[hsl(var(--success))]/10' },
+    { label: 'Form Definitions',     value: forms?.length ?? 0,       icon: FileText,    color: 'text-[hsl(var(--warning))]', bg: 'bg-[hsl(var(--warning))]/10' },
   ]
 
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">Overview of your workflow engine</p>
+        <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Dashboard</h1>
+        <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">Overview of your workflow engine</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -37,14 +37,14 @@ export function DashboardPage() {
           <Card key={label}>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-gray-500">{label}</CardTitle>
+                <CardTitle className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{label}</CardTitle>
                 <div className={`rounded-lg p-2 ${bg}`}>
                   <Icon size={16} className={color} />
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-gray-900">{value}</p>
+              <p className="text-3xl font-bold text-[hsl(var(--foreground))]">{value}</p>
             </CardContent>
           </Card>
         ))}
@@ -58,10 +58,10 @@ export function DashboardPage() {
           <CardContent>
             <div className="space-y-2">
               {recent.executions.map((ex) => (
-                <div key={ex.execution_id} className="flex items-center justify-between rounded-md border p-3 text-sm">
-                  <span className="font-mono text-xs text-gray-500">{ex.execution_id.slice(0, 8)}…</span>
+                <div key={ex.execution_id} className="flex items-center justify-between rounded-md border border-[hsl(var(--border))] p-3 text-sm">
+                  <span className="font-mono text-xs text-[hsl(var(--muted-foreground))]">{ex.execution_id.slice(0, 8)}…</span>
                   <StatusBadge status={ex.status} />
-                  <span className="text-gray-400">{new Date(ex.created_at).toLocaleString()}</span>
+                  <span className="text-[hsl(var(--muted-foreground))]">{new Date(ex.created_at).toLocaleString()}</span>
                 </div>
               ))}
             </div>
@@ -74,14 +74,14 @@ export function DashboardPage() {
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
-    PENDING:   'bg-yellow-100 text-yellow-800',
-    RUNNING:   'bg-blue-100 text-blue-800',
-    COMPLETED: 'bg-green-100 text-green-800',
-    FAILED:    'bg-red-100 text-red-800',
-    CANCELLED: 'bg-gray-100 text-gray-800',
+    PENDING:   'bg-[hsl(var(--warning))]/15 text-[hsl(var(--warning))]',
+    RUNNING:   'bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]',
+    COMPLETED: 'bg-[hsl(var(--success))]/15 text-[hsl(var(--success))]',
+    FAILED:    'bg-[hsl(var(--destructive))]/15 text-[hsl(var(--destructive))]',
+    CANCELLED: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
   }
   return (
-    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${map[status] ?? 'bg-gray-100 text-gray-800'}`}>
+    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${map[status] ?? 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'}`}>
       {status}
     </span>
   )

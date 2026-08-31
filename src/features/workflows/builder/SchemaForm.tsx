@@ -91,7 +91,7 @@ export function SchemaForm({ schema, value, onChange }: SchemaFormProps) {
   const entries = Object.entries(properties)
   if (entries.length === 0) {
     return (
-      <p className="text-[12px] text-slate-400">
+      <p className="text-[12px] text-[hsl(var(--muted-foreground))]">
         This connector declares no configurable fields.
       </p>
     )
@@ -127,13 +127,13 @@ function SchemaField({ fieldKey, prop, value, required, onChange }: SchemaFieldP
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-          {label}{required && <span className="ml-0.5 text-rose-400">*</span>}
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
+          {label}{required && <span className="ml-0.5 text-[hsl(var(--destructive))]">*</span>}
         </Label>
       </div>
       <FieldControl fieldKey={fieldKey} prop={prop} value={value} onChange={onChange} />
       {prop.description && (
-        <p className="text-[11px] leading-snug text-slate-400">{prop.description}</p>
+        <p className="text-[11px] leading-snug text-[hsl(var(--muted-foreground))]">{prop.description}</p>
       )}
     </div>
   )
@@ -148,7 +148,7 @@ function FieldControl({ fieldKey, prop, value, onChange }: Omit<SchemaFieldProps
         value={typeof value === 'string' ? value : undefined}
         onChange={(name) => onChange(name ?? '')}
         typeFilter={prop['x-workflow-engine-credential-type']}
-        accentClassName="text-slate-700"
+        accentClassName="text-[hsl(var(--foreground))]"
       />
     )
   }

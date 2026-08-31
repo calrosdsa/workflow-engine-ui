@@ -427,4 +427,19 @@ const runtimeRouteTree = runtimeRootRoute.addChildren([
   runtimeCatchAllRoute,
 ])
 
-export const runtimeRouter = createRouter({ routeTree: runtimeRouteTree })
+// defaultNotFoundComponent matters more here than the four explicit
+// <NotFoundPage /> usages above: those cover routes that RENDER a not-found
+// state, but the most common runtime failure by far is a notFound() THROWN
+// from runtimeAppRoute's loader — an app that exists but has never been
+// published (the backend answers that with a deliberate 404, see
+// api/runtime/handler.go). That thrown path bypassed every one of those four
+// components and fell through to TanStack Router's own default: a bare,
+// unstyled <p>Not Found</p> in the corner of an empty page. So the single
+// case where a user most needs to be told "you still have to publish this"
+// was the one case that said nothing. NotFoundPage's default copy already
+// names both possibilities (wrong URL, or not yet published); it was written
+// for exactly this and simply was never wired up.
+export const runtimeRouter = createRouter({
+  routeTree: runtimeRouteTree,
+  defaultNotFoundComponent: () => <NotFoundPage />,
+})

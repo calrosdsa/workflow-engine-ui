@@ -58,7 +58,7 @@ export function CalendarLayout({ records, fields, config, onOpenRecord, loading 
   const today = toDateKey(new Date())
 
   if (loading) {
-    return <div className="p-8 text-center text-sm text-slate-400">Loading…</div>
+    return <div className="p-8 text-center text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading…</div>
   }
 
   return (
@@ -113,7 +113,7 @@ export function CalendarLayout({ records, fields, config, onOpenRecord, loading 
                   </button>
                 ))}
                 {dayRecords.length > 3 && (
-                  <span className="px-1 text-[10px] text-slate-400">+{dayRecords.length - 3} more</span>
+                  <span className="px-1 text-[10px]" style={{ color: 'hsl(var(--muted-foreground))' }}>+{dayRecords.length - 3} more</span>
                 )}
               </div>
             </div>

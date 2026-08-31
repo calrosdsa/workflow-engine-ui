@@ -1,61 +1,73 @@
 /* xyflow theme files. Delete these to start from our base */
 
 .react-flow {
-  --xy-background-color: #f7f9fb;
+  --xy-background-color: hsl(var(--background));
   /* Custom Variables */
-  --xy-theme-selected: #f57dbd;
-  --xy-theme-hover: #c5c5c5;
-  --xy-theme-edge-hover: black;
-  --xy-theme-color-focus: #e8e8e8;
+  --xy-theme-selected: hsl(var(--primary));
+  --xy-theme-hover: hsl(var(--muted-foreground));
+  --xy-theme-edge-hover: hsl(var(--primary));
+  --xy-theme-color-focus: hsl(var(--primary) / 0.25);
 
   /* Built-in Variables see https://reactflow.dev/learn/customization/theming */
-  --xy-node-border-default: 1px solid #ededed;
+  --xy-node-border-default: 1px solid hsl(var(--border));
 
-  --xy-node-boxshadow-default:
-    0px 3.54px 4.55px 0px #00000005, 0px 3.54px 4.55px 0px #0000000d,
-    0px 0.51px 1.01px 0px #0000001a;
-
-  --xy-node-border-radius-default: 8px;
-
-  --xy-handle-background-color-default: #ffffff;
-  --xy-handle-border-color-default: #aaaaaa;
-
-  --xy-edge-label-color-default: #505050;
-  --xy-node-background-color-default: #ffffff;
-  --xy-theme-panel-bg: #ffffff;
-  --xy-theme-panel-text: #111827;
-  --xy-theme-resize-handle-bg: #ffffff;
-  --xy-theme-focus-border: #d9d9d9;
-  --xy-theme-muted-bg: #f3f4f6;
-  --xy-theme-subtle-border: #d1d5db;
-}
-
-.react-flow.dark {
-  --xy-background-color: #101012;
-  --xy-node-background-color-default: #1a1b1e;
-  --xy-node-border-default: 1px solid #303238;
-  --xy-handle-background-color-default: #141519;
-  --xy-handle-border-color-default: #5a5d66;
-  --xy-edge-label-color-default: #e6e7ea;
-  --xy-theme-hover: #7a7d86;
-  --xy-theme-edge-hover: #f3f4f6;
-  --xy-theme-panel-bg: #141519;
-  --xy-theme-panel-text: #f3f4f6;
-  --xy-theme-resize-handle-bg: #141519;
-  --xy-theme-focus-border: #5f6470;
-  --xy-theme-muted-bg: #24262c;
-  --xy-theme-subtle-border: #3f434c;
   --xy-node-boxshadow-default:
     0px 6px 18px 0px rgba(0, 0, 0, 0.35), 0px 2px 6px 0px rgba(0, 0, 0, 0.3),
     0px 1px 2px 0px rgba(0, 0, 0, 0.35);
-  --xy-theme-color-focus: #4b4e57;
-  --color-background: #1a1b1e;
-  --color-hover-bg: #24262c;
-  --color-disabled: #8b9099;
+
+  --xy-node-border-radius-default: 8px;
+
+  --xy-handle-background-color-default: hsl(var(--card));
+  --xy-handle-border-color-default: hsl(var(--muted-foreground));
+
+  --xy-edge-label-color-default: hsl(var(--foreground));
+  --xy-node-background-color-default: hsl(var(--card));
+  --xy-theme-panel-bg: hsl(var(--card));
+  --xy-theme-panel-text: hsl(var(--foreground));
+  --xy-theme-resize-handle-bg: hsl(var(--card));
+  --xy-theme-focus-border: hsl(var(--primary) / 0.4);
+  --xy-theme-muted-bg: hsl(var(--muted));
+  --xy-theme-subtle-border: hsl(var(--border));
 }
 
 .react-flow {
   background-color: var(--xy-background-color);
+}
+
+/* @xyflow/react/dist/style.css (imported before this file in index.css)
+   ships its own `.react-flow.dark { --xy-* : <hardcoded shadcn-dark
+   literal> }` block. Both that block and the bare `.react-flow` block above
+   have equal specificity within their own class count (0,1,0 vs 0,1,0 is
+   wrong — .dark makes theirs 0,2,0), so the bundled dark-mode rule always
+   wins over the bare selector above regardless of import order, silently
+   reverting every --xy-* variable to xyflow's own values (this is what
+   caused the canvas to render with the wrong dark, e.g. --xy-background-
+   color resolving to #020817 instead of this shell's #161618 --background).
+   Re-declaring the same variables here at matching .react-flow.dark
+   specificity — declared later in the same file — wins the cascade and
+   keeps every node/handle/edge color on this shell's actual tokens. */
+.react-flow.dark {
+  --xy-background-color: hsl(var(--background));
+  --xy-theme-selected: hsl(var(--primary));
+  --xy-theme-hover: hsl(var(--muted-foreground));
+  --xy-theme-edge-hover: hsl(var(--primary));
+  --xy-theme-color-focus: hsl(var(--primary) / 0.25);
+  --xy-node-border-default: 1px solid hsl(var(--border));
+  --xy-node-boxshadow-default:
+    0px 6px 18px 0px rgba(0, 0, 0, 0.35), 0px 2px 6px 0px rgba(0, 0, 0, 0.3),
+    0px 1px 2px 0px rgba(0, 0, 0, 0.35);
+  --xy-node-border-radius-default: 8px;
+  --xy-handle-background-color-default: hsl(var(--card));
+  --xy-handle-border-color-default: hsl(var(--muted-foreground));
+  --xy-edge-label-color-default: hsl(var(--foreground));
+  --xy-node-background-color-default: hsl(var(--card));
+  --xy-theme-panel-bg: hsl(var(--card));
+  --xy-theme-panel-text: hsl(var(--foreground));
+  --xy-theme-resize-handle-bg: hsl(var(--card));
+  --xy-theme-focus-border: hsl(var(--primary) / 0.4);
+  --xy-theme-muted-bg: hsl(var(--muted));
+  --xy-theme-subtle-border: hsl(var(--border));
+  background-color: hsl(var(--background));
 }
 
 /* Customizing Default Theming */
@@ -82,13 +94,8 @@
 }
 
 .react-flow__node-group {
-  background-color: rgba(207, 182, 255, 0.4);
-  border-color: #9e86ed;
-}
-
-.react-flow.dark .react-flow__node-group {
-  background-color: rgba(123, 107, 148, 0.22);
-  border-color: #7b6b94;
+  background-color: hsl(var(--primary) / 0.15);
+  border-color: hsl(var(--primary) / 0.5);
 }
 
 .react-flow__edge.selectable:hover .react-flow__edge-path,
@@ -119,7 +126,7 @@
 
 .react-flow__resize-control.handle {
   background-color: var(--xy-theme-resize-handle-bg);
-  border-color: #9e86ed;
+  border-color: hsl(var(--primary));
   border-radius: 0;
   width: 5px;
   height: 5px;

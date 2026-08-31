@@ -45,6 +45,8 @@
     "@tanstack/react-query-devtools": "^5.101.2",
     "@tanstack/react-router": "^1.170.16",
     "@tanstack/router-devtools": "^1.167.0",
+    "@univerjs/preset-sheets-core": "^0.25.1",
+    "@univerjs/presets": "^0.25.1",
     "@xyflow/react": "^12.11.1",
     "centrifuge": "^5.7.2",
     "class-variance-authority": "^0.7.1",

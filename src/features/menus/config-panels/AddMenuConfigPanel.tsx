@@ -1,6 +1,8 @@
 import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenceSelect'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useMenus } from '../hooks'
 import type { Menu, AddMenuConfig } from '../types'
 
@@ -19,21 +21,21 @@ export function AddMenuConfigPanel({ menu, onChange }: AddMenuConfigPanelProps) 
   return (
     <div className="space-y-4">
       <div>
-        <label className="mb-1 block text-xs font-medium text-gray-600">Target form</label>
+        <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Target form</Label>
         <FormReferenceSelect value={config.form_id} onChange={(formId) => patch({ form_id: formId ?? '' })} />
-        <p className="mt-1 text-[11px] text-gray-400">The form rendered for creating a new record.</p>
+        <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">The form rendered for creating a new record.</p>
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-gray-600">On successful save</label>
-        <div className="flex gap-1 rounded-md bg-slate-100 p-0.5">
+        <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">On successful save</Label>
+        <div className="flex gap-1 rounded-md bg-[hsl(var(--muted))] p-0.5">
           {(['message', 'redirect'] as const).map((b) => (
             <button
               key={b}
               type="button"
               onClick={() => patch({ success_behavior: b })}
               className={`flex-1 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
-                config.success_behavior === b ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400'
+                config.success_behavior === b ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]'
               }`}
             >
               {b === 'message' ? 'Show a message' : 'Redirect to another menu'}
@@ -44,7 +46,7 @@ export function AddMenuConfigPanel({ menu, onChange }: AddMenuConfigPanelProps) 
 
       {config.success_behavior === 'message' && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Success message</label>
+          <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Success message</Label>
           <Input
             value={config.success_message ?? ''}
             onChange={(e) => patch({ success_message: e.target.value })}
@@ -55,27 +57,26 @@ export function AddMenuConfigPanel({ menu, onChange }: AddMenuConfigPanelProps) 
 
       {config.success_behavior === 'redirect' && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Redirect to</label>
-          <select
-            value={config.redirect_menu_slug ?? ''}
-            onChange={(e) => patch({ redirect_menu_slug: e.target.value })}
-            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700"
-          >
-            <option value="">Select a menu…</option>
-            {otherMenus.map((m) => (
-              <option key={m.id} value={m.slug}>{m.name}</option>
-            ))}
-          </select>
+          <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Redirect to</Label>
+          <SelectMenu value={config.redirect_menu_slug || '__none__'} onValueChange={(v) => patch({ redirect_menu_slug: v === '__none__' ? '' : v })}>
+            <SelectTrigger className="w-full text-sm"><SelectValue placeholder="Select a menu…" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__" className="text-xs">Select a menu…</SelectItem>
+              {otherMenus.map((m) => (
+                <SelectItem key={m.id} value={m.slug} className="text-xs">{m.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </SelectMenu>
         </div>
       )}
 
-      <label className="flex items-center gap-2 text-[12px] text-slate-700">
+      <Label className="flex items-center gap-2 text-[12px] font-normal text-[hsl(var(--foreground))]">
         <Checkbox
           checked={config.navigate_after_save}
           onCheckedChange={(checked) => patch({ navigate_after_save: checked === true })}
         />
         Navigate automatically after save (vs. staying on the form)
-      </label>
+      </Label>
     </div>
   )
 }

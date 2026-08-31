@@ -32,14 +32,14 @@ export function VariablesPanel() {
   return (
     <aside
       className={[
-        'relative flex shrink-0 flex-col border-r border-slate-200 bg-white transition-all duration-200',
+        'relative flex shrink-0 flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] transition-all duration-200',
         varsPanelOpen ? 'w-60' : 'w-10',
       ].join(' ')}
     >
       {/* Toggle button — always visible on the right edge */}
       <button
         onClick={toggleVarsPanel}
-        className="absolute -right-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+        className="absolute -right-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] shadow-sm transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
         title={varsPanelOpen ? 'Collapse variables' : 'Expand variables'}
       >
         {varsPanelOpen ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}
@@ -48,8 +48,8 @@ export function VariablesPanel() {
       {/* Collapsed state — rotated label */}
       {!varsPanelOpen && (
         <div className="flex flex-1 flex-col items-center gap-2 pt-4">
-          <Braces size={15} className="text-slate-400" />
-          <span className="rotate-90 select-none whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+          <Braces size={15} className="text-[hsl(var(--muted-foreground))]" />
+          <span className="rotate-90 select-none whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
             Variables
           </span>
         </div>
@@ -58,15 +58,15 @@ export function VariablesPanel() {
       {/* Expanded state */}
       {varsPanelOpen && (
         <>
-          <div className="flex items-center justify-between border-b border-slate-100 px-3.5 py-3">
+          <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-3.5 py-3">
             <div className="flex items-center gap-2">
-              <Braces size={14} className="text-slate-400" />
-              <span className="text-[13px] font-semibold text-slate-700">Variables</span>
+              <Braces size={14} className="text-[hsl(var(--muted-foreground))]" />
+              <span className="text-[13px] font-semibold text-[hsl(var(--foreground))]">Variables</span>
               {variables.length > 0 && (
-                <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">{variables.length}</span>
+                <span className="rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-bold text-[hsl(var(--muted-foreground))]">{variables.length}</span>
               )}
             </div>
-            <Button size="icon" variant="ghost" onClick={add} className="h-7 w-7 text-slate-500 hover:text-slate-700">
+            <Button size="icon" variant="ghost" onClick={add} className="h-7 w-7 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">
               <Plus size={15} />
             </Button>
           </div>
@@ -74,39 +74,39 @@ export function VariablesPanel() {
           <div className="flex-1 space-y-2 overflow-y-auto p-2.5">
             {variables.length === 0 && (
               <div className="flex flex-col items-center gap-2 pt-8 text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
-                  <Braces size={18} className="text-slate-300" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[hsl(var(--muted))]">
+                  <Braces size={18} className="text-[hsl(var(--muted-foreground))]" />
                 </div>
-                <p className="text-xs text-slate-400">No variables yet.<br />Click + to add one.</p>
+                <p className="text-xs text-[hsl(var(--muted-foreground))]">No variables yet.<br />Click + to add one.</p>
               </div>
             )}
             {variables.map((v, i) => (
-              <div key={i} className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/50 p-2.5 transition-colors hover:border-slate-300">
+              <div key={i} className="space-y-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-2.5 transition-colors hover:border-[hsl(var(--muted-foreground))]/40">
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-[10px] font-semibold uppercase tracking-wide text-slate-400">#{i + 1}</span>
+                  <span className="font-mono text-[10px] font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">#{i + 1}</span>
                   <button
                     onClick={() => remove(i)}
-                    className="flex h-5 w-5 items-center justify-center rounded text-slate-300 transition-colors hover:bg-red-50 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+                    className="flex h-5 w-5 items-center justify-center rounded text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
                   >
                     <Trash2 size={11} />
                   </button>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] text-slate-500">Name</Label>
+                  <Label className="text-[10px] text-[hsl(var(--muted-foreground))]">Name</Label>
                   <Input
                     value={v.name}
                     onChange={(e) => update(i, { name: e.target.value })}
-                    className={cn('h-7 text-xs', isDuplicate(v.name) && 'border-red-300 focus-visible:ring-red-300')}
+                    className={cn('h-7 text-xs', isDuplicate(v.name) && 'border-[hsl(var(--destructive))]/50 focus-visible:ring-[hsl(var(--destructive))]/40')}
                   />
                   {isDuplicate(v.name) && (
-                    <p className="flex items-center gap-1 text-[10px] text-red-600">
+                    <p className="flex items-center gap-1 text-[10px] text-[hsl(var(--destructive))]">
                       <AlertCircle size={10} className="shrink-0" />
                       Already used by another variable — one will silently overwrite the other at runtime.
                     </p>
                   )}
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] text-slate-500">Type</Label>
+                  <Label className="text-[10px] text-[hsl(var(--muted-foreground))]">Type</Label>
                   <Select value={v.type} onChange={(e) => update(i, { type: e.target.value as VariableDecl['type'] })} className="h-7 text-xs">
                     {VAR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </Select>

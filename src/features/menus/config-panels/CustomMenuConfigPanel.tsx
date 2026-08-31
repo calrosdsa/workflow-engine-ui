@@ -85,12 +85,12 @@ export function CustomMenuConfigPanel({ menu, onChange }: CustomMenuConfigPanelP
     <div className="space-y-4">
       {/* Mode toggle — same segmented-button visual pattern as
           AddMenuConfigPanel's success-behavior toggle. */}
-      <div className="flex gap-1 rounded-md bg-slate-100 p-0.5">
+      <div className="flex gap-1 rounded-md bg-[hsl(var(--muted))] p-0.5">
         <button
           type="button"
           onClick={() => setMode('page')}
           className={`flex flex-1 items-center justify-center gap-1.5 rounded px-2 py-1.5 text-[11px] font-medium transition-colors ${
-            mode === 'page' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400'
+            mode === 'page' ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]'
           }`}
         >
           <LayoutTemplate size={12} /> Page Builder
@@ -99,7 +99,7 @@ export function CustomMenuConfigPanel({ menu, onChange }: CustomMenuConfigPanelP
           type="button"
           onClick={() => setMode('embed')}
           className={`flex flex-1 items-center justify-center gap-1.5 rounded px-2 py-1.5 text-[11px] font-medium transition-colors ${
-            mode === 'embed' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400'
+            mode === 'embed' ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]'
           }`}
         >
           <Link2 size={12} /> Embed a Webpage
@@ -123,19 +123,19 @@ export function CustomMenuConfigPanel({ menu, onChange }: CustomMenuConfigPanelP
         // straight to a dedicated route.
         <div className="space-y-3">
           <PageBuilderDnd>
-            <div className="flex h-[380px] flex-col overflow-hidden rounded-md border border-slate-200">
+            <div className="flex h-[380px] flex-col overflow-hidden rounded-md border border-[hsl(var(--border))]">
               <CompactToolbox />
               <PageCanvas />
             </div>
             <ComponentPropertiesPanel currentMenuId={menu.id} />
           </PageBuilderDnd>
 
-          <div className="flex items-center justify-between rounded-md border border-dashed border-slate-200 p-3">
+          <div className="flex items-center justify-between rounded-md border border-dashed border-[hsl(var(--border))] p-3">
             <div className="min-w-0">
-              <p className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600">
-                <LayoutDashboard size={12} className="text-indigo-500" /> New: Dashboard canvas
+              <p className="flex items-center gap-1.5 text-[11px] font-medium text-[hsl(var(--foreground))]/80">
+                <LayoutDashboard size={12} className="text-[hsl(var(--primary))]" /> New: Dashboard canvas
               </p>
-              <p className="text-[10px] text-slate-400">
+              <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
                 Copy this page into a new drag-and-drop dashboard — charts, tables, and widgets included. The original page is kept as-is.
               </p>
             </div>
@@ -152,7 +152,7 @@ export function CustomMenuConfigPanel({ menu, onChange }: CustomMenuConfigPanelP
             </Button>
           </div>
           {convertState === 'error' && (
-            <p className="text-[11px] text-red-600">Could not create the dashboard — try again.</p>
+            <p className="text-[11px] text-[hsl(var(--destructive))]">Could not create the dashboard — try again.</p>
           )}
         </div>
       )}

@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Link, useParams } from '@tanstack/react-router'
+import { useParams } from '@tanstack/react-router'
 import { Plus, Database, HelpCircle } from 'lucide-react'
 import { useForms } from '@/features/forms/hooks'
+import { AddFormDialog } from '@/features/forms/AddFormDialog'
 import { useApplication } from '@/features/applications/hooks'
 import { usePermission } from '@/features/auth/permissions'
 import { Button } from '@/components/ui/button'
@@ -16,6 +17,7 @@ export function FormsPage() {
   const { data: app } = useApplication()
   const canWrite = usePermission('forms:write')
   const [helpOpen, setHelpOpen] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
   const { appId } = useParams({ strict: false }) as { appId?: string }
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Spinner /></div>
@@ -24,19 +26,19 @@ export function FormsPage() {
     <div className="relative flex h-full flex-col p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Form Builder</h1>
-          <p className="text-sm text-gray-500 mt-1">{forms?.length ?? 0} forms</p>
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Form Builder</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">{forms?.length ?? 0} forms</p>
         </div>
       </div>
 
       {!forms?.length ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-          <Database size={32} className="text-gray-300 mb-3" />
-          <p className="text-gray-500 mb-4">No forms yet. Create one to auto-generate a Postgres table.</p>
+        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center">
+          <Database size={32} className="text-[hsl(var(--muted-foreground))]/60 mb-3" />
+          <p className="text-[hsl(var(--muted-foreground))] mb-4">No forms yet. Create one to auto-generate a Postgres table.</p>
           {canWrite && (
-            <Link to="/applications/$appId/forms/new" params={{ appId: appId ?? '' }}>
-              <Button variant="outline"><Plus size={16} />Create your first form</Button>
-            </Link>
+            <Button variant="outline" onClick={() => setAddOpen(true)}>
+              <Plus size={16} />Create your first form
+            </Button>
           )}
         </div>
       ) : (
@@ -47,14 +49,16 @@ export function FormsPage() {
 
       <div className="absolute bottom-6 right-6 flex flex-col items-end gap-2">
         {canWrite && (
-          <Link to="/applications/$appId/forms/new" params={{ appId: appId ?? '' }}>
-            <Button className="rounded-full shadow-md"><Plus size={16} />Add Form</Button>
-          </Link>
+          <Button className="rounded-full shadow-md" onClick={() => setAddOpen(true)}>
+            <Plus size={16} />Add Form
+          </Button>
         )}
-        <Button variant="outline" className="rounded-full bg-white shadow-md" onClick={() => setHelpOpen(true)}>
+        <Button variant="outline" className="rounded-full bg-[hsl(var(--card))] shadow-md" onClick={() => setHelpOpen(true)}>
           <HelpCircle size={16} />What is a Form?
         </Button>
       </div>
+
+      <AddFormDialog appId={appId ?? ''} open={addOpen} onOpenChange={setAddOpen} />
 
       <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
         <DialogContent className="w-full max-w-md">

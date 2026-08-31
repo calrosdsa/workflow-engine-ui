@@ -39,12 +39,12 @@ export function AgentSelect({ value, onChange, placeholder }: AgentSelectProps) 
             aria-expanded={open}
             className={cn(
               'h-8 w-full justify-between gap-2 px-2.5 text-[13px] font-normal',
-              !value && 'text-slate-400',
-              isBroken && 'border-amber-300',
+              !value && 'text-[hsl(var(--muted-foreground))]',
+              isBroken && 'border-[hsl(var(--warning))]/50',
             )}
           >
             <span className="flex min-w-0 items-center gap-1.5">
-              <Bot size={13} className="shrink-0 text-slate-400" />
+              <Bot size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
               <span className="truncate">
                 {isLoading && !selected
                   ? 'Loading agents…'
@@ -55,7 +55,7 @@ export function AgentSelect({ value, onChange, placeholder }: AgentSelectProps) 
                       : (placeholder ?? 'Select an agent…')}
               </span>
             </span>
-            <ChevronsUpDown size={13} className="shrink-0 text-slate-400" />
+            <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -63,7 +63,7 @@ export function AgentSelect({ value, onChange, placeholder }: AgentSelectProps) 
             <CommandInput placeholder="Search agents…" />
             <CommandList>
               {isLoading ? (
-                <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-slate-400">
+                <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
                   <Loader2 size={13} className="animate-spin" /> Loading agents…
                 </div>
               ) : options.length === 0 ? (
@@ -79,7 +79,7 @@ export function AgentSelect({ value, onChange, placeholder }: AgentSelectProps) 
                         setOpen(false)
                       }}
                     >
-                      <Check size={14} className={cn('shrink-0', a.id === value ? 'opacity-100 text-indigo-600' : 'opacity-0')} />
+                      <Check size={14} className={cn('shrink-0', a.id === value ? 'opacity-100 text-[hsl(var(--primary))]' : 'opacity-0')} />
                       <span className="truncate">{a.name}</span>
                     </CommandItem>
                   ))}
@@ -91,24 +91,24 @@ export function AgentSelect({ value, onChange, placeholder }: AgentSelectProps) 
       </Popover>
 
       {value && (
-        <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+        <div className="flex items-center justify-between gap-2 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-2.5 py-1.5">
           <div className="flex min-w-0 items-center gap-1.5 text-[11px]">
             {isBroken ? (
               <>
-                <AlertTriangle size={12} className="shrink-0 text-amber-500" />
-                <span className="text-amber-700">Referenced agent is unavailable</span>
+                <AlertTriangle size={12} className="shrink-0 text-[hsl(var(--warning))]" />
+                <span className="text-[hsl(var(--warning))]">Referenced agent is unavailable</span>
               </>
             ) : (
               <>
-                <Bot size={12} className="shrink-0 text-slate-400" />
-                <span className="truncate text-slate-600">{selected?.name ?? value}</span>
+                <Bot size={12} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
+                <span className="truncate text-[hsl(var(--muted-foreground))]">{selected?.name ?? value}</span>
               </>
             )}
           </div>
           <button
             type="button"
             onClick={() => onChange(undefined)}
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
             title="Clear selection"
           >
             <X size={12} />
@@ -116,7 +116,7 @@ export function AgentSelect({ value, onChange, placeholder }: AgentSelectProps) 
         </div>
       )}
       {isBroken && (
-        <p className="text-[10px] text-amber-600">
+        <p className="text-[10px] text-[hsl(var(--warning))]">
           The stored reference (<span className="font-mono">{value}</span>) no longer matches an existing
           agent. It's preserved until you pick a new one.
         </p>

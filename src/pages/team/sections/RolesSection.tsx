@@ -74,7 +74,7 @@ export function RolesSection() {
             </Button>
             {!role.is_builtin && (
               <Button
-                variant="ghost" size="icon" title="Delete role" className="text-red-500 hover:bg-red-50 hover:text-red-700"
+                variant="ghost" size="icon" title="Delete role" className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
                 onClick={() => setDeleteTarget(role)}
               >
                 <Trash2 size={14} />
@@ -91,8 +91,8 @@ export function RolesSection() {
   if (!apps?.length) {
     return (
       <div className="p-6">
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-          <p className="text-gray-500">No applications yet — roles are created per app.</p>
+        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center">
+          <p className="text-[hsl(var(--muted-foreground))]">No applications yet — roles are created per app.</p>
         </div>
       </div>
     )
@@ -122,7 +122,7 @@ export function RolesSection() {
         </>
       )}
 
-      <p className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400">
+      <p className="border-t border-[hsl(var(--border))] px-4 py-3 text-xs text-[hsl(var(--muted-foreground))]">
         Platform roles (Super Admin, Owner, Editor, Viewer) aren't scoped to one app and don't
         appear in this list — grant Super Admin from a user's "Manage Access" panel on the Users tab.
       </p>

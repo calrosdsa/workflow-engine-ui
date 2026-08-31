@@ -44,8 +44,8 @@ export function HomePage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Applications</h1>
-          <p className="text-sm text-gray-500 mt-1">{appMemberships.length} application{appMemberships.length === 1 ? '' : 's'}</p>
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Applications</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">{appMemberships.length} application{appMemberships.length === 1 ? '' : 's'}</p>
         </div>
         {canCreateApp && (
           <Button onClick={() => setCreateOpen(true)} className="gap-1.5"><Plus size={16} />Add app</Button>
@@ -53,10 +53,10 @@ export function HomePage() {
       </div>
 
       {appMemberships.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-          <LayoutGrid size={32} className="text-gray-300 mb-3" />
-          <p className="text-gray-500">You don't have access to any application yet.</p>
-          <p className="mt-1 text-sm text-gray-400">Contact your administrator to request access.</p>
+        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center">
+          <LayoutGrid size={32} className="text-[hsl(var(--muted-foreground))]/60 mb-3" />
+          <p className="text-[hsl(var(--muted-foreground))]">You don't have access to any application yet.</p>
+          <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]/70">Contact your administrator to request access.</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -104,7 +104,7 @@ function CreateAppDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
 
         <div className="space-y-3 px-6 py-4">
           <div>
-            <Label className="mb-1 block text-xs font-medium text-gray-600">Name</Label>
+            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -114,7 +114,7 @@ function CreateAppDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
             />
           </div>
           {createMutation.isError && (
-            <p className="flex items-center gap-1 text-xs text-red-600"><AlertCircle size={13} />Failed to create application</p>
+            <p className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={13} />Failed to create application</p>
           )}
         </div>
 
@@ -151,12 +151,12 @@ function AppCard({ membership, onOpenRuntime, onOpenDesign }: {
                 onClick={(e) => { e.stopPropagation(); onOpenDesign() }}
                 title="Edit design"
                 aria-label="Edit design"
-                className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+                className="rounded-md p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--primary))]/10 hover:text-[hsl(var(--primary))]"
               >
                 <PencilRuler size={14} />
               </button>
             )}
-            <button onClick={onOpenRuntime} title="Open" aria-label="Open" className="rounded-md p-1 text-gray-300">
+            <button onClick={onOpenRuntime} title="Open" aria-label="Open" className="rounded-md p-1 text-[hsl(var(--muted-foreground))]/60">
               <ChevronRight size={16} />
             </button>
           </div>

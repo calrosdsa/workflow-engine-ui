@@ -1,6 +1,9 @@
 import { X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { cn } from '@/lib/utils'
 import { useDashboardStore, findWidget } from './store'
 import { getWidget } from './widget-registry'
 import type { WidgetChrome } from './schema'
@@ -32,25 +35,25 @@ export function WidgetSettingsDrawer({ clientId, appId }: WidgetSettingsDrawerPr
   const def = getWidget(instance.type)
 
   return (
-    <div className="flex h-full w-80 shrink-0 flex-col border-l border-slate-200 bg-white">
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3">
+    <div className="flex h-full w-80 shrink-0 flex-col border-l border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+      <div className="flex shrink-0 items-center justify-between border-b border-[hsl(var(--border))] px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
-          {def && <def.icon size={14} className="shrink-0 text-indigo-500" />}
-          <p className="truncate text-xs font-semibold text-slate-700">{def?.label ?? 'Unavailable widget'}</p>
+          {def && <def.icon size={14} className="shrink-0 text-[hsl(var(--primary))]" />}
+          <p className="truncate text-xs font-semibold text-[hsl(var(--foreground))]">{def?.label ?? 'Unavailable widget'}</p>
         </div>
-        <button
-          type="button"
+        <Button
+          variant="ghost" size="icon"
           onClick={() => selectWidget(null)}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          className="h-6 w-6 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
         >
           <X size={14} />
-        </button>
+        </Button>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="space-y-4 p-4">
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-slate-600">Tile title (optional)</label>
+            <Label className="mb-1 block text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Tile title (optional)</Label>
             <Input
               value={instance.title ?? ''}
               onChange={(e) => updateWidgetTitle(instance.id, e.target.value)}
@@ -60,16 +63,17 @@ export function WidgetSettingsDrawer({ clientId, appId }: WidgetSettingsDrawerPr
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[11px] font-medium text-slate-600">Tile style</label>
-            <div className="flex gap-1 rounded-md bg-slate-100 p-0.5">
+            <Label className="mb-1.5 block text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Tile style</Label>
+            <div className="flex gap-1 rounded-md bg-[hsl(var(--muted))] p-0.5">
               {(['card', 'plain'] as WidgetChrome[]).map((chrome) => (
                 <button
                   key={chrome}
                   type="button"
                   onClick={() => updateWidgetChrome(instance.id, chrome)}
-                  className={`flex-1 rounded px-2 py-1.5 text-[11px] font-medium capitalize transition-colors ${
-                    instance.chrome === chrome ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400'
-                  }`}
+                  className={cn(
+                    'flex-1 rounded px-2 py-1.5 text-[11px] font-medium capitalize transition-colors',
+                    instance.chrome === chrome ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]',
+                  )}
                 >
                   {chrome}
                 </button>
@@ -77,7 +81,7 @@ export function WidgetSettingsDrawer({ clientId, appId }: WidgetSettingsDrawerPr
             </div>
           </div>
 
-          <div className="h-px bg-slate-100" />
+          <div className="h-px bg-[hsl(var(--border))]" />
 
           {def ? (
             <def.ConfigPanel
@@ -87,7 +91,7 @@ export function WidgetSettingsDrawer({ clientId, appId }: WidgetSettingsDrawerPr
               appId={appId}
             />
           ) : (
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
               This widget's type ("{instance.type}") isn't registered, so it has no settings to show. Its position and data are preserved — you can still move, resize, or delete the tile.
             </p>
           )}

@@ -27,7 +27,7 @@ export function QuickLinksRenderer({ config, menus, onNavigate, mode }: WidgetRe
   const visibleLinks = config.links.filter((l) => isVisible(l, menus, mode))
 
   if (visibleLinks.length === 0) {
-    return <div className="flex h-full items-center justify-center p-3 text-xs text-slate-400">No links added yet.</div>
+    return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No links added yet.</div>
   }
 
   return (
@@ -49,16 +49,16 @@ function QuickLinkItem({
 }) {
   const Icon = link.kind === 'url' ? ExternalLink : FileText
   const itemClass = display === 'buttons'
-    ? 'inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/50'
-    : 'flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50'
+    ? 'inline-flex items-center gap-1.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2.5 py-1.5 text-xs font-medium text-[hsl(var(--foreground))] hover:border-[hsl(var(--primary))]/40 hover:bg-[hsl(var(--primary))]/5'
+    : 'flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]'
 
   if (link.kind === 'url' && link.url) {
     if (mode === 'builder') {
-      return <span className={itemClass}><Icon size={13} className="shrink-0 text-slate-400" />{link.label}</span>
+      return <span className={itemClass}><Icon size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />{link.label}</span>
     }
     return (
       <a href={link.url} target={link.newTab === false ? undefined : '_blank'} rel="noopener noreferrer" className={itemClass}>
-        <Icon size={13} className="shrink-0 text-slate-400" />{link.label}
+        <Icon size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />{link.label}
       </a>
     )
   }
@@ -69,7 +69,7 @@ function QuickLinkItem({
       className={itemClass}
       onClick={() => { if (mode === 'runtime' && link.menuSlug) onNavigate?.(link.menuSlug) }}
     >
-      <Icon size={13} className="shrink-0 text-slate-400" />{link.label}
+      <Icon size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />{link.label}
     </button>
   )
 }

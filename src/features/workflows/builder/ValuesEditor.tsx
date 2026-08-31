@@ -42,9 +42,9 @@ export function ValuesEditor({ values, fields, variables, nodeContext = [], onCh
   const removeValue = (id: string) => onChange(values.filter((v) => v.id !== id))
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-2.5">
+    <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-2.5">
       {values.length === 0 && (
-        <p className="px-1 py-2 text-center text-[11px] text-slate-400">No field values yet.</p>
+        <p className="px-1 py-2 text-center text-[11px] text-[hsl(var(--muted-foreground))]">No field values yet.</p>
       )}
 
       <div className="space-y-1.5">
@@ -61,7 +61,7 @@ export function ValuesEditor({ values, fields, variables, nodeContext = [], onCh
         ))}
       </div>
 
-      <Button variant="outline" size="sm" onClick={addValue} className="mt-2 h-7 w-full gap-1 border-dashed text-[11px] text-slate-500">
+      <Button variant="outline" size="sm" onClick={addValue} className="mt-2 h-7 w-full gap-1 border-dashed text-[11px] text-[hsl(var(--muted-foreground))]">
         <Plus size={12} /> Field value
       </Button>
     </div>
@@ -81,11 +81,11 @@ function ValueRow({ value, fields, variables, nodeContext, onChange, onRemove }:
   const selectedField = fields.find((f) => f.name === value.field)
 
   return (
-    <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white p-1.5">
+    <div className="flex items-center gap-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-1.5">
       <select
         value={value.field}
         onChange={(e) => onChange({ field: e.target.value })}
-        className="w-28 shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-indigo-400 focus:outline-none"
+        className="w-28 shrink-0 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-1.5 py-1 text-[11px] text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none"
       >
         <option value="">field…</option>
         {fields.map((f) => (
@@ -93,7 +93,7 @@ function ValueRow({ value, fields, variables, nodeContext, onChange, onRemove }:
         ))}
       </select>
 
-      <div className="flex shrink-0 gap-0.5 rounded-md bg-slate-100 p-0.5">
+      <div className="flex shrink-0 gap-0.5 rounded-md bg-[hsl(var(--muted))] p-0.5">
         {(['static', 'expression'] as const).map((m) => (
           <button
             key={m}
@@ -102,7 +102,7 @@ function ValueRow({ value, fields, variables, nodeContext, onChange, onRemove }:
             title={m === 'static' ? 'Value' : 'Expression'}
             className={cn(
               'rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors',
-              (value.value_mode ?? 'static') === m ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400',
+              (value.value_mode ?? 'static') === m ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]',
             )}
           >
             {m === 'static' ? 'Value' : 'Expr'}
@@ -116,12 +116,12 @@ function ValueRow({ value, fields, variables, nodeContext, onChange, onRemove }:
             value={value.expression ?? ''}
             onChange={(e) => onChange({ expression: e.target.value })}
             placeholder='Vars["name"]'
-            className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-2 py-1 font-mono text-[11px] text-slate-700 placeholder:text-slate-300 focus:outline-none"
+            className="min-w-0 flex-1 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2 py-1 font-mono text-[11px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/60 focus:outline-none"
           />
           <button
             onClick={() => setEditorOpen(true)}
             title="Open expression editor"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-slate-200 text-slate-400 hover:text-slate-600"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           >
             <Code2 size={12} />
           </button>
@@ -136,7 +136,7 @@ function ValueRow({ value, fields, variables, nodeContext, onChange, onRemove }:
         <select
           value={value.value == null ? '' : String(value.value)}
           onChange={(e) => onChange({ value: e.target.value })}
-          className="h-7 min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-2 text-[12px] text-slate-700 focus:border-indigo-400 focus:outline-none"
+          className="h-7 min-w-0 flex-1 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2 text-[12px] text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none"
         >
           <option value="">select…</option>
           {selectedField.enum_values.map((v) => (
@@ -154,7 +154,7 @@ function ValueRow({ value, fields, variables, nodeContext, onChange, onRemove }:
 
       <button
         onClick={onRemove}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-slate-300 hover:bg-red-50 hover:text-red-400"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
         title="Remove value"
       >
         <Trash2 size={11} />

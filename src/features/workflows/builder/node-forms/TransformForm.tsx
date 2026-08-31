@@ -40,7 +40,7 @@ export function TransformForm({ config, variables, nodeContext, onChange }: Tran
     <div className="space-y-4">
       {/* Source list */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Source List</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Source List</Label>
         <ExpressionField
           value={config.source_expr ?? ''}
           onChange={(v) => set({ source_expr: v })}
@@ -49,22 +49,22 @@ export function TransformForm({ config, variables, nodeContext, onChange }: Tran
           placeholder='e.g. NodeOutputs["fetch1"]["records"]'
           label="source list"
         />
-        <p className="text-[10px] text-slate-400">Must resolve to a list of records. Runs once per item.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Must resolve to a list of records. Runs once per item.</p>
       </div>
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       {/* Target form */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Target Form / Table</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Target Form / Table</Label>
         <FormReferenceSelect value={config.form_id || undefined} onChange={(id) => set({ form_id: id ?? '' })} />
       </div>
 
       {/* Field mappings */}
       <div className="space-y-2">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Field mappings</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Field mappings</Label>
         {!config.form_id ? (
-          <p className="rounded-lg border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-400">Select a target form to map fields.</p>
+          <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">Select a target form to map fields.</p>
         ) : (
           <ValuesEditor
             values={config.mappings}
@@ -74,12 +74,12 @@ export function TransformForm({ config, variables, nodeContext, onChange }: Tran
             onChange={(mappings) => set({ mappings: mappings as TransformFieldMap[] })}
           />
         )}
-        <p className="text-[10px] text-slate-400">
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
           Expressions evaluate per source item — reference the item's own fields directly (e.g. <span className="font-mono">Email</span>), not through <span className="font-mono">Vars</span>.
         </p>
       </div>
 
-      <p className="text-[10px] text-slate-400">
+      <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
         Outputs <span className="font-mono">records</span> (mapped to the target schema) and <span className="font-mono">count</span> to downstream nodes — chain into a Save Records node to write them.
       </p>
     </div>

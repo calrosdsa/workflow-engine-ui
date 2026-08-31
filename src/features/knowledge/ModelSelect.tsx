@@ -40,7 +40,7 @@ export function ModelSelect({ value, onChange, options, disabled, placeholder = 
           }
         }}
         disabled={disabled}
-        className="h-9 w-full rounded-md border border-gray-200 bg-white px-2.5 text-sm text-gray-700 disabled:opacity-50"
+        className="h-9 w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 text-sm text-[hsl(var(--foreground))] disabled:opacity-50"
       >
         {options.map((m) => (
           <option key={m} value={m}>{m}</option>

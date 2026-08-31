@@ -30,21 +30,21 @@ export function EmbedConfigPanel({ value, onChange, integrationId, onIntegration
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-slate-600">Webpage URL</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Webpage URL</Label>
         <Input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="https://example.com"
           className="h-8 text-sm"
         />
-        <p className="text-[10px] text-slate-400">
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
           Some sites block embedding and won't display here even with a valid URL — end users will see a
           fallback "open in a new tab" link for those.
         </p>
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-slate-600">Pass through identity (SSO)</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Pass through identity (SSO)</Label>
         <SelectMenu
           value={integrationId ?? '__none__'}
           onValueChange={(v) => onIntegrationChange(v === '__none__' ? undefined : v)}
@@ -57,7 +57,7 @@ export function EmbedConfigPanel({ value, onChange, integrationId, onIntegration
             ))}
           </SelectContent>
         </SelectMenu>
-        <p className="text-[10px] text-slate-400">
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
           {ssoIntegrations.length === 0
             ? 'No integrations are configured for signed launch yet — add one in App Settings.'
             : "The selected integration's shared secret must match what the embedded page verifies against. Also applies on the mobile app."}
@@ -65,11 +65,11 @@ export function EmbedConfigPanel({ value, onChange, integrationId, onIntegration
       </div>
 
       {value ? (
-        <div className="overflow-hidden rounded-md border border-slate-200">
+        <div className="overflow-hidden rounded-md border border-[hsl(var(--border))]">
           <iframe key={value} src={value} title="Embed preview" className="h-64 w-full" />
         </div>
       ) : (
-        <div className="flex h-32 items-center justify-center rounded-md border border-dashed border-slate-200 bg-slate-50 text-[11px] text-slate-400">
+        <div className="flex h-32 items-center justify-center rounded-md border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))] text-[11px] text-[hsl(var(--muted-foreground))]">
           Enter a URL to preview it here
         </div>
       )}

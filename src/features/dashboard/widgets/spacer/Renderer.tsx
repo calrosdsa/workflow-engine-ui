@@ -8,7 +8,7 @@ export function SpacerRenderer({ config, mode }: WidgetRendererProps<SpacerWidge
   return (
     <div
       style={{ height: config.height }}
-      className={mode === 'builder' ? 'w-full rounded border border-dashed border-slate-200' : 'w-full'}
+      className={mode === 'builder' ? 'w-full rounded border border-dashed border-[hsl(var(--border))]' : 'w-full'}
       aria-hidden
     />
   )

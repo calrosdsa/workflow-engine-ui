@@ -1,8 +1,9 @@
 import { resolveRecordTitle } from '@/features/forms/runtime/record-title'
-import { formatValue, formatSystemDatetime } from '@/features/forms/runtime/format-value'
+import { formatFieldValue, formatSystemDatetime } from '@/features/forms/runtime/format-value'
 import { RoleValueLabel } from '@/features/forms/runtime/RoleValueLabel'
 import { resolveEnumLabel } from '@/features/forms/runtime/enum-labels'
 import { FileCellDisplay } from '@/features/forms/runtime/FileCellDisplay'
+import { ReferenceValueLabel } from '@/features/forms/runtime/ReferenceValueLabel'
 import type { FieldDef, FormRecord } from '@/features/forms/types'
 
 interface CardLayoutProps {
@@ -71,7 +72,9 @@ export function CardLayout({ records, fields, columns, roleField, enumLabels, on
                         ? resolveEnumLabel(enumLabels ?? new Map(), f.name, r[f.name])
                         : f.type === 'file'
                         ? <FileCellDisplay value={r[f.name]} />
-                        : formatValue(r[f.name])}
+                        : f.type === 'reference'
+                        ? <ReferenceValueLabel formId={f.reference_table} recordId={r[f.name]} displayField={f.display_field} />
+                        : formatFieldValue(r[f.name], f.type)}
                     </span>
                   </div>
                 ))}

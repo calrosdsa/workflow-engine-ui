@@ -2,8 +2,10 @@ import { nanoid } from '@/features/workflows/builder/nanoid'
 import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenceSelect'
 import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuilder'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useForm } from '@/features/forms/hooks'
+import { ColumnsPicker } from '../saved-views/ColumnsPicker'
 import type { Menu, SearchMenuConfig, FilterGroup, SortRule } from '../types'
 
 interface SearchMenuConfigPanelProps {
@@ -36,17 +38,11 @@ export function SearchMenuConfigPanel({ menu, onChange }: SearchMenuConfigPanelP
 
   const patch = (p: Partial<SearchMenuConfig>) => onChange({ ...config, ...p })
 
-  const toggleColumn = (fieldName: string, checked: boolean) => {
-    const columns = checked
-      ? [...config.columns, fieldName]
-      : config.columns.filter((c) => c !== fieldName)
-    patch({ columns })
-  }
 
   return (
     <div className="space-y-4">
       <div>
-        <label className="mb-1 block text-xs font-medium text-gray-600">Target form</label>
+        <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Target form</Label>
         <FormReferenceSelect
           value={config.form_id}
           onChange={(formId) => patch({ form_id: formId ?? '', columns: [] })}
@@ -55,27 +51,41 @@ export function SearchMenuConfigPanel({ menu, onChange }: SearchMenuConfigPanelP
 
       {form && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Visible columns</label>
-          <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-slate-200 p-2">
-            {form.fields.map((f) => (
-              <label key={f.name} className="flex items-center gap-2 text-[12px] text-slate-700">
-                <Checkbox
-                  checked={config.columns.includes(f.name)}
-                  onCheckedChange={(checked) => toggleColumn(f.name, checked === true)}
-                />
-                {f.label || f.name}
-              </label>
-            ))}
-            {form.fields.length === 0 && (
-              <p className="text-[11px] text-slate-400">This form has no data fields yet.</p>
-            )}
-          </div>
+          <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Columns</Label>
+          {form.fields.length === 0 ? (
+            <p className="rounded-md border border-[hsl(var(--border))] p-2 text-[11px] text-[hsl(var(--muted-foreground))]">
+              This form has no data fields yet.
+            </p>
+          ) : (
+            <>
+              {/* ColumnsPicker, not a local checkbox list. It already does
+                  exactly this job for saved views at runtime — drag to
+                  reorder, eye to show/hide — and its own contract is written
+                  against SearchMenuConfig.columns' convention, so it drops in
+                  unchanged. Reusing it also fixes a real mismatch the
+                  checkbox list had: RecordsTable treats an EMPTY columns list
+                  as "show every field" (visibleColumns' fallback), while the
+                  checkboxes rendered it as "nothing selected" — so a menu
+                  that had never had its columns touched showed zero ticks in
+                  the builder and every column at runtime. ColumnsPicker
+                  resolves empty to the explicit full list, so what you see
+                  here is what the runtime renders. */}
+              <ColumnsPicker
+                fields={form.fields}
+                columns={config.columns}
+                onChange={(columns) => patch({ columns })}
+              />
+              <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
+                Drag to set the order columns appear in. Viewers can reorder their own view without changing this default.
+              </p>
+            </>
+          )}
         </div>
       )}
 
       {form && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Default filter</label>
+          <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Default filter</Label>
           <FilterBuilder
             group={ensureGroupIds(config.default_filter)}
             fields={form.fields}
@@ -87,7 +97,7 @@ export function SearchMenuConfigPanel({ menu, onChange }: SearchMenuConfigPanelP
 
       {form && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Default sort</label>
+          <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Default sort</Label>
           <SortRuleList
             rules={ensureSortIds(config.default_sort)}
             fields={form.fields.map((f) => ({ name: f.name, label: f.label }))}
@@ -97,7 +107,7 @@ export function SearchMenuConfigPanel({ menu, onChange }: SearchMenuConfigPanelP
       )}
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-gray-600">Page size</label>
+        <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Page size</Label>
         <Input
           type="number"
           min={1}
@@ -125,27 +135,25 @@ function SortRuleList({ rules, fields, onChange }: {
     <div className="space-y-1.5">
       {rules.map((r) => (
         <div key={r.id} className="flex items-center gap-1.5">
-          <select
-            value={r.field}
-            onChange={(e) => updateRule(r.id, { field: e.target.value })}
-            className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700"
-          >
-            {fields.map((f) => (
-              <option key={f.name} value={f.name}>{f.label || f.name}</option>
-            ))}
-          </select>
-          <select
-            value={r.dir}
-            onChange={(e) => updateRule(r.id, { dir: e.target.value as 'asc' | 'desc' })}
-            className="shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700"
-          >
-            <option value="asc">Ascending</option>
-            <option value="desc">Descending</option>
-          </select>
+          <SelectMenu value={r.field} onValueChange={(v) => updateRule(r.id, { field: v })}>
+            <SelectTrigger className="h-7 min-w-0 flex-1 text-[11px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {fields.map((f) => (
+                <SelectItem key={f.name} value={f.name} className="text-xs">{f.label || f.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </SelectMenu>
+          <SelectMenu value={r.dir} onValueChange={(v) => updateRule(r.id, { dir: v as 'asc' | 'desc' })}>
+            <SelectTrigger className="h-7 w-32 shrink-0 text-[11px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="asc" className="text-xs">Ascending</SelectItem>
+              <SelectItem value="desc" className="text-xs">Descending</SelectItem>
+            </SelectContent>
+          </SelectMenu>
           <button
             type="button"
             onClick={() => removeRule(r.id)}
-            className="shrink-0 rounded px-1.5 py-1 text-[11px] text-slate-400 hover:text-red-500"
+            className="shrink-0 rounded px-1.5 py-1 text-[11px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]"
           >
             ✕
           </button>
@@ -154,7 +162,7 @@ function SortRuleList({ rules, fields, onChange }: {
       <button
         type="button"
         onClick={addRule}
-        className="w-full rounded-md border border-dashed border-slate-200 py-1 text-[11px] text-slate-500 hover:border-slate-300"
+        className="w-full rounded-md border border-dashed border-[hsl(var(--border))] py-1 text-[11px] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--muted-foreground))]/40"
       >
         + Sort rule
       </button>

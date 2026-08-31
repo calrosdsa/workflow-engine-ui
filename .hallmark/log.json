@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-08-29",
+    "scope": "app",
+    "macrostructure": "Dashboard-Workbench / canvas+rail (per design.md family)",
+    "theme": "studied-DNA (source: docs/design/ragflow-dna.md)",
+    "enrichment": "none",
+    "brief": "App Builder full-app redesign, screen 1 of N: Knowledge Base list + detail + global AppShell/Sidebar retone"
+  }
+]

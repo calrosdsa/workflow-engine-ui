@@ -32,7 +32,7 @@ export function AppShell() {
     // (RuntimeAppShell.tsx), used everywhere in the runtime bundle. Mirrors
     // that exact pattern here: fixed on desktop, a dismissible overlay
     // triggered by a mobile-only header below `md`.
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-[hsl(var(--background))]">
       <div className="hidden md:block">
         <Sidebar />
       </div>
@@ -50,13 +50,13 @@ export function AppShell() {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b bg-white px-4">
+        <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4">
           <div className="flex min-w-0 items-center gap-3">
             <button
               onClick={() => setMobileNavOpen((o) => !o)}
               aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
               aria-expanded={mobileNavOpen}
-              className="-ml-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 md:hidden"
+              className="-ml-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] md:hidden"
             >
               {mobileNavOpen ? <X size={18} /> : <MenuIcon size={18} />}
             </button>

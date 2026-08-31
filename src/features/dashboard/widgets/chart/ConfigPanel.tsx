@@ -50,12 +50,12 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-slate-600">Form</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Form</Label>
         <FormReferenceSelect value={config.formId} onChange={(formId) => patch({ formId: formId ?? '' })} />
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-slate-600">Chart type</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Chart type</Label>
         <div className="grid grid-cols-5 gap-1">
           {CHART_TYPE_OPTIONS.map(({ value, label, icon: Icon }) => (
             <button
@@ -63,7 +63,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
               type="button"
               onClick={() => patch({ chartType: value })}
               className={`flex flex-col items-center gap-1 rounded-md border py-1.5 text-[10px] font-medium transition-colors ${
-                config.chartType === value ? 'border-indigo-300 bg-indigo-50 text-indigo-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                config.chartType === value ? 'border-[hsl(var(--primary))]/40 bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]' : 'border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]'
               }`}
               title={label}
             >
@@ -76,7 +76,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
 
       {form && needsGroupBy && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-medium text-slate-600">Group by</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Group by</Label>
           <FieldSelect
             fields={fields}
             value={config.groupBy?.field ?? ''}
@@ -93,7 +93,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
 
       {form && needsGroupBy && supportsGroupBy2 && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-medium text-slate-600">Split by (optional 2nd dimension)</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Split by (optional 2nd dimension)</Label>
           <FieldSelect
             fields={fields}
             value={config.groupBy2?.field ?? ''}
@@ -106,11 +106,11 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
       {form && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label className="text-[11px] font-medium text-slate-600">
+            <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
               {config.chartType === 'stat' ? 'Value' : 'Series'}
             </Label>
             {config.chartType !== 'stat' && (
-              <button type="button" onClick={addSeries} className="flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-700">
+              <button type="button" onClick={addSeries} className="flex items-center gap-1 text-[11px] text-[hsl(var(--primary))] hover:brightness-110">
                 <Plus size={11} /> Add series
               </button>
             )}
@@ -125,7 +125,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
             />
           ))}
           {config.series.length === 0 && (
-            <p className="rounded-md border border-dashed border-slate-200 p-2 text-center text-[10px] text-slate-400">
+            <p className="rounded-md border border-dashed border-[hsl(var(--border))] p-2 text-center text-[10px] text-[hsl(var(--muted-foreground))]">
               No series — defaults to a plain count.
             </p>
           )}
@@ -134,7 +134,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
 
       {form && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-medium text-slate-600">Filter</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Filter</Label>
           <FilterBuilder
             group={config.filter ?? newGroup()}
             fields={form.fields}
@@ -147,7 +147,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
       {needsGroupBy && (
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-medium text-slate-600">Sort by</Label>
+            <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Sort by</Label>
             <SelectMenu value={config.sortBy} onValueChange={(v) => patch({ sortBy: v as ChartWidgetConfig['sortBy'] })}>
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -157,7 +157,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
             </SelectMenu>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-medium text-slate-600">Direction</Label>
+            <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Direction</Label>
             <SelectMenu value={config.sortDir} onValueChange={(v) => patch({ sortDir: v as ChartWidgetConfig['sortDir'] })}>
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -171,20 +171,20 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
 
       {needsGroupBy && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-medium text-slate-600">Max groups shown</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Max groups shown</Label>
           <Input type="number" min={1} max={200} value={config.limit} onChange={(e) => patch({ limit: Number(e.target.value) || 20 })} className="h-8 w-24 text-sm" />
         </div>
       )}
 
       {config.chartType !== 'pie' && (
-        <label className="flex items-center gap-2 text-[12px] text-slate-700">
+        <Label className="flex items-center gap-2 text-[12px] font-normal text-[hsl(var(--foreground))]">
           <Checkbox checked={config.legend} onCheckedChange={(c) => patch({ legend: c === true })} />
           Show legend
-        </label>
+        </Label>
       )}
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-slate-600">Auto-refresh (seconds, optional)</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Auto-refresh (seconds, optional)</Label>
         <Input
           type="number"
           min={5}
@@ -197,8 +197,8 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
 
       {form && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-medium text-slate-600">Preview</Label>
-          <div className="h-48 rounded-md border border-slate-200 bg-white">
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Preview</Label>
+          <div className="h-48 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
             <ChartRenderer
               config={config}
               instance={{ id: 'preview', type: 'chart', layout: { x: 0, y: 0, w: 1, h: 1 }, chrome: 'plain', config }}
@@ -253,7 +253,7 @@ function SeriesEditor({ series, numericFields, onChange, onRemove }: {
   onRemove?: () => void
 }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-md border border-slate-200 p-2">
+    <div className="flex items-center gap-1.5 rounded-md border border-[hsl(var(--border))] p-2">
       <SelectMenu value={series.fn} onValueChange={(v) => onChange({ fn: v as AggregateFn, field: v === 'count' ? undefined : series.field })}>
         <SelectTrigger className="h-7 flex-1 text-xs"><SelectValue /></SelectTrigger>
         <SelectContent>
@@ -274,7 +274,7 @@ function SeriesEditor({ series, numericFields, onChange, onRemove }: {
         </SelectMenu>
       )}
       {onRemove && (
-        <button type="button" onClick={onRemove} className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-600">
+        <button type="button" onClick={onRemove} className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]">
           <Trash2 size={12} />
         </button>
       )}

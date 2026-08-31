@@ -71,7 +71,7 @@ export function ViewSwitcher({ appId, menuId, fields, enumLabels, views, activeV
           {myViews.length > 0 && (
             <>
               <DropdownMenuSeparator />
-              <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-slate-400">My Views</div>
+              <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">My Views</div>
               <DropdownMenuGroup>
                 {myViews.map((v) => (
                   <ViewRow key={v.id} view={v} active={activeView?.id === v.id} onSelect={() => onSelect(v)}
@@ -85,7 +85,7 @@ export function ViewSwitcher({ appId, menuId, fields, enumLabels, views, activeV
           {sharedViews.length > 0 && (
             <>
               <DropdownMenuSeparator />
-              <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-slate-400">Shared Views</div>
+              <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Shared Views</div>
               <DropdownMenuGroup>
                 {sharedViews.map((v) => (
                   <ViewRow key={v.id} view={v} active={activeView?.id === v.id} onSelect={() => onSelect(v)}
@@ -160,16 +160,16 @@ function ViewRow({ view, active, onSelect, onEdit, onDelete }: {
         <span className="flex items-center gap-2 truncate">
           <Icon size={13} className="shrink-0" />
           <span className="truncate">{view.name}</span>
-          {active && <span className="text-[10px] text-slate-400">(current)</span>}
+          {active && <span className="text-[10px] text-[hsl(var(--muted-foreground))]">(current)</span>}
         </span>
-        {view.is_default && <Star size={11} className="shrink-0 fill-current text-amber-400" />}
+        {view.is_default && <Star size={11} className="shrink-0 fill-current text-[hsl(var(--warning))]" />}
       </DropdownMenuItem>
       {view.can_manage && (
         <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100">
           <button onClick={(e) => { e.stopPropagation(); onEdit() }} className="rounded p-1 hover:bg-[hsl(var(--muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1" title="Edit view">
             <Pencil size={11} />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); onDelete() }} className="rounded p-1 text-red-500 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1" title="Delete view">
+          <button onClick={(e) => { e.stopPropagation(); onDelete() }} className="rounded p-1 text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1" title="Delete view">
             <Trash2 size={11} />
           </button>
         </div>

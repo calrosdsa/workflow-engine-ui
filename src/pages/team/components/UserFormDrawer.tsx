@@ -3,7 +3,9 @@ import { Trash2 } from 'lucide-react'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { Spinner } from '@/components/ui/spinner'
 import { useApps } from '@/features/applications/hooks'
 import { useRoles } from '@/features/roles/hooks'
@@ -190,13 +192,13 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
 
         {result ? (
           <div className="flex-1 space-y-4 p-6">
-            <p className="text-sm text-emerald-700">{result}</p>
+            <p className="text-sm text-[hsl(var(--success))]">{result}</p>
           </div>
         ) : (
           <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-6">
             {!isManageAccess && (
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Email address *</label>
+                <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Email address *</Label>
                 <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter user's email address." />
               </div>
             )}
@@ -204,11 +206,11 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
             {isManageAccess && existingUser && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">First name</label>
+                  <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">First name</Label>
                   <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First name" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">Last name</label>
+                  <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Last name</Label>
                   <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last name" />
                 </div>
               </div>
@@ -216,28 +218,26 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
 
             {isManageAccess && existingUser && (
               <div>
-                <p className="mb-2 text-xs font-medium text-gray-600">Current access</p>
+                <p className="mb-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">Current access</p>
                 {existingUser.memberships.length === 0 ? (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-[hsl(var(--muted-foreground))]">
                     {existingUser.is_super_admin ? 'Super Admin grants access to every app.' : 'No app access yet.'}
                   </p>
                 ) : (
                   <div className="space-y-1">
                     {existingUser.memberships.map((m) => (
-                      <div key={m.app_id} className="flex items-center justify-between gap-2 rounded-md border border-gray-200 px-3 py-1.5 text-sm">
-                        <span className="text-gray-800">{m.app_name}</span>
+                      <div key={m.app_id} className="flex items-center justify-between gap-2 rounded-md border border-[hsl(var(--border))] px-3 py-1.5 text-sm">
+                        <span className="text-[hsl(var(--foreground))]">{m.app_name}</span>
                         <div className="flex items-center gap-1">
-                          <select
+                          <RoleSelect
+                            appId={m.app_id}
                             value={roleEditByApp[m.app_id] ?? m.role_id}
-                            onChange={(e) => setRoleEditByApp((prev) => ({ ...prev, [m.app_id]: e.target.value }))}
+                            onChange={(roleId) => setRoleEditByApp((prev) => ({ ...prev, [m.app_id]: roleId }))}
                             disabled={grantingSuperAdmin}
-                            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 disabled:opacity-50"
-                          >
-                            <RoleOptions appId={m.app_id} />
-                          </select>
+                          />
                           <Button
                             variant="ghost" size="icon" title="Remove access to this app"
-                            className="text-red-500 hover:bg-red-50 hover:text-red-700"
+                            className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
                             disabled={revokeAppAccessMutation.isPending}
                             onClick={() => handleRemoveGrant(m.app_id)}
                           >
@@ -253,11 +253,11 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
 
             {isManageAccess && (
               <div>
-                <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-800">
+                <Label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[hsl(var(--foreground))]">
                   <Checkbox checked={grantingSuperAdmin} onCheckedChange={(c) => setGrantingSuperAdmin(c === true)} />
                   Is a Super Admin?
-                </label>
-                <p className="mt-1 pl-6 text-xs text-gray-500">
+                </Label>
+                <p className="mt-1 pl-6 text-xs text-[hsl(var(--muted-foreground))]">
                   Grant full administrative access, enabling management of users, roles, app creation, and marketplace templates.
                 </p>
               </div>
@@ -265,21 +265,21 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
 
             {!grantingSuperAdmin && (
               <div>
-                <p className="mb-2 text-xs font-medium text-gray-600">
+                <p className="mb-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">
                   {isManageAccess ? 'Add access to another app' : 'Select App and Role'}
                 </p>
                 {selectableApps.length === 0 ? (
-                  <p className="text-xs text-gray-400">Already has access to every app.</p>
+                  <p className="text-xs text-[hsl(var(--muted-foreground))]">Already has access to every app.</p>
                 ) : (
                   <>
-                    <label className="mb-2 flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-800">
+                    <Label className="mb-2 flex cursor-pointer items-center gap-2 text-sm font-medium text-[hsl(var(--foreground))]">
                       <Checkbox
                         checked={allSelected ? true : someSelected ? 'indeterminate' : false}
                         onCheckedChange={(c) => toggleAllApps(c === true)}
                       />
                       Select All Apps
-                    </label>
-                    <div className="space-y-1 border-l border-gray-200 pl-3">
+                    </Label>
+                    <div className="space-y-1 border-l border-[hsl(var(--border))] pl-3">
                       {selectableApps.map((app) => (
                         <AppRoleRow
                           key={app.id}
@@ -296,7 +296,7 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
               </div>
             )}
 
-            {error && <p className="text-xs text-red-600">{error}</p>}
+            {error && <p className="text-xs text-[hsl(var(--destructive))]">{error}</p>}
           </div>
         )}
 
@@ -307,7 +307,6 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
             <>
               <Button variant="outline" onClick={handleClose}>Cancel</Button>
               <Button
-                className="bg-emerald-500 text-white hover:bg-emerald-600"
                 onClick={handleSubmit}
                 disabled={isSaving}
               >
@@ -333,33 +332,41 @@ function AppRoleRow({ app, checked, roleId, onToggle, onRoleChange }: {
 
   return (
     <div className="py-1">
-      <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+      <Label className="flex cursor-pointer items-center gap-2 text-sm font-normal text-[hsl(var(--foreground))]">
         <Checkbox checked={checked} onCheckedChange={(c) => onToggle(c === true)} />
         {app.name}
-      </label>
+      </Label>
       {checked && (
-        <select
-          value={roleId}
-          onChange={(e) => onRoleChange(e.target.value)}
-          className="mt-1.5 w-full max-w-xs rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700"
-        >
-          <option value="">Select role…</option>
-          {(roles ?? []).map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
-        </select>
+        <SelectMenu value={roleId || '__none__'} onValueChange={(v) => onRoleChange(v === '__none__' ? '' : v)}>
+          <SelectTrigger className="mt-1.5 h-8 w-full max-w-xs text-sm"><SelectValue placeholder="Select role…" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__" className="text-xs">Select role…</SelectItem>
+            {(roles ?? []).map((role) => <SelectItem key={role.id} value={role.id} className="text-xs">{role.name}</SelectItem>)}
+          </SelectContent>
+        </SelectMenu>
       )}
     </div>
   )
 }
 
-/** Bare <option> list for reassigning an EXISTING membership's role inline
- *  (used inside a <select> the parent already renders) — a separate
- *  component so useRoles(appId) is only called for apps that actually have
- *  an existing grant row, not for every selectable app up front. */
-function RoleOptions({ appId }: { appId: string }) {
+/** Role reassignment dropdown for an EXISTING membership row — same
+ *  SelectMenu-per-appId shape as AppRoleRow's own role picker above, kept as
+ *  a separate component so useRoles(appId) is only called for apps that
+ *  actually have an existing grant row, not for every selectable app up
+ *  front. */
+function RoleSelect({ appId, value, onChange, disabled }: {
+  appId: string
+  value: string
+  onChange: (roleId: string) => void
+  disabled?: boolean
+}) {
   const { data: roles } = useRoles(appId)
   return (
-    <>
-      {(roles ?? []).map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
-    </>
+    <SelectMenu value={value} onValueChange={onChange} disabled={disabled}>
+      <SelectTrigger className="h-7 w-32 text-xs"><SelectValue /></SelectTrigger>
+      <SelectContent>
+        {(roles ?? []).map((role) => <SelectItem key={role.id} value={role.id} className="text-xs">{role.name}</SelectItem>)}
+      </SelectContent>
+    </SelectMenu>
   )
 }

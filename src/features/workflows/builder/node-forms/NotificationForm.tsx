@@ -22,16 +22,16 @@ export function normaliseNotificationConfig(raw: unknown): NotificationConfig {
 }
 
 const SEVERITIES: { value: NotificationSeverity; label: string; activeClass: string }[] = [
-  { value: 'success', label: 'Success', activeClass: 'bg-emerald-500 text-white' },
-  { value: 'error',   label: 'Error',   activeClass: 'bg-red-500 text-white' },
-  { value: 'warning', label: 'Warning', activeClass: 'bg-amber-500 text-white' },
-  { value: 'info',    label: 'Info',    activeClass: 'bg-sky-500 text-white' },
+  { value: 'success', label: 'Success', activeClass: 'bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))]' },
+  { value: 'error',   label: 'Error',   activeClass: 'bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))]' },
+  { value: 'warning', label: 'Warning', activeClass: 'bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))]' },
+  { value: 'info',    label: 'Info',    activeClass: 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]' },
 ]
 
 // Same visual language as HttpRequestForm's ModeToggle/StaticOrExprField.
 function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMode) => void }) {
   return (
-    <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+    <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
       {(['static', 'expression'] as const).map((m) => (
         <button
           key={m}
@@ -39,7 +39,7 @@ function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMo
           onClick={() => onChange(m)}
           className={cn(
             'flex-1 rounded-md py-1 text-[11px] font-medium transition-colors',
-            mode === m ? 'bg-fuchsia-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700',
+            mode === m ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
           )}
         >
           {m === 'static' ? 'Static' : 'Expression'}
@@ -63,7 +63,7 @@ export function NotificationForm({ config, variables, nodeContext, onChange }: N
     <div className="space-y-4">
       {/* Recipient */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Recipient</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Recipient</Label>
         <ModeToggle mode={config.recipient_mode} onChange={(m) => set({ recipient_mode: m })} />
         {config.recipient_mode === 'expression' ? (
           <ExpressionField
@@ -80,17 +80,17 @@ export function NotificationForm({ config, variables, nodeContext, onChange }: N
             onChange={(userId) => set({ recipient_user_id: userId })}
           />
         )}
-        <p className="text-[10px] text-slate-400">
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
           Who receives this notification — a specific person, or an expression resolving to a user id (e.g. a record's assigned user).
         </p>
       </div>
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       {/* Severity */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Severity</Label>
-        <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Severity</Label>
+        <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
           {SEVERITIES.map((s) => (
             <button
               key={s.value}
@@ -98,7 +98,7 @@ export function NotificationForm({ config, variables, nodeContext, onChange }: N
               onClick={() => set({ severity: s.value })}
               className={cn(
                 'flex-1 rounded-md py-1 text-[11px] font-medium transition-colors',
-                config.severity === s.value ? `${s.activeClass} shadow-sm` : 'text-slate-500 hover:text-slate-700',
+                config.severity === s.value ? `${s.activeClass} shadow-sm` : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
               )}
             >
               {s.label}
@@ -109,7 +109,7 @@ export function NotificationForm({ config, variables, nodeContext, onChange }: N
 
       {/* Title */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Title</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Title</Label>
         <Input
           value={config.title}
           onChange={(e) => set({ title: e.target.value })}
@@ -120,29 +120,29 @@ export function NotificationForm({ config, variables, nodeContext, onChange }: N
 
       {/* Body */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Body (optional)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Body (optional)</Label>
         <div className="relative">
-          <Bell size={11} className="absolute left-2.5 top-2.5 text-fuchsia-400" />
+          <Bell size={11} className="absolute left-2.5 top-2.5 text-[hsl(var(--primary))]" />
           <textarea
             value={config.body ?? ''}
             onChange={(e) => set({ body: e.target.value })}
             rows={3}
             placeholder="You have a new task waiting for review."
-            className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 py-2 pl-7 pr-3 text-[12px] text-slate-700 placeholder:text-slate-300 focus:border-fuchsia-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-fuchsia-100"
+            className="w-full resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))] py-2 pl-7 pr-3 text-[12px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/60 focus:border-[hsl(var(--primary))] focus:bg-[hsl(var(--card))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
           />
         </div>
       </div>
 
       {/* Link URL */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Link URL (optional)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Link URL (optional)</Label>
         <Input
           value={config.link_url ?? ''}
           onChange={(e) => set({ link_url: e.target.value })}
           placeholder="/tasks/123"
           className="h-8 font-mono text-[12px]"
         />
-        <p className="text-[10px] text-slate-400">
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
           In-app path opened when the recipient clicks this notification.
         </p>
       </div>

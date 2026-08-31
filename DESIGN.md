@@ -1,279 +1,302 @@
----
-name: App Builder
-description: Multi-tenant low-code admin console for designing forms, workflows, dashboards, and menus
-colors:
-  primary: "hsl(221.2 83.2% 53.3%)"
-  primary-foreground: "hsl(210 40% 98%)"
-  secondary: "hsl(210 40% 96.1%)"
-  secondary-foreground: "hsl(222.2 47.4% 11.2%)"
-  accent: "hsl(210 40% 96.1%)"
-  accent-foreground: "hsl(222.2 47.4% 11.2%)"
-  muted: "hsl(210 40% 96.1%)"
-  muted-foreground: "hsl(215.4 16.3% 46.9%)"
-  destructive: "hsl(0 84.2% 60.2%)"
-  destructive-foreground: "hsl(210 40% 98%)"
-  success: "hsl(142 71% 45%)"
-  success-foreground: "hsl(355 100% 97%)"
-  warning: "hsl(38 92% 50%)"
-  warning-foreground: "hsl(48 96% 12%)"
-  background: "hsl(0 0% 100%)"
-  foreground: "hsl(222.2 84% 4.9%)"
-  card: "hsl(0 0% 100%)"
-  card-foreground: "hsl(222.2 84% 4.9%)"
-  border: "hsl(214.3 31.8% 91.4%)"
-  ring: "hsl(221.2 83.2% 53.3%)"
-  node-trigger: "#10b981"
-  node-condition: "#f59e0b"
-  node-subflow: "#8b5cf6"
-  node-data: "#3b82f6"
-  node-notify: "#f43f5e"
-  node-knowledge: "#06b6d4"
-typography:
-  dialog-title:
-    fontFamily: "system-ui, sans-serif"
-    fontSize: "15px"
-    fontWeight: 600
-    lineHeight: 1.3
-    letterSpacing: "normal"
-  title:
-    fontFamily: "system-ui, sans-serif"
-    fontSize: "13px"
-    fontWeight: 600
-    lineHeight: 1.3
-    letterSpacing: "normal"
-  body:
-    fontFamily: "system-ui, sans-serif"
-    fontSize: "14px"
-    fontWeight: 400
-    lineHeight: 1.5
-    letterSpacing: "normal"
-  body-compact:
-    fontFamily: "system-ui, sans-serif"
-    fontSize: "12px"
-    fontWeight: 400
-    lineHeight: 1.4
-    letterSpacing: "normal"
-  label:
-    fontFamily: "system-ui, sans-serif"
-    fontSize: "11px"
-    fontWeight: 600
-    lineHeight: 1.3
-    letterSpacing: "0.05em"
-  caption:
-    fontFamily: "system-ui, sans-serif"
-    fontSize: "10px"
-    fontWeight: 400
-    lineHeight: 1.3
-    letterSpacing: "normal"
-  micro:
-    fontFamily: "system-ui, sans-serif"
-    fontSize: "9px"
-    fontWeight: 600
-    lineHeight: 1.2
-    letterSpacing: "0.03em"
-rounded:
-  chip: "0.25rem"
-  control: "0.5rem"
-  card: "0.5rem"
-  dialog: "1rem"
-  pill: "9999px"
-spacing:
-  xs: "4px"
-  sm: "8px"
-  md: "12px"
-  lg: "16px"
-  xl: "24px"
-components:
-  button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.primary-foreground}"
-    rounded: "{rounded.control}"
-    padding: "8px 16px"
-  button-primary-hover:
-    backgroundColor: "{colors.primary}"
-  button-outline:
-    backgroundColor: "{colors.background}"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.control}"
-    padding: "8px 16px"
-  button-outline-hover:
-    backgroundColor: "{colors.accent}"
-    textColor: "{colors.accent-foreground}"
-  badge-default:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.primary}"
-    rounded: "{rounded.pill}"
-    padding: "2px 10px"
-  badge-destructive:
-    backgroundColor: "{colors.destructive}"
-    textColor: "{colors.destructive}"
-    rounded: "{rounded.pill}"
-    padding: "2px 10px"
-  badge-success:
-    backgroundColor: "{colors.success}"
-    textColor: "{colors.success}"
-    rounded: "{rounded.pill}"
-    padding: "2px 10px"
-  badge-warning:
-    backgroundColor: "{colors.warning}"
-    textColor: "{colors.warning}"
-    rounded: "{rounded.pill}"
-    padding: "2px 10px"
-  card-default:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.card-foreground}"
-    rounded: "{rounded.card}"
-    padding: "24px"
-  input-default:
-    backgroundColor: "{colors.background}"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.control}"
-    height: "36px"
----
+# Design — App Builder
 
-# Design System: App Builder
+A locked design system for this app. Every page redesign reads this file
+before emitting code. Do not regenerate per page — extend or amend this file
+when the system needs to grow.
 
-## Overview
+**This file replaces the prior system documented in [`DESIGN.md`](DESIGN.md)
+("The Instrument Panel").** That file is kept in place as historical record
+of the previous, deliberately-quiet light system — do not delete it, do not
+read it as current. This `design.md` is the one subsequent Hallmark runs
+defer to. The replacement is a genuine identity change, confirmed explicitly
+by the requester: RAGFlow's dark, gradient-accented DNA (studied and
+recorded in full at [`../docs/design/ragflow-dna.md`](../docs/design/ragflow-dna.md))
+becomes App Builder's own system, not a borrowed mechanism bolted onto the
+old palette.
 
-**Creative North Star: "The Instrument Panel"**
+## Genre
 
-App Builder's own admin surface is deliberately quiet: an unmodified shadcn/ui shell in `system-ui`, a single default blue, and gray-scale everywhere else. This is not an unfinished visual identity — it is the honest current state, and it fits the product. A builder spends the day switching between a form designer, a node-graph workflow canvas, a dashboard grid, and a permissions table; the chrome around every one of those tools stays identical and gets out of the way, so the one thing that's allowed to carry color is the thing that actually varies: what a piece of the interface *is* and what *state* it's in.
+modern-minimal (dev-tool / SaaS admin console — matches the genre the source
+DNA itself was studied under; App Builder is a builder tool for the same
+kind of technical audience RAGFlow serves).
 
-The one place this system spends color deliberately is the workflow canvas, where every node type owns a fixed hue — emerald for triggers, amber for conditions, violet for Execute Workflow, blue for data operations, rose for notifications, cyan for knowledge/RAG nodes. That's the system's real signature: not a brand palette applied to the whole app, but a categorical color code applied to exactly one surface, because that's the one surface where "instantly tell what kind of thing this is" is load-bearing to the job of building a workflow.
+## Macrostructure family
 
-**Key Characteristics:**
-- Neutral, unbranded shell (default shadcn/ui tokens, `system-ui` type) everywhere outside the workflow canvas.
-- Color is semantic, never decorative: it marks node category, status (success/warning/destructive), and interactive state — nothing is colored "for atmosphere."
-- Flat at rest; shadow appears only as surfaces lift off the page (cards, popovers, dialogs), scaled by how far off the page they sit.
-- A visible, consistent focus ring on every interactive element — this system does not rely on hover alone.
+App Builder has exactly one page-type family — there are no marketing,
+content, or public-facing pages in this codebase; every audited screen is an
+authenticated builder tool. One family, several macrostructures within it,
+matched to what each screen actually is:
 
-## Colors
+- **Canvas/editor pages** (Form Builder, Page Builder, Dashboard Editor,
+  Workflow Builder): unchanged shape from the prior system — a canvas +
+  fixed right-rail split. RAGFlow's DNA has no canvas-editor analogue to
+  draw from (it has no visual authoring tool), so this macrostructure is
+  preserved as-is; only its color tokens change. Variation knob: rail width
+  (`w-96` unchanged).
+- **List + detail pages** (Knowledge Base list/detail, App Design's tabbed
+  sections): **Dashboard-Workbench** macrostructure, per the DNA's own
+  system axis — a page-title header, then repeating
+  `(icon + label header) → content row` sections. This is the macrostructure
+  RAGFlow's own home dashboard and settings shell use, and it maps directly
+  onto App Builder's own list/settings screens.
+- **Settings shell** (the App Design nav + its tabs, `ApplicationDesignShell.tsx`):
+  RAGFlow's **three-region settings-shell** shape (nav rail · active config ·
+  searchable catalog, from the DNA's "Settings / configuration shell"
+  section) — adopted directly, since App Builder's own App Design shell is
+  structurally the same kind of screen (a persistent nav rail + tabbed
+  content) that shell was built to hold.
+- **Ingestion/detail sub-shells** (Knowledge Base detail specifically):
+  RAGFlow's **four-surface dataset-ingestion shell** (Files · Retrieval
+  testing · Logs · Configuration) is the target shape for a *future* Spec-ID
+  build (FR-C9-001 §8 already names the 5 gaps between App Builder's current
+  single-page KB detail and this shape) — **not retrofitted in this pass**.
+  This redesign restyles the KB detail page's EXISTING single-page structure
+  to the new token system; it does not add the four-tab structure. That
+  remains a separate, larger functional change gated on FR-C9-001's own
+  open decisions, not a visual-only redesign.
 
-The palette itself is deliberately restrained — one accent, a neutral gray scale, and a small set of reserved status colors — with all the system's real color vocabulary spent on the workflow canvas instead.
+## Theme
 
-### Primary
-- **Default Blue** (`hsl(221.2 83.2% 53.3%)` / `#2563eb`-adjacent): the one accent color in the entire admin shell. Primary buttons, active states, focus rings, links. Used sparingly — most of any given screen is neutral.
+**Mechanism: edit the existing shadcn/ui HSL-triplet variables in
+`src/index.css`'s `:root` block in place — do not introduce a parallel
+token vocabulary.** Every component in this codebase already consumes
+`hsl(var(--background))`, `hsl(var(--foreground))`, `hsl(var(--card))`,
+`hsl(var(--border))`, `hsl(var(--primary))`, `hsl(var(--muted-foreground))`,
+etc. (space-separated `H S% L%` triplets, the shadcn/ui convention). This
+redesign changes what those existing variables RESOLVE TO, using RAGFlow's
+studied colors — it does not rename or duplicate them. A component that
+already reads `hsl(var(--card))` correctly picks up the new dark fill with
+zero changes to its own className string; only `index.css` itself needs
+editing for the color layer.
 
-### Secondary
-- **Success Green** (`hsl(142 71% 45%)`): positive status only — a completed execution, an active/healthy state. Added to the root token set alongside this pass; previously several components (`Badge`'s `success` variant, and workflow-canvas status indicators) reached for a raw Tailwind green literal because no real token existed.
-- **Warning Amber** (`hsl(38 92% 50%)`): non-fatal, needs-attention status — a partial success, a stale/needs-review state. Same origin story as Success Green above.
+**Dark-only for this pass — no toggle mechanism exists yet.** A real
+constraint found while implementing: the builder shell has no light/dark
+switching capability today (`main.tsx`'s own comment: "The builder shell
+runs a single fixed light theme") — `.dark` exists in `index.css` only for
+the SEPARATE published-app runtime's `ThemeProvider` (per-tenant theme
+customization, a different system entirely, untouched by this redesign).
+This redesign edits `index.css`'s `:root` block directly (the values the
+builder shell actually reads) to RAGFlow's dark palette; it does not touch
+`.dark`'s own values, since nothing in the builder shell ever applies that
+class. A future toggle is a separate feature request — see
+`ragflow-dna.md`'s own Light Mode section for the values that pass would need.
 
-### Neutral
-- **Foreground** (`hsl(222.2 84% 4.9%)`): body text, headings.
-- **Muted Foreground** (`hsl(215.4 16.3% 46.9%)`): secondary text, placeholders, field labels, helper copy — the majority of text on a dense settings/config screen.
-- **Background** (`hsl(0 0% 100%)`): page background.
-- **Card** (`hsl(0 0% 100%)`): identical to background at rest; separation comes from border + shadow, not a tint.
-- **Muted / Accent** (`hsl(210 40% 96.1%)`): the one light-gray fill used for hover states, subtle section backgrounds, and selected/active chips.
-- **Border** (`hsl(214.3 31.8% 91.4%)`): the default hairline for every card, input, and divider.
-- **Destructive** (`hsl(0 84.2% 60.2%)`): delete actions and error states only.
+**Color mapping — RAGFlow token → this codebase's existing variable:**
 
-### Named Rules
-**The Reserved Red Rule.** Destructive red appears only on delete/remove actions and genuine error states — never as a generic "important" accent.
+| Existing variable | New value (RAGFlow source) |
+|---|---|
+| `--background` | `240 4% 8%` (`#161618`) |
+| `--foreground` | `240 2% 97%` (`#f6f6f7`) |
+| `--card` / `--popover` | `240 4% 8%` (same as background — RAGFlow's cards are flat, separation is border+shadow only) |
+| `--card-foreground` / `--popover-foreground` | `240 2% 97%` |
+| `--muted` | `0 0% 100% / 5%` (5% white tint — the fill-swap "selected" background) |
+| `--muted-foreground` | `240 2% 71%` (`#b2b5b7`) |
+| `--border` / `--input` | `0 0% 100% / 10%` (0.8px hairline, RAGFlow's own alpha) |
+| `--primary` | `175 100% 37%` (`rgb(0,190,180)` — `--accent-primary`, RAGFlow's one theme-invariant accent) |
+| `--primary-foreground` | `240 4% 8%` (dark text on the teal accent, matching RAGFlow's own contrast choice) |
+| `--secondary` / `--accent` | `0 0% 100% / 5%` (same as `--muted` — RAGFlow doesn't distinguish secondary/muted/accent into 3 different fills) |
+| `--secondary-foreground` / `--accent-foreground` | `240 2% 97%` |
+| `--destructive` | `359 63% 57%` (`rgb(216,73,75)` — RAGFlow's `--state-error`) |
+| `--success` | `142 46% 43%` (`rgb(59,160,92)`) |
+| `--warning` | `38 89% 53%` (`rgb(250,173,20)`) |
+| `--ring` | `175 100% 37%` (same as `--primary` — RAGFlow reuses one color for accent and focus) |
+| `--radius` | `0.4375rem` (7px, RAGFlow's own card radius — was 0.5rem/8px) |
 
-**The Named Status Rule.** Success and warning are real root tokens (`--success`, `--warning`), not raw Tailwind green/amber literals reached for per-component. Any new status-colored surface references these, the same way it already references `--destructive`.
-
-**The Canvas Exception Rule.** The neutral-shell discipline above applies to every surface except the workflow node canvas. There, each node *type* (not status) owns a fixed, saturated hue from the standard Tailwind palette (`emerald`, `amber`, `violet`, `blue`, `rose`, `cyan`, `slate`, `indigo`, `sky`, `red`, `teal`) expressed as a two-stop `to-br` gradient on the node's header, a matching solid hex for the minimap and connection handles, and a soft tint (`-50`/`-100`) for the node's badges and selected-state background. This is the one place in the system where color density is intentionally high, because distinguishing a Trigger from a Condition from a Notification node at a glance is the actual task.
+**Two gradient tokens, new — added as their own CSS custom properties,
+kept as gradients, never flattened** (per the DNA's own explicit warning
+that averaging a two-stop gradient into one HSL/OKLCH value destroys it):
+- `--gradient-brand: linear-gradient(to left, #40ebe3, #4a51ff)` — wordmark only.
+- `--gradient-upsell: linear-gradient(to right, #00beb4, #43ffa4)` — commerce/upgrade CTAs only.
+  App Builder has no commerce surface today; this token is reserved, unused
+  until one exists. Do not repurpose it as a second general-purpose accent.
 
 ## Typography
 
-**Body Font:** `system-ui, sans-serif` (the OS default stack; no custom or web font is loaded anywhere in this codebase).
+- Display: InterVariable, weight 700 for H1-scale headings, style normal
+- Body:    InterVariable, weight 400
+- Mono:    ui-monospace, SFMono-Regular, Menlo, monospace (unchanged from
+  the prior system — the DNA never samples a monospace surface, and
+  App Builder's canvas/config panels use mono for IDs/expressions; no
+  reason to invent a new mono face against no evidence)
+- Display tracking: normal (0em) — the DNA shows no letter-spacing on its
+  one H1 sample; weight alone carries the hierarchy, per the source's own
+  "single family, weight-driven" axis.
+- Type scale anchor: `--text-display` = 48px / 700 / 72px line-height (H1,
+  the DNA's own exact sampled value — this is a ceiling, not a typical
+  size: only page-title H1s on Dashboard-Workbench-macrostructure pages use
+  it; canvas/editor pages keep their existing smaller scale, since the DNA
+  never samples a canvas surface to draw a display-size precedent from)
 
-**Character:** Unopinionated on purpose — this is a tool for getting work done across many dense, information-heavy screens (config panels, data tables, permission matrices), not a surface where typographic voice is part of the product's expression.
+**Single-family discipline, not a pairing.** Unlike Hallmark's default
+2+1 font rule, this system keeps ONE typeface (InterVariable) for display
+and body both, matching the DNA's own confirmed choice exactly. This is a
+deliberate exception, grounded in direct source evidence, not a shortcut.
 
-### Hierarchy
+## Spacing
 
-The shell runs a genuinely fine-grained scale, not just two roles — canvas chrome (node cards, badges, toolbars, picker grids) packs a lot of meaning into a small footprint, so it steps down in 1px increments rather than jumping straight from body text to "small caption":
+Tailwind's default spacing scale (`p-1`/`gap-2`/`space-y-4`/etc.), unchanged
+from the prior system — the DNA never contradicts this scale or introduces
+its own named spacing tokens (RAGFlow's own spacing is expressed as
+Tailwind utility values too, per `ragflow-dna.md`'s own sampled classNames
+like `px-4 py-3`, `gap-2`). No new spacing tokens needed; keep using
+Tailwind utilities directly as this codebase already does.
 
-- **Dialog Title** (600, 15px): modal/dialog headers — the largest text anywhere in the shell.
-- **Title** (600, 13px): canvas card titles, node picker item labels — one step below a dialog title, used where a name/label needs to read as the primary thing in a small container.
-- **Body** (400, 14px via `text-sm`, 1.5 line-height): the default for nearly all UI text — inputs, buttons, body copy, table cells, form field labels.
-- **Body Compact** (400–500, 12px): the second most common size after body — dense list rows, canvas node body text, secondary panel copy.
-- **Label** (600, 11px, uppercase, 0.05em tracking): section headers inside config panels (`text-[11px] font-semibold uppercase tracking-wider`) — the system's one recurring typographic device for "this heading introduces a group of controls," used consistently across every builder surface (form config, workflow node config, detail-page builder). Also reused at 11px non-uppercase for compact canvas-card body text.
-- **Caption** (400, 10px, muted-foreground): field descriptions, timestamps, counts, node subtitles — the standard "supporting text" size on canvas surfaces.
-- **Micro** (500–600, 9px, uppercase, muted-foreground): the floor of the scale — badge glyphs, tiny inline tags (e.g. a node's "parent link"/"conditional" pill), used only where space is genuinely too tight for 10px.
+## Motion
 
-### Named Rules
-**The No-Display-Size Rule.** There is no display/hero typographic tier anywhere in the Builder shell — the largest text on any screen is a dialog title at 15px. Density and legibility at small sizes matter more than typographic drama in a tool used for hours at a time.
+- Easings: `--ease-out: cubic-bezier(0.16, 1, 0.3, 1)` (Hallmark's standard
+  exponential ease-out — the DNA's own nav-pill motion is an unscoped
+  `transition-all`, explicitly flagged in `ragflow-dna.md`'s own Notes
+  section as an anti-pattern to narrow, not copy verbatim)
+- Reveal pattern: none — this is an authenticated admin tool, not a
+  marketing page; matches both the prior system's stance and the DNA's own
+  ("no scroll-triggered reveals observed... nothing needs to arrive")
+- Reduced-motion fallback: opacity-only, ≤150ms, for the one real animated
+  element in this system (the sliding nav pill)
 
-**The Density Floor Rule.** 9px (Micro) is the smallest text this system uses anywhere, and it's reserved for glyphs/tags, never for a sentence a user has to actually read. Body-length copy never drops below 10px (Caption).
+## Microinteractions stance
 
-## Layout
+- Silent success on trivial saves (a value the user can already see saved
+  doesn't need a toast) — inherited from the prior system, unchanged; the
+  DNA offers no counter-evidence (RAGFlow's own dialogs use a plain "Save"
+  button with no visible success-toast pattern sampled).
+- Hover delay 800ms · focus delay 0ms on tooltips (unchanged, universal
+  Hallmark rule, no DNA conflict).
+- **The sliding-pill nav mechanism has shipped, scoped exactly where the DNA
+  itself uses it — and nowhere else.** `ApplicationDesignShell.tsx`'s
+  top-level nav (Dashboard/Workflows/Forms/App Design/Settings) now runs
+  the real CSS-Anchor-Positioned pill: `.nav-pill`/`.nav-pill-anchor` in
+  `index.css`, `transition` narrowed to `top/left/right/bottom/background-color`
+  (never `transition-all`, per the DNA's own flagged anti-pattern on this
+  exact mechanism), near-white fill (`hsl(var(--foreground))`) with a 2px
+  `hsl(var(--primary))` inset-bottom accent riding along, `@supports not`
+  fallback to a plain static background on unsupported browsers (no slide,
+  never an invisible active state). `Sidebar.tsx` (the global vertical rail)
+  deliberately does NOT get this treatment — the DNA's own Left Sidebar
+  section documents RAGFlow using a plain static fill-swap for its own
+  settings-scale vertical nav, explicitly reasoned as "a sliding pill for
+  the small, frequently-glanced-at top-level nav (worth the animation
+  budget); a plain fill-swap for the longer, denser settings list (would be
+  visual noise to animate every row)." `Sidebar.tsx` is retoned to that
+  exact fill-swap language instead: active = `hsl(var(--muted))` (5% white
+  tint) fill + `hsl(var(--foreground))` bright text, inactive = transparent
+  + `hsl(var(--muted-foreground))` dim text — matching the DNA's sampled
+  `rgba(255,255,255,.05)` / `rgb(246,246,247)` values precisely, not a
+  solid `--primary` fill (the prior interim retone's placeholder choice).
+  Two mechanisms, same as the DNA's own app: don't add a third sliding-pill
+  instance, and don't retrofit this one onto a vertical/settings-scale list
+  without updating this section first.
+- **Destructive actions always get a confirm step**, even where RAGFlow
+  itself doesn't confirm this DNA sample either way (the DNA's own Notes
+  section names this explicitly as "a Hallmark/App-Builder house rule, not
+  something this DNA sample can confirm" for the card overflow-menu Delete
+  action) — this system follows the house rule, not silence-as-permission.
+  This ALSO directly closes one of the two real bugs the prior audit found:
+  Knowledge Base's document-row delete, which currently fires with no
+  confirmation at all while KB-level delete correctly confirms — the new
+  system requires both to confirm, closing the asymmetry as part of the
+  redesign, not as a separate patch.
 
-Feature-panel density over marketing-page whitespace. Config panels (the right-hand rail in every builder canvas — workflow node config, form field config, detail-tab config) run a consistent `space-y-1.5`–`space-y-4` rhythm: tight (`gap-1.5`) within one control's label+input pair, generous (`gap-4`) between distinct config sections. Canvas surfaces (workflow nodes, form sections, dashboard widgets) use a coarser `gap-4`/`p-4` rhythm since they're spatial, not list-like.
+## CTA voice
 
-Full-screen builder overlays (e.g. the Detail Page Builder) use a fixed two-pane split: a flexible canvas region and a fixed `w-96` right-hand config rail behind a `ScrollArea`. This same canvas+rail shape recurs across the workflow builder, form builder, and detail-page builder — it is the system's default "spatial editor" layout, not a one-off.
+- Primary CTA: solid fill using `hsl(var(--foreground))` (near-white on
+  dark paper, matching RAGFlow's own "Save"/"Run"/"Create" convention —
+  RAGFlow's button text is dark-on-light-fill even against its own dark
+  page, the same near-inverse relationship `--primary-foreground` already
+  gives this codebase's `Button` component for free), `rounded-full` pill
+  shape, existing `Button` padding unchanged.
+- Secondary CTA: outline variant (already exists in this codebase's
+  `Button` component — `hsl(var(--border))` hairline, transparent fill),
+  same pill radius — matches the DNA's own "Cancel" button treatment.
+  No new component needed; this is the existing `variant="outline"` Button
+  picking up the new border color automatically.
 
-No dedicated marketing/wide-content breakpoints exist; the Builder targets desktop admin usage (no mobile-specific layout pass observed in the shell itself — mobile support is a separate, explicit *product* surface for the published-app runtime, not this admin tool).
+## Per-page allowances
 
-## Elevation & Depth
+- Canvas/editor pages MAY keep their existing node/widget-type categorical
+  color coding (the prior system's own declared Canvas Exception Rule,
+  preserved unchanged — RAGFlow's DNA has no canvas to override this with,
+  and there is no reason to remove a rule the DNA doesn't contradict).
+- List/settings/dashboard pages MUST NOT introduce a third accent color
+  beyond `hsl(var(--primary))` and the two reserved gradients — this
+  directly closes the prior audit's dominant finding (an undeclared indigo
+  accent leaking across Dashboard Editor, Page Builder, and parts of App
+  Design).
+- No page may render a raw hex/rgb/Tailwind-color-utility value (e.g.
+  `bg-slate-50`, `text-indigo-600`, `#161618`) outside `index.css`'s own
+  `:root` block — every color reference goes through `hsl(var(--x))`. This
+  is the single most emphasized rule in this system, given the prior
+  audit's own 5-critical/6-major finding count was almost entirely this
+  exact violation, repeated across 6+ files.
 
-Flat at rest, layered by z-order. Cards and the page background sit at the same flat plane (`shadow-sm` at most, often none) — separation comes from a 1px border, not elevation. Depth only appears as a surface genuinely lifts off the page: popovers and dropdowns get a mid-weight shadow, and the highest layer (modal dialogs) gets the heaviest shadow in the system paired with a `bg-black/50 backdrop-blur-sm` overlay behind it.
+## What pages MUST share
 
-### Shadow Vocabulary
-- **Resting** (`shadow-sm`): cards, buttons, inputs — barely perceptible, present mostly for edge softness.
-- **Floating** (`shadow-md`–`shadow-lg`): popovers, dropdown menus, select content — enough separation to read as "temporarily on top of the page."
-- **Modal** (`shadow-xl`): dialog content — the system's heaviest shadow, reserved for the one surface that also gets a dedicated backdrop-blur scrim behind it.
+- The single InterVariable typeface, weight-driven hierarchy (unchanged —
+  `index.css`'s `body { font-family: system-ui, sans-serif }` needs a real
+  `InterVariable` font load added; the prior system used `system-ui`
+  deliberately, this one departs from that per the DNA's own confirmed
+  choice).
+- The accent color (`hsl(var(--primary))`, the teal) and its two reserved
+  gradients, used only for their declared jobs (accent = focus rings/active
+  states/CTAs; brand gradient = wordmark only; upsell gradient = reserved,
+  unused today).
+- The existing `--radius` scale (now `7px`) and Tailwind's built-in
+  `rounded-md`/`rounded-lg`/`rounded-full` utilities — no new named radius
+  tokens. Where the DNA calls for a sharper radius than the default scale
+  gives (`5px` sub-pills, `4px` dense secondary controls, per
+  `ragflow-dna.md`), use Tailwind's arbitrary-value syntax (`rounded-[5px]`)
+  rather than adding permanent tokens for a handful of one-off surfaces.
+- The fill-swap active-state language for any list/tab/chip control (5%
+  opacity tint via `hsl(var(--muted))`) — reserve the sliding
+  CSS-anchor-positioned pill specifically for the primary top-level nav and
+  settings-shell sub-tabs, per the DNA's own "worth the animation budget vs.
+  visual noise" distinction; do not add a third sliding-pill instance
+  without updating this file first.
+- Dialogs: this codebase's existing `Dialog`/`DialogContent` component
+  already matches the DNA's own three-zone anatomy (bordered header/body/
+  footer) and centered-overlay shape — it needs a color-token pickup only,
+  no structural change. **Keep the existing close-X and visible Cancel
+  button** — the DNA's own Notes section calls RAGFlow's no-close-X /
+  no-visible-Cancel choice "a real discoverability tradeoff... decide on it
+  deliberately rather than copying it by default," and this system decides
+  against removing either affordance, since no functional reason exists to
+  do so.
 
-### Named Rules
-**The Border-Before-Shadow Rule.** A card is defined first by its border, second by its shadow. Shadow strength should scale with how temporary/overlaid a surface is, not with how "important" its content is.
+## What pages MAY differ on
 
-## Shapes
+- Macrostructure within the one family (canvas+rail vs. Dashboard-Workbench
+  vs. three-region settings-shell — see Macrostructure family above), matched
+  to what the specific screen actually needs to show.
+- The four-surface ingestion-shell shape (Files/Retrieval-testing/Logs/
+  Configuration) is reserved for Knowledge Base's detail page ONLY, and
+  ONLY once FR-C9-001's own gaps are resolved as a functional change — this
+  redesign pass does not add it.
 
-Four-tier radius scale, tied to surface role rather than size:
-- **Inline chip** (`rounded` / 0.25rem): the one sub-control-radius step, reserved for small inline elements sitting inside running text or a compose box (e.g. an @mention chip) — small enough not to compete with the surrounding text's own line height.
-- **Controls** (`rounded-md`, 0.5rem — the `--radius` token): buttons, inputs, badges-as-outline, the default for nearly everything interactive.
-- **Containers** (`rounded-lg`, 0.5rem visually equivalent but used semantically for cards, sections, canvas node cards): slightly more relaxed framing for content groupings.
-- **Modals** (`rounded-2xl`, 1rem): the one place radius steps up — dialogs read as a distinct, softer-edged layer above the rest of the interface.
-- **Pills** (`rounded-full`): badges, avatars, segmented-toggle buttons, status chips.
+## Tokens — where they actually live
 
-Borders are always 1px, always the `border` token color, never a decorative width or a colored accent border.
+**There is no separate `tokens.css` in this system.** This codebase already
+has one real token file (`src/index.css`'s `@layer base :root` block) that
+every component consumes via `hsl(var(--x))`. This redesign edits that
+block's values in place per the Theme section's mapping table above, and
+adds exactly two new custom properties for the gradients:
 
-## Components
+```css
+/* src/index.css, inside the existing @layer base :root block — edit the
+   existing HSL triplet values per the Theme section's mapping table.
+   These two are net-new additions, not existing-variable edits: */
+--gradient-brand: linear-gradient(to left, #40ebe3, #4a51ff);
+--gradient-upsell: linear-gradient(to right, #00beb4, #43ffa4);
+```
 
-### Buttons
-- **Shape:** `rounded-md` (0.5rem), height 36px default / 32px small / 40px large / 36×36px icon-only.
-- **Primary:** solid `primary` background, `primary-foreground` text, 90%-opacity darken on hover.
-- **Outline / Ghost:** transparent or bordered at rest, fills with the `accent` gray tint on hover — the system's default for every secondary action.
-- **Destructive:** solid `destructive` red, reserved for delete/remove.
-- **Focus:** a visible 2px ring in the `ring` color with a 2px offset against the page background on every variant, including ghost — this system never relies on hover alone to signal focus.
-- **Touch targets:** the runtime surface's compact icon-only controls (28-30px, sized for a dense desktop header) grow their hit area to 44×44px under `pointer-coarse:` (Tailwind's `@media (pointer: coarse)` variant) rather than growing at rest — this keeps desktop density unchanged while meeting the touch minimum on the devices that actually need it. Prefer this over a fixed larger size when the control lives in a tight header row; use a fixed 44px box only for controls that are mobile-only to begin with (already gated behind a breakpoint like `md:hidden`).
+**Font load — also new.** `InterVariable` is not currently loaded anywhere
+in this codebase (`body`'s `font-family: system-ui, sans-serif` is the
+prior system's deliberate choice). Add a self-hosted `@font-face` or a
+package import (`rsms/inter` via a package, matching how the studied source
+loads it) at the top of `index.css`, above the `@import "tailwindcss"` line
+per Tailwind's own required import order, then set
+`body { font-family: "InterVariable", ui-sans-serif, system-ui, sans-serif; }`.
 
-### Cards / Containers
-- **Corner Style:** `rounded-lg`.
-- **Background:** `card` token (visually identical to page background).
-- **Shadow Strategy:** `shadow-sm` at rest (see Elevation & Depth).
-- **Border:** always 1px, `border` token.
-- **Internal Padding:** 24px (`p-6`) header/body/footer, no padding between adjacent sections beyond that.
-
-### Inputs / Fields
-- **Style:** `rounded-md`, 1px `input`-token border, `shadow-sm`, 36px height.
-- **Focus:** border color implied by the ring (2px `ring`-colored ring, no border-color change) — same focus language as buttons.
-- **Disabled:** 50% opacity, pointer-events removed.
-
-### Dialogs / Overlays
-- **Style:** `rounded-2xl`, 1px border, `shadow-xl`, centered, backed by a `bg-black/50 backdrop-blur-sm` scrim.
-- **Motion:** a single authored entrance — fade + scale-from-95% + slight slide-from-top, 200ms, reversed on close. This is the system's one deliberately animated moment; nothing else in the shell animates beyond color/opacity `transition-colors`.
-- **Anatomy:** header (title + description) and footer (right-aligned actions) each get a 1px border separating them from the scrollable body — a consistent three-zone dialog shape used everywhere from confirm dialogs to full-screen builder overlays.
-
-### Badges
-- **Shape:** `rounded-full` (pill), 2px/10px padding, 12px semibold text.
-- **Variants:** `default` (primary tint), `secondary` (muted gray), `destructive` (destructive tint), `success` (success tint), `warning` (warning tint), `outline` (bordered, no fill) — each a translucent (~15% opacity) tint of its token color as background with the full-strength token color as text, so every variant reads correctly in both light and dark without a second set of hand-picked values.
-
-### Workflow Canvas Nodes (signature component)
-Each of the ~15 node types (Trigger, Condition, Execute Workflow, Set Variable, Fetch/Update/Delete Records, HTTP Request, Notification, Knowledge Retrieval/Ingest, etc.) is a card with a colored two-stop gradient header (`bg-gradient-to-br from-{hue}-500 to-{hue}-600`) carrying an icon and label, a white/card-colored body showing a short config preview, and a matching-hue soft tint (`bg-{hue}-50`) used for that node's badges. The same hue drives the node's minimap dot and connection-handle color, so a node's identity is legible at every zoom level, not just up close. Selected state adds a 2px ring in the node's own hue (not the system's default blue ring) — the one place selection color is category-specific rather than using the shared `ring` token.
-
-## Do's and Don'ts
-
-### Do:
-- **Do** keep the admin shell's color vocabulary to primary blue + neutral gray + reserved destructive red. New chrome should not introduce a second accent color.
-- **Do** reserve saturated, categorical color for surfaces where "what type is this" is the actual task (the workflow canvas is the only current example) — not as a general decorative device.
-- **Do** use the `focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2` pattern on every new custom interactive element, matching the shared `Button`/`Input` convention — this system depends on keyboard focus being visible everywhere, not just on primitives that get it for free from Radix. Drop to `focus-visible:ring-offset-1` on compact icon-only controls (toolbar icon buttons, drag handles, in-row actions typically 20–28px) packed close enough that a 2px offset would visually collide with a neighboring control — `-offset-2` stays the default everywhere else.
-- **Do** scale shadow with how "temporary/overlaid" a surface is (resting → floating → modal), not with perceived importance.
-- **Do** use the uppercase 11px/600-weight/tracked label style for config-panel section headers — it's the system's one consistent structural device across every builder surface.
-
-### Don't:
-- **Don't** add a display/hero typographic size. The system's ceiling is a 15px dialog title; a bigger headline anywhere in the admin shell would be a foreign element.
-- **Don't** introduce raw Tailwind color utilities (`bg-blue-100`, `text-red-800`) on shell components — every component in `src/components/ui/*` now references `hsl(var(--token))` tokens throughout (including `Badge`, which used raw literals until this pass). Status colors that don't yet have a token (there is no third status beyond success/warning/destructive today) are the one legitimate reason to introduce a new root token rather than reach for a raw literal — see the Named Status Rule under Colors.
-- **Don't** apply the workflow-canvas node-color system anywhere outside the workflow canvas. It's a categorical code for one surface, not a secondary brand palette.
-- **Don't** add a colored left/right border as a status indicator on cards or list rows — this system has no precedent for that pattern; status is currently expressed via `Badge` variants and text color instead.
-- **Don't** invent a custom or web font. `system-ui` is the confirmed, deliberate choice for the entire admin shell.
+**No DTCG/Tailwind-`@theme`/separate-shadcn exports.** Those formats exist
+for projects that don't already have a working shadcn/ui token file: this
+project already has one, and it's the same format those exports would
+produce. Duplicating it would create exactly the "two sources of truth"
+problem this system's own Theme section warns against.

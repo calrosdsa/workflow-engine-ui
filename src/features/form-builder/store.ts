@@ -300,3 +300,64 @@ export function resetFormBuilder() {
   useFormMetaStore.getState().reset()
   useFormBuilderStore.getState().reset()
 }
+
+// ---------------------------------------------------------------------------
+// Staged new form (JSON specification import)
+// ---------------------------------------------------------------------------
+//
+// A handoff for "create this form, but let me look at it first." The JSON
+// import dialog parses a spec, stages the resulting builder state here, and
+// navigates to the blank-builder route with the returned token in `?seed=`;
+// FormBuilderPage applies it INSTEAD of resetting, so the canvas comes up
+// pre-filled and dirty, and the ordinary Save button does the real creating.
+//
+// The staged schema lives in a module variable rather than in the URL
+// because it is far too big for one. What the URL carries is the TOKEN, and
+// that split is what makes the handoff correct rather than merely working:
+//
+//   • Keying on the URL, not on "is anything staged?", means applying is
+//     idempotent. React StrictMode double-invokes the hydration effect in
+//     development, and an earlier one-shot version of this — consume once,
+//     then clear — had its second invocation find an empty slot and reset
+//     the canvas, wiping the import it had just applied. Live-reproduced,
+//     not theoretical.
+//   • A token with no matching entry (a reload, a bookmarked or shared
+//     link, a stale back-navigation) resolves to nothing and yields the
+//     ordinary blank builder, so a spec can never be resurrected by
+//     re-visiting a URL.
+//   • Visiting /forms/new with no `seed` at all always resets, so the
+//     "Form from scratch" path is unaffected by anything left staged.
+let stagedNewForm: { token: string; form: StagedForm } | null = null
+
+interface StagedForm {
+  name: string
+  slug: string
+  description: string
+  schema: FormSchema
+}
+
+/** Stages a parsed spec and returns the token to pass as `?seed=`. Only the
+ *  most recent staging is retained — an author who imports twice without
+ *  saving meant the second one. */
+export function stageNewForm(form: StagedForm): string {
+  const token = `seed_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+  stagedNewForm = { token, form }
+  return token
+}
+
+/** Applies the form staged under `token` to both stores. Returns false when
+ *  the token is absent or doesn't match, which is the ordinary case — the
+ *  caller then resets as usual.
+ *
+ *  Deliberately does NOT clear the staged entry: see the note above on
+ *  StrictMode. The entry is dropped by the next stageNewForm, and is
+ *  unreachable in the meantime without its token. */
+export function applyStagedForm(token: string | undefined): boolean {
+  if (!token || stagedNewForm?.token !== token) return false
+  loadForm({ id: null, ...stagedNewForm.form })
+  // An imported form has never been saved, so it must come up dirty: the
+  // unsaved-changes guard is the only thing standing between an author who
+  // navigates away and a silently discarded import.
+  useFormMetaStore.getState().markDirty()
+  return true
+}

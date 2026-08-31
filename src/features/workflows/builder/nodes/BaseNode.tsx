@@ -22,14 +22,14 @@ const DRAG_TRANSFER_KEY = 'application/workflow-node-reorder'
 // is actively running), but are included for completeness against the full
 // NodeExecutionStatus union.
 const overlayStatusStyle: Record<NodeExecutionStatus, string> = {
-  PENDING:                'bg-slate-100 text-slate-500',
-  RUNNING:                'bg-blue-100 text-blue-700',
-  COMPLETED:              'bg-emerald-100 text-emerald-700',
-  FAILED:                 'bg-red-100 text-red-700',
-  SKIPPED:                'bg-slate-100 text-slate-400',
+  PENDING:                'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
+  RUNNING:                'bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]',
+  COMPLETED:              'bg-[hsl(var(--success))]/15 text-[hsl(var(--success))]',
+  FAILED:                 'bg-[hsl(var(--destructive))]/15 text-[hsl(var(--destructive))]',
+  SKIPPED:                'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]/70',
   // An iterator with continue_on_error that ran every item but had failures
   // (FR-B2-015) — amber, distinct from both a clean COMPLETED and a FAILED.
-  COMPLETED_WITH_ERRORS:  'bg-amber-100 text-amber-700',
+  COMPLETED_WITH_ERRORS:  'bg-[hsl(var(--warning))]/15 text-[hsl(var(--warning))]',
 }
 
 const overlayStatusIcon: Record<NodeExecutionStatus, React.ReactNode> = {
@@ -219,10 +219,10 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   return (
     <div
       className={cn(
-        'group relative w-[200px] rounded-2xl border bg-white transition-all duration-150',
+        'group relative w-[200px] rounded-2xl border bg-[hsl(var(--card))] transition-all duration-150',
         selected
-          ? 'border-blue-400 ring-2 ring-blue-400/30 shadow-lg shadow-blue-500/10'
-          : 'border-slate-200/80 shadow-sm hover:border-slate-300 hover:shadow-md',
+          ? 'border-[hsl(var(--primary))]/60 ring-2 ring-[hsl(var(--primary))]/30 shadow-lg shadow-[hsl(var(--primary))]/10'
+          : 'border-[hsl(var(--border))] shadow-sm hover:border-[hsl(var(--muted-foreground))]/40 hover:shadow-md',
         isDraggingThis ? 'opacity-40 scale-95' : '',
         dimForDrag ? 'opacity-40' : '',
         // A node the selected execution never reached (e.g. a condition's
@@ -247,7 +247,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           id={port.id}
           type="target"
           position={Position.Top}
-          className="!h-2.5 !w-2.5 !border-2 !border-white !bg-slate-400 transition-colors"
+          className="!h-2.5 !w-2.5 !border-2 !border-[hsl(var(--card))] !bg-[hsl(var(--muted-foreground))] transition-colors"
           style={{ left: `${((i + 1) / (data.inputs.length + 1)) * 100}%` }}
         />
       ))}
@@ -255,11 +255,11 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
       {/* Execution position badge — floats above-left of the node */}
       {info && (
         <div className="absolute -top-3 -left-3 z-10 flex items-center gap-1">
-          <div className="flex h-6 min-w-6 items-center justify-center rounded-full bg-slate-700 px-1.5 text-[11px] font-bold tabular-nums text-white shadow-md shadow-black/20 ring-2 ring-white">
+          <div className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[hsl(var(--foreground))] px-1.5 text-[11px] font-bold tabular-nums text-[hsl(var(--background))] shadow-md shadow-black/20 ring-2 ring-[hsl(var(--card))]">
             {info.step}
           </div>
           {info.wave > 0 && (
-            <div className="flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-500/90 px-1 text-[9px] font-semibold tabular-nums text-white/90 shadow ring-2 ring-white">
+            <div className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[hsl(var(--foreground))]/70 px-1 text-[9px] font-semibold tabular-nums text-[hsl(var(--background))]/90 shadow ring-2 ring-[hsl(var(--card))]">
               W{info.wave}
             </div>
           )}
@@ -269,7 +269,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
       {/* Needs-setup badge — the node can't run until this is resolved */}
       {setupIssue && (
         <div
-          className="absolute -top-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-white shadow-md shadow-amber-500/30 ring-2 ring-white"
+          className="absolute -top-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))] shadow-md shadow-[hsl(var(--warning))]/30 ring-2 ring-[hsl(var(--card))]"
           title={setupIssue}
         >
           <AlertTriangle size={11} strokeWidth={2.75} />
@@ -283,7 +283,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
       {reached && nodeStatus && (
         <div
           className={cn(
-            'absolute -bottom-2 -right-2 z-10 flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold shadow-md ring-2 ring-white',
+            'absolute -bottom-2 -right-2 z-10 flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold shadow-md ring-2 ring-[hsl(var(--card))]',
             overlayStatusStyle[nodeStatus],
           )}
           title={overlayStatusLabel(nodeStatus)}
@@ -306,11 +306,11 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               className={cn(
-                'absolute -bottom-2 -left-2 z-20 flex h-6 w-6 items-center justify-center rounded-full text-white shadow-md ring-2 ring-white transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-white nodrag nopan',
-                nodeStatus === 'COMPLETED_WITH_ERRORS' ? 'bg-amber-500 shadow-amber-500/30'
-                  : nodeError || nodeMessage?.message_type === 'error' ? 'bg-red-500 shadow-red-500/30'
-                  : nodeMessage?.message_type === 'info' ? 'bg-amber-500 shadow-amber-500/30'
-                  : 'bg-emerald-500 shadow-emerald-500/30',
+                'absolute -bottom-2 -left-2 z-20 flex h-6 w-6 items-center justify-center rounded-full text-white shadow-md ring-2 ring-[hsl(var(--card))] transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--card))] nodrag nopan',
+                nodeStatus === 'COMPLETED_WITH_ERRORS' ? 'bg-[hsl(var(--warning))] shadow-[hsl(var(--warning))]/30'
+                  : nodeError || nodeMessage?.message_type === 'error' ? 'bg-[hsl(var(--destructive))] shadow-[hsl(var(--destructive))]/30'
+                  : nodeMessage?.message_type === 'info' ? 'bg-[hsl(var(--warning))] shadow-[hsl(var(--warning))]/30'
+                  : 'bg-[hsl(var(--success))] shadow-[hsl(var(--success))]/30',
               )}
               title={failedItems?.length ? 'View failed items' : nodeError ? 'View error details' : 'View message'}
             >
@@ -324,23 +324,23 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           >
             <div className={cn(
               'flex items-center justify-between gap-2 rounded-t-xl border-b px-3 py-2',
-              nodeStatus === 'COMPLETED_WITH_ERRORS' ? 'border-amber-100 bg-amber-50'
-                : nodeError ? 'border-red-100 bg-red-50'
-                : nodeMessage?.message_type === 'info' ? 'border-amber-100 bg-amber-50'
-                : 'border-emerald-100 bg-emerald-50',
+              nodeStatus === 'COMPLETED_WITH_ERRORS' ? 'border-[hsl(var(--warning))]/20 bg-[hsl(var(--warning))]/10'
+                : nodeError ? 'border-[hsl(var(--destructive))]/20 bg-[hsl(var(--destructive))]/10'
+                : nodeMessage?.message_type === 'info' ? 'border-[hsl(var(--warning))]/20 bg-[hsl(var(--warning))]/10'
+                : 'border-[hsl(var(--success))]/20 bg-[hsl(var(--success))]/10',
             )}>
               <span className={cn(
                 'text-[11px] font-semibold uppercase tracking-wide',
-                nodeStatus === 'COMPLETED_WITH_ERRORS' ? 'text-amber-700'
-                  : nodeError ? 'text-red-700'
-                  : nodeMessage?.message_type === 'info' ? 'text-amber-700'
-                  : 'text-emerald-700',
+                nodeStatus === 'COMPLETED_WITH_ERRORS' ? 'text-[hsl(var(--warning))]'
+                  : nodeError ? 'text-[hsl(var(--destructive))]'
+                  : nodeMessage?.message_type === 'info' ? 'text-[hsl(var(--warning))]'
+                  : 'text-[hsl(var(--success))]',
               )}>
                 {failedItems?.length ? `${failedItems.length} item${failedItems.length > 1 ? 's' : ''} failed` : nodeError ? 'Node error' : nodeMessage?.message_type}
               </span>
               <button
                 onClick={() => copyOverlayText(nodeError ?? nodeMessage?.message ?? '')}
-                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-500 transition-colors hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--card))]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
                 title="Copy to clipboard"
               >
                 {errorCopied ? <Check size={11} /> : <Copy size={11} />}
@@ -351,23 +351,23 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               {failedItems && failedItems.length > 0 ? (
                 <ul className="space-y-2">
                   {failedItems.map((fi) => (
-                    <li key={fi.index} className="rounded-lg bg-amber-50/60 px-2 py-1.5">
-                      <div className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-700">
-                        <span className="rounded bg-amber-100 px-1 py-0.5">index {fi.index}</span>
+                    <li key={fi.index} className="rounded-lg bg-[hsl(var(--warning))]/10 px-2 py-1.5">
+                      <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[hsl(var(--warning))]">
+                        <span className="rounded bg-[hsl(var(--warning))]/20 px-1 py-0.5">index {fi.index}</span>
                         {fi.item !== undefined && (
-                          <code className="truncate font-mono text-[10px] font-normal text-slate-500">
+                          <code className="truncate font-mono text-[10px] font-normal text-[hsl(var(--muted-foreground))]">
                             {typeof fi.item === 'string' ? fi.item : JSON.stringify(fi.item)}
                           </code>
                         )}
                       </div>
-                      <p className="mt-1 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-red-700">{fi.error}</p>
+                      <p className="mt-1 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-[hsl(var(--destructive))]">{fi.error}</p>
                     </li>
                   ))}
                 </ul>
               ) : nodeError ? (
-                <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-red-700">{nodeError}</pre>
+                <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-[hsl(var(--destructive))]">{nodeError}</pre>
               ) : nodeMessage ? (
-                <p className="whitespace-pre-wrap break-words text-[12px] leading-relaxed text-slate-700">{nodeMessage.message}</p>
+                <p className="whitespace-pre-wrap break-words text-[12px] leading-relaxed text-[hsl(var(--foreground))]">{nodeMessage.message}</p>
               ) : null}
             </div>
           </PopoverContent>
@@ -384,7 +384,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
             <button
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
-              className="absolute -right-2 top-1/2 z-20 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-lime-600 text-white shadow-md shadow-lime-600/30 ring-2 ring-white transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-white nodrag nopan"
+              className="absolute -right-2 top-1/2 z-20 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] shadow-md shadow-[hsl(var(--success))]/30 ring-2 ring-[hsl(var(--card))] transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--card))] nodrag nopan"
               title="View captured snapshot"
             >
               <Bug size={12} strokeWidth={2.5} />
@@ -395,13 +395,13 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between gap-2 rounded-t-xl border-b border-lime-100 bg-lime-50 px-3 py-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-lime-700">
+            <div className="flex items-center justify-between gap-2 rounded-t-xl border-b border-[hsl(var(--success))]/20 bg-[hsl(var(--success))]/10 px-3 py-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--success))]">
                 {debugSnapshot.label || 'Debug snapshot'}
               </span>
               <button
                 onClick={() => copyOverlayText(JSON.stringify(debugSnapshot.variables ?? {}, null, 2))}
-                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-500 transition-colors hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--card))]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
                 title="Copy to clipboard"
               >
                 {errorCopied ? <Check size={11} /> : <Copy size={11} />}
@@ -410,28 +410,28 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
             </div>
             <div className="max-h-64 overflow-y-auto px-3 py-2.5">
               {debugSnapshot.watches && debugSnapshot.watches.length > 0 && (
-                <div className="mb-2.5 space-y-1.5 border-b border-slate-100 pb-2.5">
+                <div className="mb-2.5 space-y-1.5 border-b border-[hsl(var(--border))] pb-2.5">
                   {debugSnapshot.watches.map((w, i) => (
                     <div key={i} className="text-[11px]">
                       <div className="flex items-baseline gap-1.5">
-                        <span className="font-semibold text-slate-600">{w.name || `watch ${i + 1}`}</span>
-                        <code className="truncate font-mono text-[10px] text-slate-400">{w.expression}</code>
+                        <span className="font-semibold text-[hsl(var(--foreground))]/80">{w.name || `watch ${i + 1}`}</span>
+                        <code className="truncate font-mono text-[10px] text-[hsl(var(--muted-foreground))]">{w.expression}</code>
                       </div>
                       {w.error ? (
-                        <pre className="mt-0.5 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-red-600">{w.error}</pre>
+                        <pre className="mt-0.5 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-[hsl(var(--destructive))]">{w.error}</pre>
                       ) : (
-                        <pre className="mt-0.5 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-slate-700">{JSON.stringify(w.value, null, 2)}</pre>
+                        <pre className="mt-0.5 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-[hsl(var(--foreground))]">{JSON.stringify(w.value, null, 2)}</pre>
                       )}
                     </div>
                   ))}
                 </div>
               )}
               {debugSnapshot.variables && Object.keys(debugSnapshot.variables).length > 0 ? (
-                <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-slate-700">
+                <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-[hsl(var(--foreground))]">
                   {JSON.stringify(debugSnapshot.variables, null, 2)}
                 </pre>
               ) : (
-                <p className="text-[11px] italic text-slate-400">No workflow variables declared.</p>
+                <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">No workflow variables declared.</p>
               )}
             </div>
           </PopoverContent>
@@ -451,7 +451,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
             <button
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
-              className="absolute -left-2 -top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-white shadow-md shadow-amber-500/30 ring-2 ring-white transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-white nodrag nopan"
+              className="absolute -left-2 -top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))] shadow-md shadow-[hsl(var(--warning))]/30 ring-2 ring-[hsl(var(--card))] transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--card))] nodrag nopan"
               title="View warning"
             >
               <AlertTriangle size={12} strokeWidth={2.5} />
@@ -462,11 +462,11 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between gap-2 rounded-t-xl border-b border-amber-100 bg-amber-50 px-3 py-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">Warning</span>
+            <div className="flex items-center justify-between gap-2 rounded-t-xl border-b border-[hsl(var(--warning))]/20 bg-[hsl(var(--warning))]/10 px-3 py-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--warning))]">Warning</span>
               <button
                 onClick={() => copyOverlayText(nodeWarning)}
-                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-slate-500 transition-colors hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--card))]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
                 title="Copy to clipboard"
               >
                 {errorCopied ? <Check size={11} /> : <Copy size={11} />}
@@ -474,7 +474,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               </button>
             </div>
             <div className="max-h-64 overflow-y-auto px-3 py-2.5">
-              <p className="whitespace-pre-wrap break-words text-[12px] leading-relaxed text-slate-700">{nodeWarning}</p>
+              <p className="whitespace-pre-wrap break-words text-[12px] leading-relaxed text-[hsl(var(--foreground))]">{nodeWarning}</p>
             </div>
           </PopoverContent>
         </Popover>
@@ -484,7 +484,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
       {(canDelete || canDuplicate) && !draggingNodeId && (
         <div
           className={cn(
-            'absolute -top-8 right-0 z-20 flex items-center gap-0.5 rounded-full bg-white p-0.5 shadow-lg shadow-slate-900/10 ring-1 ring-slate-200 transition-all duration-150 nodrag nopan',
+            'absolute -top-8 right-0 z-20 flex items-center gap-0.5 rounded-full bg-[hsl(var(--card))] p-0.5 shadow-lg shadow-black/10 ring-1 ring-[hsl(var(--border))] transition-all duration-150 nodrag nopan',
             selected
               ? 'opacity-100 scale-100 pointer-events-auto'
               : 'opacity-0 scale-90 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto',
@@ -492,7 +492,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
         >
           {canDuplicate && (
             <button
-              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
@@ -506,7 +506,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           )}
           {canDelete && (
             <button
-              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
@@ -585,9 +585,9 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
       {/* + button below leaf nodes (no outgoing edge, not dragging) */}
       {showAddButton && !draggingNodeId && (
         <div className="absolute left-1/2 -translate-x-1/2 -bottom-9 flex flex-col items-center pointer-events-none">
-          <div className="h-3.5 w-px bg-slate-300" />
+          <div className="h-3.5 w-px bg-[hsl(var(--border))]" />
           <button
-            className="pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-md shadow-blue-500/30 ring-4 ring-white hover:bg-blue-600 hover:scale-110 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-white nodrag nopan"
+            className="pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-md shadow-[hsl(var(--primary))]/30 ring-4 ring-[hsl(var(--card))] hover:brightness-110 hover:scale-110 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--card))] nodrag nopan"
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => handleAddClick(e, data.outputs[0]?.id ?? 'out')}
             title="Add next node"
@@ -607,15 +607,15 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           onMouseEnter={() => setBranchToolbarOpen(true)}
           onMouseLeave={() => setBranchToolbarOpen(false)}
         >
-          <div className="h-3.5 w-px bg-slate-300" />
+          <div className="h-3.5 w-px bg-[hsl(var(--border))]" />
           <div
             className={cn(
-              'pointer-events-auto flex items-center gap-0.5 rounded-full bg-white p-1 shadow-lg shadow-slate-900/10 ring-1 ring-slate-200 transition-all duration-150 nodrag nopan',
+              'pointer-events-auto flex items-center gap-0.5 rounded-full bg-[hsl(var(--card))] p-1 shadow-lg shadow-black/10 ring-1 ring-[hsl(var(--border))] transition-all duration-150 nodrag nopan',
               branchToolbarOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none',
             )}
           >
             <button
-              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
@@ -627,7 +627,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               <ArrowLeftRight size={12} strokeWidth={2.5} />
             </button>
             <button
-              className="flex h-6 w-6 items-center justify-center rounded-full text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-[hsl(var(--destructive))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
@@ -639,7 +639,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               <Trash2 size={12} strokeWidth={2.5} />
             </button>
             <button
-              className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-sm transition-all hover:bg-blue-600 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+              className="flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm transition-all hover:brightness-110 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => handleAddClick(e, data.outputs[0]?.id ?? 'out')}
               title="Add node in a new branch"
@@ -658,10 +658,10 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
 function NodeBody({ data }: { data: FlowNode['data'] }) {
   switch (data.type) {
     case 'entry':
-      return <p className="text-[11px] text-slate-400">Workflow starts here</p>
+      return <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Workflow starts here</p>
     case 'trigger': {
       const cfg = data.configuration as TriggerConfig | undefined
-      if (!cfg?.mode) return <p className="text-[11px] italic text-slate-400">Not configured</p>
+      if (!cfg?.mode) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">Not configured</p>
       const labels: Record<TriggerConfig['mode'], string> = {
         on_demand: 'On demand', scheduled: 'Scheduled',
         before: 'Before write', after: 'After write', after_async: 'After write (async)',
@@ -669,109 +669,109 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
       return (
         <div className="space-y-1 text-[10px]">
           <div className="flex items-center gap-1">
-            <code className="rounded bg-emerald-50 px-1 py-0.5 font-semibold text-emerald-700">{labels[cfg.mode]}</code>
-            {cfg.enabled === false && <span className="rounded bg-slate-100 px-1 text-slate-400">disabled</span>}
+            <code className="rounded bg-[hsl(var(--success))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--success))]">{labels[cfg.mode]}</code>
+            {cfg.enabled === false && <span className="rounded bg-[hsl(var(--muted))] px-1 text-[hsl(var(--muted-foreground))]">disabled</span>}
           </div>
           {cfg.mode === 'scheduled' && cfg.cron && (
-            <code className="block truncate rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-600">{cfg.cron}</code>
+            <code className="block truncate rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 font-mono text-[10px] text-[hsl(var(--muted-foreground))]">{cfg.cron}</code>
           )}
           {(cfg.mode === 'before' || cfg.mode === 'after' || cfg.mode === 'after_async') && (
-            <p className="truncate text-slate-400">{cfg.event_type ?? '…'} on {cfg.form_id ? cfg.form_id.slice(0, 8) + '…' : 'no form'}</p>
+            <p className="truncate text-[hsl(var(--muted-foreground))]">{cfg.event_type ?? '…'} on {cfg.form_id ? cfg.form_id.slice(0, 8) + '…' : 'no form'}</p>
           )}
         </div>
       )
     }
     case 'show_message': {
       const cfg = data.configuration as ShowMessageConfig | undefined
-      if (!cfg?.message) return <p className="text-[11px] italic text-slate-400">No message set</p>
+      if (!cfg?.message) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">No message set</p>
       const typeColor: Record<ShowMessageConfig['message_type'], string> = {
-        success: 'bg-emerald-50 text-emerald-700', error: 'bg-red-50 text-red-700', info: 'bg-sky-50 text-sky-700',
+        success: 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]', error: 'bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))]', info: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]',
       }
       return (
         <div className="space-y-1 text-[10px]">
           <code className={cn('rounded px-1 py-0.5 font-semibold', typeColor[cfg.message_type])}>{cfg.message_type}</code>
-          <p className="truncate text-slate-500">{cfg.message}</p>
+          <p className="truncate text-[hsl(var(--muted-foreground))]">{cfg.message}</p>
         </div>
       )
     }
     case 'notification': {
       const cfg = data.configuration as NotificationConfig | undefined
-      if (!cfg?.title) return <p className="text-[11px] italic text-slate-400">No title set</p>
+      if (!cfg?.title) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">No title set</p>
       const severityColor: Record<NotificationConfig['severity'], string> = {
-        success: 'bg-emerald-50 text-emerald-700', error: 'bg-red-50 text-red-700',
-        warning: 'bg-amber-50 text-amber-700', info: 'bg-sky-50 text-sky-700',
+        success: 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]', error: 'bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))]',
+        warning: 'bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]', info: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]',
       }
       const recipient = cfg.recipient_mode === 'expression' ? cfg.recipient_expr : cfg.recipient_user_id
       return (
         <div className="space-y-1 text-[10px]">
           <code className={cn('rounded px-1 py-0.5 font-semibold', severityColor[cfg.severity])}>{cfg.severity}</code>
-          <p className="truncate text-slate-500">{cfg.title}</p>
-          {recipient && <p className="truncate text-slate-400">to: {recipient}</p>}
+          <p className="truncate text-[hsl(var(--muted-foreground))]">{cfg.title}</p>
+          {recipient && <p className="truncate text-[hsl(var(--muted-foreground))]">to: {recipient}</p>}
         </div>
       )
     }
     case 'exit':
-      return <p className="text-[11px] text-slate-400">Workflow ends here</p>
+      return <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Workflow ends here</p>
     case 'merge':
-      return <p className="text-[11px] text-slate-400">Joins parallel branches</p>
+      return <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Joins parallel branches</p>
     case 'set_variable': {
       const cfg = data.configuration as SetVariableConfig
       const assignments: VariableAssignment[] = cfg?.assignments ?? []
-      if (assignments.length === 0) return <p className="text-[11px] italic text-slate-400">Not configured</p>
+      if (assignments.length === 0) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">Not configured</p>
       return (
         <div className="space-y-1">
           {assignments.slice(0, 3).map((a, i) => (
             <div key={a.id ?? i} className="flex items-center gap-1 text-[10px]">
-              <code className="shrink-0 rounded bg-blue-50 px-1 py-0.5 font-semibold text-blue-700">{a.variable_name || '…'}</code>
-              <span className="text-slate-300">=</span>
+              <code className="shrink-0 rounded bg-[hsl(var(--primary))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--primary))]">{a.variable_name || '…'}</code>
+              <span className="text-[hsl(var(--muted-foreground))]/60">=</span>
               {a.mode === 'literal'
-                ? <code className="truncate text-slate-500">{String(a.literal_value ?? '""')}</code>
-                : <code className="truncate italic text-violet-500">{'{'}{'{'}…{'}'}{'}'}</code>
+                ? <code className="truncate text-[hsl(var(--muted-foreground))]">{String(a.literal_value ?? '""')}</code>
+                : <code className="truncate italic text-[hsl(var(--primary))]/80">{'{'}{'{'}…{'}'}{'}'}</code>
               }
             </div>
           ))}
           {assignments.length > 3 && (
-            <p className="text-[10px] text-slate-400">+{assignments.length - 3} more…</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">+{assignments.length - 3} more…</p>
           )}
         </div>
       )
     }
     case 'condition': {
       const cfg = data.configuration as ConditionConfig
-      if (!cfg?.expression) return <p className="text-[11px] italic text-slate-400">No expression set</p>
-      return <code className="block truncate rounded bg-slate-100 px-1.5 py-1 font-mono text-[10px] text-slate-700">{cfg.expression}</code>
+      if (!cfg?.expression) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">No expression set</p>
+      return <code className="block truncate rounded bg-[hsl(var(--muted))] px-1.5 py-1 font-mono text-[10px] text-[hsl(var(--foreground))]">{cfg.expression}</code>
     }
     case 'subflow': {
       const cfg = data.configuration as { definition_id?: string; sync?: boolean }
-      if (!cfg?.definition_id) return <p className="text-[11px] italic text-slate-400">No workflow selected</p>
+      if (!cfg?.definition_id) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">No workflow selected</p>
       return (
-        <p className="text-[11px] text-slate-500">
-          ↳ {cfg.definition_id.slice(0, 8)}… <span className="text-slate-400">· {cfg.sync === false ? 'fire and forget' : 'waits for result'}</span>
+        <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
+          ↳ {cfg.definition_id.slice(0, 8)}… <span className="text-[hsl(var(--muted-foreground))]/70">· {cfg.sync === false ? 'fire and forget' : 'waits for result'}</span>
         </p>
       )
     }
     case 'loop_end':
-      return <p className="text-[11px] text-slate-400">Marks the end of the loop body</p>
+      return <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Marks the end of the loop body</p>
     case 'iterator': {
       const cfg = data.configuration as IteratorConfig | undefined
-      if (!cfg?.source_expr) return <p className="text-[11px] italic text-slate-400">No source list set</p>
+      if (!cfg?.source_expr) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">No source list set</p>
       const itemV = cfg.item_var || 'item'
       const idxV = cfg.index_var || 'index'
       return (
         <div className="space-y-1 text-[10px]">
           <div className="flex items-center gap-1">
-            <span className="text-slate-400">for</span>
-            <code className="rounded bg-amber-50 px-1 py-0.5 font-semibold text-amber-700">{itemV}</code>
-            <span className="text-slate-300">,</span>
-            <code className="rounded bg-amber-50 px-1 py-0.5 font-semibold text-amber-700">{idxV}</code>
-            <span className="text-slate-400">in</span>
+            <span className="text-[hsl(var(--muted-foreground))]">for</span>
+            <code className="rounded bg-[hsl(var(--warning))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--warning))]">{itemV}</code>
+            <span className="text-[hsl(var(--muted-foreground))]/60">,</span>
+            <code className="rounded bg-[hsl(var(--warning))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--warning))]">{idxV}</code>
+            <span className="text-[hsl(var(--muted-foreground))]">in</span>
           </div>
-          <code className="block truncate rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-600">{cfg.source_expr}</code>
+          <code className="block truncate rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 font-mono text-[10px] text-[hsl(var(--muted-foreground))]">{cfg.source_expr}</code>
           {(cfg.filter_expr || cfg.stop_expr || cfg.continue_on_error) && (
-            <div className="flex gap-1 text-slate-400">
-              {cfg.filter_expr && <span className="rounded bg-slate-100 px-1">filter</span>}
-              {cfg.stop_expr && <span className="rounded bg-slate-100 px-1">stop</span>}
-              {cfg.continue_on_error && <span className="rounded bg-amber-50 px-1 text-amber-600">continue on error</span>}
+            <div className="flex gap-1 text-[hsl(var(--muted-foreground))]">
+              {cfg.filter_expr && <span className="rounded bg-[hsl(var(--muted))] px-1">filter</span>}
+              {cfg.stop_expr && <span className="rounded bg-[hsl(var(--muted))] px-1">stop</span>}
+              {cfg.continue_on_error && <span className="rounded bg-[hsl(var(--warning))]/10 px-1 text-[hsl(var(--warning))]">continue on error</span>}
             </div>
           )}
         </div>
@@ -779,19 +779,19 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
     }
     case 'fetch_records': {
       const cfg = data.configuration as FetchRecordsConfig | undefined
-      if (!cfg?.form_id) return <p className="text-[11px] italic text-slate-400">No form selected</p>
+      if (!cfg?.form_id) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">No form selected</p>
       const conds = countConditions(cfg.filter)
       return (
         <div className="space-y-1 text-[10px]">
           <div className="flex items-center gap-1">
-            <code className="rounded bg-rose-50 px-1 py-0.5 font-semibold text-rose-700">{cfg.mode === 'one' ? 'single' : 'multiple'}</code>
-            {conds > 0 && <span className="text-slate-400">· {conds} filter{conds > 1 ? 's' : ''}</span>}
-            {cfg.limit ? <span className="text-slate-400">· top {cfg.limit}</span> : null}
+            <code className="rounded bg-[hsl(var(--destructive))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--destructive))]">{cfg.mode === 'one' ? 'single' : 'multiple'}</code>
+            {conds > 0 && <span className="text-[hsl(var(--muted-foreground))]">· {conds} filter{conds > 1 ? 's' : ''}</span>}
+            {cfg.limit ? <span className="text-[hsl(var(--muted-foreground))]">· top {cfg.limit}</span> : null}
           </div>
           {cfg.output_var && (
             <div className="flex items-center gap-1">
-              <span className="text-slate-300">→</span>
-              <code className="truncate font-semibold text-blue-700">{cfg.output_var}</code>
+              <span className="text-[hsl(var(--muted-foreground))]/60">→</span>
+              <code className="truncate font-semibold text-[hsl(var(--primary))]">{cfg.output_var}</code>
             </div>
           )}
         </div>
@@ -800,15 +800,15 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
     case 'http_request': {
       const cfg = data.configuration as HttpRequestConfig | undefined
       const url = cfg?.url_mode === 'expression' ? cfg?.url_expr : cfg?.url
-      if (!url) return <p className="text-[11px] italic text-slate-400">No URL set</p>
+      if (!url) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">No URL set</p>
       return (
         <div className="space-y-1 text-[10px]">
           <div className="flex items-center gap-1.5">
-            <code className="shrink-0 rounded bg-cyan-50 px-1 py-0.5 font-semibold text-cyan-700">{cfg?.method ?? 'GET'}</code>
-            <code className="truncate text-slate-500">{url}</code>
+            <code className="shrink-0 rounded bg-[hsl(var(--primary))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--primary))]">{cfg?.method ?? 'GET'}</code>
+            <code className="truncate text-[hsl(var(--muted-foreground))]">{url}</code>
           </div>
           {cfg?.auth_type && cfg.auth_type !== 'none' && (
-            <span className="rounded bg-slate-100 px-1 text-slate-400">auth: {cfg.auth_type}</span>
+            <span className="rounded bg-[hsl(var(--muted))] px-1 text-[hsl(var(--muted-foreground))]">auth: {cfg.auth_type}</span>
           )}
         </div>
       )
@@ -817,9 +817,9 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
       const cfg = data.configuration as DebugConfig | undefined
       const watchCount = cfg?.watches?.length ?? 0
       return (
-        <p className="text-[11px] text-slate-400">
-          {cfg?.label ? <span className="text-lime-600">{cfg.label}</span> : 'Captures a variable snapshot here'}
-          {watchCount > 0 && <span className="ml-1.5 text-slate-400">· {watchCount} watch{watchCount === 1 ? '' : 'es'}</span>}
+        <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
+          {cfg?.label ? <span className="text-[hsl(var(--success))]">{cfg.label}</span> : 'Captures a variable snapshot here'}
+          {watchCount > 0 && <span className="ml-1.5 text-[hsl(var(--muted-foreground))]">· {watchCount} watch{watchCount === 1 ? '' : 'es'}</span>}
         </p>
       )
     }

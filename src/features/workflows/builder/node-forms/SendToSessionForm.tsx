@@ -25,7 +25,7 @@ export function normaliseSendToSessionConfig(raw: unknown): SendToSessionConfig 
 
 function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMode) => void }) {
   return (
-    <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+    <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
       {(['static', 'expression'] as const).map((m) => (
         <button
           key={m}
@@ -33,7 +33,7 @@ function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMo
           onClick={() => onChange(m)}
           className={cn(
             'flex-1 rounded-md py-1 text-[11px] font-medium transition-colors',
-            mode === m ? 'bg-violet-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700',
+            mode === m ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
           )}
         >
           {m === 'static' ? 'Static' : 'Expression'}
@@ -56,7 +56,7 @@ export function SendToSessionForm({ config, variables, nodeContext, onChange }: 
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Session ID</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Session ID</Label>
         <ModeToggle mode={config.session_id_mode ?? 'static'} onChange={(m) => set({ session_id_mode: m })} />
         {config.session_id_mode === 'expression' ? (
           <ExpressionField
@@ -75,13 +75,13 @@ export function SendToSessionForm({ config, variables, nodeContext, onChange }: 
             className="h-8 font-mono text-[12px]"
           />
         )}
-        <p className="text-[10px] text-slate-400">The target Agent session to post into — often a variable populated by an earlier Run Agent node.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">The target Agent session to post into — often a variable populated by an earlier Run Agent node.</p>
       </div>
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Content</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Content</Label>
         <ModeToggle mode={config.content_mode ?? 'static'} onChange={(m) => set({ content_mode: m })} />
         {config.content_mode === 'expression' ? (
           <ExpressionField
@@ -98,10 +98,10 @@ export function SendToSessionForm({ config, variables, nodeContext, onChange }: 
             onChange={(e) => set({ content: e.target.value })}
             rows={4}
             placeholder="e.g. Your refund was processed."
-            className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] text-slate-700 placeholder:text-slate-300 focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100"
+            className="w-full resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-3 py-2 text-[12px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/60 focus:border-[hsl(var(--primary))] focus:bg-[hsl(var(--card))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
           />
         )}
-        <p className="text-[10px] text-slate-400">The message text posted into the session — no Agent run is started.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">The message text posted into the session — no Agent run is started.</p>
       </div>
     </div>
   )

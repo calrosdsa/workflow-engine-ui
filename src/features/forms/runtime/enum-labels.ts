@@ -10,7 +10,7 @@
 // FieldRenderer.tsx's editable <select>, which already shows real labels
 // because it reads el.options directly rather than the flattened FieldDef.
 import { iterElements } from '@/features/form-builder/projection'
-import type { FormSchema } from '@/features/form-builder/schema'
+import type { FormSchema, SelectOption } from '@/features/form-builder/schema'
 
 /** field name -> (stored value -> display label), for every select/radio/
  *  multiselect element in the schema that has real options configured. */
@@ -33,4 +33,18 @@ export function buildEnumLabels(schema: FormSchema | undefined): Map<string, Map
 export function resolveEnumLabel(enumLabels: Map<string, Map<string, string>>, fieldName: string, value: unknown): string {
   if (typeof value !== 'string' || value === '') return '—'
   return enumLabels.get(fieldName)?.get(value) ?? value
+}
+
+/** Same resolution as resolveEnumLabel, for a caller that already has the
+ *  one FormElement in hand (FieldValueDisplay: the Detail Page and its
+ *  Detail Page Builder field_ref mirror) rather than a whole schema's
+ *  buildEnumLabels() map — building a one-entry Map<string, Map<string,
+ *  string>> just to immediately look up the single field it holds would be
+ *  pure overhead. Same value/fallback contract as resolveEnumLabel: '—' for
+ *  empty, the raw stored value (not '—') when it doesn't match any current
+ *  option, since that means a value saved before the option existed or
+ *  since renamed/removed — real data, not missing data. */
+export function resolveOptionLabel(options: SelectOption[] | undefined, value: unknown): string {
+  if (typeof value !== 'string' || value === '') return '—'
+  return options?.find((o) => o.value === value)?.label ?? value
 }

@@ -18,13 +18,13 @@ export function ImageRenderer({ config }: WidgetRendererProps<ImageWidgetConfig>
   const [failedSrc, setFailedSrc] = useState<string | null>(null)
 
   if (!config.src) {
-    return <div className="flex h-full items-center justify-center p-3 text-xs text-slate-400">No image URL set yet.</div>
+    return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No image URL set yet.</div>
   }
   if (failedSrc === config.src) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-1.5 p-3 text-center">
-        <ImageOff size={18} className="text-slate-300" />
-        <p className="text-xs text-slate-400">Couldn't load this image.</p>
+        <ImageOff size={18} style={{ color: 'hsl(var(--muted-foreground))' }} />
+        <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Couldn't load this image.</p>
       </div>
     )
   }

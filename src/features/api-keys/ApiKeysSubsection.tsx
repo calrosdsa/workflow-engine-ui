@@ -29,8 +29,8 @@ export function ApiKeysSubsection() {
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-800">API keys</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">API keys</h2>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">
             Long-lived credentials for a third party to call this app's API directly — no login required. Each key
             grants access to every form's records plus the Knowledge Base/RAG endpoints. Revoking is immediate and
             permanent.
@@ -46,7 +46,7 @@ export function ApiKeysSubsection() {
       {isLoading ? (
         <div className="flex h-24 items-center justify-center"><Spinner /></div>
       ) : !keys?.length ? (
-        <div className="rounded-lg border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">
+        <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
           No API keys yet.
         </div>
       ) : (
@@ -90,20 +90,18 @@ function ApiKeyRow({ apiKey, canWrite, onRevoke }: {
 }) {
   const revoked = !!apiKey.revoked_at
   return (
-    <div className={`flex items-center gap-3 rounded-lg border p-3 ${revoked ? 'border-slate-100 bg-slate-50/60' : 'border-slate-200 bg-white'}`}>
-      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${revoked ? 'bg-slate-100 text-slate-400' : 'bg-emerald-50 text-emerald-600'}`}>
-        <Webhook size={14} />
-      </div>
+    <div className={`flex items-center gap-3 rounded-lg border p-3 ${revoked ? 'border-[hsl(var(--border))]/50 bg-[hsl(var(--muted))]/40' : 'border-[hsl(var(--border))] bg-[hsl(var(--card))]'}`}>
+      <Webhook size={16} className={`shrink-0 ${revoked ? 'text-[hsl(var(--muted-foreground))]' : 'text-[hsl(var(--success))]'}`} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className={`truncate text-sm font-medium ${revoked ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{apiKey.name}</p>
+          <p className={`truncate text-sm font-medium ${revoked ? 'text-[hsl(var(--muted-foreground))] line-through' : 'text-[hsl(var(--foreground))]'}`}>{apiKey.name}</p>
           {revoked && (
-            <span className="shrink-0 rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+            <span className="shrink-0 rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
               Revoked
             </span>
           )}
         </div>
-        <p className="truncate font-mono text-xs text-slate-400">
+        <p className="truncate font-mono text-xs text-[hsl(var(--muted-foreground))]">
           {apiKey.key_prefix}··· · All forms + Knowledge Base/RAG
           {apiKey.last_used_at && !revoked ? ` · Last used ${formatRelative(apiKey.last_used_at)}` : ''}
           {!apiKey.last_used_at && !revoked ? ' · Never used' : ''}
@@ -112,7 +110,7 @@ function ApiKeyRow({ apiKey, canWrite, onRevoke }: {
       {canWrite && !revoked && (
         <Button
           variant="ghost" size="icon"
-          className="shrink-0 text-slate-300 hover:bg-red-50 hover:text-red-500"
+          className="shrink-0 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
           onClick={onRevoke}
         >
           <Trash2 size={14} />
@@ -147,7 +145,7 @@ function CreateApiKeyDialog({ onClose, onCreated }: {
 
         <div className="space-y-3 px-6 py-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Name</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name</label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -155,11 +153,11 @@ function CreateApiKeyDialog({ onClose, onCreated }: {
               className="text-sm"
               autoFocus
             />
-            <p className="mt-1 text-xs text-slate-400">A label to help you tell keys apart later — not shown to whoever holds the key.</p>
+            <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">A label to help you tell keys apart later — not shown to whoever holds the key.</p>
           </div>
 
           {createMutation.isError && (
-            <p className="flex items-center gap-1 text-xs text-red-600"><AlertCircle size={13} />Failed to generate key</p>
+            <p className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={13} />Failed to generate key</p>
           )}
         </div>
 
@@ -193,20 +191,20 @@ function SecretRevealDialog({ secret, onClose }: { secret: CreateApiKeyResponse;
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ShieldAlert size={16} className="text-amber-500" />
+            <ShieldAlert size={16} className="text-[hsl(var(--warning))]" />
             Save this key now
           </DialogTitle>
           <DialogDescription>
-            This is the only time <span className="font-medium text-slate-700">{secret.name}</span>'s secret is shown. Once you
+            This is the only time <span className="font-medium text-[hsl(var(--foreground))]">{secret.name}</span>'s secret is shown. Once you
             close this dialog, it cannot be retrieved again — only revoked and replaced with a new key.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 px-6 py-4">
-          <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 p-2.5">
-            <code className="min-w-0 flex-1 truncate font-mono text-xs text-slate-700">{secret.secret}</code>
+          <div className="flex items-center gap-2 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-2.5">
+            <code className="min-w-0 flex-1 truncate font-mono text-xs text-[hsl(var(--foreground))]">{secret.secret}</code>
             <Button variant="outline" size="sm" onClick={copy} className="shrink-0 gap-1.5">
-              {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+              {copied ? <Check size={13} className="text-[hsl(var(--success))]" /> : <Copy size={13} />}
               {copied ? 'Copied' : 'Copy'}
             </Button>
           </div>

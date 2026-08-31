@@ -74,21 +74,21 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
   return (
     <div className="space-y-4">
       {/* Enabled toggle */}
-      <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2">
+      <div className="flex items-center justify-between rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 px-3 py-2">
         <div>
-          <Label className="text-[12px] font-semibold text-slate-700">Enabled</Label>
-          <p className="text-[10px] text-slate-400">Disabled triggers never fire (workflow can still be run on demand from the editor).</p>
+          <Label className="text-[12px] font-semibold text-[hsl(var(--foreground))]">Enabled</Label>
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Disabled triggers never fire (workflow can still be run on demand from the editor).</p>
         </div>
         <button
           type="button"
           onClick={() => set({ enabled: !config.enabled })}
           className={cn(
             'relative h-5 w-9 shrink-0 rounded-full transition-colors',
-            config.enabled ? 'bg-emerald-500' : 'bg-slate-300',
+            config.enabled ? 'bg-[hsl(var(--success))]' : 'bg-[hsl(var(--muted-foreground))]/40',
           )}
         >
           <span className={cn(
-            'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform',
+            'absolute top-0.5 h-4 w-4 rounded-full bg-[hsl(var(--card))] shadow transition-transform',
             config.enabled ? 'translate-x-4' : 'translate-x-0.5',
           )} />
         </button>
@@ -96,7 +96,7 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
 
       {/* Mode picker */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Trigger Mode</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Trigger Mode</Label>
         <div className="space-y-1.5">
           {TRIGGER_MODES.map((m) => {
             const Icon = m.icon
@@ -108,18 +108,18 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
                 onClick={() => set({ mode: m.value })}
                 className={cn(
                   'flex w-full items-start gap-2.5 rounded-xl border p-2.5 text-left transition-colors',
-                  active ? 'border-emerald-400 bg-emerald-50/60' : 'border-slate-200 bg-white hover:border-slate-300',
+                  active ? 'border-[hsl(var(--success))]/50 bg-[hsl(var(--success))]/10' : 'border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:border-[hsl(var(--muted-foreground))]/40',
                 )}
               >
                 <div className={cn(
                   'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
-                  active ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400',
+                  active ? 'bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))]' : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
                 )}>
                   <Icon size={14} />
                 </div>
                 <div className="min-w-0">
-                  <p className={cn('text-[12px] font-semibold', active ? 'text-emerald-800' : 'text-slate-700')}>{m.label}</p>
-                  <p className="text-[10px] leading-snug text-slate-400">{m.description}</p>
+                  <p className={cn('text-[12px] font-semibold', active ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--foreground))]')}>{m.label}</p>
+                  <p className="text-[10px] leading-snug text-[hsl(var(--muted-foreground))]">{m.description}</p>
                 </div>
               </button>
             )
@@ -127,21 +127,21 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
         </div>
       </div>
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       {/* Expose as tool — FR-C8-004. Orthogonal to Mode: this workflow keeps
           whatever mode already governs its normal dispatch and can ALSO be
           made callable as an Agent tool. */}
       <ExposeAsToolFields config={config} variables={variables} set={set} />
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       {/* On Demand (data-driven) mode fields — FR-B3-007 */}
       {config.mode === 'on_demand_data_driven' && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Restrict to Form (optional)</Label>
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Restrict to Form (optional)</Label>
           <FormReferenceSelect value={config.source_form_id || undefined} onChange={(id) => set({ source_form_id: id ?? '' })} />
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
             Leave blank to allow this workflow to be triggered against a record from any form. When set, only that form's own record-detail custom actions can dispatch this workflow.
           </p>
         </div>
@@ -151,19 +151,19 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
       {config.mode === 'scheduled' && (
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Cron Expression</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Cron Expression</Label>
             <Input
               value={config.cron ?? ''}
               onChange={(e) => set({ cron: e.target.value })}
               placeholder="0 9 * * *"
               className="h-8 font-mono text-[12px]"
             />
-            <p className="text-[10px] text-slate-400">
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
               Standard 5-field crontab syntax, or shorthands like <code className="font-mono">@daily</code>, <code className="font-mono">@hourly</code>, <code className="font-mono">@every 1h30m</code>.
             </p>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Timezone</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Timezone</Label>
             <Input
               value={config.timezone ?? ''}
               onChange={(e) => set({ timezone: e.target.value })}
@@ -172,7 +172,7 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Description</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Description</Label>
             <Input
               value={config.description ?? ''}
               onChange={(e) => set({ description: e.target.value })}
@@ -187,13 +187,13 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
       {isDataDriven && (
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Form / Table</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Form / Table</Label>
             <FormReferenceSelect value={config.form_id || undefined} onChange={(id) => set({ form_id: id ?? '' })} />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">On Event</Label>
-            <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1">
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">On Event</Label>
+            <div className="grid grid-cols-2 gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
               {EVENT_TYPES.map((e) => (
                 <button
                   key={e.value}
@@ -201,7 +201,7 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
                   onClick={() => set({ event_type: e.value })}
                   className={cn(
                     'rounded-md py-1 text-[11px] font-medium transition-colors',
-                    config.event_type === e.value ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700',
+                    config.event_type === e.value ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
                   )}
                 >
                   {e.label}
@@ -210,15 +210,15 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
             </div>
           </div>
 
-          <div className="h-px bg-slate-100" />
+          <div className="h-px bg-[hsl(var(--border))]" />
 
           <div className="space-y-2">
             <div className="flex items-center gap-1.5">
-              <FilterIcon size={12} className="text-slate-400" />
-              <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Filter (optional)</Label>
+              <FilterIcon size={12} className="text-[hsl(var(--muted-foreground))]" />
+              <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Filter (optional)</Label>
             </div>
             {!config.form_id ? (
-              <p className="rounded-lg border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-400">Select a form to add filters.</p>
+              <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">Select a form to add filters.</p>
             ) : (
               <FilterBuilder
                 group={config.filter ?? newGroup()}
@@ -227,12 +227,12 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
                 onChange={(g) => set({ filter: g })}
               />
             )}
-            <p className="text-[10px] text-slate-400">
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
               Use the <span className="font-mono">was updated</span> operator on a field to react only when that field's value actually changes (change-detection, evaluated against the old/new record pair).
             </p>
           </div>
 
-          <p className="rounded-lg border border-dashed border-amber-200 bg-amber-50 p-2.5 text-[10px] text-amber-700">
+          <p className="rounded-lg border border-dashed border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-2.5 text-[10px] text-[hsl(var(--warning))]">
             {config.mode === 'before'
               ? 'Runs synchronously before the write. A Show Message node with type "error" here blocks the write and returns the message to the caller.'
               : config.mode === 'after'
@@ -243,7 +243,7 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
       )}
 
       {config.mode === 'on_demand' && (
-        <p className="rounded-lg border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-400">
+        <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
           No additional configuration. Run this workflow manually or via the executions API.
         </p>
       )}
@@ -253,8 +253,8 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
 
       {/* Executed-by-workflow mode */}
       {config.mode === 'executed_by_workflow' && (
-        <p className="rounded-lg border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-400">
-          No additional configuration. Add an <span className="font-semibold text-slate-500">Execute Workflow</span> node
+        <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
+          No additional configuration. Add an <span className="font-semibold text-[hsl(var(--muted-foreground))]">Execute Workflow</span> node
           in another workflow and point it at this one — this trigger only accepts calls made that way, never a plain
           on-demand run or the executions API.
         </p>
@@ -263,13 +263,13 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
       {/* Error trigger mode */}
       {config.mode === 'on_error' && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Watch Workflow (optional)</Label>
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Watch Workflow (optional)</Label>
           <WorkflowReferenceSelect
             value={config.source_definition_id || undefined}
             onChange={(id) => set({ source_definition_id: id ?? '' })}
             placeholder="Any workflow in this app…"
           />
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
             Leave blank to react to any workflow's failed execution in this app. When set, only that workflow's
             failures dispatch this trigger.
           </p>
@@ -312,30 +312,30 @@ function ExposeAsToolFields({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2">
+      <div className="flex items-center justify-between rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 px-3 py-2">
         <div>
-          <Label className="text-[12px] font-semibold text-slate-700">Expose as Tool</Label>
-          <p className="text-[10px] text-slate-400">Let an Agent call this workflow directly, in addition to however it's normally triggered above.</p>
+          <Label className="text-[12px] font-semibold text-[hsl(var(--foreground))]">Expose as Tool</Label>
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Let an Agent call this workflow directly, in addition to however it's normally triggered above.</p>
         </div>
         <button
           type="button"
           onClick={() => set({ expose_as_tool: !config.expose_as_tool })}
           className={cn(
             'relative h-5 w-9 shrink-0 rounded-full transition-colors',
-            config.expose_as_tool ? 'bg-emerald-500' : 'bg-slate-300',
+            config.expose_as_tool ? 'bg-[hsl(var(--success))]' : 'bg-[hsl(var(--muted-foreground))]/40',
           )}
         >
           <span className={cn(
-            'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform',
+            'absolute top-0.5 h-4 w-4 rounded-full bg-[hsl(var(--card))] shadow transition-transform',
             config.expose_as_tool ? 'translate-x-4' : 'translate-x-0.5',
           )} />
         </button>
       </div>
 
       {config.expose_as_tool && (
-        <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3">
+        <div className="space-y-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3">
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tool Name</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Tool Name</Label>
             <Input
               value={config.tool_name ?? ''}
               onChange={(e) => set({ tool_name: e.target.value })}
@@ -344,19 +344,19 @@ function ExposeAsToolFields({
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tool Description</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Tool Description</Label>
             <textarea
               value={config.tool_description ?? ''}
               onChange={(e) => set({ tool_description: e.target.value })}
               rows={3}
               placeholder="What this tool does and when an Agent should call it…"
-              className="w-full resize-y rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12px] text-slate-700 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+              className="w-full resize-y rounded-lg border border-[hsl(var(--border))] px-2.5 py-1.5 text-[12px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Parameters</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Parameters</Label>
             {variables.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-400">
+              <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
                 This workflow has no declared Variables yet — add one in the Variables panel to expose it as a tool parameter.
               </p>
             ) : (
@@ -365,11 +365,11 @@ function ExposeAsToolFields({
                   const selected = selectedNames.has(v.name)
                   const param = parameters.find((p) => p.variable_name === v.name)
                   return (
-                    <div key={v.name} className="rounded-lg border border-slate-200 p-2">
+                    <div key={v.name} className="rounded-lg border border-[hsl(var(--border))] p-2">
                       <label className="flex items-center gap-2">
                         <Checkbox checked={selected} onCheckedChange={(c) => toggleParameter(v.name, c === true)} />
-                        <span className="font-mono text-[11px] text-slate-700">{v.name}</span>
-                        <span className="text-[10px] text-slate-400">({v.type})</span>
+                        <span className="font-mono text-[11px] text-[hsl(var(--foreground))]">{v.name}</span>
+                        <span className="text-[10px] text-[hsl(var(--muted-foreground))]">({v.type})</span>
                       </label>
                       {selected && (
                         <Input
@@ -384,7 +384,7 @@ function ExposeAsToolFields({
                 })}
               </div>
             )}
-            <p className="text-[10px] text-slate-400">Leave every Variable unchecked for a tool that needs no input.</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Leave every Variable unchecked for a tool that needs no input.</p>
           </div>
         </div>
       )}
@@ -411,28 +411,28 @@ function WebhookModeFields({ config }: { config: TriggerConfig }) {
 
   return (
     <div className="space-y-1.5">
-      <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Webhook URL</Label>
+      <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Webhook URL</Label>
       {url ? (
         <>
-          <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
-            <code className="min-w-0 flex-1 truncate text-[11px] text-slate-600">{url}</code>
+          <div className="flex items-center gap-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-2.5 py-1.5">
+            <code className="min-w-0 flex-1 truncate text-[11px] text-[hsl(var(--muted-foreground))]">{url}</code>
             <button
               type="button"
               onClick={copy}
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted-foreground))]/20 hover:text-[hsl(var(--foreground))]"
               title="Copy URL"
             >
-              {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+              {copied ? <Check size={12} className="text-[hsl(var(--success))]" /> : <Copy size={12} />}
             </button>
           </div>
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
             Send a <span className="font-mono">POST</span> request here with a JSON object body — its fields are
             available to every node as <span className="font-mono">Vars["fieldKey"]</span>, the same way a
             triggering record's fields are. A body-less call is treated as an empty payload.
           </p>
         </>
       ) : (
-        <p className="flex items-center gap-1.5 rounded-lg border border-dashed border-slate-200 p-3 text-[11px] text-slate-400">
+        <p className="flex items-center gap-1.5 rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-[11px] text-[hsl(var(--muted-foreground))]">
           <RefreshCw size={12} className="shrink-0" />
           Save this workflow once to generate its webhook URL.
         </p>

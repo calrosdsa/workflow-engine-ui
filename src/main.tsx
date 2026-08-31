@@ -23,10 +23,10 @@ createRoot(document.getElementById('root')!).render(
       {/* The builder shell's own toast host — a plain sonner Toaster, not
           components/ui/sonner.tsx's wrapper, since that one calls
           useThemeMode() and requires a ThemeProvider ancestor (the runtime's
-          per-app-theme system). The builder shell runs a single fixed light
-          theme (DESIGN.md's Overview), so it maps the same
-          normal/success/error/warning CSS vars straight to its own
-          always-light tokens instead. */}
+          per-app-theme system, unrelated to the shell's own light/dark
+          switch in features/theme/useBuilderTheme.ts). Reads the same
+          index.css tokens the switch flips via .light on <html>, so no
+          separate light/dark handling is needed here. */}
       <Toaster
         richColors
         closeButton

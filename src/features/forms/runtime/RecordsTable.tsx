@@ -14,7 +14,7 @@ import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuil
 import { nanoid } from '@/features/workflows/builder/nanoid'
 import { RecordDetailPanel, RecordDetailToolbar } from './RecordDetailPanel'
 import { resolveRecordTitle } from './record-title'
-import { formatSystemDatetime } from './format-value'
+import { formatSystemDatetime, formatFieldValue } from './format-value'
 import { RecordReferenceLink } from './RecordReferenceLink'
 import { RoleValueLabel } from './RoleValueLabel'
 import { FileCellDisplay } from './FileCellDisplay'
@@ -266,6 +266,15 @@ export function RecordsTable({
     // FieldValueDisplay.tsx's Detail Page fix, this table's own read-only
     // column render).
     const isFile = field?.type === 'file'
+    // 'date'/'time'/'datetime' each arrive as an RFC3339 string, so without
+    // this case they fell through to DataTable's generic formatCell and
+    // printed the raw wire value — a Due Date of Aug 15 2026 showing as
+    // "2026-08-15T00:00:00Z". Same bug class as isFile above and as the
+    // isSystemDatetime branch below, which already formats created_at/
+    // updated_at: the system timestamps were handled while the user's OWN
+    // date fields were not. See formatFieldValue for the timezone trap that
+    // makes `new Date(v).toLocaleDateString()` the wrong fix here.
+    const isTemporal = field?.type === 'date' || field?.type === 'datetime' || field?.type === 'time'
     return {
       key,
       label: field?.label ?? key,
@@ -280,6 +289,8 @@ export function RecordsTable({
         ? (row: FormRecord) => resolveEnumLabel(enumLabels, key, row[key])
         : isFile
         ? (row: FormRecord) => <FileCellDisplay value={row[key]} />
+        : isTemporal
+        ? (row: FormRecord) => formatFieldValue(row[key], field.type)
         : undefined,
     }
   })

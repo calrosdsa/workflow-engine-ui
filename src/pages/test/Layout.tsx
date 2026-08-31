@@ -223,19 +223,19 @@ const Flow = () => {
 
   return (
     <div
-      className="relative h-full flex-1 bg-slate-50"
+      className="relative h-full flex-1 bg-[hsl(var(--background))]"
       onDrop={onDrop}
       onDragOver={onDragOver}
     >
       {/* Canvas toolbar — undo/redo + view helpers */}
-      <div className="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-xl border border-slate-200 bg-white p-1 shadow-lg shadow-slate-900/5">
+      <div className="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-1 shadow-lg shadow-black/20">
         <ToolbarButton onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)">
           <Undo2 size={15} />
         </ToolbarButton>
         <ToolbarButton onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)">
           <Redo2 size={15} />
         </ToolbarButton>
-        <div className="mx-0.5 h-4 w-px bg-slate-200" />
+        <div className="mx-0.5 h-4 w-px bg-[hsl(var(--border))]" />
         <ToolbarButton onClick={tidyLayout} title="Tidy up layout">
           <Wand2 size={15} />
         </ToolbarButton>
@@ -253,12 +253,13 @@ const Flow = () => {
 
       {/* First-steps hint — only while the canvas holds nothing but the seed */}
       {nodes.length <= 2 && (
-        <div className="pointer-events-none absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-xs font-medium text-slate-500 shadow-sm backdrop-blur">
-          Hover the connection line and click <span className="mx-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 align-middle text-[10px] font-bold text-white">+</span> to add your first step
+        <div className="pointer-events-none absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))]/90 px-4 py-2 text-xs font-medium text-[hsl(var(--muted-foreground))] shadow-sm backdrop-blur">
+          Hover the connection line and click <span className="mx-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[hsl(var(--primary))] align-middle text-[10px] font-bold text-[hsl(var(--primary-foreground))]">+</span> to add your first step
         </div>
       )}
 
       <ReactFlow
+        colorMode="dark"
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
@@ -266,7 +267,7 @@ const Flow = () => {
         defaultEdgeOptions={{
           animated: false,
           type: "default",
-          style: { strokeWidth: 2, stroke: "#cbd5e1" },
+          style: { strokeWidth: 2, stroke: "hsl(var(--muted-foreground))" },
         }}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
@@ -289,7 +290,7 @@ const Flow = () => {
         elevateEdgesOnSelect
         fitView
         // fitViewOptions={{ padding: 0.3 }}
-        connectionLineStyle={{ strokeWidth: 2, stroke: "#3b82f6" }}
+        connectionLineStyle={{ strokeWidth: 2, stroke: "hsl(var(--primary))" }}
         snapToGrid
         // snapGrid={[16, 16]}
         minZoom={0.3}
@@ -301,19 +302,19 @@ const Flow = () => {
           variant={BackgroundVariant.Dots}
           gap={20}
           size={1.5}
-          color="#d8dee9"
+          color="hsl(var(--border))"
         />
         <Controls
           showInteractive={false}
-          className="!rounded-xl !border !border-slate-200 !bg-white !shadow-lg overflow-hidden [&>button]:!border-slate-100 [&>button]:!text-slate-500 [&>button:hover]:!bg-slate-50"
+          className="!rounded-xl !border !border-[hsl(var(--border))] !bg-[hsl(var(--card))] !shadow-lg overflow-hidden [&>button]:!border-[hsl(var(--border))] [&>button]:!text-[hsl(var(--muted-foreground))] [&>button:hover]:!bg-[hsl(var(--muted))]"
         />
         {showMiniMap && (
           <MiniMap
             pannable
             zoomable
-            className="!rounded-xl !border !border-slate-200 !bg-white !shadow-lg"
-            maskColor="rgba(241,245,249,0.7)"
-            nodeColor={(n) => NODE_REGISTRY[(n.data as FlowNode["data"]).type]?.accent ?? "#94a3b8"}
+            className="!rounded-xl !border !border-[hsl(var(--border))] !bg-[hsl(var(--card))] !shadow-lg"
+            maskColor="hsl(var(--background) / 0.7)"
+            nodeColor={(n) => NODE_REGISTRY[(n.data as FlowNode["data"]).type]?.accent ?? "hsl(var(--muted-foreground))"}
             nodeStrokeWidth={0}
             nodeBorderRadius={4}
           />
@@ -348,10 +349,10 @@ function ToolbarButton({
       className={cn(
         "flex h-7 w-7 items-center justify-center rounded-lg transition-colors",
         disabled
-          ? "cursor-default text-slate-300"
+          ? "cursor-default text-[hsl(var(--muted-foreground))]/40"
           : active
-            ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
-            : "text-slate-500 hover:bg-slate-100 hover:text-slate-700",
+            ? "bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/70"
+            : "text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]",
       )}
     >
       {children}

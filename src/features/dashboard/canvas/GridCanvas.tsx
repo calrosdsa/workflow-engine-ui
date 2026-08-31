@@ -131,7 +131,7 @@ export function GridCanvas({ clientId, appId, onAddFirstWidget }: GridCanvasProp
   return (
     <div
       ref={setNodeRef}
-      className={`flex h-full flex-1 flex-col overflow-auto bg-slate-50 ${isOver ? 'ring-2 ring-inset ring-indigo-300' : ''}`}
+      className={`flex h-full flex-1 flex-col overflow-auto bg-[hsl(var(--background))] ${isOver ? 'ring-2 ring-inset ring-[hsl(var(--primary))]/50' : ''}`}
       onClick={() => selectWidget(null)}
     >
       <div className="mx-auto w-full max-w-6xl flex-1 p-6" style={{ maxWidth: schema.settings.maxWidth }}>
@@ -178,15 +178,15 @@ export function GridCanvas({ clientId, appId, onAddFirstWidget }: GridCanvasProp
 
 function EmptyCanvas({ onAdd }: { onAdd: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 bg-white/60 py-24 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
-        <LayoutGrid size={26} className="text-slate-300" />
+    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[hsl(var(--border))] bg-[hsl(var(--card))]/60 py-24 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--muted))]">
+        <LayoutGrid size={26} className="text-[hsl(var(--muted-foreground))]/60" />
       </div>
       <div>
-        <p className="text-sm font-medium text-slate-600">Start building your dashboard</p>
-        <p className="mt-1 text-xs text-slate-400">Drag a widget from the left, or add one to get started.</p>
+        <p className="text-sm font-medium text-[hsl(var(--foreground))]/80">Start building your dashboard</p>
+        <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">Drag a widget from the left, or add one to get started.</p>
       </div>
-      <Button onClick={(e) => { e.stopPropagation(); onAdd() }} className="mt-1 gap-2 bg-indigo-600 text-white hover:bg-indigo-700">
+      <Button onClick={(e) => { e.stopPropagation(); onAdd() }} className="mt-1 gap-2">
         <Plus size={15} /> Add Widget
       </Button>
     </div>

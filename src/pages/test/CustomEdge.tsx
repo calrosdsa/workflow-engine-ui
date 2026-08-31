@@ -46,10 +46,10 @@ export function CustomEdge({
   // lighter highlight. A taken path in an active overlay takes priority over
   // the idle default so the highlight reads clearly even when nothing is
   // selected/hovered. Default is the muted slate from props.
-  const stroke = selected ? '#6366f1'
-    : hovered ? '#3b82f6'
-    : isTakenPath ? '#10b981'
-    : style?.stroke ?? '#cbd5e1'
+  const stroke = selected ? 'hsl(var(--primary))'
+    : hovered ? 'hsl(var(--primary))'
+    : isTakenPath ? 'hsl(var(--success))'
+    : style?.stroke ?? 'hsl(var(--muted-foreground))'
   const strokeWidth = selected || isTakenPath ? 3 : 2
   // Dim edges while a reorder drag is in flight, matching the node fade so the
   // whole idle tree recedes and the drag/drop pair stays visually prominent.
@@ -63,7 +63,7 @@ export function CustomEdge({
         <BaseEdge
           id={`${id}-halo`}
           path={edgePath}
-          style={{ stroke: '#6366f1', strokeWidth: 8, opacity: 0.15 }}
+          style={{ stroke: 'hsl(var(--primary))', strokeWidth: 8, opacity: 0.15 }}
         />
       )}
       <BaseEdge
@@ -90,10 +90,9 @@ export function CustomEdge({
                 openPicker({ kind: 'edge', edgeId: id })
               }}
               className={[
-                'flex h-6 w-6 items-center justify-center rounded-full text-white ring-4 ring-slate-50',
+                'flex h-6 w-6 items-center justify-center rounded-full text-[hsl(var(--primary-foreground))] ring-4 ring-[hsl(var(--background))]',
                 'transition-all duration-150 hover:scale-110',
-                selected ? 'bg-indigo-500 hover:bg-indigo-600 shadow-md shadow-indigo-500/30'
-                         : 'bg-blue-500 hover:bg-blue-600 shadow-md shadow-blue-500/30',
+                'bg-[hsl(var(--primary))] hover:brightness-110 shadow-md shadow-[hsl(var(--primary))]/30',
                 (hovered || selected) ? 'opacity-100 scale-100' : 'opacity-0 scale-50',
               ].join(' ')}
               title="Insert node here"

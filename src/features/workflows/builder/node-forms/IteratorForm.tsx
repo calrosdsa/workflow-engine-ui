@@ -25,7 +25,7 @@ export function IteratorForm({ config, variables, nodeContext, onChange }: Itera
     <div className="space-y-4">
       {/* Source list */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Source List</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Source List</Label>
         <ExpressionField
           value={config.source_expr ?? ''}
           onChange={(v) => set({ source_expr: v })}
@@ -34,13 +34,13 @@ export function IteratorForm({ config, variables, nodeContext, onChange }: Itera
           placeholder='e.g. NodeOutputs["fetch"]["records"]'
           label="source list"
         />
-        <p className="text-[10px] text-slate-400">Must resolve to a list. The body runs once per element.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Must resolve to a list. The body runs once per element.</p>
       </div>
 
       {/* Item / index var names */}
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Item Var</Label>
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Item Var</Label>
           <Input
             value={config.item_var ?? 'item'}
             onChange={(e) => set({ item_var: e.target.value })}
@@ -49,7 +49,7 @@ export function IteratorForm({ config, variables, nodeContext, onChange }: Itera
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Index Var</Label>
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Index Var</Label>
           <Input
             value={config.index_var ?? 'index'}
             onChange={(e) => set({ index_var: e.target.value })}
@@ -58,15 +58,15 @@ export function IteratorForm({ config, variables, nodeContext, onChange }: Itera
           />
         </div>
       </div>
-      <p className="-mt-2 text-[10px] text-slate-400">
-        Inside the loop body, reference <code className="text-amber-600">Vars["{config.item_var || 'item'}"]</code> and <code className="text-amber-600">Vars["{config.index_var || 'index'}"]</code>.
+      <p className="-mt-2 text-[10px] text-[hsl(var(--muted-foreground))]">
+        Inside the loop body, reference <code className="text-[hsl(var(--warning))]">Vars["{config.item_var || 'item'}"]</code> and <code className="text-[hsl(var(--warning))]">Vars["{config.index_var || 'index'}"]</code>.
       </p>
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       {/* Filter condition */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Filter (optional)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Filter (optional)</Label>
         <ExpressionField
           value={config.filter_expr ?? ''}
           onChange={(v) => set({ filter_expr: v })}
@@ -75,12 +75,12 @@ export function IteratorForm({ config, variables, nodeContext, onChange }: Itera
           placeholder='e.g. Vars["item"]["active"] == true'
           label="filter condition"
         />
-        <p className="text-[10px] text-slate-400">Run the body only when this is true (skip the element otherwise).</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Run the body only when this is true (skip the element otherwise).</p>
       </div>
 
       {/* Stop condition */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Stop When (optional)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Stop When (optional)</Label>
         <ExpressionField
           value={config.stop_expr ?? ''}
           onChange={(v) => set({ stop_expr: v })}
@@ -89,12 +89,12 @@ export function IteratorForm({ config, variables, nodeContext, onChange }: Itera
           placeholder='e.g. Vars["index"] >= 10'
           label="stop condition"
         />
-        <p className="text-[10px] text-slate-400">Stop the loop early when this becomes true.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Stop the loop early when this becomes true.</p>
       </div>
 
       {/* Max iterations */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Max Iterations</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Max Iterations</Label>
         <Input
           type="number"
           min={0}
@@ -105,13 +105,13 @@ export function IteratorForm({ config, variables, nodeContext, onChange }: Itera
         />
       </div>
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       {/* Continue on error */}
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-0.5">
-          <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Continue on Error</Label>
-          <p className="text-[10px] text-slate-400">
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Continue on Error</Label>
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
             If an item's body fails, skip it and keep going instead of stopping the loop. Failed items are listed on the iterator node.
           </p>
         </div>

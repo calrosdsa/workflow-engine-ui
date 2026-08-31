@@ -42,7 +42,7 @@ function withRecordScope(
 
 export function TableRenderer({ config, recordContext }: WidgetRendererProps<TableWidgetConfig>) {
   if (!config.formId) {
-    return <div className="flex h-full items-center justify-center p-3 text-xs text-slate-400">No form selected yet.</div>
+    return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No form selected yet.</div>
   }
 
   return (

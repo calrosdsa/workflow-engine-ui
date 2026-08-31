@@ -17,11 +17,11 @@ export function ButtonConfigPanel({ config, onChange }: WidgetConfigPanelProps<B
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-slate-600">Button Label</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Button Label</Label>
         <Input value={config.label} onChange={(e) => onChange({ ...config, label: e.target.value })} className="h-8 text-sm" />
       </div>
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-slate-600">Style</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Style</Label>
         <SelectMenu value={config.variant} onValueChange={(v) => onChange({ ...config, variant: v as ButtonWidgetConfig['variant'] })}>
           <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -32,15 +32,15 @@ export function ButtonConfigPanel({ config, onChange }: WidgetConfigPanelProps<B
         </SelectMenu>
       </div>
       <div>
-        <Label className="mb-1.5 block text-[11px] font-medium text-slate-600">Links to</Label>
-        <div className="flex gap-1 rounded-md bg-slate-100 p-0.5">
+        <Label className="mb-1.5 block text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Links to</Label>
+        <div className="flex gap-1 rounded-md bg-[hsl(var(--muted))] p-0.5">
           {(['menu', 'external'] as const).map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => onChange({ ...config, linkType: t })}
               className={`flex-1 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
-                config.linkType === t ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400'
+                config.linkType === t ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]'
               }`}
             >
               {t === 'menu' ? 'Another menu' : 'External URL'}
@@ -50,12 +50,12 @@ export function ButtonConfigPanel({ config, onChange }: WidgetConfigPanelProps<B
       </div>
       {config.linkType === 'menu' ? (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-medium text-slate-600">Target menu</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Target menu</Label>
           <MenuSlugSelect value={config.menuSlug ?? ''} onChange={(slug) => onChange({ ...config, menuSlug: slug })} />
         </div>
       ) : (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-medium text-slate-600">URL</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">URL</Label>
           <Input value={config.url ?? ''} onChange={(e) => onChange({ ...config, url: e.target.value })} placeholder="https://…" className="h-8 text-sm" />
         </div>
       )}

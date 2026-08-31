@@ -11,6 +11,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Spinner } from '@/components/ui/spinner'
 import { useMenus } from '@/features/menus/hooks'
 import { MENU_TYPE_REGISTRY } from '@/features/menus/menu-registry'
+// A menu's own icon wins here too — the mobile tab bar shows the same menus
+// the sidebar does, so an icon set in the menu editor has to follow them.
+import { resolveMenuIcon } from '@/features/menus/menu-icons'
 import { useApplicationMobileNav, useUpdateApplicationMobileNav } from '@/features/applications/hooks'
 import { usePermission } from '@/features/auth/permissions'
 import { emptyMobileNavConfig } from '@/features/menus/mobile-nav-types'
@@ -174,7 +177,7 @@ function MobileNavRow({ menu, visible, onToggleVisible, canWrite }: {
   canWrite: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: menu.id })
-  const Icon = MENU_TYPE_REGISTRY[menu.menu_type].icon
+  const Icon = resolveMenuIcon(menu.icon) ?? MENU_TYPE_REGISTRY[menu.menu_type].icon
 
   return (
     <div
@@ -234,7 +237,7 @@ function PhonePreview({ rows, style }: { rows: { menu: Menu; visible: boolean }[
         {style === 'bottom_tabs' ? (
           <div className="flex border-t border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40">
             {tabs.map(({ menu }) => {
-              const Icon = MENU_TYPE_REGISTRY[menu.menu_type].icon
+              const Icon = resolveMenuIcon(menu.icon) ?? MENU_TYPE_REGISTRY[menu.menu_type].icon
               return (
                 <div key={menu.id} className="flex flex-1 flex-col items-center gap-0.5 py-2">
                   <Icon size={16} className="text-[hsl(var(--primary))]" />
@@ -252,7 +255,7 @@ function PhonePreview({ rows, style }: { rows: { menu: Menu; visible: boolean }[
         ) : (
           <div className="space-y-1 border-t border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-2">
             {tabs.map(({ menu }) => {
-              const Icon = MENU_TYPE_REGISTRY[menu.menu_type].icon
+              const Icon = resolveMenuIcon(menu.icon) ?? MENU_TYPE_REGISTRY[menu.menu_type].icon
               return (
                 <div key={menu.id} className="flex items-center gap-2 rounded px-2 py-1">
                   <Icon size={13} className="text-[hsl(var(--primary))]" />

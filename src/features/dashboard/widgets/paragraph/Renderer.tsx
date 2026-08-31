@@ -7,7 +7,7 @@ export function ParagraphRenderer({ config, mode }: WidgetRendererProps<Paragrap
   // chrome), which is fine at runtime but leaves a builder-mode tile with
   // no way to tell it exists without clicking its exact bounds.
   if (!config.text && mode === 'builder') {
-    return <p className="p-3 text-sm italic text-slate-300">Empty paragraph — click to add text</p>
+    return <p className="p-3 text-sm italic text-[hsl(var(--muted-foreground))]">Empty paragraph — click to add text</p>
   }
   return (
     <p className="p-3 leading-relaxed" style={{ color: 'hsl(var(--foreground))' }}>

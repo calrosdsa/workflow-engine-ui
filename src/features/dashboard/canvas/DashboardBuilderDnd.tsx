@@ -50,11 +50,11 @@ export function DashboardBuilderDnd({ children }: { children: ReactNode }) {
 
       <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.2,0,0,1)' }}>
         {draggingDef && (
-          <div className="flex items-center gap-2.5 rounded-lg border border-indigo-300 bg-white px-3 py-2 shadow-xl">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-100 text-indigo-600">
+          <div className="flex items-center gap-2.5 rounded-lg border border-[hsl(var(--primary))]/40 bg-[hsl(var(--card))] px-3 py-2 shadow-xl">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]">
               <draggingDef.icon size={15} />
             </span>
-            <span className="text-[12px] font-medium text-slate-700">{draggingDef.label}</span>
+            <span className="text-[12px] font-medium text-[hsl(var(--foreground))]">{draggingDef.label}</span>
           </div>
         )}
       </DragOverlay>

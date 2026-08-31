@@ -6,6 +6,7 @@ import {
   Outlet,
 } from '@tanstack/react-router'
 import { AppShell } from '@/components/layout/AppShell'
+import { NotFoundPage } from '@/features/runtime/NotFoundPage'
 import { HomePage } from '@/pages/HomePage'
 import { MarketplaceBrowsePage } from '@/pages/marketplace/MarketplaceBrowsePage'
 import { DashboardPage } from '@/pages/DashboardPage'
@@ -19,6 +20,7 @@ import { FormBuilderPage } from '@/pages/forms/FormBuilderPage'
 import { ApplicationDesignShell } from '@/pages/applications/ApplicationDesignShell'
 import { AppDesignPage } from '@/pages/applications/AppDesignPage'
 import { DashboardEditorPage } from '@/pages/applications/DashboardEditorPage'
+import { ReportBuilderPage } from '@/pages/applications/ReportBuilderPage'
 import { GlobalSettingsSection } from '@/pages/applications/sections/GlobalSettingsSection'
 import { TeamPage } from '@/pages/team/TeamPage'
 import { ModelProvidersPage } from '@/pages/ModelProvidersPage'
@@ -235,8 +237,14 @@ const appFormsRoute = createRoute({
 const appFormNewRoute = createRoute({
   getParentRoute: () => applicationShellRoute,
   path: '/forms/new',
-  validateSearch: (search: Record<string, unknown>): { parentFormId?: string } => ({
+  // `seed` names a form staged by the JSON specification import (see
+  // form-builder/store.ts). It carries only a token, never the spec itself —
+  // the schema is far too big for a URL, and a token that outlives its
+  // staged entry (a reload, a bookmarked link) simply resolves to nothing
+  // and yields the ordinary blank builder.
+  validateSearch: (search: Record<string, unknown>): { parentFormId?: string; seed?: string } => ({
     parentFormId: typeof search.parentFormId === 'string' ? search.parentFormId : undefined,
+    seed: typeof search.seed === 'string' ? search.seed : undefined,
   }),
   component: () => <FormBuilderPage mode="new" />,
 })
@@ -262,8 +270,8 @@ const appFormDetailRoute = createRoute({
 const appDesignRoute = createRoute({
   getParentRoute: () => applicationShellRoute,
   path: '/design',
-  validateSearch: (search: Record<string, unknown>): { tab?: 'theme' | 'menus' | 'mobile' | 'general' | 'agents' | 'versions' | 'environment' | 'marketplace' } => ({
-    tab: search.tab === 'theme' || search.tab === 'menus' || search.tab === 'mobile' || search.tab === 'general' || search.tab === 'agents' || search.tab === 'versions' || search.tab === 'environment' || search.tab === 'marketplace' ? search.tab : undefined,
+  validateSearch: (search: Record<string, unknown>): { tab?: 'theme' | 'menus' | 'mobile' | 'general' | 'agents' | 'versions' | 'environment' | 'reports' | 'marketplace' } => ({
+    tab: search.tab === 'theme' || search.tab === 'menus' || search.tab === 'mobile' || search.tab === 'general' || search.tab === 'agents' || search.tab === 'versions' || search.tab === 'environment' || search.tab === 'reports' || search.tab === 'marketplace' ? search.tab : undefined,
   }),
   component: () => <AppDesignPage appId={applicationShellRoute.useParams().appId} />,
 })
@@ -275,6 +283,20 @@ const dashboardEditorRoute = createRoute({
   component: () => {
     const { appId, menuId } = dashboardEditorRoute.useParams()
     return <DashboardEditorPage appId={appId} menuId={menuId} />
+  },
+})
+
+// Full-screen report builder — /applications/$appId/design/reports/$reportId
+// (3.3 §J, FR-J1-001). Sibling of dashboardEditorRoute above, but NOT
+// menu-backed — a report is its own first-class resource
+// (report_definitions), not a Menu subtype, so this takes $reportId rather
+// than $menuId.
+const reportBuilderRoute = createRoute({
+  getParentRoute: () => applicationShellRoute,
+  path: '/design/reports/$reportId',
+  component: () => {
+    const { appId, reportId } = reportBuilderRoute.useParams()
+    return <ReportBuilderPage appId={appId} reportId={reportId} />
   },
 })
 
@@ -360,6 +382,7 @@ const routeTree = rootRoute.addChildren([
       appFormRecordsRoute,
       appDesignRoute,
       dashboardEditorRoute,
+      reportBuilderRoute,
       appSettingsRoute,
       appKnowledgeBasesRoute,
       appKnowledgeBaseDetailRoute,
@@ -370,7 +393,19 @@ const routeTree = rootRoute.addChildren([
   ]),
 ])
 
-export const router = createRouter({ routeTree })
+// The builder had neither a catch-all route nor a notFoundComponent, so any
+// unmatched builder URL (a stale bookmark, a deleted app's id, a mistyped
+// path) rendered the same bare <p>Not Found</p> the runtime did. Reuses the
+// runtime's NotFoundPage — it is styled entirely with the shared
+// --background/--foreground/--muted-foreground CSS vars, which the builder
+// defines too — with builder-appropriate copy, since NotFoundPage's default
+// message talks about publishing and nothing here is publishable.
+export const router = createRouter({
+  routeTree,
+  defaultNotFoundComponent: () => (
+    <NotFoundPage message="This page doesn't exist. It may have been deleted, or the link may be out of date." />
+  ),
+})
 
 declare module '@tanstack/react-router' {
   interface Register {

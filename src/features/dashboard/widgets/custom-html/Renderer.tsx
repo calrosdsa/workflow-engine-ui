@@ -26,7 +26,7 @@ import { sanitizeInlineHtml } from './sanitize'
 //'inline' mode's DOMPurify allowlist deliberately strips.
 export function CustomHtmlRenderer({ config }: WidgetRendererProps<CustomHtmlWidgetConfig>) {
   if (!config.html.trim()) {
-    return <div className="flex h-full items-center justify-center p-3 text-xs text-slate-400">No HTML added yet.</div>
+    return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No HTML added yet.</div>
   }
 
   if (config.mode === 'sandbox') {

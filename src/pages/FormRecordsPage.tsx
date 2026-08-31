@@ -36,14 +36,14 @@ export function FormRecordsPage() {
   const [createError, setCreateError] = useState<string | null>(null)
 
   if (loadingForm || loadingRecords) return <div className="flex h-64 items-center justify-center"><Spinner /></div>
-  if (!form) return <p className="p-6 text-red-600">Form not found</p>
+  if (!form) return <p className="p-6 text-[hsl(var(--destructive))]">Form not found</p>
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{form.name}</h1>
-          <p className="text-sm text-gray-500 mt-1 font-mono">{form.slug} · {records?.length ?? 0} records</p>
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">{form.name}</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1 font-mono">{form.slug} · {records?.length ?? 0} records</p>
         </div>
         <Button onClick={() => setShowCreate(!showCreate)}>
           <Plus size={16} />{showCreate ? 'Cancel' : 'New Record'}
@@ -55,7 +55,7 @@ export function FormRecordsPage() {
           <CardHeader><CardTitle className="text-sm">New Record</CardTitle></CardHeader>
           <CardContent>
             {createError && (
-              <div className="mb-3 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+              <div className="mb-3 rounded-md bg-[hsl(var(--destructive))]/10 border border-[hsl(var(--destructive))]/30 px-3 py-2 text-sm text-[hsl(var(--destructive))]">
                 {createError}
               </div>
             )}
@@ -80,38 +80,38 @@ export function FormRecordsPage() {
       )}
 
       {!records?.length ? (
-        <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center text-gray-500">
+        <div className="rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center text-[hsl(var(--muted-foreground))]">
           No records yet.
         </div>
       ) : (
-        <div className="rounded-lg border bg-white overflow-hidden">
+        <div className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-[hsl(var(--border))]">
+              <thead className="bg-[hsl(var(--muted))]">
                 <tr>
                   {['id', ...form.fields.map(f => f.name), 'created_at'].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase whitespace-nowrap">{h}</th>
                   ))}
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-[hsl(var(--border))]">
                 {records.map((rec) => (
-                  <tr key={String(rec.id)} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-xs text-gray-400">{String(rec.id).slice(0, 8)}…</td>
+                  <tr key={String(rec.id)} className="hover:bg-[hsl(var(--muted))]">
+                    <td className="px-4 py-3 font-mono text-xs text-[hsl(var(--muted-foreground))]">{String(rec.id).slice(0, 8)}…</td>
                     {form.fields.map((f) => (
-                      <td key={f.name} className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate">
+                      <td key={f.name} className="px-4 py-3 text-sm text-[hsl(var(--foreground))] max-w-xs truncate">
                         {renderCell(rec[f.name])}
                       </td>
                     ))}
-                    <td className="px-4 py-3 text-sm text-gray-400 whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm text-[hsl(var(--muted-foreground))] whitespace-nowrap">
                       {rec.created_at ? new Date(String(rec.created_at)).toLocaleDateString() : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 h-7 w-7"
+                        className="text-[hsl(var(--destructive))] hover:text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 h-7 w-7"
                         onClick={() => deleteMutation.mutate(String(rec.id))}
                       >
                         <Trash2 size={12} />

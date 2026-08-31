@@ -49,21 +49,21 @@ export function SubflowForm({ config, variables, nodeContext = [], onChange }: S
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Workflow to Run</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Workflow to Run</Label>
         <WorkflowReferenceSelect value={config.definition_id || undefined} onChange={(id) => set({ definition_id: id ?? '' })} />
       </div>
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Run Mode</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Run Mode</Label>
         <div className="grid grid-cols-2 gap-1.5">
           <button
             type="button"
             onClick={() => set({ sync: true })}
             className={cn(
               'flex items-center justify-center gap-1.5 rounded-lg border p-2 text-[12px] font-medium transition-colors',
-              config.sync ? 'border-indigo-400 bg-indigo-50/60 text-indigo-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300',
+              config.sync ? 'border-[hsl(var(--primary))]/50 bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]' : 'border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--muted-foreground))]/40',
             )}
           >
             <Hourglass size={13} /> Wait for it
@@ -73,13 +73,13 @@ export function SubflowForm({ config, variables, nodeContext = [], onChange }: S
             onClick={() => set({ sync: false })}
             className={cn(
               'flex items-center justify-center gap-1.5 rounded-lg border p-2 text-[12px] font-medium transition-colors',
-              !config.sync ? 'border-indigo-400 bg-indigo-50/60 text-indigo-700' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300',
+              !config.sync ? 'border-[hsl(var(--primary))]/50 bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]' : 'border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--muted-foreground))]/40',
             )}
           >
             <Zap size={13} /> Fire and forget
           </button>
         </div>
-        <p className="text-[10px] text-slate-400">
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
           {config.sync
             ? 'This node waits for the called workflow to finish before continuing — its output can be mapped back below.'
             : 'This node starts the called workflow and continues immediately, without waiting for it to finish.'}
@@ -87,12 +87,12 @@ export function SubflowForm({ config, variables, nodeContext = [], onChange }: S
       </div>
 
       {!config.definition_id ? (
-        <p className="rounded-lg border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-400">
+        <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
           Pick a workflow above to configure input/output mappings.
         </p>
       ) : (
         <>
-          <div className="h-px bg-slate-100" />
+          <div className="h-px bg-[hsl(var(--border))]" />
           <InputMappingsSection
             mappings={config.input_mappings ?? []}
             targetVars={targetVars}
@@ -103,7 +103,7 @@ export function SubflowForm({ config, variables, nodeContext = [], onChange }: S
 
           {config.sync && (
             <>
-              <div className="h-px bg-slate-100" />
+              <div className="h-px bg-[hsl(var(--border))]" />
               <OutputMappingsSection
                 mappings={config.output_mappings ?? []}
                 targetVars={targetVars}
@@ -147,13 +147,13 @@ function InputMappingsSection({ mappings, targetVars, callerVars, nodeContext, o
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Input Mappings</Label>
-        <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">{mappings.length}</span>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Input Mappings</Label>
+        <span className="rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))]">{mappings.length}</span>
       </div>
-      <p className="text-[10px] text-slate-400">Set the called workflow's variables before it starts.</p>
+      <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Set the called workflow's variables before it starts.</p>
 
       {targetVars.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-400">
+        <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
           The selected workflow has no declared variables to map into.
         </div>
       ) : (
@@ -177,7 +177,7 @@ function InputMappingsSection({ mappings, targetVars, callerVars, nodeContext, o
               />
             ))}
           </div>
-          <Button variant="outline" size="sm" onClick={add} className="w-full gap-1.5 border-dashed text-slate-500 hover:text-slate-700">
+          <Button variant="outline" size="sm" onClick={add} className="w-full gap-1.5 border-dashed text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">
             <Plus size={13} /> Add Input Mapping
           </Button>
         </>
@@ -220,13 +220,13 @@ function OutputMappingsSection({ mappings, targetVars, callerVars, onChange }: {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Output Mappings</Label>
-        <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">{mappings.length}</span>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Output Mappings</Label>
+        <span className="rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))]">{mappings.length}</span>
       </div>
-      <p className="text-[10px] text-slate-400">Copy the called workflow's final variables back into this one's.</p>
+      <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Copy the called workflow's final variables back into this one's.</p>
 
       {(targetVars.length === 0 || callerVars.length === 0) ? (
-        <div className="rounded-lg border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-400">
+        <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
           {targetVars.length === 0
             ? 'The selected workflow has no declared variables to read from.'
             : 'Declare variables in this workflow first to have somewhere to store the result.'}
@@ -235,25 +235,25 @@ function OutputMappingsSection({ mappings, targetVars, callerVars, onChange }: {
         <>
           <div className="space-y-2">
             {mappings.map((m, idx) => (
-              <div key={m.id} className="group flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/60 p-2.5">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-500">
+              <div key={m.id} className="group flex items-center gap-1.5 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-2.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--muted))] text-[10px] font-bold text-[hsl(var(--muted-foreground))]">
                   {idx + 1}
                 </span>
                 <select
                   value={m.source_variable}
                   onChange={(e) => update(m.id, { source_variable: e.target.value })}
-                  className="w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[12px] font-medium text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                  className="w-0 flex-1 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2 py-1.5 text-[12px] font-medium text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
                 >
                   <option value="">Called var…</option>
                   {targetVars.map((v) => (
                     <option key={v.name} value={v.name}>{v.name} ({v.type})</option>
                   ))}
                 </select>
-                <ArrowRight size={12} className="shrink-0 text-slate-300" />
+                <ArrowRight size={12} className="shrink-0 text-[hsl(var(--muted-foreground))]/60" />
                 <select
                   value={m.target_variable}
                   onChange={(e) => update(m.id, { target_variable: e.target.value })}
-                  className="w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[12px] font-medium text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                  className="w-0 flex-1 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2 py-1.5 text-[12px] font-medium text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
                 >
                   <option value="">This var…</option>
                   {callerVars.map((v) => (
@@ -262,7 +262,7 @@ function OutputMappingsSection({ mappings, targetVars, callerVars, onChange }: {
                 </select>
                 <button
                   onClick={() => remove(m.id)}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-red-50 hover:text-red-400"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
                   title="Remove mapping"
                 >
                   <Trash2 size={12} />
@@ -270,7 +270,7 @@ function OutputMappingsSection({ mappings, targetVars, callerVars, onChange }: {
               </div>
             ))}
           </div>
-          <Button variant="outline" size="sm" onClick={add} className="w-full gap-1.5 border-dashed text-slate-500 hover:text-slate-700">
+          <Button variant="outline" size="sm" onClick={add} className="w-full gap-1.5 border-dashed text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">
             <Plus size={13} /> Add Output Mapping
           </Button>
         </>
@@ -304,16 +304,16 @@ function MappingRow({
   const selVar = targetOptions.find((v) => v.name === targetName)
 
   return (
-    <div className="group relative rounded-xl border border-slate-200 bg-slate-50/60 p-3 transition-shadow hover:shadow-sm">
+    <div className="group relative rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-3 transition-shadow hover:shadow-sm">
       <div className="mb-2.5 flex items-center gap-2">
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-500">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--muted))] text-[10px] font-bold text-[hsl(var(--muted-foreground))]">
           {index + 1}
         </span>
         <div className="flex-1">
           <select
             value={targetName}
             onChange={(e) => onTargetChange(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2.5 py-1.5 text-[12px] font-medium text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
           >
             <option value="">Called workflow's variable…</option>
             {targetOptions.map((v) => (
@@ -323,14 +323,14 @@ function MappingRow({
         </div>
         <button
           onClick={onDelete}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-red-50 hover:text-red-400"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
           title="Remove mapping"
         >
           <Trash2 size={12} />
         </button>
       </div>
 
-      <div className="mb-2 flex gap-1.5 rounded-lg bg-white p-1 border border-slate-200">
+      <div className="mb-2 flex gap-1.5 rounded-lg bg-[hsl(var(--card))] p-1 border border-[hsl(var(--border))]">
         {(['literal', 'expression'] as const).map((m) => (
           <button
             key={m}
@@ -338,7 +338,7 @@ function MappingRow({
             onClick={() => onModeChange(m)}
             className={cn(
               'flex flex-1 items-center justify-center gap-1 rounded-md py-1 text-[11px] font-medium transition-colors',
-              mode === m ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700',
+              mode === m ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
             )}
           >
             {m === 'literal' ? <Settings size={10} /> : <Code2 size={10} />}
@@ -354,18 +354,18 @@ function MappingRow({
       {mode === 'expression' && (
         <div className="flex items-center gap-1.5">
           <div className="relative flex-1">
-            <Braces size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-indigo-400" />
+            <Braces size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--primary))]" />
             <input
               value={expression ?? ''}
               onChange={(e) => onExpressionChange(e.target.value)}
               placeholder='e.g. Vars["orderId"]'
-              className="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-7 pr-2 font-mono text-[11px] text-slate-700 placeholder:text-slate-300 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] py-1.5 pl-7 pr-2 font-mono text-[11px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/60 focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
             />
           </div>
           <button
             onClick={onOpenEditor}
             title="Open expression editor"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] transition-colors hover:border-[hsl(var(--primary))]/50 hover:bg-[hsl(var(--primary))]/10 hover:text-[hsl(var(--primary))]"
           >
             <Code2 size={13} />
           </button>
@@ -387,7 +387,7 @@ function LiteralInput({ varType, value, onChange }: {
       <select
         value={str}
         onChange={(e) => onChange(e.target.value === 'true' ? true : e.target.value === 'false' ? false : '')}
-        className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+        className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2.5 py-1.5 text-[12px] text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
       >
         <option value="">—</option>
         <option value="true">true</option>

@@ -156,11 +156,11 @@ export function DashboardEditorPage({ appId, menuId }: DashboardEditorPageProps)
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-slate-50">
-      <header className="z-20 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-3 shadow-sm">
+    <div className="flex h-screen flex-col overflow-hidden bg-[hsl(var(--background))]">
+      <header className="z-20 flex h-14 shrink-0 items-center gap-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3">
         <Button
           variant="ghost" size="icon"
-          className="h-8 w-8 text-slate-500 hover:text-slate-700"
+          className="h-8 w-8 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           onClick={handleBack}
           aria-label="Back to menus"
           title="Back to menus"
@@ -168,17 +168,17 @@ export function DashboardEditorPage({ appId, menuId }: DashboardEditorPageProps)
           <ArrowLeft size={16} />
         </Button>
 
-        <div className="h-5 w-px bg-slate-200" />
+        <div className="h-5 w-px bg-[hsl(var(--border))]" />
 
         <div className="flex items-center gap-2">
           <Input
             value={menu?.name ?? ''}
             readOnly
-            className="h-8 w-60 border-0 bg-transparent px-1.5 text-[15px] font-semibold text-slate-800 shadow-none focus-visible:ring-0"
+            className="h-8 w-60 border-0 bg-transparent px-1.5 text-[15px] font-semibold text-[hsl(var(--foreground))] shadow-none focus-visible:ring-0"
           />
           {dirty && (
-            <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-600">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+            <span className="flex items-center gap-1 rounded-full bg-[hsl(var(--warning))]/10 px-2 py-0.5 text-[10px] font-medium text-[hsl(var(--warning))]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--warning))]" />
               Unsaved
             </span>
           )}
@@ -189,7 +189,7 @@ export function DashboardEditorPage({ appId, menuId }: DashboardEditorPageProps)
         <div className="flex items-center gap-0.5">
           <Button
             variant="ghost" size="icon"
-            className="h-8 w-8 text-slate-500 hover:text-slate-700 disabled:opacity-30"
+            className="h-8 w-8 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] disabled:opacity-30"
             onClick={undo}
             disabled={!canUndo}
             aria-label="Undo"
@@ -199,7 +199,7 @@ export function DashboardEditorPage({ appId, menuId }: DashboardEditorPageProps)
           </Button>
           <Button
             variant="ghost" size="icon"
-            className="h-8 w-8 text-slate-500 hover:text-slate-700 disabled:opacity-30"
+            className="h-8 w-8 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] disabled:opacity-30"
             onClick={redo}
             disabled={!canRedo}
             aria-label="Redo"
@@ -209,10 +209,10 @@ export function DashboardEditorPage({ appId, menuId }: DashboardEditorPageProps)
           </Button>
         </div>
 
-        <div className="h-5 w-px bg-slate-200" />
+        <div className="h-5 w-px bg-[hsl(var(--border))]" />
 
         {saveError && (
-          <span className="flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-xs text-red-600">
+          <span className="flex items-center gap-1 rounded-md bg-[hsl(var(--destructive))]/10 px-2 py-1 text-xs text-[hsl(var(--destructive))]">
             <AlertCircle size={13} />{saveError}
           </span>
         )}

@@ -41,11 +41,11 @@ export function VersionHistorySection({ publishedVersion }: { publishedVersion: 
   const { data: envStatus } = useEnvironmentLinkStatus()
   // Save Version and Import are ordinary design-time writes, locked the
   // same as every builder's own Save button when this app is a linked
-  // Production (RequireEnvironmentUnlocked already rejects both
-  // server-side -- this only keeps the button from inviting a click that
-  // would just come back as an error). Rollback/Publish/Export stay
-  // unaffected: the first two are deliberately exempt from the lock, and
-  // Export only reads.
+  // Production (RequireEnvironmentUnlocked already rejects both server-side
+  // — this only keeps the button itself from inviting a click that would
+  // just come back as an error). Rollback/Publish/Export stay unaffected:
+  // Rollback and Publish are deliberately exempt from the lock (see the
+  // backend's own route-registration comment), and Export only reads.
   const canWrite = canWritePermission && !(envStatus?.linked && envStatus.role === 'production')
 
   const [saveOpen, setSaveOpen] = useState(false)

@@ -15,7 +15,7 @@ export function HeadingRenderer({ config, mode }: WidgetRendererProps<HeadingWid
   // runtime: a genuinely blank heading is a valid end state for a real
   // viewer, not something needing a "click to edit" hint they can't act on.
   if (!config.text && mode === 'builder') {
-    return <p className="p-3 text-sm italic text-slate-300">Empty heading — click to add text</p>
+    return <p className="p-3 text-sm italic text-[hsl(var(--muted-foreground))]">Empty heading — click to add text</p>
   }
   return (
     <Tag className={`p-3 font-semibold ${SIZES[config.level]}`} style={{ color: 'hsl(var(--foreground))' }}>

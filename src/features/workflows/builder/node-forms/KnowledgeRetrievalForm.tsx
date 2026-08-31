@@ -36,7 +36,7 @@ const MODES: { value: KnowledgeQueryMode; label: string; hint: string }[] = [
 
 function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMode) => void }) {
   return (
-    <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+    <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
       {(['static', 'expression'] as const).map((m) => (
         <button
           key={m}
@@ -44,7 +44,7 @@ function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMo
           onClick={() => onChange(m)}
           className={cn(
             'flex-1 rounded-md py-1 text-[11px] font-medium transition-colors',
-            mode === m ? 'bg-teal-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700',
+            mode === m ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
           )}
         >
           {m === 'static' ? 'Static' : 'Expression'}
@@ -67,14 +67,14 @@ export function KnowledgeRetrievalForm({ config, variables, nodeContext, onChang
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Knowledge Base</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Knowledge Base</Label>
         <KnowledgeBaseSelect value={config.kb_id || undefined} onChange={(id) => set({ kb_id: id ?? '' })} />
       </div>
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Query</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Query</Label>
         <ModeToggle mode={config.query_mode ?? 'static'} onChange={(m) => set({ query_mode: m })} />
         {config.query_mode === 'expression' ? (
           <ExpressionField
@@ -91,13 +91,13 @@ export function KnowledgeRetrievalForm({ config, variables, nodeContext, onChang
             onChange={(e) => set({ query: e.target.value })}
             rows={2}
             placeholder="What would you like to know?"
-            className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] text-slate-700 placeholder:text-slate-300 focus:border-teal-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-100"
+            className="w-full resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-3 py-2 text-[12px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/60 focus:border-[hsl(var(--primary))] focus:bg-[hsl(var(--card))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
           />
         )}
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Retrieval Mode</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Retrieval Mode</Label>
         <div className="grid grid-cols-2 gap-1.5">
           {MODES.map((m) => (
             <button
@@ -108,8 +108,8 @@ export function KnowledgeRetrievalForm({ config, variables, nodeContext, onChang
               className={cn(
                 'rounded-lg border px-2.5 py-1.5 text-left text-[11px] font-medium transition-colors',
                 (config.mode ?? 'mix') === m.value
-                  ? 'border-teal-400 bg-teal-50 text-teal-700'
-                  : 'border-slate-200 text-slate-500 hover:border-slate-300',
+                  ? 'border-[hsl(var(--primary))]/50 bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
+                  : 'border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--muted-foreground))]/40',
               )}
             >
               {m.label}
@@ -118,19 +118,19 @@ export function KnowledgeRetrievalForm({ config, variables, nodeContext, onChang
         </div>
       </div>
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="flex items-center justify-between">
         <div>
-          <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Generate Answer</Label>
-          <p className="text-[10px] text-slate-400">Off returns raw context only — useful for building a custom prompt downstream.</p>
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Generate Answer</Label>
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Off returns raw context only — useful for building a custom prompt downstream.</p>
         </div>
         <Switch checked={config.include_answer} onCheckedChange={(v) => set({ include_answer: v })} />
       </div>
 
       {config.include_answer && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Additional Instructions (optional)</Label>
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Additional Instructions (optional)</Label>
           <Input
             value={config.user_prompt ?? ''}
             onChange={(e) => set({ user_prompt: e.target.value })}
@@ -140,17 +140,17 @@ export function KnowledgeRetrievalForm({ config, variables, nodeContext, onChang
         </div>
       )}
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Output Variable</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Output Variable</Label>
         <Input
           value={config.output_var}
           onChange={(e) => set({ output_var: e.target.value })}
           placeholder="kb_result"
           className="h-8 font-mono text-[12px]"
         />
-        <p className="text-[10px] text-slate-400">
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
           Result published as answer/context/chunks/references — both on this node's output and on the named variable.
         </p>
       </div>

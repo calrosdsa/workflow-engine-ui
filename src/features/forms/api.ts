@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import type { FormDefinition, CreateFormPayload, UpdateFormPayload, FormRecord, AuditLogResponse, LinkedRecordsResponse, CommentEntry, CommentsResponse, FormVisibility, FormSharingResponse, FormSharingUsageResponse } from './types'
+import type { FormDefinition, CreateFormPayload, UpdateFormPayload, FormRecord, AuditLogResponse, LinkedRecordsResponse, CommentEntry, CommentsResponse, FormVisibility, FormSharingResponse, FormSharingUsageResponse, LinkableForm } from './types'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
 
 export interface SearchRecordsRequest {
@@ -95,6 +95,17 @@ export const formsApi = {
   getSharingUsage: (id: string) => api.get(`forms/${id}/sharing/usage`).json<FormSharingUsageResponse>(),
   setSharing: (id: string, visibility: FormVisibility) =>
     api.patch(`forms/${id}/sharing`, { json: { visibility } }).json<FormSharingResponse>(),
+
+  // --- cross-app links (the borrowing app's side of the same sharing model) ---
+  // listLinkable is the "Shared from another app" picker's source: forms
+  // OTHER apps under this client have shared and this app hasn't linked.
+  listLinkable: () => api.get('forms/linkable').json<LinkableForm[]>(),
+  link: (id: string) => api.post(`forms/${id}/link`).json<FormDefinition>(),
+  // A 204, so awaited rather than passed through as an unresolved
+  // ResponsePromise — same reason deleteRecord below does.
+  unlinkShared: async (id: string): Promise<void> => {
+    await api.delete(`forms/${id}/link`)
+  },
 
   // --- records ---
   listRecords:   (formId: string, filters?: Record<string, string>) => {

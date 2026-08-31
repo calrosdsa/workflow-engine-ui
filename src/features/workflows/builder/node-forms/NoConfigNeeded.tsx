@@ -5,7 +5,7 @@
 // NodeFormProps so they satisfy the same ComponentType<NodeFormProps> shape
 // every other node type's form does.
 function Message({ children }: { children: string }) {
-  return <p className="text-xs text-slate-400 text-center py-4">{children}</p>
+  return <p className="text-xs text-[hsl(var(--muted-foreground))] text-center py-4">{children}</p>
 }
 
 export function NoAdditionalConfig() {
@@ -14,7 +14,7 @@ export function NoAdditionalConfig() {
 
 export function LoopEndNoConfig() {
   return (
-    <p className="text-xs text-slate-400 text-center py-4">
+    <p className="text-xs text-[hsl(var(--muted-foreground))] text-center py-4">
       Marks the end of the loop body.<br />No configuration needed.
     </p>
   )

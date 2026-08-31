@@ -11,8 +11,8 @@ export function TeamPage() {
   return (
     <div className="flex h-full flex-col">
       <Tabs value={section} onValueChange={(v) => setSection(v as SectionId)} className="flex h-full flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-4 border-b bg-white px-4">
-          <h1 className="text-sm font-semibold text-slate-800">Users and Access</h1>
+        <header className="flex h-14 shrink-0 items-center gap-4 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4">
+          <h1 className="text-sm font-semibold text-[hsl(var(--foreground))]">Users and Access</h1>
           <TabsList>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="roles">Roles</TabsTrigger>
