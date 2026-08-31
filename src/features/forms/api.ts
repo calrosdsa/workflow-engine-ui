@@ -63,6 +63,17 @@ export interface TriggerWorkflowResponse {
   workflow_definition_id: string
 }
 
+// Mirrors api/forms/handler.go's exportReportResponse (FR-D2-018's
+// export_report custom action). Deliberately NOT execution_id/status/poll-
+// shaped like TriggerWorkflowResponse above — this endpoint is synchronous,
+// the response IS the final result.
+export interface ExportReportResponse {
+  content_id: string
+  filename: string
+  format: string
+  row_count: number
+}
+
 export const formsApi = {
   // --- definitions ---
   list:   () => api.get('forms').json<FormDefinition[]>(),
@@ -130,6 +141,17 @@ export const formsApi = {
     api.post(`forms/${formId}/records/${recordId}/trigger-workflow`, {
       json: { workflow_definition_id: workflowDefinitionId },
     }).json<TriggerWorkflowResponse>(),
+
+  exportReport: (
+    formId: string,
+    recordId: string,
+    reportDefinitionId: string,
+    format?: string,
+    argumentValues?: Record<string, unknown>,
+  ) =>
+    api.post(`forms/${formId}/records/${recordId}/export-report`, {
+      json: { report_definition_id: reportDefinitionId, format, arguments: argumentValues },
+    }).json<ExportReportResponse>(),
 
   // --- comments (FR-D2-016) ---
   getComments: (formId: string, recordId: string, params: { page: number; page_size: number }) =>

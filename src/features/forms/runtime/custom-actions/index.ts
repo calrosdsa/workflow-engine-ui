@@ -7,3 +7,4 @@
 // (identical reasoning to detail-tabs/registry.ts's).
 import './update-field'
 import './trigger-workflow'
+import './export-report'

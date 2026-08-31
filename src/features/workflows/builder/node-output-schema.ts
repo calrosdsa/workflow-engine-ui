@@ -470,6 +470,26 @@ export function buildNodeOutputSchema(
       }]
     }
 
+    case 'generate_report': {
+      // Mirrors GenerateReportActivity's actual NodeOutput map exactly
+      // (internal/activities/report.go) — content_id/filename/format/
+      // row_count only; download_url is NOT populated here (FR-B2-031
+      // RPT-13's eager-minting question was left unresolved and shipped as
+      // "not minted" — a downstream node must resolve a presigned URL from
+      // content_id itself if it needs one).
+      return [{
+        nodeId: node.id,
+        nodeLabel: label,
+        nodeType: type,
+        fields: [
+          { key: 'content_id', type: 'string' },
+          { key: 'filename', type: 'string' },
+          { key: 'format', type: 'string' },
+          { key: 'row_count', type: 'integer' },
+        ],
+      }]
+    }
+
     case 'trigger': {
       // Before/After/AfterAsync triggers: the dispatcher (internal/triggers/
       // dispatch.go) snapshots the changed record and the engine

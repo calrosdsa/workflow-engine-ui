@@ -23,6 +23,7 @@ import {
   Bug,
   Bot,
   MessageCircle,
+  FileBarChart,
   type LucideIcon,
 } from 'lucide-react'
 import type {
@@ -30,7 +31,7 @@ import type {
   UpsertRecordsConfig, UpdateRecordsConfig, DeleteRecordsConfig, HttpRequestConfig,
   TriggerConfig, ShowMessageConfig, TransformConfig, SaveRecordsConfig, NotificationConfig,
   KnowledgeRetrievalConfig, KnowledgeIngestConfig, DebugConfig, SubflowConfig,
-  RunAgentConfig, SendToSessionConfig,
+  RunAgentConfig, SendToSessionConfig, ReportGenerateConfig,
 } from '../types'
 import type { NodeOutputSchema } from './node-output-schema'
 import { TriggerForm, normaliseTriggerConfig } from './node-forms/TriggerForm'
@@ -52,6 +53,7 @@ import { KnowledgeIngestForm, normaliseKnowledgeIngestConfig } from './node-form
 import { DebugForm, normaliseDebugConfig } from './node-forms/DebugForm'
 import { RunAgentForm, normaliseRunAgentConfig } from './node-forms/RunAgentForm'
 import { SendToSessionForm, normaliseSendToSessionConfig } from './node-forms/SendToSessionForm'
+import { GenerateReportForm, normaliseReportGenerateConfig } from './node-forms/GenerateReportForm'
 import { NoAdditionalConfig, LoopEndNoConfig } from './node-forms/NoConfigNeeded'
 
 // The fixed prop shape every node type's config form receives — unused props
@@ -300,6 +302,15 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     normalise: (raw) => normaliseSendToSessionConfig(raw),
     category: 'Agent',
   },
+  generate_report: {
+    label: 'Generate Report', icon: FileBarChart,
+    color: 'bg-sky-600', gradient: 'bg-gradient-to-br from-sky-600 to-blue-700',
+    accent: '#0284c7', textColor: 'text-sky-700', ring: 'bg-sky-50',
+    description: 'Generate a report and get back a downloadable file',
+    form: GenerateReportForm as unknown as ComponentType<NodeFormProps>,
+    normalise: (raw) => normaliseReportGenerateConfig(raw),
+    category: 'Knowledge',
+  },
 }
 
 // These three accept NodeType | (string & {}) — see store.ts's addNode doc
@@ -347,7 +358,7 @@ export function defaultConfig(type: NodeType | (string & {})):
   | UpsertRecordsConfig | UpdateRecordsConfig | DeleteRecordsConfig | HttpRequestConfig
   | TriggerConfig | ShowMessageConfig | TransformConfig | SaveRecordsConfig | NotificationConfig
   | KnowledgeRetrievalConfig | KnowledgeIngestConfig | DebugConfig | SubflowConfig
-  | RunAgentConfig | SendToSessionConfig
+  | RunAgentConfig | SendToSessionConfig | ReportGenerateConfig
   | Record<string, never> {
   switch (type) {
     case 'trigger':
@@ -409,6 +420,10 @@ export function defaultConfig(type: NodeType | (string & {})):
       return { agent_id: '', task_mode: 'literal', task: '', output_var: '' } satisfies RunAgentConfig
     case 'send_to_session':
       return { session_id_mode: 'static', session_id: '', content_mode: 'static', content: '' } satisfies SendToSessionConfig
+    case 'generate_report':
+      return {
+        report_definition_id: '', format: '', parameters_mode: 'static', parameters: {}, output_var: '',
+      } satisfies ReportGenerateConfig
     default:
       return {}
   }
@@ -429,7 +444,7 @@ export const PALETTE_NODES: NodeType[] = [
   'set_variable', 'condition', 'fetch_records', 'upsert_records', 'update_records',
   'delete_records', 'transform', 'save_records', 'iterator', 'http_request', 'show_message',
   'notification', 'knowledge_retrieval', 'knowledge_ingest', 'merge', 'debug', 'subflow',
-  'run_agent', 'send_to_session',
+  'run_agent', 'send_to_session', 'generate_report',
 ]
 
 // Node picker category tabs, derived from each PALETTE_NODES member's own

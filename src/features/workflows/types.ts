@@ -26,6 +26,7 @@ export type NodeType =
   | 'debug'
   | 'run_agent'
   | 'send_to_session'
+  | 'generate_report'
 
 export type PortKind = 'data' | 'control' | 'trigger'
 
@@ -598,6 +599,23 @@ export interface KnowledgeIngestConfig {
   file_name_mode?: ValueMode
   file_name?: string
   file_name_expr?: string
+  output_var: string
+}
+
+// ---------------------------------------------------------------------------
+// generate_report — mirrors internal/graph/configs_report.go's
+// ReportGenerateConfig (FR-B2-031). Modeled directly on
+// KnowledgeRetrievalConfig's own static/expression split for Parameters.
+// ---------------------------------------------------------------------------
+
+export type ReportExportFormat = 'csv' | 'xlsx' | 'xls' | 'pdf' | 'docx' | 'markdown'
+
+export interface ReportGenerateConfig {
+  report_definition_id: string
+  format?: ReportExportFormat | ''
+  parameters_mode?: ValueMode
+  parameters?: Record<string, unknown>
+  parameters_expr?: string
   output_var: string
 }
 
