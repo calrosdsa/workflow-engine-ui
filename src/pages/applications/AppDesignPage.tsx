@@ -1,16 +1,18 @@
 import { useState } from 'react'
 import { useSearch } from '@tanstack/react-router'
-import { Palette, ListTree, Smartphone, Settings2, Bot, History } from 'lucide-react'
+import { Palette, ListTree, Smartphone, Settings2, Bot, History, GitBranch, Store } from 'lucide-react'
 import { ThemeSection } from './sections/ThemeSection'
 import { MenusSection } from './sections/MenusSection'
 import { MobileLayoutSection } from './sections/MobileLayoutSection'
 import { GeneralSettingsSection } from './sections/GeneralSettingsSection'
 import { AgentsSection } from './sections/AgentsSection'
 import { VersionHistorySection } from './sections/VersionHistorySection'
+import { EnvironmentLinkSection } from './sections/EnvironmentLinkSection'
+import { MarketplaceSection } from './sections/MarketplaceSection'
 import { useApplication } from '@/features/applications/hooks'
 import { Spinner } from '@/components/ui/spinner'
 
-type Tab = 'theme' | 'menus' | 'mobile' | 'general' | 'agents' | 'versions'
+type Tab = 'theme' | 'menus' | 'mobile' | 'general' | 'agents' | 'versions' | 'environment' | 'marketplace'
 
 const TABS: { id: Tab; label: string; icon: typeof Palette }[] = [
   { id: 'theme', label: 'Theme', icon: Palette },
@@ -19,6 +21,11 @@ const TABS: { id: Tab; label: string; icon: typeof Palette }[] = [
   { id: 'general', label: 'General', icon: Settings2 },
   { id: 'agents', label: 'Agents', icon: Bot },
   { id: 'versions', label: 'Version History', icon: History },
+  // Both are app-design-scoped meta-concerns, so they belong here alongside
+  // Version History rather than as new top-level NAV_ITEMS entries (which
+  // are reserved for content-editing destinations).
+  { id: 'environment', label: 'Environment Link', icon: GitBranch },
+  { id: 'marketplace', label: 'Marketplace', icon: Store },
 ]
 
 // Merges the old ApplicationBuilderPage's Theme + Menus + General tabs into
@@ -61,6 +68,8 @@ export function AppDesignPage({ appId }: { appId: string }) {
         {tab === 'general' && <GeneralSettingsSection app={app} />}
         {tab === 'agents' && <AgentsSection appId={appId} />}
         {tab === 'versions' && <VersionHistorySection publishedVersion={app.published_version} />}
+        {tab === 'environment' && <EnvironmentLinkSection />}
+        {tab === 'marketplace' && <MarketplaceSection />}
       </div>
     </div>
   )

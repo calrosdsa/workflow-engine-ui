@@ -1,12 +1,13 @@
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { ArrowLeft, LayoutDashboard, Workflow, FileText, Palette, KeyRound, Rocket, Save, Loader2, AlertCircle, ListTree, Eye } from 'lucide-react'
+import { ArrowLeft, LayoutDashboard, Workflow, FileText, Palette, KeyRound, Rocket, Save, Loader2, AlertCircle, ListTree, Eye, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { useApplication, useApplicationVersions, usePublishApplication, useSaveVersion } from '@/features/applications/hooks'
+import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
 import { usePermission } from '@/features/auth/permissions'
 import { runtimeUrlFor } from '@/features/runtime/urls'
 import { useState } from 'react'
@@ -46,6 +47,8 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
   const navigate = useNavigate()
   const { data: app, isLoading } = useApplication()
   const { data: versions } = useApplicationVersions()
+  const { data: envStatus } = useEnvironmentLinkStatus()
+  const isLockedProduction = envStatus?.linked && envStatus.role === 'production'
   const publishMutation = usePublishApplication()
   const saveVersionMutation = useSaveVersion()
   const canPublish = usePermission('application:publish')
@@ -203,6 +206,21 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
           )}
         </div>
       </header>
+
+      {isLockedProduction && (
+        <div className="flex items-center justify-between gap-3 border-b border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/10 px-4 py-2 text-[12px] font-medium text-[hsl(var(--warning))]">
+          <span className="flex items-center gap-2">
+            <Lock size={14} className="shrink-0" />
+            This app is a linked Production environment — design-time edits are disabled. Make changes in its linked Sandbox and Promote them across.
+          </span>
+          <Button
+            variant="ghost" size="sm" className="h-6 shrink-0 gap-1 px-2 text-[11px] text-[hsl(var(--warning))] hover:bg-[hsl(var(--warning))]/10"
+            onClick={() => navigate({ to: '/applications/$appId/design', params: { appId }, search: { tab: 'environment' } })}
+          >
+            View Environment Link
+          </Button>
+        </div>
+      )}
 
       {publishIssues && publishIssues.length > 0 && (
         <div className="border-b border-red-200 bg-red-50 px-4 py-3 text-[12px] text-red-700">

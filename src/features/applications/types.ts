@@ -53,7 +53,7 @@ export interface PublishValidationError {
   issues: ValidationIssue[]
 }
 
-export type VersionKind = 'publish' | 'checkpoint' | 'rollback'
+export type VersionKind = 'publish' | 'checkpoint' | 'rollback' | 'promotion'
 
 export interface AppVersion {
   id: string
@@ -71,6 +71,12 @@ export interface AppVersion {
   label?: string
   description?: string
   rolled_back_from_version?: number
+  /** Set only for kind === 'promotion' — the Sandbox app id this version's
+   *  content was pushed from. A different app's id, not a version number on
+   *  this same app, so it's a separate field from rolled_back_from_version
+   *  rather than overloading it (see the backend's AppVersionRow doc
+   *  comment). */
+  promoted_from_app_id?: string
   published_by: string
   created_at: string
 }
