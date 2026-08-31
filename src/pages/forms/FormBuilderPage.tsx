@@ -20,6 +20,7 @@ import { toBuilder, toPayload } from '@/features/form-builder/serialize'
 import { projectToFields, validateFormRefs } from '@/features/form-builder/projection'
 import { syncLineItemsChildren } from '@/features/form-builder/lineItemsSync'
 import { slugifyKey } from '@/features/form-builder/factory'
+import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
 import type { VariableDecl } from '@/features/workflows/types'
 
 interface FormBuilderPageProps {
@@ -47,6 +48,8 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
 
   const { data: loaded, isLoading } = useForm(formId ?? '')
   const { data: allForms } = useForms()
+  const { data: envStatus } = useEnvironmentLinkStatus()
+  const isLockedProduction = envStatus?.linked && envStatus.role === 'production'
   const createMutation = useCreateForm()
   const updateMutation = useUpdateForm(formId ?? '')
 
@@ -334,7 +337,13 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
         <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)} className="gap-1.5">
           <Eye size={14} /> Preview
         </Button>
-        <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5">
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={saving || isLockedProduction}
+          className="gap-1.5"
+          title={isLockedProduction ? 'This app is a linked Production environment — edit its linked Sandbox instead' : undefined}
+        >
           {saving ? <Loader2 size={14} className="animate-spin" /> : mode === 'new' ? <FilePlus2 size={14} /> : <Save size={14} />}
           {saving ? (mode === 'new' ? 'Creating…' : 'Saving…') : mode === 'new' ? 'Create Form' : 'Save'}
         </Button>

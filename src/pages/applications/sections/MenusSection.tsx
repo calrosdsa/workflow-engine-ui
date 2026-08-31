@@ -17,6 +17,7 @@ import { useMenus, useCreateMenu, useUpdateMenu, useDeleteMenu, useReorderMenus,
 import { buildMenuTree } from '@/features/menus/tree'
 import { MENU_TYPE_REGISTRY } from '@/features/menus/menu-registry'
 import { usePermission } from '@/features/auth/permissions'
+import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
 import { usePermissionsCatalog } from '@/features/permissions/hooks'
 import { useRoles } from '@/features/roles/hooks'
 import { useForm as useFormDef } from '@/features/forms/hooks'
@@ -728,7 +729,9 @@ function MenuDetail({ menu, appId, onDeleted, onBack }: { menu: Menu; appId: str
   const updateMutation = useUpdateMenu(menu.id)
   const createMutation = useCreateMenu()
   const deleteMutation = useDeleteMenu()
-  const canWrite = usePermission('menus:write')
+  const canWritePermission = usePermission('menus:write')
+  const { data: envStatus } = useEnvironmentLinkStatus()
+  const canWrite = canWritePermission && !(envStatus?.linked && envStatus.role === 'production')
   const { data: permissionsCatalog } = usePermissionsCatalog()
   const { data: roles } = useRoles(appId)
   const { data: allMenus } = useMenus()

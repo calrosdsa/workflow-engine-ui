@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { LayoutGrid, Users2, BookOpen } from 'lucide-react'
+import { LayoutGrid, Users2, BookOpen, Store } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth'
 import { isSuperAdmin } from '@/features/auth/access'
@@ -16,6 +16,12 @@ const navItems = [
 
 const globalNavItems = [
   { to: '/knowledge-bases', label: 'Knowledge Bases', icon: BookOpen },
+  // Marketplace is genuinely global like the entries above — it lists apps
+  // published by OTHER clients, so it can't live inside any one app's
+  // design shell. Ungated here (no permission check): browsing is
+  // harmless, and the page only shows listings the backend already decided
+  // this account may see.
+  { to: '/marketplace',     label: 'Marketplace',     icon: Store },
 ]
 
 interface SidebarProps {

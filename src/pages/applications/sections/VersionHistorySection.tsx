@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { History, Save, RotateCcw, Loader2, AlertCircle, ChevronRight, Rocket, GitCommitHorizontal, Undo2, Download, Upload } from 'lucide-react'
+import { History, Save, RotateCcw, Loader2, AlertCircle, ChevronRight, Rocket, GitCommitHorizontal, Undo2, Download, Upload, ArrowUpRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +10,7 @@ import {
   useApplicationVersions, useApplicationVersionDetail, useVersionDiff,
   useSaveVersion, useRollback, useExportApp, useImportApp,
 } from '@/features/applications/hooks'
+import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
 import { usePermission } from '@/features/auth/permissions'
 import type { AppVersion, ResourceDiff, VersionKind } from '@/features/applications/types'
 
@@ -17,6 +18,7 @@ const KIND_META: Record<VersionKind, { label: string; icon: typeof Rocket; class
   publish:    { label: 'Published',  icon: Rocket,               className: 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]' },
   checkpoint: { label: 'Checkpoint', icon: GitCommitHorizontal,  className: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]' },
   rollback:   { label: 'Rollback',   icon: Undo2,                className: 'bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]' },
+  promotion:  { label: 'Promoted',   icon: ArrowUpRight,         className: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]' },
 }
 
 const RESOURCE_LABELS: Record<string, string> = {
@@ -34,8 +36,17 @@ function versionLabel(v: { major_version: number; minor_version: number }): stri
 
 export function VersionHistorySection({ publishedVersion }: { publishedVersion: number | null }) {
   const { data: versions, isLoading } = useApplicationVersions()
-  const canWrite = usePermission('application:write')
+  const canWritePermission = usePermission('application:write')
   const canPublish = usePermission('application:publish')
+  const { data: envStatus } = useEnvironmentLinkStatus()
+  // Save Version and Import are ordinary design-time writes, locked the
+  // same as every builder's own Save button when this app is a linked
+  // Production (RequireEnvironmentUnlocked already rejects both
+  // server-side -- this only keeps the button from inviting a click that
+  // would just come back as an error). Rollback/Publish/Export stay
+  // unaffected: the first two are deliberately exempt from the lock, and
+  // Export only reads.
+  const canWrite = canWritePermission && !(envStatus?.linked && envStatus.role === 'production')
 
   const [saveOpen, setSaveOpen] = useState(false)
   const [detailVersion, setDetailVersion] = useState<number | null>(null)
@@ -120,6 +131,7 @@ export function VersionHistorySection({ publishedVersion }: { publishedVersion: 
                 // fabricating a major.minor label with no real backing.
                 return source ? versionLabel(source) : `#${v.rolled_back_from_version}`
               })()}
+              promotedFromSandbox={v.kind === 'promotion' && v.promoted_from_app_id != null}
               onOpenDetail={() => setDetailVersion(v.version_number)}
               onRollback={() => setRollbackTarget(v)}
             />
@@ -136,12 +148,13 @@ export function VersionHistorySection({ publishedVersion }: { publishedVersion: 
 }
 
 function VersionRow({
-  version, isLive, canRollback, rolledBackFromLabel, onOpenDetail, onRollback,
+  version, isLive, canRollback, rolledBackFromLabel, promotedFromSandbox, onOpenDetail, onRollback,
 }: {
   version: AppVersion
   isLive: boolean
   canRollback: boolean
   rolledBackFromLabel: string | null
+  promotedFromSandbox: boolean
   onOpenDetail: () => void
   onRollback: () => void
 }) {
@@ -159,6 +172,9 @@ function VersionRow({
           {isLive && <Badge className="bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]">Live</Badge>}
           {version.kind === 'rollback' && rolledBackFromLabel != null && (
             <span className="text-[11px] text-[hsl(var(--muted-foreground))]">from {rolledBackFromLabel}</span>
+          )}
+          {promotedFromSandbox && (
+            <span className="text-[11px] text-[hsl(var(--muted-foreground))]">from linked Sandbox</span>
           )}
           {version.label && <span className="truncate text-[13px] text-[hsl(var(--foreground))]">{version.label}</span>}
         </div>

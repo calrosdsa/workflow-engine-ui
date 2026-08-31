@@ -10,6 +10,7 @@ import { nodeSetupIssue } from '@/features/workflows/builder/node-validation'
 import { VariablesPanel } from '@/features/workflows/builder/VariablesPanel'
 import { NodeConfigPanel } from '@/features/workflows/builder/NodeConfigPanel'
 import { ExecutionsSidebar, statusDot } from '@/features/workflows/builder/ExecutionsSidebar'
+import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,6 +42,8 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   const id       = mode === 'edit' ? (params.workflowId ?? '') : ''
 
   const { data: existing, isLoading } = useWorkflow(id)
+  const { data: envStatus } = useEnvironmentLinkStatus()
+  const isLockedProduction = envStatus?.linked && envStatus.role === 'production'
 
   const {
     loadDefinition, seedNew, toDefinition, name, setName,
@@ -330,7 +333,12 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
           </div>
         )}
 
-        <Button size="sm" onClick={handleSave} disabled={isSaving} title="Save (Ctrl+S)">
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={isSaving || isLockedProduction}
+          title={isLockedProduction ? 'This app is a linked Production environment — edit its linked Sandbox instead' : 'Save (Ctrl+S)'}
+        >
           {isSaving ? <Spinner className="h-4 w-4" /> : justSaved ? <Check size={13} /> : <Save size={13} />}
           {mode === 'new' ? 'Create' : justSaved ? 'Saved' : 'Save'}
         </Button>

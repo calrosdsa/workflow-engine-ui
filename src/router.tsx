@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-router'
 import { AppShell } from '@/components/layout/AppShell'
 import { HomePage } from '@/pages/HomePage'
+import { MarketplaceBrowsePage } from '@/pages/marketplace/MarketplaceBrowsePage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { WorkflowsPage } from '@/pages/WorkflowsPage'
 import { WorkflowBuilderPage } from '@/pages/workflows/WorkflowBuilderPage'
@@ -143,6 +144,17 @@ const modelProvidersRoute = createRoute({
   component: ModelProvidersPage,
 })
 
+// Global: App Marketplace browse. Like modelProvidersRoute (and unlike
+// teamRoute) there's no beforeLoad gate — the page is useful read-only to
+// anyone, and install is gated in-page via usePermission('marketplace:install'),
+// matching this codebase's convention of gating writes in-page rather than
+// redirecting the whole route. The backend gates it independently either way.
+const marketplaceRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/marketplace',
+  component: MarketplaceBrowsePage,
+})
+
 // ---------------------------------------------------------------------------
 // App-scoped design shell — /applications/$appId/{workflows,forms,design,settings}
 // ---------------------------------------------------------------------------
@@ -250,8 +262,8 @@ const appFormDetailRoute = createRoute({
 const appDesignRoute = createRoute({
   getParentRoute: () => applicationShellRoute,
   path: '/design',
-  validateSearch: (search: Record<string, unknown>): { tab?: 'theme' | 'menus' | 'mobile' | 'general' | 'agents' | 'versions' } => ({
-    tab: search.tab === 'theme' || search.tab === 'menus' || search.tab === 'mobile' || search.tab === 'general' || search.tab === 'agents' || search.tab === 'versions' ? search.tab : undefined,
+  validateSearch: (search: Record<string, unknown>): { tab?: 'theme' | 'menus' | 'mobile' | 'general' | 'agents' | 'versions' | 'environment' | 'marketplace' } => ({
+    tab: search.tab === 'theme' || search.tab === 'menus' || search.tab === 'mobile' || search.tab === 'general' || search.tab === 'agents' || search.tab === 'versions' || search.tab === 'environment' || search.tab === 'marketplace' ? search.tab : undefined,
   }),
   component: () => <AppDesignPage appId={applicationShellRoute.useParams().appId} />,
 })
@@ -334,6 +346,7 @@ const routeTree = rootRoute.addChildren([
     homeRoute,
     teamRoute,
     modelProvidersRoute,
+    marketplaceRoute,
     applicationShellRoute.addChildren([
       applicationIndexRoute,
       appWorkflowsRoute,
