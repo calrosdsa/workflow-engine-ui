@@ -86,10 +86,11 @@ export function useDeleteDocument(kbId: string) {
   })
 }
 
-// Reprocesses a FAILED document from its already-stored content — the
-// backend rejects retrying anything not currently FAILED, so the mutation
-// only needs to invalidate the documents list (the retried doc's status
-// flips back to pending/processing and the existing poller picks it up).
+// Reprocesses a FAILED or already-PROCESSED document from its already-stored
+// content — the backend rejects retrying anything still PENDING/PROCESSING,
+// so the mutation only needs to invalidate the documents list (the retried
+// doc's status flips back to pending/processing and the existing poller
+// picks it up).
 export function useRetryDocument(kbId: string) {
   const qc = useQueryClient()
   return useMutation({
