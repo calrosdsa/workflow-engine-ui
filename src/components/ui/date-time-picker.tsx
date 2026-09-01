@@ -22,13 +22,17 @@ interface DatePickerProps {
   placeholder?: string
   size?: PickerSize
   disabled?: boolean
+  /** Applied to the popover trigger, so a `<label htmlFor>` can point at this
+   *  control. The trigger is the focusable element a screen reader lands on —
+   *  there is no native input behind it to carry the id instead. */
+  id?: string
 }
 
 // A calendar-in-a-Popover date picker. Picking a day both commits and
 // closes the popover — there's nothing else to configure for a date-only
 // value, unlike DateTimePicker below which keeps the popover open for a
 // time to be picked too.
-export function DatePicker({ value, onChange, className, placeholder = 'select date…', size = 'default', disabled }: DatePickerProps) {
+export function DatePicker({ value, onChange, className, placeholder = 'select date…', size = 'default', disabled, id }: DatePickerProps) {
   const [open, setOpen] = useState(false)
   const selectedDate = parseDateInputValue(value)
   const display = formatDateDisplay(value)
@@ -37,6 +41,7 @@ export function DatePicker({ value, onChange, className, placeholder = 'select d
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           type="button"
           variant="outline"
           disabled={disabled}
@@ -80,6 +85,8 @@ interface DateTimePickerProps {
   placeholder?: string
   size?: PickerSize
   disabled?: boolean
+  /** See DatePickerProps.id. */
+  id?: string
 }
 
 // A single Popover holding both the calendar and a compact hour/minute/
@@ -92,7 +99,7 @@ interface DateTimePickerProps {
 // popover's own draft-then-Apply pattern in RecordsTable.tsx — so clicking
 // a day doesn't fire an onChange per click before a time has even been
 // chosen.
-export function DateTimePicker({ value, onChange, className, placeholder = 'select date & time…', size = 'default', disabled }: DateTimePickerProps) {
+export function DateTimePicker({ value, onChange, className, placeholder = 'select date & time…', size = 'default', disabled, id }: DateTimePickerProps) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState(value)
 
@@ -124,6 +131,7 @@ export function DateTimePicker({ value, onChange, className, placeholder = 'sele
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           type="button"
           variant="outline"
           disabled={disabled}

@@ -48,9 +48,13 @@ interface ReferenceFieldAutocompleteProps {
   el: FormElement
   field: { value: unknown; onChange: (v: unknown) => void }
   disabled: boolean
+  /** Applied to the combobox trigger so FieldRenderer's `<label htmlFor>` can
+   *  name this control — the trigger is the focusable element here, there is
+   *  no native input to carry the id. */
+  id?: string
 }
 
-export function ReferenceFieldAutocomplete({ el, field, disabled }: ReferenceFieldAutocompleteProps) {
+export function ReferenceFieldAutocomplete({ el, field, disabled, id }: ReferenceFieldAutocompleteProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search, 300)
@@ -96,6 +100,7 @@ export function ReferenceFieldAutocomplete({ el, field, disabled }: ReferenceFie
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           type="button"
           variant="outline"
           role="combobox"

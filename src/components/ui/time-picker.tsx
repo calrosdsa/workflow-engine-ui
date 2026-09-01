@@ -113,6 +113,9 @@ interface TimePickerProps {
   placeholder?: string
   size?: PickerSize
   disabled?: boolean
+  /** Applied to the popover trigger, so a `<label htmlFor>` can point at this
+   *  control — same reasoning as DatePickerProps.id. */
+  id?: string
 }
 
 // A Popover-based time picker with scrollable hour/minute/AM-PM columns —
@@ -122,7 +125,7 @@ interface TimePickerProps {
 // same "click to open, pick, done" shape as DatePicker/DateTimePicker in
 // this same file's sibling date-time-picker.tsx, rather than falling back
 // to OS chrome that looks out of place next to them.
-export function TimePicker({ value, onChange, className, placeholder = 'select time…', size = 'default', disabled }: TimePickerProps) {
+export function TimePicker({ value, onChange, className, placeholder = 'select time…', size = 'default', disabled, id }: TimePickerProps) {
   const [open, setOpen] = useState(false)
   const parsed = parseTimeInputValue(value)
   const { hour12, period } = parsed ? to12Hour(parsed.hour) : { hour12: 12, period: 'AM' as const }
@@ -136,6 +139,7 @@ export function TimePicker({ value, onChange, className, placeholder = 'select t
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           type="button"
           variant="outline"
           disabled={disabled}
