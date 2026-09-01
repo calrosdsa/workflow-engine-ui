@@ -2,6 +2,7 @@ import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
+import { cspMetaTag } from './src/lib/csp'
 
 // Every top-level path segment the BUILDER's router.tsx actually owns (Home
 // '/', /applications/$appId/{workflows,forms,design,settings,executions},
@@ -67,8 +68,36 @@ function runtimeDevFallback(): Plugin {
   }
 }
 
+
+// Injects the app's Content-Security-Policy into BOTH entry documents
+// (index.html and runtime.html) as the first thing in <head> — a meta CSP
+// governs only what follows it, so position is load-bearing.
+//
+// A plugin rather than a literal <meta> in each .html file for two reasons:
+// the policy differs between dev and production (Vite's dev transform needs
+// 'unsafe-eval', HMR needs ws:), and duplicating it across two documents is
+// exactly how they drift. See src/lib/csp.ts for what the policy does and
+// does not cover.
+function contentSecurityPolicy(): Plugin {
+  return {
+    name: 'app-content-security-policy',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html, ctx) {
+        // ctx.server is the reliable dev signal: it is set only by the
+        // dev server. ctx.bundle is NOT populated at order:'pre' during a
+        // build, so keying on it silently shipped the dev policy —
+        // 'unsafe-eval' and plain http:/ws: — into production output.
+        const tag = cspMetaTag({ dev: !!ctx.server })
+        return html.replace(/<head>/i, `<head>
+    ${tag}`)
+      },
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), runtimeDevFallback()],
+  plugins: [contentSecurityPolicy(), react(), tailwindcss(), runtimeDevFallback()],
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
