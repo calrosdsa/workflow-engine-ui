@@ -1101,6 +1101,9 @@ function RowEditorSidebar({ row, sections, disabled, isDraft, parentFormId, onCh
 // is not defined" thrown from inside LineItemsGrid). Deferring the import
 // until first render (well after both modules have finished evaluating)
 // sidesteps the ordering problem entirely.
+import { RecordDetailToolbar } from './RecordDetailToolbar'
+import { useRecordDetail } from './record-detail-hooks'
+
 const LazyRecordDetailPanel = lazy(() =>
   import('./RecordDetailPanel').then((m) => ({ default: m.RecordDetailPanel })),
 )
@@ -1113,19 +1116,35 @@ function RowDetailDrawer({ formId, recordId, fields, layout, onClose }: {
   onClose: () => void
 }) {
   const container = document.getElementById('runtime-root') ?? document.body
+  const schema = resolveFormSchema({ layout, fields })
+  // Same query key the panel below uses, so this is a cache share, not a
+  // second fetch — the toolbar needs the record for its actions.
+  const { data: record } = useRecordDetail(formId, recordId)
   return (
     <Drawer open onOpenChange={(open) => { if (!open) onClose() }}>
       <DrawerContent size="lg" container={container}>
         <DrawerHeader>
-          <DrawerTitle>Record details</DrawerTitle>
+          {/* Toolbar + panel is the same composition RuntimeRecordPage uses
+              full-page; onDeleted closes the drawer, since the row it showed
+              no longer exists. */}
+          <div className="flex items-center justify-between gap-3">
+            <DrawerTitle>Record details</DrawerTitle>
+            <RecordDetailToolbar
+              formId={formId}
+              recordId={recordId}
+              record={record}
+              createUserSettings={schema.settings?.createUser}
+              schema={schema}
+              onDeleted={onClose}
+            />
+          </div>
         </DrawerHeader>
         <Suspense fallback={<div className="flex-1 p-6"><Skeleton className="h-40 w-full" /></div>}>
           <LazyRecordDetailPanel
             formId={formId}
             recordId={recordId}
             fields={fields}
-            schema={resolveFormSchema({ layout, fields })}
-            onDeleted={onClose}
+            schema={schema}
           />
         </Suspense>
       </DrawerContent>

@@ -29,7 +29,7 @@ import { ZonedDetailTabList } from './detail-tabs/ZonedDetailTabList'
 import { MAX_GROUP_DEPTH } from './detail-tabs/contract'
 import './detail-tabs'
 import type { FormSchema, DetailTabConfig } from '@/features/form-builder/schema'
-import type { FieldDef, AuditLogEntry, AuditFieldChange, FormRecord, LinkedRecordGroup } from '@/features/forms/types'
+import type { FieldDef, AuditLogEntry, AuditFieldChange, LinkedRecordGroup } from '@/features/forms/types'
 
 export { formatValue }
 export { RecordDetailToolbar } from './RecordDetailToolbar'

@@ -28,7 +28,6 @@ import { formsApi } from '@/features/forms/api'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { resolveReferenceLabel } from './record-title'
 import type { FormElement } from '@/features/form-builder/schema'
-import type { FormRecord } from '@/features/forms/types'
 import type { FilterGroup } from '@/features/workflows/types'
 
 function displayField(hasName: boolean, hasLabel: boolean): string | null {
