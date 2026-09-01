@@ -17,6 +17,16 @@ registerDetailTab({
   label: 'Details',
   icon: FileText,
   description: "The record's own fields, laid out per the form's section/column design. Can hold child tabs (e.g. Comments, History) below the fields.",
+  configSchema: {
+    type: 'object',
+    properties: {
+      childTabs: {
+        type: 'array',
+        description: 'Nested tabs rendered below the record fields. Each entry is a full detail-tab entry — same shape as detail_tab_envelope.',
+        items: { type: 'object' },
+      },
+    },
+  },
   builtin: true,
   parseConfig: parseDetailsTabConfig,
   createDefaultConfig: emptyDetailsTabConfig,
@@ -39,6 +49,7 @@ registerDetailTab({
   label: 'Audit Log',
   icon: History,
   description: "This record's create/update history.",
+  configSchema: { type: 'object', description: 'No configuration.', properties: {} },
   builtin: true,
   parseConfig: () => ({}),
   createDefaultConfig: () => ({}),
@@ -52,6 +63,7 @@ registerDetailTab({
   label: 'Linked Records',
   icon: Link2,
   description: 'Every record, on every other form, that references this one — auto-discovered.',
+  configSchema: { type: 'object', description: 'No configuration.', properties: {} },
   builtin: true,
   parseConfig: () => ({}),
   createDefaultConfig: () => ({}),

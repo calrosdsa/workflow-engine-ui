@@ -14,6 +14,7 @@
 // imports every built-in tab type.
 import type { ComponentType } from 'react'
 import type { LucideIcon } from 'lucide-react'
+import type { ConfigSchema } from '@/lib/config-schema'
 import type { FormSchema } from '@/features/form-builder/schema'
 import type { FieldDef } from '@/features/forms/types'
 
@@ -70,6 +71,19 @@ export interface DetailTabDefinition<TConfig = unknown> {
   label: string
   icon: LucideIcon
   description: string
+  /** JSON Schema for this type's config payload, exported to the backend's
+   *  /meta/catalog via src/lib/ui-catalog.ts. Required so a new tab type
+   *  cannot register without describing itself — see ConfigSchema's doc
+   *  comment for why this is the drift mechanism, not decoration. */
+  configSchema: ConfigSchema
+  /** Retirement policy (workflow-engine/COMPATIBILITY.md): a retired type
+   *  keeps rendering forever but stops being offered for NEW configuration.
+   *  Set deprecated (and replacedBy, naming the live type to use instead)
+   *  rather than ever deleting a registration — stored configs reference
+   *  types by name, and a deleted registration turns every one of them into
+   *  an unrenderable unknown. Flows into the generated ui-catalog. */
+  deprecated?: boolean
+  replacedBy?: string
   /** Built-in types (details/audit/linked) are structural extractions of
    *  today's fixed tabs, always present by default and not deletable
    *  outright (only hideable) — see registry.ts's resolveDetailTabs. */

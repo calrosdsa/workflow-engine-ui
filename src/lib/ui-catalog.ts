@@ -1,0 +1,109 @@
+// ---------------------------------------------------------------------------
+// UI catalog builder — the generated half of the backend's /meta/catalog
+// ---------------------------------------------------------------------------
+//
+// Menu types, custom actions, and detail tabs exist only in this frontend's
+// registries: the backend stores their config as opaque JSON and never parses
+// it, so it cannot derive a catalog for them by reflection the way it does
+// for workflow nodes and field types. This module closes that gap by READING
+// the live registries and emitting one JSON document, which the backend
+// embeds (workflow-engine/api/meta/ui-catalog.json) and serves.
+//
+// The chain that keeps it honest, end to end:
+//
+//	1. Each registry contract REQUIRES configSchema — a new type cannot
+//	   compile without describing itself (src/lib/config-schema.ts).
+//	2. This builder ranges over the registries, so a registered type cannot
+//	   be skipped.
+//	3. src/lib/ui-catalog.gen.test.ts snapshots the output against the
+//	   committed file — `npm test` FAILS when the file is stale, and
+//	   `npm run gen:ui-catalog` regenerates it.
+//	4. The backend embeds the file at compile time (go:embed), so a build
+//	   cannot ship without it, and serves it verbatim.
+//
+// Enum completeness for the two plain unions is compile-enforced with
+// Record<Union, ...> maps below — add a value to the union and this file
+// fails to compile until its description exists.
+
+// Side-effecting imports: each runs every registerX() call at module scope,
+// exactly as the app's own entry points do.
+import '@/features/forms/runtime/custom-actions'
+import '@/features/forms/runtime/detail-tabs'
+
+import { allCustomActions } from '@/features/forms/runtime/custom-actions/registry'
+import { allDetailTabs } from '@/features/forms/runtime/detail-tabs/registry'
+import { MENU_TYPE_REGISTRY } from '@/features/menus/menu-registry'
+import {
+  CUSTOM_ACTION_ENVELOPE_SCHEMA,
+  DETAIL_PAGE_LAYOUTS,
+  DETAIL_TAB_ENVELOPE_SCHEMA,
+  type DetailTabOrientation,
+} from '@/features/form-builder/schema'
+
+/** Compile-enforced complete: adding a value to DetailTabOrientation fails
+ *  this Record until its description is written. */
+const TAB_ORIENTATION_DESCRIPTIONS: Record<DetailTabOrientation, string> = {
+  horizontal: 'Top-level tab bar across the top. The default.',
+  vertical: 'Top-level tab bar down the side. Nested group tabs stay horizontal regardless.',
+}
+
+/** Emits deprecated/replaced_by only when a type is actually retired, so
+ *  the generated file (and its snapshot) is untouched until the first
+ *  retirement happens. */
+function retirement(d: { deprecated?: boolean; replacedBy?: string }) {
+  if (!d.deprecated) return {}
+  return { deprecated: true, replaced_by: d.replacedBy ?? '' }
+}
+
+export function buildUiCatalog() {
+  const byType = <T extends { type: string }>(xs: T[]) =>
+    [...xs].sort((a, b) => a.type.localeCompare(b.type))
+
+  return {
+    $comment:
+      'GENERATED FILE - do not edit by hand. Source: workflow-engine-ui registries (src/lib/ui-catalog.ts). Regenerate with `npm run gen:ui-catalog` in workflow-engine-ui; `npm test` fails while this file is stale.',
+    menu_types: byType(
+      Object.values(MENU_TYPE_REGISTRY).map((e) => ({
+        type: e.type,
+        label: e.label,
+        summary: e.description,
+        config_schema: e.configSchema,
+        ...retirement(e),
+      })),
+    ),
+    custom_actions: byType(
+      allCustomActions().map((d) => ({
+        type: d.type,
+        label: d.label,
+        summary: d.description,
+        config_schema: d.configSchema,
+        ...retirement(d),
+      })),
+    ),
+    detail_tabs: byType(
+      allDetailTabs().map((d) => ({
+        type: d.type,
+        label: d.label,
+        summary: d.description,
+        builtin: d.builtin ?? false,
+        config_schema: d.configSchema,
+        ...retirement(d),
+      })),
+    ),
+    detail_layouts: Object.entries(DETAIL_PAGE_LAYOUTS).map(([value, def]) => ({
+      value,
+      description: `${def.label}. Zones: ${def.zones.map((z) => z.id).join(', ')}. A tab's 'zone' must name one of these; absent means 'main'.`,
+    })),
+    tab_orientations: Object.entries(TAB_ORIENTATION_DESCRIPTIONS).map(([value, description]) => ({
+      value,
+      description,
+    })),
+    detail_tab_envelope: DETAIL_TAB_ENVELOPE_SCHEMA,
+    custom_action_envelope: CUSTOM_ACTION_ENVELOPE_SCHEMA,
+  }
+}
+
+/** The exact bytes written to workflow-engine/api/meta/ui-catalog.json. */
+export function buildUiCatalogJson(): string {
+  return JSON.stringify(buildUiCatalog(), null, 2) + '\n'
+}

@@ -110,6 +110,49 @@ that averaging a two-stop gradient into one HSL/OKLCH value destroys it):
   App Builder has no commerce surface today; this token is reserved, unused
   until one exists. Do not repurpose it as a second general-purpose accent.
 
+## Runtime default theme
+
+**Amends the boundary set above.** The Theme section's own "untouched by
+this redesign" note (Dark-only for this pass) still holds for `index.css`'s
+`.dark` block — this section is a separate decision, about the ONE file
+that seeds a brand-new tenant app's theme before its owner ever opens the
+Theme tab: `src/features/theme/default-theme.ts`'s `DEFAULT_THEME` export
+(`ThemeConfig`, five color slots × light/dark, consumed by `ThemeProvider`
+via `element.style.setProperty` — see that file's own doc comment). This is
+intentionally its OWN identity, never the builder shell's teal — a real
+tenant's CRM/ERP/etc. should not look like App Builder's own chrome.
+
+**Why it changed:** the prior defaults were an unmodified shadcn/ui "New
+York" starter — `221.2 83.2% 53.3%` primary (Tailwind's own stock blue-600),
+hue-210 cool-slate neutrals, pure `0 0% 100%`/near-black surfaces. Every
+un-customized shadcn scaffold ships these exact numbers; a tenant who never
+opens the Theme tab shipped a visibly-unstyled default. Replaced with a
+modern indigo-violet identity a real app can credibly ship as-is, following
+this repo's own `color.md` Hallmark reference (tint the neutrals toward the
+accent hue; no pure `#fff`/`#000`; dark-mode surfaces read *lighter* than
+background, not flat/identical, per its elevation recipe).
+
+**Values (`DEFAULT_THEME`, HSL triplets — same format as the rest of this
+system, chosen directly rather than derived from OKLCH since this codebase's
+theme editor round-trips hex⇄HSL, not OKLCH; see `color-utils.ts`):**
+
+| Slot | Light | Dark |
+|---|---|---|
+| `primary` | `243 82% 61%` | `239 91% 74%` |
+| `secondary` / `accent` | `240 25% 96%` | `240 20% 18%` |
+| `background` | `240 25% 99%` | `240 22% 7%` |
+| `surface` | `240 25% 99%` (= background) | `240 18% 11%` (lighter than background — elevation) |
+
+All four `*-foreground` variables (`primary-foreground`, `secondary-foreground`,
+`accent-foreground`, `foreground`, `card-foreground`) are NOT hand-picked —
+`ThemeProvider` derives them per-color via `pickForeground()`'s real WCAG
+contrast check against two fixed candidates, already exact for whatever
+background/accent values this table sets. No change needed to that
+mechanism for this palette swap.
+
+**Scope note:** `radius` (`0.5rem`) and `shadow` (`sm`) were left unchanged —
+this decision is about color only, per the request that prompted it.
+
 ## Typography
 
 - Display: InterVariable, weight 700 for H1-scale headings, style normal

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { ColorPicker } from '@/components/ui/color-picker'
+import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useApplicationTheme, useUpdateApplicationTheme } from '@/features/applications/hooks'
 import { usePermission } from '@/features/auth/permissions'
 import { ThemeProvider, useThemeMode } from '@/features/theme/ThemeProvider'
@@ -63,14 +64,16 @@ export function ThemeSection() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Font family</label>
-            <select
+            <SelectMenu
               value={draft.typography.fontFamily}
-              onChange={(e) => { setSaved(false); setDraft((d) => ({ ...d, typography: { ...d.typography, fontFamily: e.target.value } })) }}
+              onValueChange={(v) => { setSaved(false); setDraft((d) => ({ ...d, typography: { ...d.typography, fontFamily: v } })) }}
               disabled={!canWrite}
-              className="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1.5 text-sm text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {FONT_OPTIONS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-            </select>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {FONT_OPTIONS.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+              </SelectContent>
+            </SelectMenu>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Base font size</label>
@@ -92,14 +95,16 @@ export function ThemeSection() {
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Shadow</label>
-            <select
+            <SelectMenu
               value={draft.shadow}
-              onChange={(e) => { setSaved(false); setDraft((d) => ({ ...d, shadow: e.target.value as ThemeConfig['shadow'] })) }}
+              onValueChange={(v) => { setSaved(false); setDraft((d) => ({ ...d, shadow: v as ThemeConfig['shadow'] })) }}
               disabled={!canWrite}
-              className="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1.5 text-sm text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {SHADOW_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {SHADOW_OPTIONS.map((s) => <SelectItem key={s} value={s as string}>{s}</SelectItem>)}
+              </SelectContent>
+            </SelectMenu>
           </div>
         </div>
 

@@ -11,6 +11,7 @@
 // component in this codebase would.
 import type { ComponentType } from 'react'
 import type { LucideIcon } from 'lucide-react'
+import type { ConfigSchema } from '@/lib/config-schema'
 import type { FormSchema } from '@/features/form-builder/schema'
 import type { FormRecord } from '@/features/forms/types'
 
@@ -48,6 +49,19 @@ export interface CustomActionDefinition<TConfig = unknown> {
   label: string
   icon: LucideIcon
   description: string
+  /** JSON Schema for this type's config payload, exported to the backend's
+   *  /meta/catalog via src/lib/ui-catalog.ts. Required so a new action type
+   *  cannot register without describing itself — see ConfigSchema's doc
+   *  comment for why this is the drift mechanism, not decoration. */
+  configSchema: ConfigSchema
+  /** Retirement policy (workflow-engine/COMPATIBILITY.md): a retired type
+   *  keeps rendering forever but stops being offered for NEW configuration.
+   *  Set deprecated (and replacedBy, naming the live type to use instead)
+   *  rather than ever deleting a registration — stored configs reference
+   *  types by name, and a deleted registration turns every one of them into
+   *  an unrenderable unknown. Flows into the generated ui-catalog. */
+  deprecated?: boolean
+  replacedBy?: string
   /** Parses/heals a possibly-stale or malformed config blob, the same
    *  defensive role DetailTabDefinition.parseConfig plays. Must never throw. */
   parseConfig: (raw: unknown) => TConfig

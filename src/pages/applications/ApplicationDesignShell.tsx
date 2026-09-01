@@ -1,6 +1,6 @@
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { ArrowLeft, LayoutDashboard, Workflow, FileText, Palette, KeyRound, Rocket, Save, Loader2, AlertCircle, ListTree, Eye, LogOut, Sun, Moon, BookOpen, Lock } from 'lucide-react'
+import { ArrowLeft, Bot, Workflow, FileText, Palette, SlidersHorizontal, Rocket, Save, Loader2, AlertCircle, ListTree, Eye, LogOut, Sun, Moon, BookOpen, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
@@ -28,15 +28,24 @@ import type { ValidationIssue } from '@/features/applications/types'
 // parent beforeLoad in router.tsx) rather than being threaded an explicit
 // appId prop — see the plan's A3 minimal-risk recommendation.
 const NAV_ITEMS = [
-  { to: '/applications/$appId', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  // Dashboard is deliberately absent from this bar, NOT removed: the route
+  // and DashboardPage are untouched and /applications/$appId still renders
+  // it — it just isn't a nav destination for now. Note this is still the
+  // shell's index route, so entering an app from Home lands here even
+  // though nothing in the bar points at it.
   { to: '/applications/$appId/workflows', label: 'Workflows', icon: Workflow, exact: false },
   { to: '/applications/$appId/forms', label: 'Forms', icon: FileText, exact: false },
   { to: '/applications/$appId/design', label: 'App Design', icon: Palette, exact: false },
+  // Promoted out of App Design's tab bar to a destination of its own.
+  { to: '/applications/$appId/agents', label: 'Agents', icon: Bot, exact: false },
   // FR-C9-002: now a real per-app nested route — a KB always belongs to
   // exactly one owning app, so this is app-scoped like every other item
   // here, not a link out to a global page.
   { to: '/applications/$appId/knowledge-bases', label: 'Knowledge Base', icon: BookOpen, exact: false },
-  // { to: '/applications/$appId/settings', label: 'Settings', icon: KeyRound, exact: false },
+  // App Configuration absorbed the old Settings nav item (credentials +
+  // variables are now its 'settings' tab) along with five tabs that used to
+  // sit under App Design — see AppConfigurationPage.
+  { to: '/applications/$appId/configuration', label: 'App Configuration', icon: SlidersHorizontal, exact: false },
 ] as const
 
 // The Workflow Builder (/applications/$appId/workflows/$workflowId) owns its
@@ -118,7 +127,7 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
   return (
     <div className="flex h-screen flex-col">
       {/* This header carries the shell chrome for every app screen (Dashboard,
-       *  Workflows, Forms, App Design, Settings), not just App Design — the
+       *  Workflows, Forms, App Design, Agents, App Configuration), not just App Design — the
        *  audit that flagged this measured 776px of un-shrinkable content
        *  (mostly the 5-item text-label nav at 503px, plus the right-side
        *  actions at 189px) forced into a 375px header with no wrap or shrink
@@ -215,7 +224,7 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
           </span>
           <Button
             variant="ghost" size="sm" className="h-6 shrink-0 gap-1 px-2 text-[11px] text-[hsl(var(--warning))] hover:bg-[hsl(var(--warning))]/10"
-            onClick={() => navigate({ to: '/applications/$appId/design', params: { appId }, search: { tab: 'environment' } })}
+            onClick={() => navigate({ to: '/applications/$appId/configuration', params: { appId }, search: { tab: 'environment' } })}
           >
             View Environment Link
           </Button>

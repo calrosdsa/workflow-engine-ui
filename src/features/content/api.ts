@@ -6,7 +6,7 @@ import type { ContentObject } from './types'
 // request context (see api/content/handler.go's parseOwner) — never sent
 // from here — so only owner_kind/owner_resource_id are this client's job.
 export interface ContentOwner {
-  ownerKind: 'form_record' | 'kb_document' | 'app_asset'
+  ownerKind: 'form_record' | 'kb_document' | 'app_asset' | 'menu_icon'
   ownerResourceId: string
 }
 

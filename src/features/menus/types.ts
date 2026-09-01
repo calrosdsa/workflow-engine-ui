@@ -13,7 +13,7 @@ import type { FilterGroup, SortRule } from '@/features/workflows/types'
 import type { PageSchema } from '@/features/page-builder/schema'
 import type { DashboardSchema } from '@/features/dashboard/schema'
 
-export type MenuType = 'search' | 'add' | 'parent' | 'custom' | 'dashboard'
+export type MenuType = 'search' | 'add' | 'parent' | 'custom' | 'dashboard' | 'html'
 
 export interface SearchMenuConfig {
   form_id: string
@@ -63,7 +63,53 @@ export interface DashboardMenuConfig {
   schema: DashboardSchema
 }
 
-export type MenuConfig = SearchMenuConfig | AddMenuConfig | ParentMenuConfig | CustomMenuConfig | DashboardMenuConfig
+/** One query an HTML menu's page is allowed to run, declared by the author
+ *  at design time. The page addresses it by `id` and never names a form, so
+ *  the reachable set is fixed when the menu is saved, not when it runs.
+ *
+ *  filter/sort/columns are the Search menu's own shapes (FR-B1-006), reused
+ *  verbatim so the host can hand them straight to RecordStore.Query. */
+export interface HtmlDataSource {
+  /** Author-chosen, stable within this menu — what `AppBuilder.query()` takes. */
+  id: string
+  form_id: string
+  filter?: FilterGroup
+  sort?: SortRule[]
+  columns?: string[]
+  page_size?: number
+}
+
+/** One form an HTML menu's page may write to, and which operations are
+ *  permitted. Separate from HtmlDataSource because reading and writing are
+ *  separate grants: a page that lists records is not automatically a page
+ *  that may change them. */
+export interface HtmlWriteTarget {
+  id: string
+  form_id: string
+  allow_create?: boolean
+  allow_update?: boolean
+}
+
+/** Drives an HTML menu — an author-written page rendered in a sandboxed
+ *  iframe (see features/menus/html/srcdoc.ts for the trust boundary).
+ *
+ *  Deliberately NOT a mode on CustomMenuConfig: `custom` is retired
+ *  (COMPATIBILITY.md rule 3), and this type's config shares none of its
+ *  fields. */
+export interface HtmlMenuConfig {
+  /** The author's markup, stored verbatim and never sanitized — the sandbox
+   *  is the boundary, not a filter. */
+  html: string
+  /** Queries the page may run. */
+  data_sources: HtmlDataSource[]
+  /** Forms the page may write to. */
+  write_targets: HtmlWriteTarget[]
+  /** Hosts the page may reach outward, enforced by the CSP composed into
+   *  the frame. Empty means fully self-contained: no outbound requests. */
+  allowed_hosts: string[]
+}
+
+export type MenuConfig = SearchMenuConfig | AddMenuConfig | ParentMenuConfig | CustomMenuConfig | DashboardMenuConfig | HtmlMenuConfig
 
 /** How the "Permission" section of the menu editor gates visibility:
  *  'all' shows the menu to anyone who can view the app; 'role' restricts it

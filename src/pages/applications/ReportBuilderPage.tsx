@@ -178,7 +178,7 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
 
   const handleBack = () => {
     if (dirty && !window.confirm('You have unsaved changes. Leave without saving?')) return
-    navigate({ to: '/applications/$appId/design', params: { appId }, search: { tab: 'reports' } })
+    navigate({ to: '/applications/$appId/configuration', params: { appId }, search: { tab: 'reports' } })
   }
 
   if (isLoading || loadedReportId !== reportId) {

@@ -19,6 +19,8 @@
 // Component types
 // ---------------------------------------------------------------------------
 
+import type { ConfigSchema } from '@/lib/config-schema'
+
 export type ComponentType =
   // Text inputs
   | 'text' | 'textarea' | 'number' | 'email' | 'password' | 'phone' | 'url'
@@ -435,6 +437,69 @@ export interface CustomActionConfig {
   config: unknown          // type-owned payload, parsed via that type's own CustomActionDefinition.parseConfig
   visibility?: TabVisibilityConfig
   renderIf?: TabRenderCondition
+}
+
+// ---------------------------------------------------------------------------
+// Envelope schemas — exported to the backend's /meta/catalog
+// ---------------------------------------------------------------------------
+//
+// JSON Schema descriptions of DetailTabConfig and CustomActionConfig, the
+// wrapper objects stored in FormSchema.settings.detailTabs/customActions.
+// They live HERE, directly below the interfaces they describe, because
+// same-file locality is the only drift defense TypeScript interfaces allow —
+// change a field above without touching its schema and the review diff shows
+// both side by side. src/lib/ui-catalog.ts exports them; per-TYPE config
+// schemas live on each registry entry instead (contract.configSchema).
+
+const TAB_VISIBILITY_SCHEMA = {
+  type: 'object',
+  description: 'Who may see this entry.',
+  required: ['mode'],
+  properties: {
+    mode: { type: 'string', enum: ['everyone', 'roles', 'users', 'roles_or_users'] },
+    roleIds: { type: 'array', items: { type: 'string' }, description: 'Role ids, for the roles/roles_or_users modes.' },
+    userIds: { type: 'array', items: { type: 'string' }, description: 'User ids, for the users/roles_or_users modes.' },
+  },
+} as const
+
+const TAB_RENDER_CONDITION_SCHEMA = {
+  type: 'object',
+  description: 'Conditional rendering on the record’s own data.',
+  required: ['mode'],
+  properties: {
+    mode: { type: 'string', enum: ['always', 'expression'] },
+    expressionWhen: { type: 'string', description: 'Expr expression; Vars["fieldKey"] addresses the record’s fields. The entry renders only when it evaluates true.' },
+  },
+} as const
+
+export const DETAIL_TAB_ENVELOPE_SCHEMA: ConfigSchema = {
+  type: 'object',
+  description: 'One entry of FormSchema.settings.detailTabs — a tab on the record-detail page, stored inside the form’s layout blob.',
+  required: ['id', 'type', 'config'],
+  properties: {
+    id: { type: 'string', description: 'UI-only stable key; any unique string.' },
+    type: { type: 'string', description: 'Registry key — one of the catalog’s detail_tabs types.' },
+    label: { type: 'string', description: 'Overrides the type’s default label.' },
+    hidden: { type: 'boolean', description: 'Keep the tab configured but hide it at runtime. Built-in tabs can only be hidden, never removed.' },
+    config: { description: 'Type-owned payload — see the matching detail_tabs entry’s config_schema.' },
+    visibility: TAB_VISIBILITY_SCHEMA,
+    renderIf: TAB_RENDER_CONDITION_SCHEMA,
+    zone: { type: 'string', description: 'Zone id from the active detail layout’s zones. Absent always means ‘main’.' },
+  },
+}
+
+export const CUSTOM_ACTION_ENVELOPE_SCHEMA: ConfigSchema = {
+  type: 'object',
+  description: 'One entry of FormSchema.settings.customActions — an action on the record-detail toolbar, stored inside the form’s layout blob. Menu-item order is array order.',
+  required: ['id', 'type', 'label', 'config'],
+  properties: {
+    id: { type: 'string', description: 'UI-only stable key; any unique string.' },
+    type: { type: 'string', description: 'Registry key — one of the catalog’s custom_actions types.' },
+    label: { type: 'string', description: 'The menu item’s visible text. Always admin-authored — there is no registry default.' },
+    config: { description: 'Type-owned payload — see the matching custom_actions entry’s config_schema.' },
+    visibility: TAB_VISIBILITY_SCHEMA,
+    renderIf: TAB_RENDER_CONDITION_SCHEMA,
+  },
 }
 
 /** Top-level, form-wide settings bag — sibling of sections/variables on

@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-08-31",
+    "scope": "app",
+    "macrostructure": "unchanged (Dashboard-Workbench, per design.md family)",
+    "theme": "design.md amendment: Runtime default theme (modern indigo-violet, replacing unmodified shadcn/ui starter blue)",
+    "enrichment": "none",
+    "brief": "Theme tab (App Design > Theme): componentized two native <select> elements to SelectMenu; replaced DEFAULT_THEME's stock shadcn defaults with a modern indigo-violet palette (default-theme.ts + KMP mirror ThemeConfig.kt) for brand-new tenant apps"
+  },
+  {
     "date": "2026-08-29",
     "scope": "app",
     "macrostructure": "Dashboard-Workbench / canvas+rail (per design.md family)",

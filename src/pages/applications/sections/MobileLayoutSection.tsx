@@ -11,9 +11,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Spinner } from '@/components/ui/spinner'
 import { useMenus } from '@/features/menus/hooks'
 import { MENU_TYPE_REGISTRY } from '@/features/menus/menu-registry'
+import { MenuIcon } from '@/features/menus/MenuIcon'
 // A menu's own icon wins here too — the mobile tab bar shows the same menus
 // the sidebar does, so an icon set in the menu editor has to follow them.
-import { resolveMenuIcon } from '@/features/menus/menu-icons'
 import { useApplicationMobileNav, useUpdateApplicationMobileNav } from '@/features/applications/hooks'
 import { usePermission } from '@/features/auth/permissions'
 import { emptyMobileNavConfig } from '@/features/menus/mobile-nav-types'
@@ -177,7 +177,6 @@ function MobileNavRow({ menu, visible, onToggleVisible, canWrite }: {
   canWrite: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: menu.id })
-  const Icon = resolveMenuIcon(menu.icon) ?? MENU_TYPE_REGISTRY[menu.menu_type].icon
 
   return (
     <div
@@ -198,7 +197,7 @@ function MobileNavRow({ menu, visible, onToggleVisible, canWrite }: {
       >
         <GripVertical size={14} />
       </button>
-      <Icon size={14} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
+      <MenuIcon icon={menu.icon} fallback={MENU_TYPE_REGISTRY[menu.menu_type].icon} size={14} className="text-[hsl(var(--muted-foreground))]" />
       <span className="min-w-0 flex-1 truncate">{menu.name}</span>
       <label className="flex shrink-0 items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]">
         <Checkbox checked={visible} onCheckedChange={onToggleVisible} disabled={!canWrite} />
@@ -237,10 +236,9 @@ function PhonePreview({ rows, style }: { rows: { menu: Menu; visible: boolean }[
         {style === 'bottom_tabs' ? (
           <div className="flex border-t border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40">
             {tabs.map(({ menu }) => {
-              const Icon = resolveMenuIcon(menu.icon) ?? MENU_TYPE_REGISTRY[menu.menu_type].icon
               return (
                 <div key={menu.id} className="flex flex-1 flex-col items-center gap-0.5 py-2">
-                  <Icon size={16} className="text-[hsl(var(--primary))]" />
+                  <MenuIcon icon={menu.icon} fallback={MENU_TYPE_REGISTRY[menu.menu_type].icon} size={16} className="text-[hsl(var(--primary))]" />
                   <span className="max-w-full truncate px-1 text-[9px] text-[hsl(var(--foreground))]">{menu.name}</span>
                 </div>
               )
@@ -255,10 +253,9 @@ function PhonePreview({ rows, style }: { rows: { menu: Menu; visible: boolean }[
         ) : (
           <div className="space-y-1 border-t border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-2">
             {tabs.map(({ menu }) => {
-              const Icon = resolveMenuIcon(menu.icon) ?? MENU_TYPE_REGISTRY[menu.menu_type].icon
               return (
                 <div key={menu.id} className="flex items-center gap-2 rounded px-2 py-1">
-                  <Icon size={13} className="text-[hsl(var(--primary))]" />
+                  <MenuIcon icon={menu.icon} fallback={MENU_TYPE_REGISTRY[menu.menu_type].icon} size={13} className="text-[hsl(var(--primary))]" />
                   <span className="truncate text-[11px] text-[hsl(var(--foreground))]">{menu.name}</span>
                 </div>
               )

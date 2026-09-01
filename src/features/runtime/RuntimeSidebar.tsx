@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { ChevronDown } from 'lucide-react'
-import { MENU_TYPE_REGISTRY } from '@/features/menus/menu-registry'
-import { resolveMenuIcon } from '@/features/menus/menu-icons'
+import { ChevronDown, HelpCircle } from 'lucide-react'
+import { getMenuType } from '@/features/menus/menu-registry'
+import { MenuIcon } from '@/features/menus/MenuIcon'
 import { RuntimeLink } from './RuntimeLink'
 import { cn } from '@/lib/utils'
 import type { MenuTreeNode } from '@/features/menus/types'
@@ -43,11 +43,14 @@ function NavItem({ node, clientId, appId, activeMenuId, onNavigate, depth }: {
   onNavigate?: () => void
   depth: number
 }) {
-  const entry = MENU_TYPE_REGISTRY[node.menu_type]
-  // The author's chosen icon (features/menus/menu-icons.ts) wins over the
-  // menu type's own; an unset icon, or a name this build's catalog doesn't
-  // carry, falls back to exactly what rendered before icons were settable.
-  const Icon = resolveMenuIcon(node.icon) ?? entry.icon
+  // MenuIcon (below) resolves the author's chosen icon — a catalog glyph or
+  // an uploaded image — and falls back to this type icon for an unset icon,
+  // an unknown name, or an upload it can't load.
+  //
+  // Accessor, not a direct index: an unregistered menu_type must still render
+  // its nav row (an icon is decoration — see MenuIcon), so the type icon simply
+  // falls back to a neutral glyph rather than throwing. See FR-D1-008.
+  const entry = getMenuType(node.menu_type)
   const hasChildren = node.children.length > 0
   const collapsedDefault = node.menu_type === 'parent' && (node.config as { collapsed_by_default?: boolean }).collapsed_by_default
   const [open, setOpen] = useState(!collapsedDefault)
@@ -81,7 +84,7 @@ function NavItem({ node, clientId, appId, activeMenuId, onNavigate, depth }: {
           )}
           style={isActive ? { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' } : { color: 'hsl(var(--card-foreground))' }}
         >
-          <Icon size={14} className="shrink-0" />
+          <MenuIcon icon={node.icon} fallback={entry?.icon ?? HelpCircle} size={14} />
           <span className="truncate">{node.name}</span>
         </RuntimeLink>
       </div>

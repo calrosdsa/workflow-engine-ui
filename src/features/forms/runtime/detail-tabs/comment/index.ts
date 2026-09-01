@@ -8,6 +8,7 @@ registerDetailTab({
   label: 'Comments',
   icon: MessageSquare,
   description: 'A comment thread on this record — post, edit, and delete comments.',
+  configSchema: { type: 'object', description: 'No configuration.', properties: {} },
   parseConfig: parseCommentTabConfig,
   createDefaultConfig: emptyCommentTabConfig,
   Renderer: CommentTabRenderer,

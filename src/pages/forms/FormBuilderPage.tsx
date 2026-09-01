@@ -17,7 +17,7 @@ import { FormCanvas } from '@/features/form-builder/canvas/FormCanvas'
 import { ConfigPanel } from '@/features/form-builder/config/ConfigPanel'
 import { FormPreviewDialog } from '@/features/form-builder/FormPreviewDialog'
 import { toBuilder, toPayload } from '@/features/form-builder/serialize'
-import { projectToFields, validateFormRefs } from '@/features/form-builder/projection'
+import { projectToFields, validateFormRefs, validateTitleAndSearch, iterElements, type TitleSearchIssue } from '@/features/form-builder/projection'
 import { syncLineItemsChildren } from '@/features/form-builder/lineItemsSync'
 import { slugifyKey } from '@/features/form-builder/factory'
 import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
@@ -61,6 +61,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   const redo = useFormBuilderStore((s) => s.redo)
   const canUndo = useFormBuilderStore((s) => s.canUndo)
   const canRedo = useFormBuilderStore((s) => s.canRedo)
+  const updateElement = useFormBuilderStore((s) => s.updateItem)
   const {
     name, slug, description, isDirty, parentFormId: loadedParentFormId,
     setName, setSlug, markSaved,
@@ -72,6 +73,10 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
   const seededRef = useRef(false)
   const [parentRefSeeded, setParentRefSeeded] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Unmet Record Title / Searchable requirements, each carrying the elements
+  // that could satisfy it — rendered as a fix-it prompt rather than folded
+  // into `error`, since the whole point is to offer the one-click remedy.
+  const [titleSearchIssues, setTitleSearchIssues] = useState<TitleSearchIssue[]>([])
   const [previewOpen, setPreviewOpen] = useState(false)
   // Guards the one reachable in-app path that would otherwise silently
   // discard unsaved work: the header's "Back to forms" button. beforeunload
@@ -169,6 +174,24 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
 
   const projection = useMemo(() => projectToFields(schema), [schema])
 
+  /** Turns on the missing flag for the named field, then re-checks — so
+   *  clearing one requirement leaves the other's prompt standing rather than
+   *  dismissing the whole banner and making the author press Save again to
+   *  discover it. Goes through updateItem like any config-panel edit, so it
+   *  lands in the undo history and marks the form dirty. */
+  const applyTitleSearchFix = (kind: TitleSearchIssue['kind'], key: string) => {
+    const target = [...iterElements(schema)].find((el) => el.key === key)
+    if (!target) return
+    updateElement(target.id, kind === 'record_title' ? { isRecordTitle: true } : { searchable: true })
+
+    // Drop just the satisfied requirement. Re-running validateTitleAndSearch
+    // here would read `schema` as it stands in THIS render — updateItem's
+    // new state isn't visible until the next one — so it would report the
+    // issue we just fixed as still outstanding. The candidate came from an
+    // eligible field, so setting its flag satisfies this kind outright.
+    setTitleSearchIssues((prev) => prev.filter((i) => i.kind !== kind))
+  }
+
   const handleSave = async () => {
     setError(null)
     if (!name.trim()) { setError('Form name is required'); return }
@@ -190,6 +213,20 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
       setError(`Form reference issue — ${parts.join('; ')}.`)
       return
     }
+
+    // Every form must name a Record Title field and a Searchable field —
+    // without the first the runtime shows a raw UUID wherever a record is
+    // referenced, without the second its search box matches nothing.
+    // Enforced server-side too (FormDef.Validate); checked here so the
+    // author gets an actionable message and a one-click fix instead of a
+    // 400 naming a setting they'd have to go hunting for.
+    const titleSearchIssues = validateTitleAndSearch(schema, !!loaded?.is_line_items)
+    if (titleSearchIssues.length > 0) {
+      setTitleSearchIssues(titleSearchIssues)
+      setError(null)
+      return
+    }
+    setTitleSearchIssues([])
 
     const payload = toPayload({ name, slug, description, schema })
     try {
@@ -381,6 +418,41 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
         <div className="flex items-center gap-2 border-b border-[hsl(var(--destructive))]/30 bg-[hsl(var(--destructive))]/10 px-4 py-2 text-[12px] text-[hsl(var(--destructive))]">
           <AlertCircle size={14} className="shrink-0" />
           {error}
+        </div>
+      )}
+
+      {/* Record Title / Searchable requirement. Its own banner rather than a
+          line in `error`: the fix is one click on a named field, and a plain
+          message would leave the author hunting through the config panel of
+          every field to find the toggle. */}
+      {titleSearchIssues.length > 0 && (
+        <div className="border-b border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/10 px-4 py-2.5 text-[12px]">
+          {titleSearchIssues.map((issue) => (
+            <div key={issue.kind} className="flex flex-wrap items-center gap-x-2 gap-y-1.5 py-0.5">
+              <AlertCircle size={14} className="shrink-0 text-[hsl(var(--warning))]" />
+              <span className="text-[hsl(var(--foreground))]">
+                {issue.kind === 'record_title'
+                  ? 'Every form needs a Record Title field — it is what the runtime shows wherever a record is named.'
+                  : 'Every form needs a Searchable field — without one, search matches nothing.'}
+              </span>
+              <span className="text-[hsl(var(--muted-foreground))]">Use:</span>
+              {issue.candidates.slice(0, 6).map((c) => (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => applyTitleSearchFix(issue.kind, c.key)}
+                  className="rounded border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-1.5 py-0.5 text-[11px] font-medium text-[hsl(var(--foreground))] hover:border-[hsl(var(--primary))]/50 hover:bg-[hsl(var(--muted))]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+                >
+                  {c.label}
+                </button>
+              ))}
+              {issue.candidates.length > 6 && (
+                <span className="text-[11px] text-[hsl(var(--muted-foreground))]">
+                  or set it on any field from its Appearance tab
+                </span>
+              )}
+            </div>
+          ))}
         </div>
       )}
 

@@ -2,7 +2,7 @@
 // (objectResponse in api/content/handler.go) — every /content route.
 export interface ContentObject {
   id: string
-  owner_kind: 'form_record' | 'kb_document' | 'app_asset'
+  owner_kind: 'form_record' | 'kb_document' | 'app_asset' | 'menu_icon'
   owner_resource_id: string
   filename: string
   content_type: string

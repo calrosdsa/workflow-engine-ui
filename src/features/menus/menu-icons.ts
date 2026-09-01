@@ -239,6 +239,45 @@ const BY_NAME: Record<string, LucideIcon> = Object.fromEntries(
   MENU_ICON_GROUPS.flatMap((g) => g.icons.map((i) => [i.name, i.Icon] as const)),
 )
 
+// ---------------------------------------------------------------------------
+// Custom uploaded icons
+// ---------------------------------------------------------------------------
+//
+// `Menu.icon` is one TEXT column carrying two kinds of value:
+//
+//   "Users"            → a name from the catalog above
+//   "content:<uuid>"   → an image uploaded to the content store
+//
+// A prefix rather than a second column because `icon` already round-trips
+// through the API, the published snapshot and every client (the KMP runtime
+// included) as an opaque string — a new column would mean touching all of
+// that for what is still just "which icon". Lucide's own names are
+// PascalCase identifiers and can never contain a colon, so the two spaces
+// can't collide.
+//
+// The image lives under owner kind `app_asset` with no resource id, which
+// makes it app-scoped rather than menu-scoped: uploading once puts the icon
+// in a small per-app library that any menu can reuse, and deleting a menu
+// doesn't take its icon away from the others still using it.
+const CUSTOM_ICON_PREFIX = 'content:'
+
+/** True when `icon` names an uploaded image rather than a catalog entry. */
+export function isCustomIcon(icon: string | undefined | null): boolean {
+  return !!icon && icon.startsWith(CUSTOM_ICON_PREFIX)
+}
+
+/** The content-store object id inside a custom icon value, or null. */
+export function customIconContentId(icon: string | undefined | null): string | null {
+  if (!isCustomIcon(icon)) return null
+  const id = icon!.slice(CUSTOM_ICON_PREFIX.length)
+  return id || null
+}
+
+/** Builds the `Menu.icon` value for an uploaded content object. */
+export function customIconValue(contentId: string): string {
+  return `${CUSTOM_ICON_PREFIX}${contentId}`
+}
+
 /** Resolves a stored `Menu.icon` to its component, or null.
  *
  *  Returns null for an unset icon AND for a name this build doesn't carry —
@@ -247,8 +286,29 @@ const BY_NAME: Record<string, LucideIcon> = Object.fromEntries(
  *  unknown name degrades to exactly the pre-icon behavior rather than
  *  rendering a hole. */
 export function resolveMenuIcon(name: string | undefined | null): LucideIcon | null {
-  if (!name) return null
+  if (!name || isCustomIcon(name)) return null
   return BY_NAME[name] ?? null
+}
+
+/** Accepted upload types for a custom icon. SVG is included and rendered
+ *  only ever through `<img src>`, which does not execute script — never
+ *  inlined into the DOM, where an uploaded SVG would be an XSS vector. */
+export const CUSTOM_ICON_MIME_TYPES = ['image/png', 'image/svg+xml', 'image/webp', 'image/jpeg']
+
+/** Icons are UI chrome rendered at 14-16px; anything approaching a megabyte
+ *  is a mistake worth catching at the file picker rather than after a round
+ *  trip. The server's own maxUploadBytes remains the real ceiling. */
+export const CUSTOM_ICON_MAX_BYTES = 512 * 1024
+
+/** Validates a chosen file, returning an error message or null. */
+export function validateCustomIconFile(file: File): string | null {
+  if (!CUSTOM_ICON_MIME_TYPES.includes(file.type)) {
+    return `${file.name} is a ${file.type || 'unknown'} file — use a PNG, SVG, WebP or JPEG.`
+  }
+  if (file.size > CUSTOM_ICON_MAX_BYTES) {
+    return `${file.name} is ${(file.size / 1024).toFixed(0)} KB — icons must be under ${CUSTOM_ICON_MAX_BYTES / 1024} KB.`
+  }
+  return null
 }
 
 /** Every catalog name, for search and for tests. */

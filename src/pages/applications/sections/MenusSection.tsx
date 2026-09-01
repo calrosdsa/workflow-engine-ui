@@ -17,8 +17,8 @@ import { Spinner } from '@/components/ui/spinner'
 import { useMenus, useCreateMenu, useUpdateMenu, useDeleteMenu, useReorderMenus, useMoveMenu, useSetHiddenFromNav } from '@/features/menus/hooks'
 import { buildMenuTree } from '@/features/menus/tree'
 import { MENU_TYPE_REGISTRY } from '@/features/menus/menu-registry'
-import { resolveMenuIcon } from '@/features/menus/menu-icons'
 import { MenuIconPicker } from '@/features/menus/MenuIconPicker'
+import { MenuIcon } from '@/features/menus/MenuIcon'
 import { usePermission } from '@/features/auth/permissions'
 import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
 import { usePermissionsCatalog } from '@/features/permissions/hooks'
@@ -392,7 +392,7 @@ export function MenuTree({ tree, hiddenMenus, allMenus, selectedId, onSelect, on
       <DragOverlay dropAnimation={{ duration: 150, easing: 'cubic-bezier(0.2,0,0,1)' }}>
         {activeOverlay && (
           <div className="flex items-center gap-1.5 rounded-md border border-[hsl(var(--primary))]/40 bg-[hsl(var(--card))] px-2 py-1 text-[13px] font-medium text-[hsl(var(--foreground))] shadow-lg">
-            {(() => { const Icon = resolveMenuIcon(activeOverlay.icon) ?? MENU_TYPE_REGISTRY[activeOverlay.menuType].icon; return <Icon size={13} className="shrink-0 text-[hsl(var(--primary))]" /> })()}
+            <MenuIcon icon={activeOverlay.icon} fallback={MENU_TYPE_REGISTRY[activeOverlay.menuType].icon} size={13} className="text-[hsl(var(--primary))]" />
             {activeOverlay.name}
           </div>
         )}
@@ -484,9 +484,6 @@ function HiddenMenuRow({ menu, selected, onSelect, onRestore }: {
   onSelect: () => void
   onRestore: () => void
 }) {
-  // The menu's own chosen icon wins; the menu TYPE's icon is the fallback,
-  // which is also what an unset icon and an unknown name both resolve to.
-  const Icon = resolveMenuIcon(menu.icon) ?? MENU_TYPE_REGISTRY[menu.menu_type].icon
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: menu.id })
 
   const style = { transform: CSS.Translate.toString(transform), transition }
@@ -512,7 +509,7 @@ function HiddenMenuRow({ menu, selected, onSelect, onRestore }: {
       </button>
       <span className="w-3 shrink-0" />
       <button onClick={onSelect} className="flex min-w-0 flex-1 items-center gap-1.5 truncate rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]">
-        <Icon size={13} className="shrink-0" />
+        <MenuIcon icon={menu.icon} fallback={MENU_TYPE_REGISTRY[menu.menu_type].icon} size={13} />
         <span className="truncate">{menu.name}</span>
       </button>
       <button
@@ -540,7 +537,6 @@ function MenuRow({ node, depth, index, siblingCount, selected, hasChildren, isCo
   onMove: (dir: -1 | 1) => void
   onAddChild: () => void
 }) {
-  const Icon = resolveMenuIcon(node.icon) ?? MENU_TYPE_REGISTRY[node.menu_type].icon
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver, active } = useSortable({ id: node.id })
 
   const style = {
@@ -587,7 +583,7 @@ function MenuRow({ node, depth, index, siblingCount, selected, hasChildren, isCo
         <span className="w-3 shrink-0" />
       )}
       <button onClick={onSelect} className="flex min-w-0 flex-1 items-center gap-1.5 truncate rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]">
-        <Icon size={13} className="shrink-0" />
+        <MenuIcon icon={node.icon} fallback={MENU_TYPE_REGISTRY[node.menu_type].icon} size={13} />
         <span className="truncate">{node.name}</span>
       </button>
       <span className="hidden shrink-0 items-center gap-0.5 group-hover:flex group-focus-within:flex">
@@ -649,7 +645,11 @@ function MenuTypePickerDialog({ open, onClose, parentId, onCreated }: {
           <DialogDescription>Choose what kind of menu to add.</DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-2 p-4">
-          {Object.values(MENU_TYPE_REGISTRY).map((entry) => {
+          {/* A retired type keeps rendering the menus that already use it,
+              but stops being offered for new ones — this filter is what
+              makes the registry's `deprecated` flag do that work
+              (workflow-engine/COMPATIBILITY.md rule 3). */}
+          {Object.values(MENU_TYPE_REGISTRY).filter((entry) => !entry.deprecated).map((entry) => {
             const Icon = entry.icon
             return (
               <button

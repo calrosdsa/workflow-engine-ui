@@ -10,7 +10,8 @@ import { PermissionDeniedPage } from './PermissionDeniedPage'
 import { openDesignHub } from './designHub'
 import { NotificationBell } from './notifications/NotificationBell'
 import { ProfileMenu } from './ProfileMenu'
-import { MENU_TYPE_REGISTRY } from '@/features/menus/menu-registry'
+import { getMenuType } from '@/features/menus/menu-registry'
+import { UnavailableMenu } from './UnavailableMenu'
 import type { AppSnapshot, MenuSnapshotItem } from './types'
 
 interface RuntimeAppShellProps {
@@ -43,7 +44,11 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
   const canViewCurrent = canViewMenu(currentMenu, roleId, permissions)
   const isDraftPreview = useRuntimeDraftPreview()
 
-  const RuntimeRenderer = MENU_TYPE_REGISTRY[currentMenu.menu_type].runtimeRenderer
+  // Resolved through the accessor rather than indexed directly, so a menu_type
+  // this build doesn't register degrades to UnavailableMenu instead of throwing
+  // on the property access and taking the whole render tree with it — there is
+  // no error boundary above this. See FR-D1-008.
+  const RuntimeRenderer = getMenuType(currentMenu.menu_type)?.runtimeRenderer
 
   return (
     // Theming (dark class + CSS vars on #runtime-root) is provided once by
@@ -135,7 +140,9 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
           </div>
 
           <main className="min-h-0 flex-1 overflow-y-auto">
-            {canViewCurrent ? (
+            {!canViewCurrent ? (
+              <PermissionDeniedPage />
+            ) : RuntimeRenderer ? (
               <RuntimeRenderer
                 // Keyed by menu id so navigating between two menus of the
                 // SAME type (e.g. two Search menus) always remounts the
@@ -156,7 +163,7 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
                 onNavigate={(slug) => runtimeRouter.navigate({ to: `/${clientId}/${appId}/${slug}` })}
               />
             ) : (
-              <PermissionDeniedPage />
+              <UnavailableMenu type={currentMenu.menu_type} />
             )}
           </main>
         </div>

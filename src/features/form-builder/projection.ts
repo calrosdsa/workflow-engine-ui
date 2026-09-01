@@ -209,6 +209,61 @@ export function validateFormRefs(schema: FormSchema, validIds?: Set<string>): Fo
   return issues
 }
 
+/** What a form is missing to satisfy the Record Title / Searchable rule. */
+export interface TitleSearchIssue {
+  kind: 'record_title' | 'searchable'
+  /** Elements that COULD carry the missing flag, in document order — the
+   *  candidates the builder offers as a one-click fix. Never empty: an issue
+   *  is only reported when at least one eligible element exists. */
+  candidates: { key: string; label: string }[]
+}
+
+/** Checks that the form names at least one Record Title field and at least
+ *  one Searchable field — the frontend half of the rule FormDef.Validate
+ *  enforces server-side (internal/forms/field/form.go).
+ *
+ *  Mirrors that function's two exemptions exactly, so the builder never
+ *  blocks a save the API would have accepted, or vice versa:
+ *
+ *    - `isLineItems` forms are skipped entirely (a child grid has no
+ *      standalone page, detail view or search surface).
+ *    - A flag with no ELIGIBLE element is skipped, including on a form with
+ *      no fields at all — requiring a flag nothing could carry would make
+ *      the form permanently unsaveable.
+ *
+ *  Eligibility is re-derived from the component registry rather than trusted
+ *  from the element, matching how projectToFields re-checks both flags
+ *  before emitting them. */
+export function validateTitleAndSearch(schema: FormSchema, isLineItems = false): TitleSearchIssue[] {
+  if (isLineItems) return []
+
+  const titleCandidates: { key: string; label: string }[] = []
+  const searchCandidates: { key: string; label: string }[] = []
+  let hasTitle = false
+  let hasSearch = false
+
+  for (const el of iterElements(schema)) {
+    const named = { key: el.key, label: el.label || el.key }
+    if (supportsRecordTitle(el.component)) {
+      titleCandidates.push(named)
+      if (el.isRecordTitle) hasTitle = true
+    }
+    if (supportsSearchable(el.component)) {
+      searchCandidates.push(named)
+      if (el.searchable) hasSearch = true
+    }
+  }
+
+  const issues: TitleSearchIssue[] = []
+  if (titleCandidates.length > 0 && !hasTitle) {
+    issues.push({ kind: 'record_title', candidates: titleCandidates })
+  }
+  if (searchCandidates.length > 0 && !hasSearch) {
+    issues.push({ kind: 'searchable', candidates: searchCandidates })
+  }
+  return issues
+}
+
 /** Derives the backend FieldDef[] from the builder schema. */
 export function projectToFields(schema: FormSchema): ProjectionResult {
   const used = new Set<string>()

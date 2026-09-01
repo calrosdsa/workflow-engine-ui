@@ -19,9 +19,10 @@ import { FormRecordsPage } from '@/pages/FormRecordsPage'
 import { FormBuilderPage } from '@/pages/forms/FormBuilderPage'
 import { ApplicationDesignShell } from '@/pages/applications/ApplicationDesignShell'
 import { AppDesignPage } from '@/pages/applications/AppDesignPage'
+import { AppConfigurationPage } from '@/pages/applications/AppConfigurationPage'
+import { AgentsSection } from '@/pages/applications/sections/AgentsSection'
 import { DashboardEditorPage } from '@/pages/applications/DashboardEditorPage'
 import { ReportBuilderPage } from '@/pages/applications/ReportBuilderPage'
-import { GlobalSettingsSection } from '@/pages/applications/sections/GlobalSettingsSection'
 import { TeamPage } from '@/pages/team/TeamPage'
 import { ModelProvidersPage } from '@/pages/ModelProvidersPage'
 import { KnowledgeBasesPage } from '@/pages/KnowledgeBasesPage'
@@ -158,7 +159,7 @@ const marketplaceRoute = createRoute({
 })
 
 // ---------------------------------------------------------------------------
-// App-scoped design shell — /applications/$appId/{workflows,forms,design,settings}
+// App-scoped design shell — /applications/$appId/{workflows,forms,design,configuration}
 // ---------------------------------------------------------------------------
 const applicationShellRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -188,12 +189,30 @@ const applicationShellRoute = createRoute({
   },
 })
 
-// Dashboard content (workflow/execution/form counts) is inherently per-app
-// stats, so it lands here as the design shell's index page rather than at
-// the global '/' (which Home now owns).
+// Entering an app lands on App Design. Dashboard used to be this index
+// page, but it was taken out of the nav bar, which left the app's own
+// entry point on a screen nothing could navigate back to.
 const applicationIndexRoute = createRoute({
   getParentRoute: () => applicationShellRoute,
   path: '/',
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: '/applications/$appId/design',
+      params: { appId: (params as { appId: string }).appId },
+      replace: true,
+    })
+  },
+})
+
+// Dashboard content (workflow/execution/form counts) is inherently per-app
+// stats. Moved off the index path above to an explicit one so it stays
+// reachable while it isn't a nav destination — deliberately kept, not
+// deleted. `replace: true` on the redirect matters here: without it, Back
+// from App Design would return to the index and immediately redirect
+// forward again, trapping the user.
+const applicationDashboardRoute = createRoute({
+  getParentRoute: () => applicationShellRoute,
+  path: '/dashboard',
   component: DashboardPage,
 })
 
@@ -263,17 +282,48 @@ const appFormDetailRoute = createRoute({
   component: () => <FormBuilderPage mode="edit" />,
 })
 
-// App Design (Theme + Menus) — `tab` is a search param (not just local
+// App Design (design surfaces) — `tab` is a search param (not just local
 // state) so a deep link can land directly on a specific tab, e.g. the
 // dashboard editor's "back" button returning to the Menus tab specifically
 // rather than always resetting to Theme.
+//
+// The union below narrowed when General/Reports/Version History/Environment
+// Link/Marketplace moved to /configuration, and again when Agents was
+// promoted to its own top-level route. An old link carrying one of those
+// values now validates to `undefined` and lands on Theme rather than
+// erroring — the same thing any unrecognised value has always done here.
+const DESIGN_TABS = ['theme', 'menus', 'mobile'] as const
+type DesignTabParam = (typeof DESIGN_TABS)[number]
+
 const appDesignRoute = createRoute({
   getParentRoute: () => applicationShellRoute,
   path: '/design',
-  validateSearch: (search: Record<string, unknown>): { tab?: 'theme' | 'menus' | 'mobile' | 'general' | 'agents' | 'versions' | 'environment' | 'reports' | 'marketplace' } => ({
-    tab: search.tab === 'theme' || search.tab === 'menus' || search.tab === 'mobile' || search.tab === 'general' || search.tab === 'agents' || search.tab === 'versions' || search.tab === 'environment' || search.tab === 'reports' || search.tab === 'marketplace' ? search.tab : undefined,
+  validateSearch: (search: Record<string, unknown>): { tab?: DesignTabParam } => ({
+    tab: DESIGN_TABS.includes(search.tab as DesignTabParam) ? (search.tab as DesignTabParam) : undefined,
   }),
   component: () => <AppDesignPage appId={applicationShellRoute.useParams().appId} />,
+})
+
+// App Configuration — how the app is set up, released and distributed.
+const CONFIG_TABS = ['general', 'settings', 'reports', 'versions', 'environment', 'marketplace'] as const
+type ConfigTabParam = (typeof CONFIG_TABS)[number]
+
+const appConfigurationRoute = createRoute({
+  getParentRoute: () => applicationShellRoute,
+  path: '/configuration',
+  validateSearch: (search: Record<string, unknown>): { tab?: ConfigTabParam } => ({
+    tab: CONFIG_TABS.includes(search.tab as ConfigTabParam) ? (search.tab as ConfigTabParam) : undefined,
+  }),
+  component: () => <AppConfigurationPage appId={applicationShellRoute.useParams().appId} />,
+})
+
+// Agents — promoted out of App Design's tab bar to a top-level destination.
+// A plain route with no tabs of its own; the shell's Outlet already
+// provides the scroll container the tab bar used to.
+const appAgentsRoute = createRoute({
+  getParentRoute: () => applicationShellRoute,
+  path: '/agents',
+  component: () => <AgentsSection appId={applicationShellRoute.useParams().appId} />,
 })
 
 // Full-screen dashboard editor — /applications/$appId/design/dashboards/$menuId
@@ -300,11 +350,22 @@ const reportBuilderRoute = createRoute({
   },
 })
 
-// Settings (Credentials + Variables)
+// Settings (Credentials + Variables) is now the "settings" tab of App
+// Configuration. This route is kept as a redirect rather than deleted: it
+// was a real, linkable destination in the app's nav until now, so a
+// bookmark or an open tab pointing at it should land on the same content
+// instead of a 404.
 const appSettingsRoute = createRoute({
   getParentRoute: () => applicationShellRoute,
   path: '/settings',
-  component: GlobalSettingsSection,
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: '/applications/$appId/configuration',
+      params: { appId: (params as { appId: string }).appId },
+      search: { tab: 'settings' as const },
+      replace: true,
+    })
+  },
 })
 
 // FR-C9-002: Knowledge Bases move from a global, client-wide route to a
@@ -371,6 +432,7 @@ const routeTree = rootRoute.addChildren([
     marketplaceRoute,
     applicationShellRoute.addChildren([
       applicationIndexRoute,
+      applicationDashboardRoute,
       appWorkflowsRoute,
       appWorkflowNewRoute,
       appWorkflowDetailRoute,
@@ -381,6 +443,8 @@ const routeTree = rootRoute.addChildren([
       appFormDetailRoute,
       appFormRecordsRoute,
       appDesignRoute,
+      appConfigurationRoute,
+      appAgentsRoute,
       dashboardEditorRoute,
       reportBuilderRoute,
       appSettingsRoute,
