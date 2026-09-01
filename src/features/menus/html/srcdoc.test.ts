@@ -106,3 +106,28 @@ describe('composeSrcDoc', () => {
     expect(doc).toContain('</html>')
   })
 })
+
+// These functions parse stored config, so they must be total — throwing
+// blanks the page behind an error boundary. A menu saved before a field
+// existed simply has undefined there.
+describe('never throws on incomplete stored config', () => {
+  it('tolerates null/undefined everywhere', () => {
+    expect(buildThemeCss(null)).toBe('')
+    expect(buildThemeCss(undefined)).toBe('')
+    expect(buildCsp(null)).toContain("connect-src 'none'")
+    expect(sanitizeHosts(undefined)).toEqual([])
+    expect(() => composeSrcDoc({
+      html: '<p>x</p>',
+      themeValues: null,
+      allowedHosts: undefined,
+      sourceIds: undefined,
+    })).not.toThrow()
+  })
+
+  it('still produces a usable document from an empty config', () => {
+    const doc = composeSrcDoc({ html: '', themeValues: null, allowedHosts: null, sourceIds: null })
+    expect(doc).toContain('Content-Security-Policy')
+    expect(doc).toContain('window.AppBuilder')
+    expect(doc).toContain('[]')
+  })
+})

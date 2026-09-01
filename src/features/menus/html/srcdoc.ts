@@ -58,10 +58,10 @@ export function isAllowedHost(host: string): boolean {
 /** Keeps only the hosts that pass validation. An invalid entry is dropped
  *  rather than failing the whole render — the config panel is where an
  *  author is told about it; at runtime a bad host must not blank the page. */
-export function sanitizeHosts(hosts: readonly string[]): string[] {
+export function sanitizeHosts(hosts: readonly string[] | null | undefined): string[] {
   const seen = new Set<string>()
   const out: string[] = []
-  for (const raw of hosts) {
+  for (const raw of hosts ?? []) {
     const host = raw.trim()
     if (!host || seen.has(host) || !isAllowedHost(host)) continue
     seen.add(host)
@@ -77,7 +77,7 @@ export function sanitizeHosts(hosts: readonly string[]): string[] {
  *  safe *here specifically* — the origin is opaque, so the script it allows
  *  has nothing of this app's to reach, and refusing it would mean an author
  *  couldn't write a `<script>` or a `<style>` in their own page at all. */
-export function buildCsp(allowedHosts: readonly string[]): string {
+export function buildCsp(allowedHosts: readonly string[] | null | undefined): string {
   const hosts = sanitizeHosts(allowedHosts)
   const list = hosts.length > 0 ? ' ' + hosts.join(' ') : ''
   // With no declared hosts the page is fully self-contained: it may still
@@ -96,15 +96,23 @@ export function buildCsp(allowedHosts: readonly string[]): string {
   ].join('; ')
 }
 
-/** Serialises resolved token values into a `:root{…}` block. Values are
+/** Serialises resolved token values into a `:root{…}` block.
+ *
+ *  Total by contract: every input here is nullable. These functions parse
+ *  STORED config, which predates fields being added (a menu saved before
+ *  write_targets existed has none) and is read straight off the wire — the
+ *  same never-throws rule every other config parser in this codebase follows
+ *  (FR-D-005). Throwing here blanks the page behind an error boundary, which
+ *  is strictly worse than rendering with a fallback.
+ * Values are
  *  filtered to a conservative character set: they come from
  *  getComputedStyle rather than from an author, but they are interpolated
  *  into a <style> block, and a value carrying `<` or `}` would break out of
  *  it. Anything unexpected is dropped rather than escaped — a missing token
  *  degrades to the page's own fallback, which is the safe direction. */
-export function buildThemeCss(values: Record<string, string>): string {
+export function buildThemeCss(values: Record<string, string> | null | undefined): string {
   const safe = /^[a-zA-Z0-9\s.,%#()/_-]+$/
-  const decls = Object.entries(values)
+  const decls = Object.entries(values ?? {})
     .filter(([name, value]) => name.startsWith('--') && value && safe.test(value))
     .map(([name, value]) => `${name}: ${value.trim()};`)
   if (decls.length === 0) return ''
@@ -117,12 +125,12 @@ export interface SrcDocInput {
    *  the point of offering a scripting surface at all. */
   html: string
   /** Resolved theme custom properties, from readThemeTokens(). */
-  themeValues: Record<string, string>
+  themeValues: Record<string, string> | null | undefined
   /** Hosts the page may reach outward. */
-  allowedHosts: readonly string[]
+  allowedHosts: readonly string[] | null | undefined
   /** Declared data source ids, so the in-frame helper can fail fast on a
    *  typo instead of hanging on a request the host will refuse. */
-  sourceIds: readonly string[]
+  sourceIds: readonly string[] | null | undefined
 }
 
 /** The whole document, ready for the iframe's `srcdoc`. */
@@ -158,8 +166,8 @@ ${html}
  *
  *  Injected as a literal string, not a module: the frame has no bundler and
  *  no network access to fetch one. */
-function bridgeScript(sourceIds: readonly string[]): string {
-  const known = JSON.stringify([...sourceIds])
+function bridgeScript(sourceIds: readonly string[] | null | undefined): string {
+  const known = JSON.stringify([...(sourceIds ?? [])])
   return `(function(){
 var KNOWN=${known},pending={},n=0;
 function applyTheme(css){
