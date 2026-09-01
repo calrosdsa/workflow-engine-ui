@@ -312,6 +312,7 @@ export function ExpressionEditor({ open, onClose, value, onChange, variables, no
               <p className="mb-1 font-semibold text-[hsl(var(--foreground))]">Quick reference</p>
               <p><code className="text-[hsl(var(--primary))]">Vars["name"]</code> — workflow variable · <code className="text-[hsl(var(--primary))]">Times["name"]</code> — date variable</p>
               <p><code className="text-[hsl(var(--primary))]">NodeOutputs["id"]["field"]</code> — previous node output</p>
+              <p><code className="text-[hsl(var(--primary))]">Vars["field_name"]</code> — triggering record's field (record-triggered runs; shadows a variable of the same name)</p>
               <p className="mt-1 text-[hsl(var(--muted-foreground))]">Type to autocomplete · <kbd className="rounded border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-1">Ctrl</kbd>+<kbd className="rounded border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-1">Space</kbd> to trigger</p>
             </div>
           </div>
