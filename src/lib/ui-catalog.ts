@@ -29,9 +29,12 @@
 // exactly as the app's own entry points do.
 import '@/features/forms/runtime/custom-actions'
 import '@/features/forms/runtime/detail-tabs'
+import '@/features/ui-workflows/nodes'
 
 import { allCustomActions } from '@/features/forms/runtime/custom-actions/registry'
 import { allDetailTabs } from '@/features/forms/runtime/detail-tabs/registry'
+import { allUiWorkflowNodes } from '@/features/ui-workflows/node-registry'
+import { UI_WORKFLOW_ENVELOPE_SCHEMA, UI_WORKFLOW_STEP_ENVELOPE_SCHEMA } from '@/features/ui-workflows/envelope'
 import { MENU_TYPE_REGISTRY } from '@/features/menus/menu-registry'
 import { COMPONENT_REGISTRY } from '@/features/form-builder/component-registry'
 import {
@@ -108,6 +111,26 @@ export function buildUiCatalog() {
     })),
     detail_tab_envelope: DETAIL_TAB_ENVELOPE_SCHEMA,
     custom_action_envelope: CUSTOM_ACTION_ENVELOPE_SCHEMA,
+    // The UI-workflow vocabulary: node types plus the envelopes for the graph
+    // itself. Client-side authored logic, so like menu types and detail tabs
+    // it exists only in this frontend's registry — the backend stores it
+    // inside an already-opaque config blob and never parses it, which is
+    // exactly why it has to be published here to be authorable by an agent.
+    // `platforms` is carried through because a node absent from a runtime must
+    // be a design-time warning, never a silent no-op at runtime.
+    ui_workflow_nodes: byType(
+      allUiWorkflowNodes().map((n) => ({
+        type: n.type,
+        label: n.label,
+        category: n.category,
+        platforms: [...n.platforms],
+        summary: n.description,
+        config_schema: n.configSchema,
+        ...retirement(n),
+      })),
+    ),
+    ui_workflow_envelope: UI_WORKFLOW_ENVELOPE_SCHEMA,
+    ui_workflow_step_envelope: UI_WORKFLOW_STEP_ENVELOPE_SCHEMA,
     // The form CANVAS vocabulary: every placeable component (straight off the
     // builder's own palette registry) plus the authoring envelopes for the
     // layout JSON — element, section, root — including per-element Advanced
