@@ -1,5 +1,8 @@
 import { MessageSquare } from 'lucide-react'
-import { registerUiWorkflowNode } from '../node-registry'
+import { Textarea } from '@/components/ui/textarea'
+import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
+import { registerUiWorkflowNode, type UiWorkflowNodeConfigPanelProps } from '../node-registry'
+import { Field } from './panel-kit'
 import { ALL_PLATFORMS } from '../types'
 
 /** Kept name- and shape-compatible with the SERVER's show_message node
@@ -30,7 +33,37 @@ export function parseShowMessageConfig(raw: unknown): ShowMessageStepConfig {
   }
 }
 
+function ShowMessagePanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<ShowMessageStepConfig>) {
+  return (
+    <div className="space-y-2">
+      <Field label="Message">
+        <Textarea
+          value={config.message}
+          onChange={(e) => onChange({ ...config, message: e.target.value })}
+          rows={2}
+          placeholder="Saved."
+          className="text-[12px]"
+        />
+      </Field>
+      <Field label="Style">
+        <SelectMenu
+          value={config.message_type}
+          onValueChange={(v) => onChange({ ...config, message_type: v as ShowMessageStepConfig['message_type'] })}
+        >
+          <SelectTrigger className="h-8 text-[12px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {(['info', 'success', 'warning', 'error'] as const).map((t) => (
+              <SelectItem key={t} value={t} className="text-[12px]">{t}</SelectItem>
+            ))}
+          </SelectContent>
+        </SelectMenu>
+      </Field>
+    </div>
+  )
+}
+
 registerUiWorkflowNode({
+  ConfigPanel: ShowMessagePanel,
   type: 'show_message',
   label: 'Show Message',
   icon: MessageSquare,

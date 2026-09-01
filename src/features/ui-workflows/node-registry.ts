@@ -32,8 +32,10 @@
 // string and config shape (show_message, condition, set_variable,
 // fetch_records), so the generated catalog stays coherent and an author's
 // mental model transfers between the two builders.
+import type { ComponentType } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import type { ConfigSchema } from '@/lib/config-schema'
+import type { FieldDef } from '@/features/forms/types'
 import type { UiWorkflowHost, UiWorkflowRunContext } from './host'
 import type { StepListsOf, UiWorkflowPlatform, UiWorkflowStep } from './types'
 
@@ -58,6 +60,21 @@ export interface StepExecuteArgs<TConfig> {
   /** Aborted when the viewer navigates away or the run is cancelled. A node
    *  doing anything long-running must honour it. */
   signal: AbortSignal
+}
+
+/** Props a node's authoring panel receives.
+ *
+ *  Deliberately excludes anything about NESTED steps: a branching node's child
+ *  lists are rendered by the editor from childStepLabels/setChildStepList, not
+ *  by the node's own panel. That keeps the editor the only component that
+ *  recurses, and stops every node file from having to import the editor that
+ *  imports it. */
+export interface UiWorkflowNodeConfigPanelProps<TConfig> {
+  config: TConfig
+  onChange: (config: TConfig) => void
+  /** The fields of the form this workflow is attached to, for field pickers
+   *  and condition builders. Empty when the surface has no single form. */
+  fields: FieldDef[]
 }
 
 export interface UiWorkflowNodeDefinition<TConfig = unknown> {
@@ -95,6 +112,19 @@ export interface UiWorkflowNodeDefinition<TConfig = unknown> {
    *  Declared here so traversal never switches on node type — a future
    *  branching node works without touching the walker. */
   childStepLists?: StepListsOf
+  /** Heading for each list childStepLists returns, in the same order. The
+   *  editor renders one nested step list per label, so a branching node needs
+   *  no editor changes to become editable. */
+  childStepLabels?: readonly string[]
+  /** Writes list `index` back into the config — the counterpart to
+   *  childStepLists, which only reads. Both exist so the editor can render and
+   *  edit nested lists without knowing which node types branch or what their
+   *  config calls them. */
+  setChildStepList?: (config: unknown, index: number, steps: UiWorkflowStep[]) => unknown
+  /** Renders this node's own configuration. Optional the same way `execute`
+   *  is: a node can be registered and runnable before it is editable, and the
+   *  editor shows a plain "no settings" note rather than pretending. */
+  ConfigPanel?: ComponentType<UiWorkflowNodeConfigPanelProps<TConfig>>
   /** Runs the step. Mutates `ctx.variables` for nodes that produce values,
    *  and reaches everything else through `host` — never through a direct
    *  import, which is what keeps the interpreter runnable under test and the

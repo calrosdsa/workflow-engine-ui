@@ -1,5 +1,12 @@
 import { FilePlus2, PencilLine } from 'lucide-react'
-import { registerUiWorkflowNode } from '../node-registry'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Trash2, Plus } from 'lucide-react'
+import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
+import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenceSelect'
+import { registerUiWorkflowNode, type UiWorkflowNodeConfigPanelProps } from '../node-registry'
+import { Field, FieldPicker } from './panel-kit'
 import { buildRecordValues } from '../values'
 import { ALL_PLATFORMS } from '../types'
 
@@ -57,6 +64,91 @@ export function parseWriteRecordConfig(raw: unknown): WriteRecordStepConfig {
   }
 }
 
+/** Shared by create and update — the two differ only in which extra field
+ *  they carry, so the value-writes editor is written once. */
+function WriteRecordPanel({ config, onChange, fields, mode }: UiWorkflowNodeConfigPanelProps<WriteRecordStepConfig> & {
+  mode: 'create' | 'update'
+}) {
+  const setWrite = (i: number, patch: Partial<RecordFieldWrite>) =>
+    onChange({ ...config, values: config.values.map((w, idx) => (idx === i ? { ...w, ...patch } : w)) })
+
+  return (
+    <div className="space-y-2">
+      <Field
+        label="Form"
+        hint={mode === 'update' ? 'Leave unset to update the record this workflow is acting on.' : undefined}
+      >
+        <FormReferenceSelect
+          value={config.form_id}
+          onChange={(form_id) => onChange({ ...config, form_id: form_id ?? '' })}
+        />
+      </Field>
+
+      <div className="space-y-1.5">
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Set fields</Label>
+        {config.values.length === 0 && (
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
+            Nothing set yet. Only the fields listed here are written — everything else on the record is left alone.
+          </p>
+        )}
+        {config.values.map((write, i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <div className="min-w-0 flex-1">
+              <FieldPicker fields={fields} value={write.field} onChange={(field) => setWrite(i, { field })} />
+            </div>
+            <SelectMenu value={write.source} onValueChange={(v) => setWrite(i, { source: v as RecordFieldWrite['source'] })}>
+              <SelectTrigger className="h-8 w-24 shrink-0 text-[11px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="static" className="text-[12px]">Value</SelectItem>
+                <SelectItem value="variable" className="text-[12px]">Variable</SelectItem>
+              </SelectContent>
+            </SelectMenu>
+            <Input
+              value={write.source === 'variable' ? (write.variable ?? '') : String(write.value ?? '')}
+              onChange={(e) =>
+                setWrite(i, write.source === 'variable' ? { variable: e.target.value } : { value: e.target.value })
+              }
+              className="h-8 w-28 shrink-0 text-[11px]"
+            />
+            <Button
+              type="button" variant="ghost" size="sm" className="h-7 w-7 shrink-0 p-0"
+              aria-label="Remove field"
+              onClick={() => onChange({ ...config, values: config.values.filter((_, idx) => idx !== i) })}
+            >
+              <Trash2 size={11} />
+            </Button>
+          </div>
+        ))}
+        <Button
+          type="button" variant="outline" size="sm" className="h-7 w-full gap-1 text-[11px]"
+          onClick={() => onChange({ ...config, values: [...config.values, { field: '', source: 'static', value: '' }] })}
+        >
+          <Plus size={11} /> Add field
+        </Button>
+      </div>
+
+      {mode === 'create' ? (
+        <Field label="Store new record id in" hint="Lets a later step open or update what this one just made.">
+          <Input
+            value={config.output_variable ?? ''}
+            onChange={(e) => onChange({ ...config, output_variable: e.target.value })}
+            placeholder="new_record"
+            className="h-8 font-mono text-[11px]"
+          />
+        </Field>
+      ) : (
+        <Field label="Record id from variable" hint="Blank means the record this workflow is acting on.">
+          <Input
+            value={config.record_id_variable ?? ''}
+            onChange={(e) => onChange({ ...config, record_id_variable: e.target.value })}
+            className="h-8 font-mono text-[11px]"
+          />
+        </Field>
+      )}
+    </div>
+  )
+}
+
 // Both writes go through the ORDINARY record endpoints as the viewer, so field
 // validation, the form's own Before/After triggers, per-form permissions and
 // the audit log all apply exactly as they would if the person had typed the
@@ -66,6 +158,7 @@ export function parseWriteRecordConfig(raw: unknown): WriteRecordStepConfig {
 // identity, which a client must never have.
 
 registerUiWorkflowNode({
+  ConfigPanel: (p) => <WriteRecordPanel {...p} mode="create" />,
   type: 'create_record',
   label: 'Create Record',
   icon: FilePlus2,
@@ -102,6 +195,7 @@ registerUiWorkflowNode({
 })
 
 registerUiWorkflowNode({
+  ConfigPanel: (p) => <WriteRecordPanel {...p} mode="update" />,
   type: 'update_record',
   label: 'Update Record',
   icon: PencilLine,

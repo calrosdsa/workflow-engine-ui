@@ -17,7 +17,7 @@ import { useForm as useFormDef } from '@/features/forms/hooks'
 import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection, updateDetailTabs, updateDetailLayout, updateTabOrientation, updateCustomActions, updateAfterSubmitWorkflow } from '../store'
 import { DetailPageConfigSection } from './DetailPageConfigSection'
 import { CustomActionsConfigSection } from './CustomActionsConfigSection'
-import { UiWorkflowJsonEditor } from '@/features/ui-workflows/UiWorkflowJsonEditor'
+import { UiWorkflowEditor } from '@/features/ui-workflows/UiWorkflowEditor'
 import { emptyUiWorkflow } from '@/features/ui-workflows/types'
 import { DetailPageBuilderOverlay } from '@/features/detail-page-builder/DetailPageBuilderOverlay'
 import { resolveDetailTabs } from '@/features/forms/runtime/detail-tabs/registry'
@@ -274,9 +274,10 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
           </DrawerHeader>
           <ScrollArea className="flex-1">
             <div className="p-6">
-              <UiWorkflowJsonEditor
+              <UiWorkflowEditor
                 value={schema.settings?.afterSubmitWorkflow ?? emptyUiWorkflow()}
                 onChange={updateAfterSubmitWorkflow}
+                fields={fields}
                 help="The saved record is in context: conditions can branch on what was entered, and an update step addresses it with no extra configuration."
               />
             </div>

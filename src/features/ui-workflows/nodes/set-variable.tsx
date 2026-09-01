@@ -1,5 +1,8 @@
 import { Variable } from 'lucide-react'
-import { registerUiWorkflowNode } from '../node-registry'
+import { Input } from '@/components/ui/input'
+import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
+import { registerUiWorkflowNode, type UiWorkflowNodeConfigPanelProps } from '../node-registry'
+import { Field, FieldPicker, VALUE_SOURCE_HINT } from './panel-kit'
 import { resolveValue } from '../values'
 import { ALL_PLATFORMS } from '../types'
 
@@ -32,7 +35,52 @@ export function parseSetVariableConfig(raw: unknown): SetVariableStepConfig {
   }
 }
 
+function SetVariablePanel({ config, onChange, fields }: UiWorkflowNodeConfigPanelProps<SetVariableStepConfig>) {
+  return (
+    <div className="space-y-2">
+      <Field label="Variable name" hint="Later steps read this by name.">
+        <Input
+          value={config.name}
+          onChange={(e) => onChange({ ...config, name: e.target.value })}
+          placeholder="total"
+          className="h-8 text-[12px]"
+        />
+      </Field>
+      <Field label="Value from" hint={VALUE_SOURCE_HINT}>
+        <SelectMenu
+          value={config.source}
+          onValueChange={(v) => onChange({ ...config, source: v as SetVariableStepConfig['source'] })}
+        >
+          <SelectTrigger className="h-8 text-[12px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="static" className="text-[12px]">A typed-in value</SelectItem>
+            <SelectItem value="field" className="text-[12px]">A field on this record</SelectItem>
+          </SelectContent>
+        </SelectMenu>
+      </Field>
+      {config.source === 'static' ? (
+        <Field label="Value">
+          <Input
+            value={String(config.value ?? '')}
+            onChange={(e) => onChange({ ...config, value: e.target.value })}
+            className="h-8 text-[12px]"
+          />
+        </Field>
+      ) : (
+        <Field label="Field">
+          <FieldPicker
+            fields={fields}
+            value={config.field ?? ''}
+            onChange={(field) => onChange({ ...config, field })}
+          />
+        </Field>
+      )}
+    </div>
+  )
+}
+
 registerUiWorkflowNode({
+  ConfigPanel: SetVariablePanel,
   type: 'set_variable',
   label: 'Set Variable',
   icon: Variable,

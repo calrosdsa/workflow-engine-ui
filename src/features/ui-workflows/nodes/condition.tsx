@@ -1,5 +1,6 @@
 import { GitBranch } from 'lucide-react'
-import { registerUiWorkflowNode } from '../node-registry'
+import { FilterBuilder } from '@/features/workflows/builder/FilterBuilder'
+import { registerUiWorkflowNode, type UiWorkflowNodeConfigPanelProps } from '../node-registry'
 import { parseSteps } from '../parse'
 import { evaluateFilterGroup } from '@/lib/filter-eval'
 import { conditionValues } from '../values'
@@ -35,7 +36,30 @@ export function parseConditionConfig(raw: unknown): ConditionStepConfig {
   }
 }
 
+function ConditionPanel({ config, onChange, fields }: UiWorkflowNodeConfigPanelProps<ConditionStepConfig>) {
+  return (
+    <FilterBuilder
+      group={config.when}
+      fields={fields}
+      variables={[]}
+      onChange={(when) => onChange({ ...config, when })}
+      // The operators a client cannot decide are hidden rather than offered
+      // and then failing at runtime: `search` is full-text with no in-memory
+      // equivalent, and an expression value would need the Go evaluator. Both
+      // would turn a branch into a blocking network call — the exact thing
+      // structured trees were chosen to avoid.
+      hideExpressions
+    />
+  )
+}
+
 registerUiWorkflowNode({
+  ConfigPanel: ConditionPanel,
+  childStepLabels: ['If true', 'Otherwise'],
+  setChildStepList: (config, index, steps) => {
+    const c = config as ConditionStepConfig
+    return index === 0 ? { ...c, then: steps } : { ...c, else: steps }
+  },
   type: 'condition',
   label: 'If',
   icon: GitBranch,

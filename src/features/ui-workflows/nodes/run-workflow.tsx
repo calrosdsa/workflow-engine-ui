@@ -1,5 +1,10 @@
 import { Workflow } from 'lucide-react'
-import { registerUiWorkflowNode } from '../node-registry'
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
+import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
+import { useWorkflows } from '@/features/workflows/hooks'
+import { registerUiWorkflowNode, type UiWorkflowNodeConfigPanelProps } from '../node-registry'
+import { Field } from './panel-kit'
 import { resolveValue } from '../values'
 import { ALL_PLATFORMS } from '../types'
 
@@ -61,7 +66,52 @@ export function parseRunWorkflowConfig(raw: unknown): RunWorkflowStepConfig {
   }
 }
 
+function RunWorkflowPanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<RunWorkflowStepConfig>) {
+  const { data: workflows } = useWorkflows()
+  return (
+    <div className="space-y-2">
+      <Field
+        label="Workflow"
+        hint="Runs on the server, so this is where anything needing a credential, a connector or durability belongs."
+      >
+        <SelectMenu
+          value={config.workflow_definition_id}
+          onValueChange={(workflow_definition_id) => onChange({ ...config, workflow_definition_id })}
+        >
+          <SelectTrigger className="h-8 text-[12px]"><SelectValue placeholder="Pick a workflow…" /></SelectTrigger>
+          <SelectContent>
+            {(workflows ?? []).map((w) => (
+              <SelectItem key={w.id} value={w.id} className="text-[12px]">{w.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </SelectMenu>
+      </Field>
+      <label className="flex items-start gap-2 text-[11px] text-[hsl(var(--muted-foreground))]">
+        <Checkbox
+          checked={config.wait_for_result}
+          onCheckedChange={(v) => onChange({ ...config, wait_for_result: v === true })}
+          className="mt-0.5"
+        />
+        <span>
+          Wait for it to finish before the next step.
+          {' '}Off by default — a server workflow can take longer than the viewer stays on this screen.
+        </span>
+      </label>
+      {config.wait_for_result && (
+        <Field label="Store result in">
+          <Input
+            value={config.output_variable ?? ''}
+            onChange={(e) => onChange({ ...config, output_variable: e.target.value })}
+            className="h-8 font-mono text-[11px]"
+          />
+        </Field>
+      )}
+    </div>
+  )
+}
+
 registerUiWorkflowNode({
+  ConfigPanel: RunWorkflowPanel,
   type: 'run_workflow',
   label: 'Run Workflow',
   icon: Workflow,
