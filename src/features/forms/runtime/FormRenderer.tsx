@@ -10,6 +10,9 @@ import { buildZodSchema } from './schema-to-zod'
 import { schemaToVariableDecls, useExpressionRuntimeState, getFieldRuntimeState } from './expression-context'
 import { useCurrentViewer } from './detail-tabs/useTabVisible'
 import { resolveAdvancedSettings, NO_EFFECTS } from './advanced-settings'
+import { useUiWorkflowHost } from '@/features/ui-workflows/useUiWorkflowHost'
+import { useFieldChangeWorkflow } from '@/features/ui-workflows/useFieldChangeWorkflow'
+import type { FieldStatePatch } from '@/features/ui-workflows/host'
 import { FieldRenderer } from './FieldRenderer'
 import type { AdvancedFieldEffects } from './advanced-settings'
 import type { FormSchema } from '@/features/form-builder/schema'
@@ -124,6 +127,18 @@ export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitti
   const [hiddenKeys, setHiddenKeys] = useState<ReadonlySet<string>>(EMPTY_KEYS)
   const zodSchema = useMemo(() => buildZodSchema(schema, hiddenKeys), [schema, hiddenKeys])
 
+  // Field states asserted by a field-change workflow's set_field_state steps.
+  // A THIRD layer on top of the behavior rules and Advanced Settings rather
+  // than a replacement for either: only the keys a step actually set are
+  // present, and they win, because a step asserting something is a more
+  // specific instruction than a standing rule. Nothing clears them — an
+  // assertion holds for the rest of this fill, which is what makes "reveal a
+  // section once they pick Other" behave the way an author expects.
+  //
+  // Declared up here, beside hiddenKeys, because the validator sync below
+  // reads both.
+  const [workflowFieldStates, setWorkflowFieldStates] = useState<Record<string, FieldStatePatch>>({})
+
   const { control, handleSubmit, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(zodSchema),
     defaultValues: { ...emptyDefaults(schema), ...nullsToEmptyStrings(schema, defaultValues ?? {}) },
@@ -158,14 +173,43 @@ export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitti
 
   // Sync the hidden set used by the validator above. Compared by content, not
   // identity — a fresh Set every render would loop forever.
+  //
+  // Covers BOTH ways a field can end up off screen: an Advanced Setting rule
+  // and a workflow step's assertion. Either one hiding a `required: always`
+  // field would otherwise make the form unsubmittable with the error pinned to
+  // a control nobody can see.
   useEffect(() => {
     const next = new Set(
       Object.entries(advancedEffects).filter(([, e]) => e.hidden).map(([key]) => key),
     )
+    for (const [key, patch] of Object.entries(workflowFieldStates)) {
+      if (patch.visible === false) next.add(key)
+      // An assertion of visible:true also OVERRIDES a rule-driven hide, so the
+      // field is back on screen and its requirement applies again.
+      if (patch.visible === true) next.delete(key)
+    }
     setHiddenKeys((prev) =>
       prev.size === next.size && [...next].every((k) => prev.has(k)) ? prev : next,
     )
-  }, [advancedEffects])
+  }, [advancedEffects, workflowFieldStates])
+
+  // The form-aware half of the host. Only these two methods exist here; a
+  // navigate or a record write goes through the shared host the hook builds.
+  const formHost = useUiWorkflowHost({
+    onRefresh: () => {},
+    formCapabilities: {
+      setFieldValue: (key, value) => setValue(key, value, { shouldDirty: true, shouldValidate: true }),
+      setFieldState: (key, patch) =>
+        setWorkflowFieldStates((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } })),
+    },
+  })
+
+  useFieldChangeWorkflow({
+    config: schema.settings?.fieldChangeWorkflow,
+    values: liveValues ?? {},
+    host: formHost,
+    formId,
+  })
 
   // clear_value is the one action that writes rather than renders. Guarded on
   // the value not already being empty so this can't ping-pong: clearing feeds
@@ -229,11 +273,16 @@ export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitti
                     // rather than replacing them: both are restrictions, so
                     // either one asserting hidden/read-only wins.
                     const advanced = advancedEffects[el.key] ?? NO_EFFECTS
-                    const visible = runtimeState.visible && !advanced.hidden
+                    // A workflow step's assertion is the most specific
+                    // instruction of the three, so it wins where it spoke;
+                    // where it said nothing, the standing rules still decide.
+                    const asserted = workflowFieldStates[el.key]
+                    const visible = asserted?.visible ?? (runtimeState.visible && !advanced.hidden)
                     // A field nobody can see must not also block submit as
                     // required — the filler would face a validation error
                     // pointing at a field that isn't on screen.
-                    const required = resolvedRequired && visible
+                    const required = (asserted?.required ?? resolvedRequired) && visible
+                    const readOnly = asserted?.readOnly ?? (resolvedReadOnly || advanced.readOnly)
 
                     return (
                       <FieldRenderer
@@ -241,7 +290,7 @@ export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitti
                         element={el}
                         control={control}
                         formId={formId}
-                        runtimeState={{ visible, required, readOnly: resolvedReadOnly || advanced.readOnly }}
+                        runtimeState={{ visible, required, readOnly }}
                         error={errors[el.key]?.message as string | undefined}
                       />
                     )

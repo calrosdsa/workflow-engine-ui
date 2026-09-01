@@ -35,12 +35,37 @@ export interface FetchRecordsRequest {
   pageSize: number
 }
 
+/** What a step may assert about a field being filled in. Every key is
+ *  optional: a step sets only what it means to, and leaves the rest to the
+ *  form's own rules. */
+export interface FieldStatePatch {
+  visible?: boolean
+  required?: boolean
+  readOnly?: boolean
+}
+
 export interface UiWorkflowHost {
   /** A toast on the web, a snackbar on mobile. */
   showMessage(text: string, type: UiMessageType): void
   navigate(target: NavigateTarget): void
   /** Re-fetch whatever the current surface is showing. */
   refresh(): void
+
+  // -------------------------------------------------------------------------
+  // Live form capabilities — OPTIONAL, because they genuinely don't exist on
+  // every surface. A record action runs against a SAVED record with no form
+  // being filled anywhere, so there is no field to write into. Absent is the
+  // honest representation of that, and the nodes that need these say so
+  // plainly rather than appearing to work; the alternative — a no-op stub on
+  // every host — would make a step silently do nothing.
+  // -------------------------------------------------------------------------
+
+  /** Writes a value into the form currently being filled. */
+  setFieldValue?(key: string, value: unknown): void
+  /** Overrides a field's visible/required/readOnly for the rest of this fill.
+   *  Layered ON TOP of the form's own behavior rules and Advanced Settings,
+   *  which continue to apply — this asserts, it does not replace them. */
+  setFieldState?(key: string, patch: FieldStatePatch): void
 
   searchRecords(req: FetchRecordsRequest): Promise<{ records: Record<string, unknown>[]; total: number }>
   createRecord(formId: string, values: Record<string, unknown>): Promise<{ id: string }>

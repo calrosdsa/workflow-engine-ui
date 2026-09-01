@@ -14,11 +14,12 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, Dr
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useForm as useFormDef } from '@/features/forms/hooks'
-import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection, updateDetailTabs, updateDetailLayout, updateTabOrientation, updateCustomActions, updateAfterSubmitWorkflow } from '../store'
+import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection, updateDetailTabs, updateDetailLayout, updateTabOrientation, updateCustomActions, updateAfterSubmitWorkflow, updateFieldChangeWorkflow } from '../store'
 import { DetailPageConfigSection } from './DetailPageConfigSection'
 import { CustomActionsConfigSection } from './CustomActionsConfigSection'
 import { UiWorkflowEditor } from '@/features/ui-workflows/UiWorkflowEditor'
 import { emptyUiWorkflow } from '@/features/ui-workflows/types'
+import { emptyFieldChangeWorkflow } from '@/features/ui-workflows/useFieldChangeWorkflow'
 import { DetailPageBuilderOverlay } from '@/features/detail-page-builder/DetailPageBuilderOverlay'
 import { resolveDetailTabs } from '@/features/forms/runtime/detail-tabs/registry'
 import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable } from '../component-registry'
@@ -138,9 +139,11 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
   const [canvasOpen, setCanvasOpen] = useState(false)
   const [customActionsOpen, setCustomActionsOpen] = useState(false)
   const [afterSubmitOpen, setAfterSubmitOpen] = useState(false)
+  const [whileFillingOpen, setWhileFillingOpen] = useState(false)
   const tabCount = resolveDetailTabs(schema.settings?.detailTabs).filter((t) => !t.hidden).length
   const actionCount = (schema.settings?.customActions ?? []).length
   const afterSubmitCount = (schema.settings?.afterSubmitWorkflow?.steps ?? []).length
+  const fieldChange = schema.settings?.fieldChangeWorkflow ?? emptyFieldChangeWorkflow()
   const fields = useMemo(() => projectToFields(schema).fields, [schema])
 
   return (
@@ -242,6 +245,28 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
 
           <div className="h-px bg-[hsl(var(--border))]" />
           <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">While Filling In</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
+              Steps that run as someone fills this form in, when a watched field changes.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setWhileFillingOpen(true)}
+              className="flex w-full items-center justify-between gap-2 text-[12px]"
+            >
+              <span className="flex items-center gap-2">
+                <Zap size={14} className="text-[hsl(var(--muted-foreground))]" />
+                Configure While Filling In
+              </span>
+              <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
+                {fieldChange.workflow.steps.length} step{fieldChange.workflow.steps.length === 1 ? '' : 's'}
+              </span>
+            </Button>
+          </div>
+
+          <div className="h-px bg-[hsl(var(--border))]" />
+          <div className="space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">After Submit</p>
             <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
               Steps that run in the browser once a record is saved from this form. They run after the save and can’t stop it.
@@ -261,6 +286,61 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
           </div>
         </div>
       </ScrollArea>
+
+      <Drawer open={whileFillingOpen} onOpenChange={setWhileFillingOpen}>
+        <DrawerContent size="lg">
+          <DrawerHeader>
+            <DrawerTitle>While Filling In</DrawerTitle>
+            <DrawerDescription>
+              Runs in the viewer’s browser while they fill this form in, whenever one of the watched fields changes —
+              cascading defaults, dependent pickers, revealing a section once an option is picked. Nothing is saved by
+              these steps; they act on the form on screen.
+            </DrawerDescription>
+          </DrawerHeader>
+          <ScrollArea className="flex-1">
+            <div className="space-y-4 p-6">
+              <Field
+                label="Watch these fields"
+                hint="Only a change to one of these starts a run. Naming them is also what stops a Set Field step from re-triggering the workflow that wrote it."
+              >
+                <div className="grid grid-cols-2 gap-1.5">
+                  {fields.map((f) => (
+                    <label key={f.name} className="flex items-center gap-1.5 text-[12px]">
+                      <Switch
+                        checked={fieldChange.watch.includes(f.name)}
+                        onCheckedChange={(on) =>
+                          updateFieldChangeWorkflow({
+                            ...fieldChange,
+                            watch: on
+                              ? [...fieldChange.watch, f.name]
+                              : fieldChange.watch.filter((w) => w !== f.name),
+                          })
+                        }
+                      />
+                      <span className="truncate">{f.label || f.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </Field>
+
+              <UiWorkflowEditor
+                value={fieldChange.workflow}
+                onChange={(workflow) => updateFieldChangeWorkflow({ ...fieldChange, workflow })}
+                fields={fields}
+                help="The form’s current values are in context, and the variable “changed_field” holds which field triggered the run."
+              />
+            </div>
+          </ScrollArea>
+          <DrawerFooter className="items-center justify-between sm:justify-between">
+            <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
+              {fieldChange.watch.length === 0 && fieldChange.workflow.steps.length > 0
+                ? 'No fields watched yet — these steps will never run.'
+                : `${fieldChange.workflow.steps.length} step${fieldChange.workflow.steps.length === 1 ? '' : 's'}, ${fieldChange.watch.length} watched`}
+            </p>
+            <Button type="button" onClick={() => setWhileFillingOpen(false)}>Done</Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       <Drawer open={afterSubmitOpen} onOpenChange={setAfterSubmitOpen}>
         <DrawerContent size="lg">

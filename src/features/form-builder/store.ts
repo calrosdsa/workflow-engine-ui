@@ -7,6 +7,7 @@ import {
   emptySchema, emptyFormSettings, emptyCreateUserSettings,
 } from './schema'
 import type { UiWorkflow } from '@/features/ui-workflows/types'
+import type { FieldChangeWorkflowConfig } from '@/features/ui-workflows/useFieldChangeWorkflow'
 import { createElement, createSection, duplicateElement, duplicateSection, relayoutSection, createAccountSection, createParentReferenceField } from './factory'
 import { createTreeStore, findItem, type ItemLocation } from '@/features/builder-kit/tree-store'
 
@@ -122,6 +123,21 @@ export function updateAfterSubmitWorkflow(next: UiWorkflow) {
       settings: {
         ...(s.schema.settings ?? emptyFormSettings()),
         afterSubmitWorkflow: next,
+      },
+    },
+  }))
+  useFormMetaStore.getState().markDirty()
+}
+
+/** Patches FormSchema.settings.fieldChangeWorkflow — the UI workflow run
+ *  while the form is being filled, when a watched field changes. */
+export function updateFieldChangeWorkflow(next: FieldChangeWorkflowConfig) {
+  useFormBuilderStore.setState((s) => ({
+    schema: {
+      ...s.schema,
+      settings: {
+        ...(s.schema.settings ?? emptyFormSettings()),
+        fieldChangeWorkflow: next,
       },
     },
   }))

@@ -142,11 +142,12 @@ describe('platform reporting', () => {
 })
 
 describe('the registry contract', () => {
-  it('registered the expected first node set', () => {
+  it('registered the expected node set', () => {
     const types = allUiWorkflowNodes().map((n) => n.type).sort()
     expect(types).toEqual([
       'condition', 'create_record', 'fetch_records', 'navigate',
-      'run_workflow', 'set_variable', 'show_message', 'update_record',
+      'run_workflow', 'set_field', 'set_field_state', 'set_variable',
+      'show_message', 'update_record',
     ])
   })
 

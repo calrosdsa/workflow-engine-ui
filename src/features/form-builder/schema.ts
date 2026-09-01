@@ -21,6 +21,7 @@
 
 import type { ConfigSchema } from '@/lib/config-schema'
 import type { UiWorkflow } from '@/features/ui-workflows/types'
+import type { FieldChangeWorkflowConfig } from '@/features/ui-workflows/useFieldChangeWorkflow'
 
 export type ComponentType =
   // Text inputs
@@ -541,6 +542,15 @@ export interface FormSettings {
    *  opaque UiWorkflow here for the same reason customActions holds
    *  `unknown` configs: this layer never interprets it. */
   afterSubmitWorkflow?: UiWorkflow
+  /** UI workflow run WHILE the form is being filled, when one of its watched
+   *  fields changes — cascading defaults, dependent pickers, revealing a
+   *  section once an option is picked.
+   *
+   *  The watch list is required rather than "any field": running on every
+   *  keystroke of every field is both wasteful and unpredictable, and naming
+   *  the fields is also what stops a set_field step from re-triggering the
+   *  workflow that wrote it. */
+  fieldChangeWorkflow?: FieldChangeWorkflowConfig
 }
 
 export const INVITATION_STATUS_COLUMN: ViewOnlyColumn = { id: 'invitation_status', label: 'Invitation Status' }
