@@ -1,4 +1,4 @@
-import { FolderTree, Search as SearchIcon, PlusSquare, LayoutTemplate, LayoutDashboard } from 'lucide-react'
+import { FolderTree, Search as SearchIcon, PlusSquare, LayoutTemplate, LayoutDashboard, Code2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { buildMenuTree } from '../tree'
 import type { Menu, MenuType } from '../types'
@@ -15,12 +15,22 @@ interface ParentMenuRuntimeProps {
   onNavigate?: (slug: string) => void
 }
 
+// Mirrors MENU_TYPE_REGISTRY[type].icon, which is the source of truth for a
+// menu type's icon everywhere else (see menu-icons.ts). Duplicated rather than
+// imported because menu-registry.ts imports THIS module as the `parent` type's
+// runtimeRenderer — reading the registry from here would close that loop.
+//
+// The exhaustive Record<MenuType, …> is what keeps the copy honest: adding a
+// menu type fails this file to compile until its icon is listed, which is
+// exactly how the missing `html` entry surfaced. Keep each icon identical to
+// the registry's own, or a type's icon changes depending on where it's drawn.
 const TYPE_ICONS: Record<MenuType, LucideIcon> = {
   search: SearchIcon,
   add: PlusSquare,
   parent: FolderTree,
   custom: LayoutTemplate,
   dashboard: LayoutDashboard,
+  html: Code2,
 }
 
 // A Parent menu has no content of its own — landing directly on its URL
