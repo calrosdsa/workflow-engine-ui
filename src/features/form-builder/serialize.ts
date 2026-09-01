@@ -4,34 +4,32 @@
 //  • toPayload(state) — produce the Create/Update payload: derives fields[] from
 //                       the schema (for SQL) and embeds the full schema in layout.
 
-import { type FormSchema, emptySchema, emptyFormSettings } from './schema'
+import { type FormSchema, emptySchema } from './schema'
 import { projectToFields } from './projection'
+import { parseLayout } from './parse-layout'
+import { healSchema, type HealableForm } from './heal'
 import type { FormDefinition, CreateFormPayload, FieldDef } from '@/features/forms/types'
+
+// parseLayout lives in its own leaf module now (see parse-layout.ts for the
+// import-cycle reason); re-exported so existing importers keep working.
+export { parseLayout } from './parse-layout'
+
+/** THE way to turn a stored form into a renderable FormSchema. Parses the
+ *  layout blob AND heals it against the backend's fields[] (see heal.ts):
+ *  a form created or edited through the API — no layout, or a layout that
+ *  predates a field change — still renders every real field, drops ghosts of
+ *  deleted ones, and shows the true create-user settings. Pure and
+ *  idempotent, so render paths call it every time. */
+export function resolveFormSchema(form: (HealableForm & { layout?: unknown }) | null | undefined): FormSchema {
+  if (!form) return emptySchema()
+  return healSchema(parseLayout(form.layout), form)
+}
 
 export interface BuilderFormState {
   name: string
   slug: string
   description: string
   schema: FormSchema
-}
-
-/** Parse the backend `layout` blob into a FormSchema, tolerating older/empty data. */
-export function parseLayout(layout: unknown): FormSchema {
-  if (!layout) return emptySchema()
-  try {
-    const obj = typeof layout === 'string' ? JSON.parse(layout) : layout
-    if (obj && typeof obj === 'object' && Array.isArray((obj as FormSchema).sections)) {
-      return {
-        version: 1,
-        sections: (obj as FormSchema).sections,
-        variables: (obj as FormSchema).variables,
-        settings: (obj as FormSchema).settings ?? emptyFormSettings(),
-      }
-    }
-  } catch {
-    // fall through
-  }
-  return emptySchema()
 }
 
 /** Hydrate builder state from a saved form definition.
@@ -42,7 +40,10 @@ export function parseLayout(layout: unknown): FormSchema {
  *  data. New elements (no matching backend field) simply stay column-less and
  *  get one assigned by the backend on the next save. */
 export function toBuilder(def: FormDefinition): BuilderFormState {
-  const parsed = parseLayout(def.layout)
+  // Heal BEFORE hydrating, so an API-written form opens showing its real
+  // fields and true settings, and ghost elements of API-deleted fields can't
+  // be resurrected by the next save (see heal.ts).
+  const parsed = healSchema(parseLayout(def.layout), def)
   const columnByKey = new Map<string, string>()
   for (const f of def.fields ?? ([] as FieldDef[])) {
     if (f.column) columnByKey.set(f.name, f.column)

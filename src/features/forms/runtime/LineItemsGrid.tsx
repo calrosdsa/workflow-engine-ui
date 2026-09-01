@@ -44,7 +44,7 @@ import { FileCellDisplay } from './FileCellDisplay'
 import { FileFieldInput } from './FileFieldInput'
 import { COLUMN_LAYOUTS } from '@/features/form-builder/schema'
 import { iterLineItemElements } from '@/features/form-builder/lineItemsSync'
-import { parseLayout } from '@/features/form-builder/serialize'
+import { resolveFormSchema } from '@/features/form-builder/serialize'
 import type { LineItemSection, FormElement, FormColumn, ComponentType } from '@/features/form-builder/schema'
 import type { FormRecord, FieldDef, FieldType, FormDefinition } from '@/features/forms/types'
 import type { FilterGroup } from '@/features/workflows/types'
@@ -105,7 +105,7 @@ function adoptedFormSections(adoptedForm: FormDefinition, referenceField: string
   // array below is rebuilt fresh rather than filtered in place, so this never
   // mutates that shared cache (which would otherwise silently corrupt the
   // adopted form's own builder page).
-  const schema = parseLayout(adoptedForm.layout)
+  const schema = resolveFormSchema(adoptedForm)
   const layoutKeys = new Set<string>()
   const sections: LineItemSection[] = []
   for (const section of schema.sections) {
@@ -1124,7 +1124,7 @@ function RowDetailDrawer({ formId, recordId, fields, layout, onClose }: {
             formId={formId}
             recordId={recordId}
             fields={fields}
-            schema={parseLayout(layout)}
+            schema={resolveFormSchema({ layout, fields })}
             onDeleted={onClose}
           />
         </Suspense>

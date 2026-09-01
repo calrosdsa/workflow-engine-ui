@@ -8,7 +8,7 @@ import { RuntimeSidebar } from './RuntimeSidebar'
 import { PermissionDeniedPage } from './PermissionDeniedPage'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
 import { useForm as useFormDef, useCreateRecord } from '@/features/forms/hooks'
-import { parseLayout } from '@/features/form-builder/serialize'
+import { resolveFormSchema } from '@/features/form-builder/serialize'
 import type { AppSnapshot } from './types'
 
 interface RuntimeFormCreatePageProps {
@@ -131,7 +131,7 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId }: Run
                   </div>
                 )}
                 <FormRenderer
-                  schema={parseLayout(form.layout)}
+                  schema={resolveFormSchema(form)}
                   fields={form.fields}
                   formId={form.id}
                   onSubmit={handleSubmit}

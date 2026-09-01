@@ -44,7 +44,8 @@ import {
 } from './schema'
 import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable } from './component-registry'
 import { createSection, createElement, slugifyKey, RESERVED_FIELD_KEYS } from './factory'
-import { parseLayout, type BuilderFormState } from './serialize'
+import { parseLayout } from './parse-layout'
+import type { BuilderFormState } from './serialize'
 
 // ---------------------------------------------------------------------------
 // The compact shape
@@ -353,7 +354,11 @@ function resolveColumnLayout(raw: unknown, warnings: string[], sectionIndex: num
   return '1'
 }
 
-function specFieldToElement(
+/** Expand one compact-spec field into a real canvas element. Exported for
+ *  heal-on-load (heal.ts), which funnels backend FieldDefs through the same
+ *  expansion so healed canvases and spec-imported canvases are built by one
+ *  code path. */
+export function specFieldToElement(
   raw: FormSpecField,
   usedKeys: Set<string>,
   warnings: string[],

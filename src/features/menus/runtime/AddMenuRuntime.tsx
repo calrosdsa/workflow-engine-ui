@@ -3,7 +3,7 @@ import { CheckCircle2, AlertCircle } from 'lucide-react'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { formsApi } from '@/features/forms/api'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
-import { parseLayout } from '@/features/form-builder/serialize'
+import { resolveFormSchema } from '@/features/form-builder/serialize'
 import type { Menu, AddMenuConfig } from '../types'
 
 interface AddMenuRuntimeProps {
@@ -68,7 +68,7 @@ export function AddMenuRuntime({ menu, onNavigate }: AddMenuRuntimeProps) {
 
       <FormRenderer
         key={formGeneration}
-        schema={parseLayout(form.layout)}
+        schema={resolveFormSchema(form)}
         fields={form.fields}
         formId={form.id}
         onSubmit={handleSubmit}

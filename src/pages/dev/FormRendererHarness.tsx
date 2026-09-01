@@ -6,7 +6,7 @@
 import { useState } from 'react'
 import { useForms, useForm } from '@/features/forms/hooks'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
-import { parseLayout } from '@/features/form-builder/serialize'
+import { resolveFormSchema } from '@/features/form-builder/serialize'
 import { Select } from '@/components/ui/select'
 
 export function FormRendererHarness() {
@@ -25,7 +25,7 @@ export function FormRendererHarness() {
 
       {form && (
         <FormRenderer
-          schema={parseLayout(form.layout)}
+          schema={resolveFormSchema(form)}
           fields={form.fields}
           onSubmit={(values) => setSubmitted(values)}
           submitLabel="Test submit"

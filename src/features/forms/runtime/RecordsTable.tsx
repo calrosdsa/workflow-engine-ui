@@ -19,7 +19,7 @@ import { RecordReferenceLink } from './RecordReferenceLink'
 import { RoleValueLabel } from './RoleValueLabel'
 import { FileCellDisplay } from './FileCellDisplay'
 import { buildEnumLabels, resolveEnumLabel } from './enum-labels'
-import { parseLayout } from '@/features/form-builder/serialize'
+import { resolveFormSchema } from '@/features/form-builder/serialize'
 import { CardLayout } from '@/features/menus/saved-views/layouts/CardLayout'
 import { CalendarLayout } from '@/features/menus/saved-views/layouts/CalendarLayout'
 import { KanbanLayout } from '@/features/menus/saved-views/layouts/KanbanLayout'
@@ -231,7 +231,7 @@ export function RecordsTable({
   // this recovers the same labels for List/Card's read-only display. Reuses
   // the same parseLayout(form.layout) call the record-detail drawer below
   // already makes, rather than a second, redundant parse.
-  const formSchema = parseLayout(form.layout)
+  const formSchema = resolveFormSchema(form)
   const enumLabels = buildEnumLabels(formSchema)
 
   // §6's named edge case: a saved view's Calendar/Kanban layout_config names

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
-import { parseLayout } from '@/features/form-builder/serialize'
+import { resolveFormSchema } from '@/features/form-builder/serialize'
 
 async function extractError(err: unknown): Promise<string> {
   if (err && typeof err === 'object' && 'response' in err) {
@@ -60,7 +60,7 @@ export function FormRecordsPage() {
               </div>
             )}
             <FormRenderer
-              schema={parseLayout(form.layout)}
+              schema={resolveFormSchema(form)}
               fields={form.fields}
               formId={formId}
               onSubmit={(data) => {

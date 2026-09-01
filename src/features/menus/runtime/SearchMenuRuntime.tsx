@@ -6,7 +6,7 @@ import { RecordsTable } from '@/features/forms/runtime/RecordsTable'
 import { RuntimeLink } from '@/features/runtime/RuntimeLink'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { buildEnumLabels } from '@/features/forms/runtime/enum-labels'
-import { parseLayout } from '@/features/form-builder/serialize'
+import { resolveFormSchema } from '@/features/form-builder/serialize'
 import { useSavedViews, useUpdateSavedView } from '@/features/menus/saved-views/hooks'
 import { ViewSwitcher } from '@/features/menus/saved-views/ViewSwitcher'
 import { resolveDefaultView } from '@/features/menus/saved-views/types'
@@ -103,7 +103,7 @@ export function SearchMenuRuntime({ menu, menus, clientId, appId, onNavigate }: 
   // computes for the board itself; recomputed here rather than threaded
   // down as a prop since RecordsTable owns its own instance and there's no
   // existing plumbing to share one between this component and it.
-  const enumLabels = buildEnumLabels(parseLayout(form?.layout))
+  const enumLabels = buildEnumLabels(resolveFormSchema(form))
 
   const currentConfig: SavedViewConfig = liveActiveView
     ? liveActiveView.config

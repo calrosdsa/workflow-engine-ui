@@ -21,8 +21,17 @@ export function* iterElements(schema: FormSchema): Generator<FormElement> {
   }
 }
 
-/** Maps a single element to a backend FieldDef, or null if it isn't data-bearing. */
-function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | null {
+/** The wire field name this element WOULD project to, or null when it
+ *  wouldn't project at all — not data-bearing, or still unconfigured (a
+ *  reference with no target form picked, etc.), which projection skips so a
+ *  work-in-progress canvas can still save. This is the PRE-deduplication
+ *  name; elementToField below layers the collision suffixing on top.
+ *
+ *  Exported for heal-on-load (heal.ts), whose orphan rule is exactly "would
+ *  this element project to a field the backend no longer has?" — sharing the
+ *  guards here is what keeps healing and projection agreeing on what counts
+ *  as data-bearing. */
+export function projectedBaseName(el: FormElement): string | null {
   // A 'line_items' element is data-bearing ONLY in adopted mode ('existing')
   // — it becomes a TypeLineItemAdopted virtual field marking the association
   // on the PARENT's own field list (see schema.ts's sourceMode doc comment).
@@ -31,7 +40,10 @@ function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | nul
   // 'line_items' covers that case; this is the one place that overrides it.
   const isAdoptedLineItems = el.component === 'line_items' && el.sourceMode === 'existing'
 
+  // Unknown component (layout written by a newer frontend, or by hand):
+  // treat as non-bearing rather than crash — never dropped, never counted.
   const reg = COMPONENT_REGISTRY[el.component]
+  if (!reg) return null
   if (!isAdoptedLineItems && (!reg.dataBearing || !reg.fieldType)) return null
 
   // An unconfigured form reference (no form selected) can't become a valid
@@ -47,9 +59,8 @@ function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | nul
   // reference field picked yet).
   if (isAdoptedLineItems && (!el.adoptedFormRef || !el.adoptedReferenceField)) return null
 
-  // The editable `key` becomes the wire `name`. It's deduplicated only so the
-  // backend's key-based record contract stays unambiguous — it is NOT the
-  // physical column (which the backend owns and never changes).
+  // The editable `key` becomes the wire `name`. It is NOT the physical
+  // column (which the backend owns and never changes).
   let name = el.key && /^[a-zA-Z_]\w*$/.test(el.key) ? el.key : slugifyKey(el.label)
   // A key can reach here already looking like a valid identifier (e.g. loaded
   // from older data saved before slugifyKey rejected reserved words) — guard
@@ -57,6 +68,20 @@ function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | nul
   // field key that collides with the backend's hardcoded id/created_at/
   // updated_at columns (see RESERVED_FIELD_KEYS's doc comment).
   if (RESERVED_FIELD_KEYS.has(name)) name = `${name}_field`
+  return name
+}
+
+/** Maps a single element to a backend FieldDef, or null if it isn't data-bearing. */
+function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | null {
+  const isAdoptedLineItems = el.component === 'line_items' && el.sourceMode === 'existing'
+  const reg = COMPONENT_REGISTRY[el.component]
+
+  const baseName = projectedBaseName(el)
+  if (baseName === null) return null
+
+  // Deduplicate: the key is the record's wire field name, and two elements
+  // sharing one would collide the moment records were written.
+  let name = baseName
   if (usedNames.has(name)) {
     let i = 2
     while (usedNames.has(`${name}_${i}`)) i++

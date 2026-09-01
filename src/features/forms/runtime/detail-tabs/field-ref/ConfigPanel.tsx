@@ -7,14 +7,14 @@ import { useMemo } from 'react'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { Field } from '@/features/form-builder/config/ConfigPanel'
 import { useForm as useFormDef } from '@/features/forms/hooks'
-import { parseLayout } from '@/features/form-builder/serialize'
+import { resolveFormSchema } from '@/features/form-builder/serialize'
 import { pickableFields } from './pickable-fields'
 import type { DetailTabConfigPanelProps } from '../contract'
 import type { FieldRefTabConfig } from './schema'
 
 export function FieldRefConfigPanel({ config, onChange, formId }: DetailTabConfigPanelProps<FieldRefTabConfig>) {
   const { data: form } = useFormDef(formId)
-  const schema = useMemo(() => (form ? parseLayout(form.layout) : null), [form])
+  const schema = useMemo(() => (form ? resolveFormSchema(form) : null), [form])
   const options = useMemo(() => pickableFields(schema), [schema])
 
   return (

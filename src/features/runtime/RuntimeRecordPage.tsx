@@ -11,7 +11,7 @@ import { RecordDetailPanel, RecordDetailToolbar } from '@/features/forms/runtime
 import { resolveRecordTitle } from '@/features/forms/runtime/record-title'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { useRecordDetail } from '@/features/forms/runtime/record-detail-hooks'
-import { parseLayout } from '@/features/form-builder/serialize'
+import { resolveFormSchema } from '@/features/form-builder/serialize'
 import type { AppSnapshot, MenuSnapshotItem } from './types'
 
 interface RuntimeRecordPageProps {
@@ -45,7 +45,7 @@ export function RuntimeRecordPage({ snapshot, clientId, appId, currentMenu, form
   const { data: form } = useFormDef(formId)
   const { data: record } = useRecordDetail(formId, recordId)
   const recordTitle = resolveRecordTitle(form?.fields, record)
-  const schema = form ? parseLayout(form.layout) : undefined
+  const schema = form ? resolveFormSchema(form) : undefined
 
   return (
     // Theming is provided once by the shared ThemeProvider in
