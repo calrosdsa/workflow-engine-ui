@@ -63,6 +63,7 @@ export const EXPR_ROOTS: ExprRoot[] = [
   { name: 'NodeOutputs', detail: 'map',  description: 'Outputs of prior nodes — NodeOutputs["id"]["field"]' },
   { name: 'Context',     detail: 'map',  description: 'Workflow metadata — Context["key"]' },
   { name: 'AppSettings', detail: 'map',  description: 'App-level global variables (Global Settings) — AppSettings["name"]' },
+  { name: 'TriggerRecord', detail: 'map', description: 'The triggering record’s fields — TriggerRecord["field_name"] (nil for runs with no triggering record)' },
 ]
 
 export const FUNCTION_CATEGORIES = [...new Set(EXPR_FUNCTIONS.map((f) => f.category))]

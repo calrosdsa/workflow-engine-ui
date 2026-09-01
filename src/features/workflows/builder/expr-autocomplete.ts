@@ -29,6 +29,11 @@ const VAR_BRACKET_RE = /(Vars|Times|Context)\s*\[\s*"([^"]*)$/
 // Vars["item"][ "path"... ][ "  — deep path into a loop-scoped var (the cursor
 // is in a LATER bracket). Captures the top-level var key, the closed segments,
 // and the in-progress key, so we can walk the var's inferred field shape.
+// TriggerRecord[" → the triggering record's field keys (root: 'trigger_record'
+// entries from node-output-schema — a trigger node's bound-form fields, or an
+// on_error trigger's failure-context keys).
+const TRIGGER_BRACKET_RE = /TriggerRecord\s*\[\s*"([^"]*)$/
+
 const VARS_PATH_RE = /Vars\s*\[\s*"([^"]+)"\s*\]((?:\s*\[\s*(?:"[^"]*"|\d+)\s*\])+)\s*\[\s*"([^"]*)$/
 
 // NodeOutputs["  — cursor inside the FIRST bracket (choosing the node id).
@@ -117,7 +122,7 @@ function exprCompletionSource(variables: VariableDecl[], nodeContext: NodeOutput
   // instead of the later entries silently shadowing the earlier ones.
   const byId = new Map<string, NodeOutputSchema[]>()
   for (const s of nodeContext) {
-    if (s.root === 'vars') continue
+    if (s.root === 'vars' || s.root === 'trigger_record') continue
     const list = byId.get(s.nodeId)
     if (list) list.push(s)
     else byId.set(s.nodeId, [s])
@@ -133,6 +138,13 @@ function exprCompletionSource(variables: VariableDecl[], nodeContext: NodeOutput
   const loopVarComps: Completion[] = [...varFieldsByKey.keys()].map((key) => ({
     label: key, type: 'variable', detail: 'loop', boost: 65,
   }))
+
+  // Triggering-record fields (root: 'trigger_record') complete inside
+  // TriggerRecord[" — the labeled accessor the Variables panel inserts.
+  const triggerComps: Completion[] = nodeContext
+    .filter((s) => s.root === 'trigger_record')
+    .flatMap((s) => s.fields)
+    .map((f) => ({ label: f.key, type: 'property', detail: f.type, boost: 65 }))
 
   return (context: CompletionContext): CompletionResult | null => {
     const before = context.state.sliceDoc(0, context.pos)
@@ -184,6 +196,14 @@ function exprCompletionSource(variables: VariableDecl[], nodeContext: NodeOutput
         boost: 70,
       }))
       return { from, options, validFor: /^[^"]*$/ }
+    }
+
+    // TriggerRecord[" → the triggering record's field keys.
+    const trigBracket = TRIGGER_BRACKET_RE.exec(before)
+    if (trigBracket) {
+      const typed = trigBracket[1]
+      const from = context.pos - typed.length
+      return { from, options: triggerComps, validFor: /^[^"]*$/ }
     }
 
     // 1. Vars/Times/Context[" → variable names (+ loop-scoped item/index for Vars).

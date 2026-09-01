@@ -34,7 +34,7 @@ export interface OutputField {
 /** How an output schema's fields are addressed in an expression.
  *  - 'node_outputs' → NodeOutputs["<nodeId>"]["field"] (default, real node output)
  *  - 'vars'         → Vars["field"] (loop-scoped variables like item/index) */
-export type SchemaRoot = 'node_outputs' | 'vars'
+export type SchemaRoot = 'node_outputs' | 'vars' | 'trigger_record'
 
 /** The output schema of a single (upstream) node. */
 export interface NodeOutputSchema {
@@ -530,7 +530,7 @@ export function buildNodeOutputSchema(
             nodeId: node.id,
             nodeLabel: `${label} (failure context)`,
             nodeType: type,
-            root: 'vars',
+            root: 'trigger_record',
             fields: [
               { key: 'failed_definition_id', type: 'string' },
               { key: 'failed_execution_id', type: 'string' },
@@ -548,7 +548,7 @@ export function buildNodeOutputSchema(
         nodeId: node.id,
         nodeLabel: `${label} (triggering record)`,
         nodeType: type,
-        root: 'vars',
+        root: 'trigger_record',
         fields: recordFields(form),
       }]
     }
@@ -561,14 +561,19 @@ export function buildNodeOutputSchema(
 
 /** The Expr path that addresses an output field. For 'node_outputs' (default)
  *  the path is NodeOutputs["<nodeId>"]["a"]["b"]; for 'vars' (loop item/index)
- *  it is Vars["a"]["b"] (the nodeId is ignored). When the leaf field carries
- *  an `exprPath` (HTTP response schema-mapped fields), that precomputed
- *  string is returned verbatim instead of being derived generically. */
+ *  it is Vars["a"]["b"] (the nodeId is ignored); for 'trigger_record' (a
+ *  trigger node's record/failure-context fields) it is
+ *  TriggerRecord["a"]["b"] — the labeled accessor, chosen over the legacy
+ *  Vars overlay so an inserted expression says where its data comes from and
+ *  can never be shadowed by a same-named workflow variable. When the leaf
+ *  field carries an `exprPath` (HTTP response schema-mapped fields), that
+ *  precomputed string is returned verbatim instead of being derived
+ *  generically. */
 export function outputFieldPath(nodeId: string, path: OutputField[], root: SchemaRoot = 'node_outputs'): string {
   const leaf = path[path.length - 1]
   if (leaf?.exprPath) return leaf.exprPath
 
-  let expr = root === 'vars' ? 'Vars' : `NodeOutputs["${nodeId}"]`
+  let expr = root === 'vars' ? 'Vars' : root === 'trigger_record' ? 'TriggerRecord' : `NodeOutputs["${nodeId}"]`
   for (const f of path) {
     expr += `["${f.key}"]`
     if (f.isArray) expr += '[0]'

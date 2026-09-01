@@ -136,3 +136,18 @@ describe('inferItemFields — nested iterator over Vars["item"]["Items"]', () =>
     expect(inferItemFields('Vars["item"]["Items"]["extra"]', [httpNode, outerIterator], emptyFormsById)).toBeUndefined()
   })
 })
+
+describe('outputFieldPath roots', () => {
+  it('emits the labeled TriggerRecord accessor for trigger-record fields', () => {
+    // The Variables panel's "(triggering record)" entries carry
+    // root: 'trigger_record' so a click inserts an expression that SAYS the
+    // data comes from the triggering record — not a bare Vars[""] lookup a
+    // same-named workflow variable could shadow.
+    expect(outputFieldPath('trigger1', [{ key: 'company_name', type: 'string' }], 'trigger_record'))
+      .toBe('TriggerRecord["company_name"]')
+    expect(outputFieldPath('ignored', [{ key: 'item', type: 'object' }], 'vars'))
+      .toBe('Vars["item"]')
+    expect(outputFieldPath('http1', [{ key: 'body', type: 'object' }]))
+      .toBe('NodeOutputs["http1"]["body"]')
+  })
+})
