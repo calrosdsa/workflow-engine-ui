@@ -37,6 +37,11 @@ export function isFieldSingleWritable(el: FormElement): boolean {
   if (el.behavior.visibility === 'hidden') return false
   if (el.behavior.readOnly === 'expression') return false
   if (el.behavior.visibility === 'expression') return false
+  // Advanced Settings can hide or lock this field for the current viewer, and
+  // resolving that needs a viewer this function deliberately has no access to
+  // (see the doc comment above). Excluded for exactly the same reason as the
+  // expression modes: staying unavailable is safe, guessing writable is not.
+  if (el.advancedSettings?.length) return false
   return true
 }
 
@@ -49,9 +54,13 @@ export function isFieldSingleWritable(el: FormElement): boolean {
  *  required/readOnly/visibility is excluded from inline editing entirely
  *  (see that file), so this static-rules-only validator is a complete,
  *  correct check for every field inline editing actually allows. */
-export function fieldSchema(el: FormElement): z.ZodTypeAny {
+export function fieldSchema(el: FormElement, relaxRequired = false): z.ZodTypeAny {
   const reg = COMPONENT_REGISTRY[el.component]
-  const isStaticRequired = el.behavior.required === 'always'
+  // relaxRequired drops the static requirement for a field the viewer cannot
+  // currently see — an Advanced Setting can hide a `required: always` field
+  // from a whole role, and without this the form becomes unsubmittable for
+  // them with the validation error pinned to a field that isn't on screen.
+  const isStaticRequired = el.behavior.required === 'always' && !relaxRequired
 
   let base: z.ZodTypeAny
   switch (reg.fieldType) {
@@ -138,7 +147,14 @@ export function fieldSchema(el: FormElement): z.ZodTypeAny {
  *  data-bearing element's `key` (matching the record shape the backend
  *  expects). Presentational elements (heading/paragraph/divider/spacer) are
  *  skipped — they carry no value. */
-export function buildZodSchema(schema: FormSchema): z.ZodObject<Record<string, z.ZodTypeAny>> {
+export function buildZodSchema(
+  schema: FormSchema,
+  /** Field keys whose static `required` rule should not apply, because the
+   *  viewer can't see them (FormRenderer passes the fields an Advanced
+   *  Setting has hidden). Omitted everywhere else, so existing callers keep
+   *  the full static rules. */
+  relaxRequiredKeys?: ReadonlySet<string>,
+): z.ZodObject<Record<string, z.ZodTypeAny>> {
   const shape: Record<string, z.ZodTypeAny> = {}
   for (const el of iterElements(schema)) {
     if (el.component === 'line_items') {
@@ -151,7 +167,7 @@ export function buildZodSchema(schema: FormSchema): z.ZodObject<Record<string, z
       continue
     }
     if (!COMPONENT_REGISTRY[el.component].dataBearing) continue
-    shape[el.key] = fieldSchema(el)
+    shape[el.key] = fieldSchema(el, relaxRequiredKeys?.has(el.key) ?? false)
   }
   return z.object(shape)
 }

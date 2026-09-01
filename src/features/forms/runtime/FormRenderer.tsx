@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
@@ -7,7 +8,10 @@ import { iterElements } from '@/features/form-builder/projection'
 import { COMPONENT_REGISTRY } from '@/features/form-builder/component-registry'
 import { buildZodSchema } from './schema-to-zod'
 import { schemaToVariableDecls, useExpressionRuntimeState, getFieldRuntimeState } from './expression-context'
+import { useCurrentViewer } from './detail-tabs/useTabVisible'
+import { resolveAdvancedSettings, NO_EFFECTS } from './advanced-settings'
 import { FieldRenderer } from './FieldRenderer'
+import type { AdvancedFieldEffects } from './advanced-settings'
 import type { FormSchema } from '@/features/form-builder/schema'
 import type { FieldDef } from '@/features/forms/types'
 
@@ -79,6 +83,10 @@ function nullsToEmptyStrings(schema: FormSchema, values: Record<string, unknown>
   return out
 }
 
+/** Stable identity for "nothing hidden", so the validator memo below doesn't
+ *  rebuild on every render of a form with no Advanced Settings at all. */
+const EMPTY_KEYS: ReadonlySet<string> = new Set<string>()
+
 export interface FormRendererProps {
   schema: FormSchema
   fields: FieldDef[]
@@ -101,10 +109,22 @@ export interface FormRendererProps {
 // configure. This is the piece Add Menu depends on; no runtime form-fill
 // renderer existed anywhere in the codebase before this.
 export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitting, submitLabel }: FormRendererProps) {
-  const zodSchema = buildZodSchema(schema)
   const variables = schemaToVariableDecls(schema)
 
-  const { control, handleSubmit, formState: { errors } } = useForm({
+  // Fields an Advanced Setting hides from THIS viewer, fed back into the
+  // validator so a hidden `required: always` field can't make the form
+  // permanently unsubmittable for a whole role.
+  //
+  // State rather than a value derived inline, because the dependency is
+  // circular: the rules resolve against live form values, which come from the
+  // form, which needs the validator. Kept as state and synced one render
+  // later, which is harmless — validation only runs on change or submit, long
+  // after the first paint. react-hook-form v7 re-reads control._options on
+  // every render, so the newer resolver is the one that actually runs.
+  const [hiddenKeys, setHiddenKeys] = useState<ReadonlySet<string>>(EMPTY_KEYS)
+  const zodSchema = useMemo(() => buildZodSchema(schema, hiddenKeys), [schema, hiddenKeys])
+
+  const { control, handleSubmit, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(zodSchema),
     defaultValues: { ...emptyDefaults(schema), ...nullsToEmptyStrings(schema, defaultValues ?? {}) },
   })
@@ -117,6 +137,48 @@ export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitti
     { key: el.key, kind: 'readOnlyWhen' as const, expr: el.behavior.readOnly === 'expression' ? el.behavior.readOnlyWhen : undefined },
   ])
   const runtimeStates = useExpressionRuntimeState(expressionInputs, variables, liveValues ?? {})
+
+  // Advanced Settings (per-element hide / read-only / clear rules). Resolved
+  // here rather than inside the element map so the clear_value effect below
+  // has the whole picture, and so the viewer is read exactly once — the same
+  // reason useTabVisible splits useCurrentViewer from its pure per-item check.
+  //
+  // Unlike the expression rules above, these need no round-trip: an Advanced
+  // Setting's condition tree is client-evaluable by construction (see
+  // advanced-settings.ts), so it resolves synchronously from live values.
+  const viewer = useCurrentViewer()
+  const advancedEffects = useMemo(() => {
+    const out: Record<string, AdvancedFieldEffects> = {}
+    for (const el of iterElements(schema)) {
+      if (!el.advancedSettings?.length) continue
+      out[el.key] = resolveAdvancedSettings(el.advancedSettings, viewer, liveValues ?? {})
+    }
+    return out
+  }, [schema, viewer, liveValues])
+
+  // Sync the hidden set used by the validator above. Compared by content, not
+  // identity — a fresh Set every render would loop forever.
+  useEffect(() => {
+    const next = new Set(
+      Object.entries(advancedEffects).filter(([, e]) => e.hidden).map(([key]) => key),
+    )
+    setHiddenKeys((prev) =>
+      prev.size === next.size && [...next].every((k) => prev.has(k)) ? prev : next,
+    )
+  }, [advancedEffects])
+
+  // clear_value is the one action that writes rather than renders. Guarded on
+  // the value not already being empty so this can't ping-pong: clearing feeds
+  // back into liveValues, which re-runs the rules above.
+  useEffect(() => {
+    for (const [key, effects] of Object.entries(advancedEffects)) {
+      if (!effects.clearValue) continue
+      const current = (liveValues ?? {})[key]
+      if (current === '' || current === null || current === undefined) continue
+      if (Array.isArray(current) && current.length === 0) continue
+      setValue(key, Array.isArray(current) ? [] : '', { shouldDirty: true, shouldValidate: true })
+    }
+  }, [advancedEffects, liveValues, setValue])
 
   return (
     <form onSubmit={handleSubmit((values) => onSubmit(values))} className="space-y-6">
@@ -163,13 +225,23 @@ export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitti
                       ? getFieldRuntimeState(runtimeStates, el.key).readOnly
                       : runtimeState.readOnly
 
+                    // Advanced Settings compose ON TOP of the behavior rules
+                    // rather than replacing them: both are restrictions, so
+                    // either one asserting hidden/read-only wins.
+                    const advanced = advancedEffects[el.key] ?? NO_EFFECTS
+                    const visible = runtimeState.visible && !advanced.hidden
+                    // A field nobody can see must not also block submit as
+                    // required — the filler would face a validation error
+                    // pointing at a field that isn't on screen.
+                    const required = resolvedRequired && visible
+
                     return (
                       <FieldRenderer
                         key={el.id}
                         element={el}
                         control={control}
                         formId={formId}
-                        runtimeState={{ visible: runtimeState.visible, required: resolvedRequired, readOnly: resolvedReadOnly }}
+                        runtimeState={{ visible, required, readOnly: resolvedReadOnly || advanced.readOnly }}
                         error={errors[el.key]?.message as string | undefined}
                       />
                     )
