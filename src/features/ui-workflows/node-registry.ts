@@ -34,7 +34,31 @@
 // mental model transfers between the two builders.
 import type { LucideIcon } from 'lucide-react'
 import type { ConfigSchema } from '@/lib/config-schema'
+import type { UiWorkflowHost, UiWorkflowRunContext } from './host'
 import type { StepListsOf, UiWorkflowPlatform, UiWorkflowStep } from './types'
+
+/** What a node's executor hands back to the interpreter.
+ *
+ *  Control flow lives HERE rather than in a switch inside the interpreter, so
+ *  a branching node type works without the interpreter learning about it —
+ *  the same reason childStepLists exists for traversal. */
+export type StepOutcome =
+  /** Continue with the next sibling step. The default. */
+  | { kind: 'next' }
+  /** Run this list, then continue with the next sibling — how `condition`
+   *  returns whichever branch matched. */
+  | { kind: 'enter'; steps: readonly UiWorkflowStep[] }
+  /** End the run here, successfully. */
+  | { kind: 'stop' }
+
+export interface StepExecuteArgs<TConfig> {
+  config: TConfig
+  ctx: UiWorkflowRunContext
+  host: UiWorkflowHost
+  /** Aborted when the viewer navigates away or the run is cancelled. A node
+   *  doing anything long-running must honour it. */
+  signal: AbortSignal
+}
 
 export interface UiWorkflowNodeDefinition<TConfig = unknown> {
   /** Registry key, stored as UiWorkflowStep.type. */
@@ -71,6 +95,16 @@ export interface UiWorkflowNodeDefinition<TConfig = unknown> {
    *  Declared here so traversal never switches on node type — a future
    *  branching node works without touching the walker. */
   childStepLists?: StepListsOf
+  /** Runs the step. Mutates `ctx.variables` for nodes that produce values,
+   *  and reaches everything else through `host` — never through a direct
+   *  import, which is what keeps the interpreter runnable under test and the
+   *  capability list honest (see host.ts).
+   *
+   *  Optional so a node type can be registered and authorable before it is
+   *  executable; the interpreter treats a missing executor as an explicit
+   *  failure rather than a silent skip, so an unimplemented node can never
+   *  quietly do nothing. */
+  execute?: (args: StepExecuteArgs<TConfig>) => Promise<StepOutcome> | StepOutcome
 }
 
 const REGISTRY = new Map<string, UiWorkflowNodeDefinition<any>>()

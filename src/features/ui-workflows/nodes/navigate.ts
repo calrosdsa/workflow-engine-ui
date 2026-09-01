@@ -61,6 +61,38 @@ registerUiWorkflowNode({
       },
     },
   },
+  execute: ({ config, ctx, host }) => {
+    if (config.target === 'back') {
+      host.navigate({ kind: 'back' })
+      // Navigation ends the run: the surface the remaining steps would act on
+      // is being torn down, so continuing would mean writing field state into
+      // a screen nobody is looking at any more.
+      return { kind: 'stop' }
+    }
+
+    if (config.target === 'record') {
+      const formId = config.form_id || ctx.formId
+      const recordId = config.record_id_variable
+        ? String(ctx.variables[config.record_id_variable] ?? '')
+        : ctx.recordId
+      // Named but unresolved is an authoring error worth surfacing — most
+      // often a create_record step that did not store its output_variable, or
+      // a typo in the name. Failing beats navigating somewhere arbitrary.
+      if (!formId || !recordId) {
+        throw new Error(
+          config.record_id_variable
+            ? `Nothing to open: variable "${config.record_id_variable}" holds no record id.`
+            : 'Nothing to open: no record is in context for this step.',
+        )
+      }
+      host.navigate({ kind: 'record', formId, recordId })
+      return { kind: 'stop' }
+    }
+
+    if (!config.menu_slug) throw new Error('This step has no destination configured.')
+    host.navigate({ kind: 'menu', slug: config.menu_slug })
+    return { kind: 'stop' }
+  },
   parseConfig: parseNavigateConfig,
   createDefaultConfig: emptyNavigateConfig,
 })

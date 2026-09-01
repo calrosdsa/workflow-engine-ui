@@ -1,5 +1,6 @@
 import { Workflow } from 'lucide-react'
 import { registerUiWorkflowNode } from '../node-registry'
+import { resolveValue } from '../values'
 import { ALL_PLATFORMS } from '../types'
 
 /** THE PRESSURE VALVE.
@@ -92,6 +93,37 @@ registerUiWorkflowNode({
         description: 'Run variable the result is stored in, when waiting.',
       },
     },
+  },
+  execute: async ({ config, ctx, host }) => {
+    if (!config.workflow_definition_id) throw new Error('This step has no workflow configured.')
+    // The dispatch endpoint is record-scoped, so a server workflow can only be
+    // started from a context that HAS a record. That is a real limitation of
+    // the existing trigger path, not a rule of this node — named plainly here
+    // rather than left to surface as a confusing 404.
+    if (!ctx.formId || !ctx.recordId) {
+      throw new Error('Running a workflow needs a record in context.')
+    }
+
+    const inputs: Record<string, unknown> = {}
+    for (const input of config.inputs) {
+      const value = resolveValue(
+        { source: input.source === 'variable' ? 'variable' : 'static', value: input.value, variable: input.variable },
+        ctx,
+      )
+      if (value !== undefined) inputs[input.name] = value
+    }
+
+    const result = await host.runServerWorkflow({
+      formId: ctx.formId,
+      recordId: ctx.recordId,
+      workflowDefinitionId: config.workflow_definition_id,
+      inputs,
+      wait: config.wait_for_result,
+    })
+    if (config.wait_for_result && config.output_variable) {
+      ctx.variables[config.output_variable] = result
+    }
+    return { kind: 'next' }
   },
   parseConfig: parseRunWorkflowConfig,
   createDefaultConfig: emptyRunWorkflowConfig,

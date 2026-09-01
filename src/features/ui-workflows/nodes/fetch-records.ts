@@ -74,6 +74,24 @@ registerUiWorkflowNode({
       },
     },
   },
+  execute: async ({ config, ctx, host }) => {
+    if (!config.form_id) throw new Error('This step has no form configured.')
+    const { records, total } = await host.searchRecords({
+      formId: config.form_id,
+      filter: config.filter,
+      sort: config.sort,
+      // Re-clamped at execution, not only at parse: a config can reach the
+      // interpreter without passing through parseConfig (a caller building a
+      // graph in memory), and the bound protects a real query.
+      pageSize: Math.min(MAX_PAGE_SIZE, Math.max(1, Math.floor(config.page_size || 50))),
+    })
+    ctx.variables[config.output_variable] = records
+    // The count is genuinely useful to branch on ("if nothing matched, say
+    // so") and is free here, whereas a follow-up step could only recover it
+    // by counting a possibly-truncated page.
+    ctx.variables[`${config.output_variable}_count`] = total
+    return { kind: 'next' }
+  },
   parseConfig: parseFetchRecordsConfig,
   createDefaultConfig: emptyFetchRecordsConfig,
 })

@@ -53,6 +53,14 @@ registerUiWorkflowNode({
       },
     },
   },
+  execute: ({ config, host }) => {
+    // An empty message shows nothing rather than an empty toast. Unlike the
+    // SERVER's show_message — which halts its run when it fires — this does
+    // not stop the workflow: on the client a message is ordinary feedback
+    // mid-flow ("saved", then navigate), not a terminal state.
+    if (config.message) host.showMessage(config.message, config.message_type)
+    return { kind: 'next' }
+  },
   parseConfig: parseShowMessageConfig,
   createDefaultConfig: emptyShowMessageConfig,
 })

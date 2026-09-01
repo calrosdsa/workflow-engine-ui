@@ -8,3 +8,4 @@
 import './update-field'
 import './trigger-workflow'
 import './export-report'
+import './run-ui-workflow'

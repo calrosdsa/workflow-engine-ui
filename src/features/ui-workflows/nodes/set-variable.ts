@@ -1,5 +1,6 @@
 import { Variable } from 'lucide-react'
 import { registerUiWorkflowNode } from '../node-registry'
+import { resolveValue } from '../values'
 import { ALL_PLATFORMS } from '../types'
 
 /** Run-local scratch state. Nothing here is persisted: a UI workflow run has
@@ -53,6 +54,18 @@ registerUiWorkflowNode({
       value: { description: "The literal value written when source is 'static'." },
       field: { type: 'string', description: "Field key to copy when source is 'field'." },
     },
+  },
+  execute: ({ config, ctx }) => {
+    // An unnamed variable is a half-configured step, not a reason to fail the
+    // run: writing to key "" would silently create a variable nothing can
+    // ever read, which is worse than doing nothing.
+    if (config.name) {
+      ctx.variables[config.name] = resolveValue(
+        { source: config.source, value: config.value, field: config.field },
+        ctx,
+      )
+    }
+    return { kind: 'next' }
   },
   parseConfig: parseSetVariableConfig,
   createDefaultConfig: emptySetVariableConfig,

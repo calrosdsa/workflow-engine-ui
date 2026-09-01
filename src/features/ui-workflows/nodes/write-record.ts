@@ -1,5 +1,6 @@
 import { FilePlus2, PencilLine } from 'lucide-react'
 import { registerUiWorkflowNode } from '../node-registry'
+import { buildRecordValues } from '../values'
 import { ALL_PLATFORMS } from '../types'
 
 /** One field write. `source` mirrors set_variable's: a literal, or the value
@@ -88,6 +89,14 @@ registerUiWorkflowNode({
       },
     },
   },
+  execute: async ({ config, ctx, host }) => {
+    if (!config.form_id) throw new Error('This step has no form configured.')
+    const created = await host.createRecord(config.form_id, buildRecordValues(config.values, ctx))
+    // Storing the id is what makes "create it, then open it" expressible at
+    // all — navigate's record_id_variable reads exactly this.
+    if (config.output_variable) ctx.variables[config.output_variable] = created.id
+    return { kind: 'next' }
+  },
   parseConfig: parseWriteRecordConfig,
   createDefaultConfig: emptyWriteRecordConfig,
 })
@@ -116,6 +125,29 @@ registerUiWorkflowNode({
           'Run variable holding the id of the record to update. Absent means the record the workflow was triggered on.',
       },
     },
+  },
+  execute: async ({ config, ctx, host }) => {
+    const formId = config.form_id || ctx.formId
+    const recordId = config.record_id_variable
+      ? String(ctx.variables[config.record_id_variable] ?? '')
+      : ctx.recordId
+    if (!formId) throw new Error('This step has no form configured.')
+    if (!recordId) {
+      throw new Error(
+        config.record_id_variable
+          ? `Nothing to update: variable "${config.record_id_variable}" holds no record id.`
+          : 'Nothing to update: no record is in context for this step.',
+      )
+    }
+
+    const values = buildRecordValues(config.values, ctx)
+    // Sends ONLY the configured fields. The endpoint is a genuine partial
+    // patch, and resubmitting a whole fetched record is what broke Kanban's
+    // cross-column drag: a date field round-trips from GET as full RFC3339
+    // while the validator demands YYYY-MM-DD on write.
+    if (Object.keys(values).length === 0) return { kind: 'next' }
+    await host.updateRecord(formId, recordId, values)
+    return { kind: 'next' }
   },
   parseConfig: parseWriteRecordConfig,
   createDefaultConfig: emptyWriteRecordConfig,

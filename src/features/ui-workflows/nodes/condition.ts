@@ -1,6 +1,8 @@
 import { GitBranch } from 'lucide-react'
 import { registerUiWorkflowNode } from '../node-registry'
 import { parseSteps } from '../parse'
+import { evaluateFilterGroup } from '@/lib/filter-eval'
+import { conditionValues } from '../values'
 import { ALL_PLATFORMS, type ConditionStepConfig, type UiWorkflowStep } from '../types'
 import type { FilterGroup } from '@/features/workflows/types'
 
@@ -60,6 +62,15 @@ registerUiWorkflowNode({
       then: { type: 'array', description: 'Steps to run when the condition matches.' },
       else: { type: 'array', description: 'Steps to run when it does not.' },
     },
+  },
+  execute: ({ config, ctx }) => {
+    // Evaluated locally — no round-trip. matches is only trustworthy when
+    // nothing was undecidable, and an undecidable condition here means the
+    // SAME thing it means for Advanced Settings: the rule did not match.
+    // Most often that is just an empty field with nothing to compare yet,
+    // not a reason to guess.
+    const { matches } = evaluateFilterGroup(config.when, { values: conditionValues(ctx) })
+    return { kind: 'enter', steps: matches ? config.then : config.else }
   },
   parseConfig: parseConditionConfig,
   createDefaultConfig: emptyConditionConfig,
