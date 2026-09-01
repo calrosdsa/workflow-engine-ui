@@ -706,6 +706,245 @@ export interface FormSchema {
 }
 
 // ---------------------------------------------------------------------------
+// Canvas envelopes — exported to the backend's /meta/catalog (ui-catalog)
+// ---------------------------------------------------------------------------
+//
+// The authoring vocabulary for the form CANVAS itself: what one element, one
+// section, and the layout root look like — including per-element Advanced
+// Settings rules. Same placement rule as the envelopes above: these live
+// directly below the interfaces they describe, because same-file locality is
+// the only drift defense TypeScript interfaces allow. Every enum inside them
+// is DERIVED from a Record<Union, description> map, so adding a union value
+// fails compilation here until its description exists — the same trick
+// TAB_ORIENTATION_DESCRIPTIONS uses.
+//
+// With these in the generated ui-catalog, an agent driving the MCP can author
+// real layouts (multi-column sections, headings, per-element rules) in
+// create_form/update_form's `layout` argument instead of settling for the
+// synthesized single-column default.
+
+export const VISIBILITY_MODE_DESCRIPTIONS: Record<VisibilityMode, string> = {
+  always: 'Always shown.',
+  hidden: 'Never shown (still stored and submitted).',
+  expression: "Shown only while behavior.visibleWhen's expression is true.",
+}
+
+export const REQUIRED_MODE_DESCRIPTIONS: Record<RequiredMode, string> = {
+  always: 'Always required.',
+  optional: 'Never required.',
+  expression: "Required only while behavior.requiredWhen's expression is true.",
+}
+
+export const READ_ONLY_MODE_DESCRIPTIONS: Record<ReadOnlyMode, string> = {
+  editable: 'Editable. The default.',
+  always: 'Always read-only.',
+  expression: "Read-only only while behavior.readOnlyWhen's expression is true.",
+}
+
+export const ADVANCED_SETTING_AUDIENCE_DESCRIPTIONS: Record<AdvancedSettingAudience, string> = {
+  everyone: 'The rule applies to every user.',
+  specific_people: "Applies only to the users listed in 'userIds'.",
+  specific_role: "Applies only to users holding a role listed in 'roleIds' (resolve ids via the roles API / list_roles).",
+}
+
+export const ADVANCED_SETTING_ACTION_DESCRIPTIONS: Record<AdvancedSettingActionType, string> = {
+  hidden_in_ui: 'Hide the element in the form UI (the value is still stored). Presentation only — not a security boundary; use a role’s hidden_fields for real masking.',
+  read_only: 'Render the element read-only.',
+  show_exception: 'Invert the audience’s restriction — e.g. “hidden for everyone, except this role”.',
+  clear_value: 'Clear the element’s value when the conditions match.',
+}
+
+export const ADVANCED_SETTING_OP_DESCRIPTIONS: Record<AdvancedSettingCompareOp, string> = {
+  eq: 'Field equals the value.',
+  neq: 'Field does not equal the value.',
+  gt: 'Field is greater than the value.',
+  gte: 'Field is greater than or equal to the value.',
+  lt: 'Field is less than the value.',
+  lte: 'Field is less than or equal to the value.',
+  contains: 'Field contains the value as a substring.',
+  starts_with: 'Field begins with the value.',
+  in: 'Field matches any entry in the value, which must be a list.',
+  is_null: 'Field has no value. Takes no comparison value.',
+  not_null: 'Field has any value. Takes no comparison value.',
+}
+
+/** One per-element Advanced Setting rule (see the Advanced Settings section
+ *  above): WHO it applies to, WHEN it applies, and what it does. */
+export const ADVANCED_SETTING_SCHEMA: ConfigSchema = {
+  type: 'object',
+  description: 'A named, audience-scoped, conditional rule on one element. Unlike behavior.visibleWhen (one expression, every filler), a rule targets WHO (everyone / specific people / a role) and WHEN (an AND/OR tree over this form’s own fields), and can carry several actions at once.',
+  required: ['id', 'name', 'appliesTo', 'when', 'actions'],
+  properties: {
+    id: { type: 'string', description: 'Any unique string.' },
+    name: { type: 'string', description: 'Human-readable rule name shown in the builder.' },
+    appliesTo: { type: 'string', enum: Object.keys(ADVANCED_SETTING_AUDIENCE_DESCRIPTIONS) },
+    userIds: { type: 'array', items: { type: 'string' }, description: "User ids — when appliesTo is 'specific_people'." },
+    roleIds: { type: 'array', items: { type: 'string' }, description: "Role ids — when appliesTo is 'specific_role'." },
+    when: {
+      type: 'object',
+      description: 'AND/OR condition tree over this form’s own field values at fill time. Empty conditions and groups mean the rule always applies.',
+      required: ['id', 'combinator', 'conditions', 'groups'],
+      properties: {
+        id: { type: 'string' },
+        combinator: { type: 'string', enum: ['and', 'or'] },
+        conditions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['id', 'field', 'op'],
+            properties: {
+              id: { type: 'string' },
+              field: { type: 'string', description: 'This form’s own field key.' },
+              op: { type: 'string', enum: Object.keys(ADVANCED_SETTING_OP_DESCRIPTIONS) },
+              value: { description: 'Comparison value. Omit for is_null/not_null.' },
+            },
+          },
+        },
+        groups: { type: 'array', description: 'Nested groups of the same shape.', items: { type: 'object' } },
+      },
+    },
+    actions: {
+      type: 'array',
+      description: 'At least one action to perform when the rule matches.',
+      items: {
+        type: 'object',
+        required: ['id', 'type'],
+        properties: {
+          id: { type: 'string' },
+          type: { type: 'string', enum: Object.keys(ADVANCED_SETTING_ACTION_DESCRIPTIONS) },
+        },
+      },
+    },
+  },
+}
+
+/** One canvas element — a field or a presentational block. The authoring
+ *  companion to FormElement above; per-component applicability mirrors what
+ *  projection.ts reads back, so an element authored from this schema
+ *  round-trips to the identical backend field. */
+export const FORM_ELEMENT_ENVELOPE_SCHEMA: ConfigSchema = {
+  type: 'object',
+  description: 'One element on the canvas. ‘component’ comes from canvas.components; data-bearing components project to a backend field whose wire name is ‘key’.',
+  required: ['id', 'component', 'label', 'key', 'validation', 'behavior', 'appearance', 'binding'],
+  properties: {
+    id: { type: 'string', description: 'Any unique string.' },
+    component: { type: 'string', description: 'A type from canvas.components.' },
+    label: { type: 'string' },
+    description: { type: 'string' },
+    placeholder: { type: 'string' },
+    helpText: { type: 'string' },
+    key: { type: 'string', description: 'The wire field name (matches FieldDef.name). Freely renameable.' },
+    column: { type: 'string', description: 'Immutable physical column, backend-assigned. Echo it back when editing; never invent one.' },
+    unique: { type: 'boolean' },
+    defaultValue: { description: 'Static default value.' },
+    isRecordTitle: { type: 'boolean', description: 'Part of the record’s human-readable title (scalar components only).' },
+    searchable: { type: 'boolean', description: 'Included in full-text search (text-like components only).' },
+    options: {
+      type: 'array',
+      description: 'Choice components (select/radio/multiselect/autocomplete).',
+      items: { type: 'object', required: ['label', 'value'], properties: { label: { type: 'string' }, value: { type: 'string' } } },
+    },
+    formRef: { type: 'string', description: "‘form’ component: the referenced form’s id. ‘line_item_count’: the target grid’s child form id." },
+    displayField: { type: 'string', description: '‘form’ component: which field of the referenced form to display/search.' },
+    aggregateFn: { type: 'string', enum: ['count', 'sum', 'avg', 'min', 'max'], description: '‘line_item_count’ only.' },
+    aggregateField: { type: 'string', description: '‘line_item_count’: numeric field on the target grid; required unless aggregateFn is count.' },
+    childFormId: { type: 'string', description: '‘line_items’ (generated mode): backend-managed child form id. Echo, never invent.' },
+    sourceMode: { type: 'string', enum: ['generated', 'existing'], description: '‘line_items’: generated hidden child form (default) vs adopting an existing form as the grid.' },
+    adoptedFormRef: { type: 'string', description: '‘line_items’ (existing mode): the adopted form’s id.' },
+    adoptedReferenceField: { type: 'string', description: '‘line_items’ (existing mode): a reference field ON the adopted form pointing back at this parent.' },
+    lineItemColumns: { type: 'array', description: '‘line_items’ (generated mode): the row editor’s own sections — same section shape as canvas.section_envelope.', items: { type: 'object' } },
+    lineItemConfig: { type: 'object', description: '‘line_items’: grid display/behavior toggles (allowAddRows, stickyHeader, displayMode…).' },
+    content: { type: 'string', description: 'heading/paragraph text.' },
+    level: { type: 'integer', enum: [1, 2, 3], description: 'heading level.' },
+    height: { type: 'integer', description: 'spacer height in px.' },
+    validation: {
+      type: 'object',
+      properties: {
+        minLength: { type: 'integer' }, maxLength: { type: 'integer' },
+        min: { type: 'number' }, max: { type: 'number' },
+        pattern: { type: 'string', description: 'Regex.' },
+        customMessage: { type: 'string' },
+        maxFileSizeBytes: { type: 'integer', description: 'file/image only; bytes.' },
+        allowedMimeTypes: { type: 'array', items: { type: 'string' }, description: 'file/image only.' },
+      },
+    },
+    behavior: {
+      type: 'object',
+      required: ['visibility', 'required', 'readOnly'],
+      properties: {
+        visibility: { type: 'string', enum: Object.keys(VISIBILITY_MODE_DESCRIPTIONS) },
+        visibleWhen: { type: 'string', description: 'Expression, when visibility is ‘expression’.' },
+        required: { type: 'string', enum: Object.keys(REQUIRED_MODE_DESCRIPTIONS) },
+        requiredWhen: { type: 'string' },
+        readOnly: { type: 'string', enum: Object.keys(READ_ONLY_MODE_DESCRIPTIONS) },
+        readOnlyWhen: { type: 'string' },
+        disabled: { type: 'boolean' },
+        dynamicDefault: { type: 'string', description: 'Expression producing the default value.' },
+      },
+    },
+    appearance: {
+      type: 'object',
+      properties: {
+        width: { type: 'string', enum: ['full', 'half', 'third', 'quarter', 'auto'] },
+        colSpan: { type: 'integer' }, cssClass: { type: 'string' }, tooltip: { type: 'string' },
+        prefix: { type: 'string' }, suffix: { type: 'string' }, icon: { type: 'string', description: 'Lucide icon name.' },
+      },
+    },
+    binding: {
+      type: 'object',
+      required: ['source'],
+      properties: {
+        source: { type: 'string', enum: ['none', 'form_field', 'workflow_variable', 'expression', 'option_source'] },
+        ref: { type: 'string' }, expression: { type: 'string' }, optionSource: { type: 'string' },
+      },
+    },
+    advancedSettings: {
+      type: 'array',
+      description: 'Named, audience-scoped conditional rules on this element.',
+      items: ADVANCED_SETTING_SCHEMA,
+    },
+  },
+}
+
+/** One canvas section of columns of elements. */
+export const FORM_SECTION_ENVELOPE_SCHEMA: ConfigSchema = {
+  type: 'object',
+  required: ['id', 'title', 'layout', 'columns'],
+  properties: {
+    id: { type: 'string', description: 'Any unique string.' },
+    title: { type: 'string' },
+    description: { type: 'string' },
+    layout: { type: 'string', enum: Object.keys(COLUMN_LAYOUTS), description: 'Column arrangement — see canvas.column_layouts. columns.length and each ratio must match it.' },
+    columns: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['id', 'ratio', 'elements'],
+        properties: {
+          id: { type: 'string' },
+          ratio: { type: 'number', description: 'Flex ratio from the chosen layout.' },
+          elements: { type: 'array', description: 'Elements in order — each per canvas.element_envelope.', items: { type: 'object' } },
+        },
+      },
+    },
+    collapsed: { type: 'boolean', description: 'Editor-only convenience.' },
+  },
+}
+
+/** The layout root — what the backend `layout` column stores. */
+export const FORM_LAYOUT_ROOT_SCHEMA: ConfigSchema = {
+  type: 'object',
+  description: 'The complete builder schema persisted in the form’s layout column. Sections per canvas.section_envelope; settings per forms.detail_page’s envelopes plus createUser.',
+  required: ['version', 'sections'],
+  properties: {
+    version: { type: 'integer', enum: [1] },
+    sections: { type: 'array', items: { type: 'object', description: 'Per canvas.section_envelope.' } },
+    variables: { type: 'array', items: { type: 'object', required: ['name', 'type'], properties: { name: { type: 'string' }, type: { type: 'string' } } } },
+    settings: { type: 'object', description: 'Form-wide settings: createUser (mirrors the create_user_* form arguments), detailTabs, detailLayout, tabOrientation, customActions — shapes under forms.detail_page.' },
+  },
+}
+
+// ---------------------------------------------------------------------------
 // Construction helpers
 // ---------------------------------------------------------------------------
 

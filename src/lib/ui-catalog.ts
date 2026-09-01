@@ -33,10 +33,18 @@ import '@/features/forms/runtime/detail-tabs'
 import { allCustomActions } from '@/features/forms/runtime/custom-actions/registry'
 import { allDetailTabs } from '@/features/forms/runtime/detail-tabs/registry'
 import { MENU_TYPE_REGISTRY } from '@/features/menus/menu-registry'
+import { COMPONENT_REGISTRY } from '@/features/form-builder/component-registry'
 import {
+  ADVANCED_SETTING_ACTION_DESCRIPTIONS,
+  ADVANCED_SETTING_AUDIENCE_DESCRIPTIONS,
+  ADVANCED_SETTING_OP_DESCRIPTIONS,
+  COLUMN_LAYOUTS,
   CUSTOM_ACTION_ENVELOPE_SCHEMA,
   DETAIL_PAGE_LAYOUTS,
   DETAIL_TAB_ENVELOPE_SCHEMA,
+  FORM_ELEMENT_ENVELOPE_SCHEMA,
+  FORM_LAYOUT_ROOT_SCHEMA,
+  FORM_SECTION_ENVELOPE_SCHEMA,
   type DetailTabOrientation,
 } from '@/features/form-builder/schema'
 
@@ -100,6 +108,40 @@ export function buildUiCatalog() {
     })),
     detail_tab_envelope: DETAIL_TAB_ENVELOPE_SCHEMA,
     custom_action_envelope: CUSTOM_ACTION_ENVELOPE_SCHEMA,
+    // The form CANVAS vocabulary: every placeable component (straight off the
+    // builder's own palette registry) plus the authoring envelopes for the
+    // layout JSON — element, section, root — including per-element Advanced
+    // Settings. This is what lets an agent author create_form/update_form's
+    // `layout` argument instead of settling for the synthesized single-column
+    // default. icon/configPanel are builder-internal and deliberately omitted.
+    canvas: {
+      components: byType(
+        Object.values(COMPONENT_REGISTRY).map((c) => ({
+          type: c.type,
+          label: c.label,
+          category: c.category,
+          data_bearing: c.dataBearing,
+          ...(c.fieldType ? { field_type: c.fieldType } : {}),
+          summary: c.description,
+        })),
+      ),
+      column_layouts: Object.entries(COLUMN_LAYOUTS).map(([value, def]) => ({
+        value,
+        description: `${def.label}. Column flex ratios: ${def.ratios.join(':')} — a section using this layout needs exactly ${def.ratios.length} column(s) with these ratios in order.`,
+      })),
+      layout_envelope: FORM_LAYOUT_ROOT_SCHEMA,
+      section_envelope: FORM_SECTION_ENVELOPE_SCHEMA,
+      element_envelope: FORM_ELEMENT_ENVELOPE_SCHEMA,
+      advanced_setting_audiences: Object.entries(ADVANCED_SETTING_AUDIENCE_DESCRIPTIONS).map(
+        ([value, description]) => ({ value, description }),
+      ),
+      advanced_setting_actions: Object.entries(ADVANCED_SETTING_ACTION_DESCRIPTIONS).map(
+        ([value, description]) => ({ value, description }),
+      ),
+      advanced_setting_ops: Object.entries(ADVANCED_SETTING_OP_DESCRIPTIONS).map(
+        ([value, description]) => ({ value, description }),
+      ),
+    },
   }
 }
 

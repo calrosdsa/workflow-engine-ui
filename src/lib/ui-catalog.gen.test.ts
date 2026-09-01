@@ -45,4 +45,40 @@ describe('ui-catalog generation', () => {
       }
     }
   })
+
+  it('the canvas vocabulary is complete and self-describing', () => {
+    const canvas = buildUiCatalog().canvas
+
+    // Ranges over COMPONENT_REGISTRY, so a palette addition can't be skipped;
+    // the floor just catches the registry import breaking silently.
+    expect(canvas.components.length).toBeGreaterThanOrEqual(20)
+    for (const c of canvas.components) {
+      expect(c.summary, `${c.type} summary`).toBeTruthy()
+      // data-bearing components project to a backend field, which needs a
+      // type — line_item_count's virtual type included. The one deliberate
+      // exception is line_items: its DATA lives on the child form's fields,
+      // not on a field of its own.
+      if (c.data_bearing && c.type !== 'line_items') {
+        expect(c.field_type, `${c.type} field_type`).toBeTruthy()
+      }
+    }
+
+    for (const envelope of [canvas.layout_envelope, canvas.section_envelope, canvas.element_envelope]) {
+      expect(envelope.type).toBe('object')
+      expect(Object.keys(envelope.properties ?? {}).length).toBeGreaterThan(0)
+    }
+
+    // The Advanced Settings grammar: enum lists are derived from the
+    // compile-enforced description Records, and the element envelope must
+    // agree with them (it embeds the same Object.keys).
+    expect(canvas.advanced_setting_ops.length).toBeGreaterThanOrEqual(11)
+    expect(canvas.advanced_setting_audiences.map((a) => a.value)).toContain('specific_role')
+    expect(canvas.advanced_setting_actions.map((a) => a.value)).toContain('hidden_in_ui')
+    const rule = canvas.element_envelope.properties?.advancedSettings as {
+      items?: { properties?: { appliesTo?: { enum?: string[] } } }
+    }
+    expect(rule.items?.properties?.appliesTo?.enum).toEqual(
+      canvas.advanced_setting_audiences.map((a) => a.value),
+    )
+  })
 })
