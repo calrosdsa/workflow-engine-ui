@@ -134,8 +134,8 @@ export function composeSrcDoc({ html, themeValues, allowedHosts, sourceIds }: Sr
 <meta http-equiv="Content-Security-Policy" content="${buildCsp(allowedHosts)}">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<style id="ab-theme">${themeCss}</style>
 <style>
-${themeCss}
 html,body{margin:0;padding:0;background:hsl(var(--background));color:hsl(var(--foreground));font-family:system-ui,sans-serif;}
 *,*::before,*::after{box-sizing:border-box;}
 </style>
@@ -162,9 +162,18 @@ function bridgeScript(sourceIds: readonly string[]): string {
   const known = JSON.stringify([...sourceIds])
   return `(function(){
 var KNOWN=${known},pending={},n=0;
+function applyTheme(css){
+  var el=document.getElementById('ab-theme');
+  if(!el){el=document.createElement('style');el.id='ab-theme';document.head.appendChild(el);}
+  el.textContent=css;
+}
 window.addEventListener('message',function(e){
   if(e.source!==window.parent)return;
-  var m=e.data;if(!m||!m.requestId)return;
+  var m=e.data;if(!m)return;
+  // Theme updates carry no requestId — handled before the correlation
+  // check below, which exists only for request/response pairs.
+  if(m.type==='appbuilder:theme'){applyTheme(m.css);return;}
+  if(!m.requestId)return;
   var p=pending[m.requestId];if(!p)return;
   delete pending[m.requestId];
   if(m.type==='appbuilder:error')p.reject(new Error(m.message||m.code||'request failed'));

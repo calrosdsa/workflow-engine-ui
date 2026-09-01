@@ -1,16 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { formsApi } from '@/features/forms/api'
-import { composeSrcDoc, THEME_TOKENS } from '../html/srcdoc'
+import { composeSrcDoc, buildThemeCss, THEME_TOKENS } from '../html/srcdoc'
 import type { MenuRuntimeRendererProps } from '../menu-registry'
 import type { HtmlMenuConfig, HtmlDataSource, HtmlWriteTarget } from '../types'
 
-/** Reads the host's resolved theme custom properties, to be mirrored into
- *  the frame. Resolved rather than declared: ThemeProvider sets these with
- *  element.style.setProperty from the app's saved theme, and the values that
- *  matter are whatever won after light/dark resolution. */
-function readThemeTokens(): Record<string, string> {
-  if (typeof window === 'undefined') return {}
-  const computed = getComputedStyle(document.documentElement)
+/** Reads the resolved theme custom properties at `el`'s position in the
+ *  tree, to be mirrored into the frame.
+ *
+ *  Read from `el`, NOT document.documentElement. The runtime scopes its
+ *  ThemeProvider to #runtime-root (runtime-router.tsx) rather than :root, so
+ *  reading from documentElement returns index.css's base defaults — the
+ *  builder's palette — instead of the app's configured theme. Custom
+ *  properties inherit, so resolving them against an element inside the
+ *  themed subtree picks up whichever provider actually applies, with no
+ *  knowledge of where that provider mounted. */
+function readThemeTokens(el: Element | null): Record<string, string> {
+  if (typeof window === 'undefined' || !el) return {}
+  const computed = getComputedStyle(el)
   const out: Record<string, string> = {}
   for (const token of THEME_TOKENS) {
     const value = computed.getPropertyValue(token)
@@ -53,17 +59,19 @@ interface WriteMessage {
 export function HtmlMenuRuntime({ menu }: MenuRuntimeRendererProps) {
   const config = menu.config as HtmlMenuConfig
   const frameRef = useRef<HTMLIFrameElement>(null)
-  // Read once per mount rather than on every render: the tokens only change
-  // when the theme does, and re-composing srcdoc remounts the whole page,
-  // discarding whatever state the author's script had built up.
-  const [themeValues] = useState(readThemeTokens)
+  const hostRef = useRef<HTMLDivElement>(null)
+  // Null until the host element exists and its inherited tokens can be
+  // resolved. The iframe waits for it rather than mounting with the wrong
+  // palette and re-composing: re-composing srcdoc remounts the page and
+  // discards whatever state the author's script had built up.
+  const [themeValues, setThemeValues] = useState<Record<string, string> | null>(null)
 
   const sources = useMemo<HtmlDataSource[]>(() => config.data_sources ?? [], [config.data_sources])
   const targets = useMemo<HtmlWriteTarget[]>(() => config.write_targets ?? [], [config.write_targets])
 
   const srcDoc = useMemo(() => composeSrcDoc({
     html: config.html ?? '',
-    themeValues,
+    themeValues: themeValues ?? {},
     allowedHosts: config.allowed_hosts ?? [],
     sourceIds: sources.map((s) => s.id),
   }), [config.html, config.allowed_hosts, sources, themeValues])
@@ -75,6 +83,47 @@ export function HtmlMenuRuntime({ menu }: MenuRuntimeRendererProps) {
     // we only ever reply to a request the frame made, carrying data the
     // author already declared it may see.
     frameRef.current?.contentWindow?.postMessage(payload, '*')
+  }, [])
+
+  // Deferred one frame on purpose. ThemeProvider writes its custom
+  // properties in a PASSIVE effect on an ancestor (#runtime-root), and React
+  // runs child effects before parent ones — so reading synchronously here
+  // lands before the provider has written anything, and inherits :root's
+  // index.css defaults, i.e. the builder's palette instead of the app's.
+  // Live-reproduced: the frame rendered teal (175 100% 37%) while the app
+  // was indigo (239 91% 74%). The observer below is the backstop if this
+  // still reads early, since it corrects without remounting the page.
+  useLayoutEffect(() => {
+    const id = requestAnimationFrame(() => setThemeValues(readThemeTokens(hostRef.current)))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  // Keep the frame in step when the viewer flips light/dark, or the app's
+  // theme is edited live. ThemeProvider rewrites the tokens with
+  // setProperty on its scope element (and toggles a `dark` class), so an
+  // attribute observer catches both without this needing to know where that
+  // element is. Pushed over the bridge rather than re-composing srcdoc:
+  // re-composing remounts the page and throws away the author's state.
+  useEffect(() => {
+    if (typeof MutationObserver === 'undefined') return
+    let last = ''
+    const sync = () => {
+      const next = readThemeTokens(hostRef.current)
+      const css = buildThemeCss(next)
+      if (!css || css === last) return
+      last = css
+      frameRef.current?.contentWindow?.postMessage({ type: 'appbuilder:theme', css }, '*')
+    }
+    const observer = new MutationObserver(sync)
+    // Also run once on attach: if the theme was already applied before this
+    // menu mounted (navigating between menus), no mutation will fire.
+    sync()
+    observer.observe(document.documentElement, {
+      attributes: true,
+      subtree: true,
+      attributeFilter: ['style', 'class'],
+    })
+    return () => observer.disconnect()
   }, [])
 
   useEffect(() => {
@@ -151,6 +200,11 @@ export function HtmlMenuRuntime({ menu }: MenuRuntimeRendererProps) {
   }
 
   return (
+    // The wrapper is what readThemeTokens resolves against: it sits inside
+    // whatever ThemeProvider subtree this menu renders in, so inherited
+    // custom properties resolve to that app's theme rather than :root's.
+    <div ref={hostRef} className="h-full w-full">
+      {themeValues && (
     <iframe
       ref={frameRef}
       srcDoc={srcDoc}
@@ -161,6 +215,8 @@ export function HtmlMenuRuntime({ menu }: MenuRuntimeRendererProps) {
       title={menu.name}
       className="h-full w-full border-0"
     />
+      )}
+    </div>
   )
 }
 
