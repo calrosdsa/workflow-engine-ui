@@ -25,6 +25,10 @@ export interface UseUiWorkflowHostOptions {
    *  owns the data can re-fetch. The host cannot know which query to
    *  invalidate; the caller does. */
   onRefresh?: () => void
+  /** Observes a navigate step, for callers that have their own post-save
+   *  redirect to stand down. Fires alongside the navigation, not instead of
+   *  it. */
+  onNavigate?: () => void
 }
 
 /** Builds a host bound to the current route.
@@ -34,7 +38,7 @@ export interface UseUiWorkflowHostOptions {
  *  runtime has clientId/appId to navigate with. Rather than pretend, a
  *  navigate step in a surface with no runtime route reports honestly instead
  *  of silently going nowhere. */
-export function useUiWorkflowHost({ onRefresh }: UseUiWorkflowHostOptions = {}): UiWorkflowHost {
+export function useUiWorkflowHost({ onRefresh, onNavigate }: UseUiWorkflowHostOptions = {}): UiWorkflowHost {
   const navigate = useNavigate()
   const params = useParams({ strict: false }) as { clientId?: string; appId?: string }
   const { clientId, appId } = params
@@ -45,6 +49,7 @@ export function useUiWorkflowHost({ onRefresh }: UseUiWorkflowHostOptions = {}):
     showMessage: showToast,
 
     navigate: (target) => {
+      onNavigate?.()
       if (target.kind === 'back') {
         window.history.back()
         return
@@ -113,5 +118,5 @@ export function useUiWorkflowHost({ onRefresh }: UseUiWorkflowHostOptions = {}):
         await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
       }
     },
-  }), [clientId, appId, navigate, refresh, onRefresh])
+  }), [clientId, appId, navigate, refresh, onRefresh, onNavigate])
 }

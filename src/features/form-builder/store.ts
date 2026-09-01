@@ -6,6 +6,7 @@ import {
   DETAIL_PAGE_LAYOUTS, DEFAULT_DETAIL_PAGE_ZONE,
   emptySchema, emptyFormSettings, emptyCreateUserSettings,
 } from './schema'
+import type { UiWorkflow } from '@/features/ui-workflows/types'
 import { createElement, createSection, duplicateElement, duplicateSection, relayoutSection, createAccountSection, createParentReferenceField } from './factory'
 import { createTreeStore, findItem, type ItemLocation } from '@/features/builder-kit/tree-store'
 
@@ -104,6 +105,23 @@ export function updateCustomActions(next: CustomActionConfig[]) {
       settings: {
         ...(s.schema.settings ?? emptyFormSettings()),
         customActions: next,
+      },
+    },
+  }))
+  useFormMetaStore.getState().markDirty()
+}
+
+/** Patches FormSchema.settings.afterSubmitWorkflow — the UI workflow run in
+ *  the viewer's browser AFTER a record is saved from this form. Same
+ *  replace-the-whole-value pattern as updateCustomActions above; the editor
+ *  always computes the next full graph itself. */
+export function updateAfterSubmitWorkflow(next: UiWorkflow) {
+  useFormBuilderStore.setState((s) => ({
+    schema: {
+      ...s.schema,
+      settings: {
+        ...(s.schema.settings ?? emptyFormSettings()),
+        afterSubmitWorkflow: next,
       },
     },
   }))

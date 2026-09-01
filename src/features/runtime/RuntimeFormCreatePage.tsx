@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Menu as MenuIcon, X, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react'
 import { runtimeRouter } from '@/runtime-router'
 import { useAuthStore } from '@/stores/auth'
@@ -9,6 +9,7 @@ import { PermissionDeniedPage } from './PermissionDeniedPage'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
 import { useForm as useFormDef, useCreateRecord } from '@/features/forms/hooks'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
+import { useAfterSubmitWorkflow } from '@/features/ui-workflows/useAfterSubmitWorkflow'
 import type { AppSnapshot } from './types'
 
 interface RuntimeFormCreatePageProps {
@@ -42,11 +43,24 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId }: Run
   const { data: form } = useFormDef(formId)
   const createRecord = useCreateRecord(formId)
 
+  // The form's own after-submit steps. Undefined-tolerant on both counts: the
+  // definition may still be loading, and most forms configure none at all.
+  const schema = useMemo(() => (form ? resolveFormSchema(form) : undefined), [form])
+  const runAfterSubmit = useAfterSubmitWorkflow(formId, schema?.settings?.afterSubmitWorkflow)
+
   const handleSubmit = async (values: Record<string, unknown>) => {
     setResult(null)
     try {
       const record = await createRecord.mutateAsync(values)
       setResult('success')
+
+      // Runs AFTER the write and cannot undo it — the record exists by now.
+      // Awaited before this page's own redirect so a workflow that navigates
+      // somewhere specific wins over the generic "go look at what you made"
+      // destination below.
+      const { navigated } = await runAfterSubmit({ ...values, ...record })
+      if (navigated) return
+
       // Same "go look at what you just made" behavior AddMenuRuntime's own
       // redirect option offers, except this page has no configured redirect
       // target (no menu config to read one from) — the one destination that's
@@ -131,7 +145,7 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId }: Run
                   </div>
                 )}
                 <FormRenderer
-                  schema={resolveFormSchema(form)}
+                  schema={schema!}
                   fields={form.fields}
                   formId={form.id}
                   onSubmit={handleSubmit}

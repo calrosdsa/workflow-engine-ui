@@ -20,6 +20,7 @@
 // ---------------------------------------------------------------------------
 
 import type { ConfigSchema } from '@/lib/config-schema'
+import type { UiWorkflow } from '@/features/ui-workflows/types'
 
 export type ComponentType =
   // Text inputs
@@ -527,6 +528,19 @@ export interface FormSettings {
    *  record-detail toolbar with zero custom actions (today's universal
    *  state) is a completely normal, not degraded, configuration. */
   customActions?: CustomActionConfig[]
+  /** UI workflow run AFTER a record is successfully saved from this form.
+   *
+   *  AFTER, deliberately, and it cannot veto: the record is already written
+   *  by the time these steps run, so a failure here reports and stops the
+   *  run without undoing anything. A client-side check that could block a
+   *  write would be authorization living in the browser, which the server
+   *  would still have to enforce anyway — the form's own Before triggers are
+   *  where a genuine veto belongs.
+   *
+   *  Absent means no steps run, which is every form today. Typed as an
+   *  opaque UiWorkflow here for the same reason customActions holds
+   *  `unknown` configs: this layer never interprets it. */
+  afterSubmitWorkflow?: UiWorkflow
 }
 
 export const INVITATION_STATUS_COLUMN: ViewOnlyColumn = { id: 'invitation_status', label: 'Invitation Status' }
@@ -940,7 +954,7 @@ export const FORM_LAYOUT_ROOT_SCHEMA: ConfigSchema = {
     version: { type: 'integer', enum: [1] },
     sections: { type: 'array', items: { type: 'object', description: 'Per canvas.section_envelope.' } },
     variables: { type: 'array', items: { type: 'object', required: ['name', 'type'], properties: { name: { type: 'string' }, type: { type: 'string' } } } },
-    settings: { type: 'object', description: 'Form-wide settings: createUser (mirrors the create_user_* form arguments), detailTabs, detailLayout, tabOrientation, customActions — shapes under forms.detail_page.' },
+    settings: { type: 'object', description: 'Form-wide settings: createUser (mirrors the create_user_* form arguments), detailTabs, detailLayout, tabOrientation, customActions — shapes under forms.detail_page. Plus afterSubmitWorkflow: a UI workflow (ui_workflows.envelope) run in the viewer’s browser AFTER a record is saved from this form; it cannot veto the save, which has already happened by then.' },
   },
 }
 

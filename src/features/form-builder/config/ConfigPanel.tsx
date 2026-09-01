@@ -14,9 +14,11 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, Dr
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useForm as useFormDef } from '@/features/forms/hooks'
-import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection, updateDetailTabs, updateDetailLayout, updateTabOrientation, updateCustomActions } from '../store'
+import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection, updateDetailTabs, updateDetailLayout, updateTabOrientation, updateCustomActions, updateAfterSubmitWorkflow } from '../store'
 import { DetailPageConfigSection } from './DetailPageConfigSection'
 import { CustomActionsConfigSection } from './CustomActionsConfigSection'
+import { UiWorkflowJsonEditor } from '@/features/ui-workflows/UiWorkflowJsonEditor'
+import { emptyUiWorkflow } from '@/features/ui-workflows/types'
 import { DetailPageBuilderOverlay } from '@/features/detail-page-builder/DetailPageBuilderOverlay'
 import { resolveDetailTabs } from '@/features/forms/runtime/detail-tabs/registry'
 import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable } from '../component-registry'
@@ -135,8 +137,10 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
   const [detailPageOpen, setDetailPageOpen] = useState(false)
   const [canvasOpen, setCanvasOpen] = useState(false)
   const [customActionsOpen, setCustomActionsOpen] = useState(false)
+  const [afterSubmitOpen, setAfterSubmitOpen] = useState(false)
   const tabCount = resolveDetailTabs(schema.settings?.detailTabs).filter((t) => !t.hidden).length
   const actionCount = (schema.settings?.customActions ?? []).length
+  const afterSubmitCount = (schema.settings?.afterSubmitWorkflow?.steps ?? []).length
   const fields = useMemo(() => projectToFields(schema).fields, [schema])
 
   return (
@@ -235,8 +239,56 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
               <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Save this form first to configure its custom actions.</p>
             )}
           </div>
+
+          <div className="h-px bg-[hsl(var(--border))]" />
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">After Submit</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
+              Steps that run in the browser once a record is saved from this form. They run after the save and can’t stop it.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAfterSubmitOpen(true)}
+              className="flex w-full items-center justify-between gap-2 text-[12px]"
+            >
+              <span className="flex items-center gap-2">
+                <Zap size={14} className="text-[hsl(var(--muted-foreground))]" />
+                Configure After Submit
+              </span>
+              <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{afterSubmitCount} step{afterSubmitCount === 1 ? '' : 's'}</span>
+            </Button>
+          </div>
         </div>
       </ScrollArea>
+
+      <Drawer open={afterSubmitOpen} onOpenChange={setAfterSubmitOpen}>
+        <DrawerContent size="lg">
+          <DrawerHeader>
+            <DrawerTitle>After Submit</DrawerTitle>
+            <DrawerDescription>
+              Runs in the viewer’s browser once a record is saved from this form — show a message, branch on what
+              was entered, write another record, or hand off to a server workflow. It runs <em>after</em> the save,
+              so it can’t prevent one; put a genuine veto in the form’s Before trigger instead.
+            </DrawerDescription>
+          </DrawerHeader>
+          <ScrollArea className="flex-1">
+            <div className="p-6">
+              <UiWorkflowJsonEditor
+                value={schema.settings?.afterSubmitWorkflow ?? emptyUiWorkflow()}
+                onChange={updateAfterSubmitWorkflow}
+                help="The saved record is in context: conditions can branch on what was entered, and an update step addresses it with no extra configuration."
+              />
+            </div>
+          </ScrollArea>
+          <DrawerFooter className="items-center justify-between sm:justify-between">
+            <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
+              {afterSubmitCount} step{afterSubmitCount === 1 ? '' : 's'} — changes apply instantly, use the builder's Save to persist them.
+            </p>
+            <Button type="button" onClick={() => setAfterSubmitOpen(false)}>Done</Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       {formId && (
         <Drawer open={detailPageOpen} onOpenChange={setDetailPageOpen}>

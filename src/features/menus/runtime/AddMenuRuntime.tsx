@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { CheckCircle2, AlertCircle } from 'lucide-react'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { formsApi } from '@/features/forms/api'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
+import { useAfterSubmitWorkflow } from '@/features/ui-workflows/useAfterSubmitWorkflow'
 import type { Menu, AddMenuConfig } from '../types'
 
 interface AddMenuRuntimeProps {
@@ -27,6 +28,12 @@ export function AddMenuRuntime({ menu, onNavigate }: AddMenuRuntimeProps) {
   // (reasonably, to enter the next record) silently wrote an exact duplicate.
   const [formGeneration, setFormGeneration] = useState(0)
 
+  // Resolved above the early returns below, because the hook that reads it
+  // cannot be called conditionally. Both are undefined-tolerant while the
+  // form is still loading.
+  const schema = useMemo(() => (form ? resolveFormSchema(form) : undefined), [form])
+  const runAfterSubmit = useAfterSubmitWorkflow(form?.id, schema?.settings?.afterSubmitWorkflow)
+
   if (isLoading) return null
   if (!form) return <div className="p-6 text-sm" style={{ color: 'hsl(var(--destructive))' }}>The form this menu points to is unavailable.</div>
 
@@ -34,10 +41,18 @@ export function AddMenuRuntime({ menu, onNavigate }: AddMenuRuntimeProps) {
     setSubmitting(true)
     setResult(null)
     try {
-      await formsApi.createRecord(form.id, values)
+      const created = await formsApi.createRecord(form.id, values)
       setResult('success')
       setFormGeneration((n) => n + 1)
-      if (config.navigate_after_save && config.success_behavior === 'redirect' && config.redirect_menu_slug) {
+
+      // The form's after-submit steps run here, AFTER the write, and cannot
+      // undo it — the record exists by now. Awaited before this menu's own
+      // redirect so a workflow that navigates somewhere specific wins over
+      // the menu's generic destination; two navigations racing on one click
+      // would land the viewer wherever the second happens to resolve.
+      const { navigated } = await runAfterSubmit({ ...values, ...created })
+
+      if (!navigated && config.navigate_after_save && config.success_behavior === 'redirect' && config.redirect_menu_slug) {
         onNavigate?.(config.redirect_menu_slug)
       }
     } catch {
@@ -68,7 +83,7 @@ export function AddMenuRuntime({ menu, onNavigate }: AddMenuRuntimeProps) {
 
       <FormRenderer
         key={formGeneration}
-        schema={resolveFormSchema(form)}
+        schema={schema!}
         fields={form.fields}
         formId={form.id}
         onSubmit={handleSubmit}
