@@ -31,8 +31,11 @@ export function nodeSetupIssue(data: GraphNode): string | null {
       if (assignments.some((a) => !a.variable_name)) return 'Name every assignment'
       return null
     }
-    case 'condition':
-      return (cfg as ConditionConfig | undefined)?.expression ? null : 'Write a branch expression'
+    case 'condition': {
+      const c = cfg as ConditionConfig | undefined
+      const hasRows = !!c?.condition && (c.condition.conditions.length > 0 || c.condition.groups.length > 0)
+      return c?.expression || hasRows ? null : 'Add a condition'
+    }
     case 'subflow': {
       const c = cfg as SubflowConfig | undefined
       return c?.definition_id ? null : 'Pick a workflow to run'

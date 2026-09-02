@@ -138,7 +138,12 @@ export interface SetVariableConfig {
 }
 
 export interface ConditionConfig {
-  expression: string
+  expression?: string
+  /** Structured alternative to `expression` — the same FilterGroup grammar
+   *  filters use, compiled backend-side via ToExprString (a row's field
+   *  resolves as Vars[field]: declared variables and the triggering
+   *  record's overlay both work). Exactly one of the two is set. */
+  condition?: FilterGroup
 }
 
 /** Copies one of the CALLED workflow's final declared variables into one of

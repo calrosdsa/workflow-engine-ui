@@ -13,6 +13,20 @@ import { nanoid } from './nanoid'
 import type { GraphNode, GraphEdge, VariableDecl, NodeType, WorkflowDefinitionGraph } from '../types'
 import { defaultPorts, defaultConfig, defaultLabel } from './node-registry'
 
+// isEditChange reports whether a React Flow change actually EDITS the
+// definition, as opposed to merely reporting canvas bookkeeping.
+//
+// 'dimensions' fires for every node the moment the canvas measures it on
+// mount, and 'select' fires on a plain click — neither changes anything that
+// gets saved. Treating them as edits is what made a freshly-opened, untouched
+// workflow show the "Unsaved" badge immediately: loadDefinition sets
+// isDirty false, then the mount-time measurement pass lands right after it and
+// flipped it straight back to true. Dragging a node ('position') and
+// adding/removing/replacing one are real edits and still mark the graph dirty.
+function isEditChange(change: NodeChange | EdgeChange): boolean {
+  return change.type !== 'dimensions' && change.type !== 'select'
+}
+
 // ---------------------------------------------------------------------------
 // fetch_records serialisation — strip UI-only `id` keys from filter/sort
 // ---------------------------------------------------------------------------
@@ -320,6 +334,10 @@ export interface BuilderState {
   deleteBranch:         (parentId: string, branchRootId: string) => void
   swapLastTwoBranches:  (parentId: string) => void
   updateNodeConfig:     (nodeId: string, config: unknown) => void
+  /** Condition nodes only: switch between the single-output gate (default)
+   *  and an explicit two-path true/false branch. Disabling drops the false
+   *  port AND every edge wired to it. */
+  setConditionFalseBranch: (nodeId: string, enabled: boolean) => void
   updateNodeLabel:      (nodeId: string, label: string) => void
   selectNode:           (id: string | null) => void
   deleteNode:           (nodeId: string) => void
@@ -462,10 +480,16 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
   },
 
   onNodesChange: (changes) =>
-    set((s) => ({ nodes: applyNodeChanges(changes, s.nodes), isDirty: true })),
+    set((s) => ({
+      nodes: applyNodeChanges(changes, s.nodes),
+      isDirty: s.isDirty || changes.some(isEditChange),
+    })),
 
   onEdgesChange: (changes) =>
-    set((s) => ({ edges: applyEdgeChanges(changes, s.edges), isDirty: true })),
+    set((s) => ({
+      edges: applyEdgeChanges(changes, s.edges),
+      isDirty: s.isDirty || changes.some(isEditChange),
+    })),
 
   onConnect: (connection) => {
     pushHistory()
@@ -891,6 +915,24 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
     }))
   },
 
+  setConditionFalseBranch: (nodeId, enabled) => {
+    pushHistory(`branch:${nodeId}`)
+    set((s) => ({
+      nodes: s.nodes.map((n) => {
+        if (n.id !== nodeId || n.data.type !== 'condition') return n
+        const outputs = enabled
+          ? [
+              { id: 'true', label: 'true', kind: 'control' as const },
+              { id: 'false', label: 'false', kind: 'control' as const },
+            ]
+          : [{ id: 'true', label: 'if true', kind: 'control' as const }]
+        return { ...n, data: { ...n.data, outputs } }
+      }),
+      edges: enabled ? s.edges : s.edges.filter((e) => !(e.source === nodeId && e.sourceHandle === 'false')),
+      isDirty: true,
+    }))
+  },
+
   updateNodeLabel: (nodeId, label) => {
     pushHistory(`label:${nodeId}`)
     set((s) => ({
@@ -1027,11 +1069,28 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
       // <Handle> elements while def.edges still reference 'in'/'out', and
       // React Flow silently drops every edge touching that node.
       const ports = defaultPorts(gn.type)
+      let outputs = gn.outputs ?? ports.outputs
+      // A port-less condition node (saved via the raw API/MCP) gets its
+      // outputs inferred from its EDGES: a false-handle edge means it was
+      // authored as a two-path branch, everything else renders as the
+      // single-output gate the default now is. Without this, changing the
+      // default would have hidden the false port under legacy branches'
+      // false edges — React Flow silently drops an edge whose handle
+      // doesn't exist.
+      if (gn.type === 'condition' && !gn.outputs) {
+        const branches = def.edges.some((e) => e.source === gn.id && e.source_handle === 'false')
+        if (branches) {
+          outputs = [
+            { id: 'true', label: 'true', kind: 'control' },
+            { id: 'false', label: 'false', kind: 'control' },
+          ]
+        }
+      }
       return {
         id:       gn.id,
         type:     gn.type,
         position: { x: gn.position.x, y: gn.position.y },
-        data:     { ...gn, configuration: cfg, inputs: gn.inputs ?? ports.inputs, outputs: gn.outputs ?? ports.outputs },
+        data:     { ...gn, configuration: cfg, inputs: gn.inputs ?? ports.inputs, outputs },
       }
     })
 

@@ -136,7 +136,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     label: 'Condition', icon: GitBranch,
     color: 'bg-amber-500', gradient: 'bg-gradient-to-br from-amber-500 to-orange-500',
     accent: '#f59e0b', textColor: 'text-amber-700', ring: 'bg-amber-50',
-    description: 'Branch on a boolean expression',
+    description: 'Continue only when a condition holds (optionally branch true/false)',
     form: ConditionForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseConditionConfig(raw),
     category: 'Logic',
@@ -333,12 +333,15 @@ export function defaultPorts(type: NodeType | (string & {})): { inputs: Port[]; 
     case 'exit':
       return { inputs: [{ id: 'in', label: 'in', kind: 'control' }], outputs: [] }
     case 'condition':
+      // Gate by default: ONE output, followed only when the condition is
+      // true — no false path to wire. The config panel's "two-path branch"
+      // toggle adds the false port back for an explicit if/else
+      // (setConditionFalseBranch in the store). Stored nodes keep whatever
+      // ports they were saved with; loadDefinition infers two ports for
+      // legacy port-less nodes that have a false-handle edge.
       return {
-        inputs:  [{ id: 'in',    label: 'in',    kind: 'control' }],
-        outputs: [
-          { id: 'true',  label: 'true',  kind: 'control' },
-          { id: 'false', label: 'false', kind: 'control' },
-        ],
+        inputs:  [{ id: 'in',   label: 'in',      kind: 'control' }],
+        outputs: [{ id: 'true', label: 'if true', kind: 'control' }],
       }
     case 'merge':
       return {
