@@ -3,12 +3,18 @@ import type { AddMenuConfig, Menu, MenuType, SearchMenuConfig } from '@/features
 import type { MenuSnapshotItem } from '@/features/runtime/types'
 
 // Mirrors internal/auth.HasPermission in the Go backend: exact match, a
-// resource wildcard ("workflows:*"), or the full wildcard ("*"). This is UI
-// polish only — the server independently re-checks every request via
-// RequirePermission, so this never needs to be the actual security boundary.
+// resource wildcard ("workflows:*"), a per-action wildcard on three-part
+// keys ("forms:*:view" grants "forms:<any id>:view" — how a read-only role
+// sees every form's records without holding the write-matching "forms:*"),
+// or the full wildcard ("*"). This is UI polish only — the server
+// independently re-checks every request via RequirePermission, so this never
+// needs to be the actual security boundary.
 export function hasPermission(permissions: string[], need: string): boolean {
-  const [resource] = need.split(':')
-  return permissions.some((p) => p === '*' || p === need || p === `${resource}:*`)
+  const [resource, , action] = need.split(':')
+  const actionWildcard = action === undefined ? undefined : `${resource}:*:${action}`
+  return permissions.some(
+    (p) => p === '*' || p === need || p === `${resource}:*` || (actionWildcard !== undefined && p === actionWildcard),
+  )
 }
 
 export function usePermission(need: string): boolean {

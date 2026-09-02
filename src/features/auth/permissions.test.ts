@@ -21,6 +21,10 @@ const parityCases: { name: string; perms: string[]; need: string; want: boolean 
   { name: 'per-form key exact match', perms: ['forms:abc-123:view'], need: 'forms:abc-123:view', want: true },
   { name: 'per-form key does not match a different form', perms: ['forms:abc-123:view'], need: 'forms:other-form:view', want: false },
   { name: 'forms wildcard matches per-form key', perms: ['forms:*'], need: 'forms:abc-123:view', want: true },
+  { name: 'per-action wildcard matches any form', perms: ['forms:*:view'], need: 'forms:abc-123:view', want: true },
+  { name: 'per-action wildcard is action-scoped', perms: ['forms:*:view'], need: 'forms:abc-123:edit', want: false },
+  { name: 'per-action wildcard does not match flat keys', perms: ['forms:*:view'], need: 'forms:read', want: false },
+  { name: 'per-action wildcard does not cross resources', perms: ['forms:*:view'], need: 'menus:abc-123:view', want: false },
   { name: 'unrelated resource does not match', perms: ['users:write'], need: 'roles:write', want: false },
 ]
 
