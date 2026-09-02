@@ -20,6 +20,7 @@
 // and the audit log all apply exactly as if they had done it by hand. A UI
 // workflow can never do more than the person looking at the screen could.
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
+import type { DialogRequest, DialogAnswer } from './ask-store'
 
 export type UiMessageType = 'info' | 'success' | 'warning' | 'error'
 
@@ -52,13 +53,24 @@ export interface UiWorkflowHost {
   refresh(): void
 
   // -------------------------------------------------------------------------
-  // Live form capabilities — OPTIONAL, because they genuinely don't exist on
-  // every surface. A record action runs against a SAVED record with no form
-  // being filled anywhere, so there is no field to write into. Absent is the
-  // honest representation of that, and the nodes that need these say so
-  // plainly rather than appearing to work; the alternative — a no-op stub on
-  // every host — would make a step silently do nothing.
+  // OPTIONAL capabilities. Each is absent on surfaces that genuinely cannot
+  // provide it, rather than stubbed to a no-op — a step that quietly does
+  // nothing looks like success, and the nodes needing these say so plainly
+  // instead.
   // -------------------------------------------------------------------------
+
+  /** Asks the viewer something and waits — the one capability that SUSPENDS a
+   *  run rather than completing during it. Present wherever a dialog host is
+   *  mounted, which is every app root.
+   *
+   *  Rejects rather than resolving when the run is aborted: a cancelled run
+   *  did not get a "no" from anyone, and reporting it as one would let the
+   *  steps after a cancel branch run on a decision nobody made. */
+  askUser?(request: DialogRequest, signal?: AbortSignal): Promise<DialogAnswer>
+
+  // Live-form capabilities: absent unless a form is actually being filled. A
+  // record action runs against a SAVED record, where there is no field on
+  // screen to write into.
 
   /** Writes a value into the form currently being filled. */
   setFieldValue?(key: string, value: unknown): void

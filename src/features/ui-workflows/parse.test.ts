@@ -147,7 +147,7 @@ describe('the registry contract', () => {
     expect(types).toEqual([
       'condition', 'create_record', 'fetch_records', 'navigate',
       'run_workflow', 'set_field', 'set_field_state', 'set_variable',
-      'show_message', 'update_record',
+      'show_dialog', 'show_message', 'update_record',
     ])
   })
 

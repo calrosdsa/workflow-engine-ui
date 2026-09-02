@@ -8,6 +8,7 @@ import { useCallback, useMemo } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { formsApi } from '@/features/forms/api'
+import { ask } from './ask-store'
 import { executionsApi } from '@/features/executions/api'
 import type { UiMessageType, UiWorkflowHost } from './host'
 
@@ -35,14 +36,11 @@ export interface UseUiWorkflowHostOptions {
   formCapabilities?: Pick<UiWorkflowHost, 'setFieldValue' | 'setFieldState'>
 }
 
-/** Builds a host bound to the current route.
- *
- *  Route params are read non-strictly on purpose: this same toolbar renders
- *  under BOTH routers (the builder's preview and the runtime), and only the
- *  runtime has clientId/appId to navigate with. Rather than pretend, a
- *  navigate step in a surface with no runtime route reports honestly instead
- *  of silently going nowhere. */
 /** Router access that tolerates there being no router.
+ *
+ *  Params are also read non-strictly: the same toolbar renders under BOTH
+ *  routers (the builder's preview and the runtime), and only the runtime has
+ *  clientId/appId to navigate with.
  *
  *  FormRenderer builds a host for its field-change workflow, and FormRenderer
  *  is a leaf renderer that has always been mountable on its own — under test,
@@ -85,6 +83,9 @@ export function useUiWorkflowHost({ onRefresh, onNavigate, formCapabilities }: U
 
   return useMemo<UiWorkflowHost>(() => ({
     showMessage: showToast,
+    // Always available: the dialog host is mounted at every app root, so a
+    // step can ask from any surface a workflow can start on.
+    askUser: ask,
     // Spread rather than assigned so the KEYS stay absent when there is no
     // form — the nodes check for the method's presence, and an explicit
     // `undefined` would read the same but is easier to leave behind by

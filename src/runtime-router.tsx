@@ -13,6 +13,7 @@ import { runtimeApi } from '@/features/runtime/api'
 import { ThemeProvider } from '@/features/theme/ThemeProvider'
 import { mergeTheme } from '@/features/theme/default-theme'
 import { Toaster } from '@/components/ui/sonner'
+import { UiWorkflowDialogHost } from '@/features/ui-workflows/UiWorkflowDialogHost'
 import { RuntimeAppShell } from '@/features/runtime/RuntimeAppShell'
 import { ChatLauncher } from '@/features/runtime/ChatLauncher'
 import { RuntimeRecordPage } from '@/features/runtime/RuntimeRecordPage'
@@ -237,6 +238,11 @@ function RuntimeAppRouteComponent() {
               bottom margin, simpler than conditioning this on ChatLauncher's
               own (async) visibility check. */}
           <Toaster position="bottom-right" offset={{ bottom: 88 }} />
+          {/* Mounted beside the Toaster for the same reason: both are
+              app-level overlays driven by a module-level call from outside
+              the component tree. This is what lets a workflow step suspend
+              and ask the viewer something. */}
+          <UiWorkflowDialogHost />
           <ChatLauncher />
         </ThemeProvider>
       </RuntimeDraftPreviewContext.Provider>
