@@ -13,7 +13,7 @@ registerDetailTab({
     type: 'object',
     required: ['schema'],
     properties: {
-      schema: { type: 'object', description: 'DashboardSchema — the widget grid, same shape a dashboard menu stores. Opaque to the backend.' },
+      schema: { type: 'object', description: 'DashboardSchema — the widget grid, same shape a dashboard menu stores; authored against this catalog’s `dashboards` section (envelope, widget_envelope, widgets). Widgets rendering here may read the record context — e.g. the table widget’s scopeToRecord.' },
     },
   },
   parseConfig: parseCustomTabConfig,

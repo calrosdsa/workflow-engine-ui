@@ -1,3 +1,5 @@
+import type { ConfigSchema } from '@/lib/config-schema'
+
 export type CustomHtmlMode = 'inline' | 'sandbox'
 
 export interface CustomHtmlWidgetConfig {
@@ -19,4 +21,14 @@ export function parseCustomHtmlConfig(raw: unknown): CustomHtmlWidgetConfig {
 
 export function createDefaultCustomHtmlConfig(): CustomHtmlWidgetConfig {
   return { mode: 'inline', html: '' }
+}
+
+export const CUSTOM_HTML_CONFIG_SCHEMA: ConfigSchema = {
+  type: 'object',
+  description: "Author-written HTML rendered inside the tile. 'inline' renders sanitized markup in the page (no scripts); 'sandbox' renders it in a sandboxed iframe where scripts run but nothing reaches the app.",
+  required: ['mode', 'html'],
+  properties: {
+    mode: { type: 'string', enum: ['inline', 'sandbox'] },
+    html: { type: 'string', description: 'The markup. For a full page with data access, use an html MENU instead — this widget has no data sources.' },
+  },
 }

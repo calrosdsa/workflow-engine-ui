@@ -30,8 +30,11 @@
 import '@/features/forms/runtime/custom-actions'
 import '@/features/forms/runtime/detail-tabs'
 import '@/features/ui-workflows/nodes'
+import '@/features/dashboard/widgets'
 
 import { allCustomActions } from '@/features/forms/runtime/custom-actions/registry'
+import { allWidgets } from '@/features/dashboard/widget-registry'
+import { DASHBOARD_ENVELOPE_SCHEMA, WIDGET_INSTANCE_ENVELOPE_SCHEMA } from '@/features/dashboard/schema'
 import { allDetailTabs } from '@/features/forms/runtime/detail-tabs/registry'
 import { allUiWorkflowNodes } from '@/features/ui-workflows/node-registry'
 import { UI_WORKFLOW_ENVELOPE_SCHEMA, UI_WORKFLOW_STEP_ENVELOPE_SCHEMA } from '@/features/ui-workflows/envelope'
@@ -126,11 +129,37 @@ export function buildUiCatalog() {
         platforms: [...n.platforms],
         summary: n.description,
         config_schema: n.configSchema,
+        // Which config keys hold NESTED STEP LISTS (a branch's then/else) —
+        // what lets a consumer walk every step of a stored graph without
+        // this frontend's childStepLists function.
+        ...(n.childStepListKeys?.length ? { child_step_lists: [...n.childStepListKeys] } : {}),
         ...retirement(n),
       })),
     ),
     ui_workflow_envelope: UI_WORKFLOW_ENVELOPE_SCHEMA,
     ui_workflow_step_envelope: UI_WORKFLOW_STEP_ENVELOPE_SCHEMA,
+    // The DASHBOARD vocabulary: every placeable widget off the widget
+    // registry, plus the envelopes for the grid schema itself. Two surfaces
+    // store that schema — a dashboard menu's config.schema and a detail
+    // page's 'custom' tab — and both were catalog-invisible ("Opaque to the
+    // backend") until this section, meaning an agent could not author either.
+    // default_layout rides along so a generated dashboard starts with each
+    // widget's intended tile size rather than arbitrary guesses.
+    dashboards: {
+      widgets: byType(
+        allWidgets().map((w) => ({
+          type: w.type,
+          label: w.label,
+          category: w.category,
+          summary: w.description,
+          config_schema: w.configSchema,
+          default_layout: w.defaultLayout,
+          default_chrome: w.defaultChrome,
+        })),
+      ),
+      envelope: DASHBOARD_ENVELOPE_SCHEMA,
+      widget_envelope: WIDGET_INSTANCE_ENVELOPE_SCHEMA,
+    },
     // The form CANVAS vocabulary: every placeable component (straight off the
     // builder's own palette registry) plus the authoring envelopes for the
     // layout JSON — element, section, root — including per-element Advanced

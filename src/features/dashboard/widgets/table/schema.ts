@@ -1,3 +1,4 @@
+import type { ConfigSchema } from '@/lib/config-schema'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
 
 export type TableRowClick = 'none' | 'record'
@@ -50,4 +51,25 @@ export function parseTableConfig(raw: unknown): TableWidgetConfig {
 
 export function createDefaultTableConfig(): TableWidgetConfig {
   return { formId: '', columns: [], pageSize: 10, allowUserFilter: false, rowClick: 'record' }
+}
+
+export const TABLE_CONFIG_SCHEMA: ConfigSchema = {
+  type: 'object',
+  description: 'A live records table for one form — a glanceable tile, not a full search page.',
+  required: ['formId', 'columns', 'pageSize'],
+  properties: {
+    formId: { type: 'string', description: 'Id of the form whose records to list.' },
+    columns: { type: 'array', items: { type: 'string' }, description: 'Field names to show as columns, in order.' },
+    defaultFilter: { type: 'object', description: 'A FilterGroup applied server-side. Same grammar as workflow nodes.' },
+    defaultSort: { type: 'array', items: { type: 'object' }, description: 'SortRule list applied by default.' },
+    pageSize: { type: 'integer', description: 'Rows per page. Tile-appropriate default is 10.' },
+    allowUserFilter: { type: 'boolean', description: 'Let the viewer add their own filters on the tile.' },
+    rowClick: { type: 'string', enum: ['none', 'record'], description: "What clicking a row does: nothing, or open the record's detail." },
+    scopeToRecord: {
+      type: 'object',
+      required: ['fieldName'],
+      properties: { fieldName: { type: 'string' } },
+      description: "Only meaningful inside a detail-page 'custom' tab: narrows the table to records whose reference field `fieldName` points at the record being viewed. Ignored on a Dashboard menu.",
+    },
+  },
 }

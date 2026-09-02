@@ -1,3 +1,4 @@
+import type { ConfigSchema } from '@/lib/config-schema'
 import type { FilterGroup } from '@/features/workflows/types'
 import type { AggregateFn, DateBucket } from '@/features/forms/api'
 
@@ -87,4 +88,44 @@ export function createDefaultChartConfig(): ChartWidgetConfig {
     limit: 20,
     legend: true,
   }
+}
+
+export const CHART_CONFIG_SCHEMA: ConfigSchema = {
+  type: 'object',
+  description: "An aggregate chart over one form's records, computed server-side. 'stat' renders a single big number and needs no groupBy.",
+  required: ['formId', 'chartType', 'series'],
+  properties: {
+    formId: { type: 'string', description: 'Id of the form to aggregate.' },
+    chartType: { type: 'string', enum: ['bar', 'line', 'area', 'pie', 'stat'] },
+    groupBy: {
+      type: 'object',
+      required: ['field'],
+      properties: {
+        field: { type: 'string', description: 'Field to group rows by.' },
+        bucket: { type: 'string', enum: ['day', 'week', 'month', 'quarter', 'year'], description: 'For date/datetime fields: bucket rows into this period.' },
+      },
+      description: "Primary dimension. Omit only for chartType 'stat'.",
+    },
+    groupBy2: { type: 'object', description: 'Optional second dimension (same shape as groupBy) — splits each group into stacked/colored sub-series.' },
+    series: {
+      type: 'array',
+      description: 'What to measure per group, in order.',
+      items: {
+        type: 'object',
+        required: ['fn'],
+        properties: {
+          fn: { type: 'string', enum: ['count', 'sum', 'avg', 'min', 'max'] },
+          field: { type: 'string', description: "Numeric field to aggregate. Required for every fn except 'count'." },
+          label: { type: 'string' },
+          color: { type: 'string', description: 'CSS color; omit for the theme palette.' },
+        },
+      },
+    },
+    filter: { type: 'object', description: 'A FilterGroup narrowing which records count. Same grammar as workflow nodes.' },
+    sortBy: { type: 'string', enum: ['group', 'value'] },
+    sortDir: { type: 'string', enum: ['asc', 'desc'] },
+    limit: { type: 'integer', description: 'Maximum groups shown. Default 20.' },
+    legend: { type: 'boolean' },
+    refreshSeconds: { type: 'integer', description: 'Seconds between automatic re-fetches; omit to load once.' },
+  },
 }

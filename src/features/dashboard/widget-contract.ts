@@ -16,6 +16,7 @@
 // widgets/index.ts for the single file that imports every widget module.
 import type { ComponentType } from 'react'
 import type { LucideIcon } from 'lucide-react'
+import type { ConfigSchema } from '@/lib/config-schema'
 import type { Menu } from '@/features/menus/types'
 import type { WidgetInstance, WidgetLayout, WidgetChrome } from './schema'
 
@@ -61,6 +62,12 @@ export interface WidgetDefinition<TConfig = unknown> {
   icon: LucideIcon
   category: WidgetCategory
   description: string
+  /** JSON Schema for this widget's config, exported to the backend's
+   *  /meta/catalog via src/lib/ui-catalog.ts (the `dashboards` section) —
+   *  required so a new widget type cannot register without describing
+   *  itself, same drift guard every other UI registry carries. Write it
+   *  beside the widget's parseConfig/interface in its schema.ts. */
+  configSchema: ConfigSchema
   /** Parses/heals a possibly-stale or malformed config blob into a valid
    *  TConfig, the same defensive role features/page-builder/serialize.ts's
    *  parsePageSchema plays for PageSchema. Must never throw — on anything

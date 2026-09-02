@@ -56,6 +56,7 @@ function ConditionPanel({ config, onChange, fields }: UiWorkflowNodeConfigPanelP
 registerUiWorkflowNode({
   ConfigPanel: ConditionPanel,
   childStepLabels: ['If true', 'Otherwise'],
+  childStepListKeys: ['then', 'else'],
   setChildStepList: (config, index, steps) => {
     const c = config as ConditionStepConfig
     return index === 0 ? { ...c, then: steps } : { ...c, else: steps }

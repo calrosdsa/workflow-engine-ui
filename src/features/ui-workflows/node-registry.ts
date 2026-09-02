@@ -112,6 +112,12 @@ export interface UiWorkflowNodeDefinition<TConfig = unknown> {
    *  Declared here so traversal never switches on node type — a future
    *  branching node works without touching the walker. */
   childStepLists?: StepListsOf
+  /** The CONFIG KEYS those same lists live under, in the same order — the
+   *  declarative twin of childStepLists, which is a function and so cannot be
+   *  serialized. Exported to /meta/catalog (child_step_lists) so an agent —
+   *  or the MCP server's lint — can walk a stored graph's branches without
+   *  running this frontend. registry-wiring.test.ts holds the two in step. */
+  childStepListKeys?: readonly string[]
   /** Heading for each list childStepLists returns, in the same order. The
    *  editor renders one nested step list per label, so a branching node needs
    *  no editor changes to become editable. */

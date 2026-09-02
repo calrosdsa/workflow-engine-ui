@@ -1,3 +1,5 @@
+import type { ConfigSchema } from '@/lib/config-schema'
+
 export type QuickLinksDisplay = 'list' | 'grid' | 'buttons'
 export type QuickLinkKind = 'menu' | 'url'
 
@@ -39,4 +41,29 @@ export function parseQuickLinksConfig(raw: unknown): QuickLinksWidgetConfig {
 
 export function createDefaultQuickLinksConfig(): QuickLinksWidgetConfig {
   return { display: 'list', links: [] }
+}
+
+export const QUICK_LINKS_CONFIG_SCHEMA: ConfigSchema = {
+  type: 'object',
+  description: 'A set of navigation links, rendered as a list, grid, or button row.',
+  required: ['display', 'links'],
+  properties: {
+    display: { type: 'string', enum: ['list', 'grid', 'buttons'] },
+    links: {
+      type: 'array',
+      description: 'Links in display order.',
+      items: {
+        type: 'object',
+        required: ['id', 'label', 'kind'],
+        properties: {
+          id: { type: 'string', description: 'Stable identifier, unique within the widget.' },
+          label: { type: 'string' },
+          kind: { type: 'string', enum: ['menu', 'url'] },
+          menuSlug: { type: 'string', description: "Target menu's slug. Required when kind is 'menu'." },
+          url: { type: 'string', description: "External URL. Required when kind is 'url'." },
+          newTab: { type: 'boolean', description: "kind 'url' only: open in a new tab." },
+        },
+      },
+    },
+  },
 }

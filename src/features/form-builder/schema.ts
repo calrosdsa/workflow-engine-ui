@@ -964,7 +964,7 @@ export const FORM_LAYOUT_ROOT_SCHEMA: ConfigSchema = {
     version: { type: 'integer', enum: [1] },
     sections: { type: 'array', items: { type: 'object', description: 'Per canvas.section_envelope.' } },
     variables: { type: 'array', items: { type: 'object', required: ['name', 'type'], properties: { name: { type: 'string' }, type: { type: 'string' } } } },
-    settings: { type: 'object', description: 'Form-wide settings: createUser (mirrors the create_user_* form arguments), detailTabs, detailLayout, tabOrientation, customActions — shapes under forms.detail_page. Plus afterSubmitWorkflow: a UI workflow (ui_workflows.envelope) run in the viewer’s browser AFTER a record is saved from this form; it cannot veto the save, which has already happened by then.' },
+    settings: { type: 'object', description: 'Form-wide settings: createUser (mirrors the create_user_* form arguments), detailTabs, detailLayout, tabOrientation, customActions — shapes under forms.detail_page. Plus two UI-workflow attach points (ui_workflows.envelope): afterSubmitWorkflow, run in the viewer’s client AFTER a record is saved from this form (it cannot veto the save, which has already happened by then); and fieldChangeWorkflow — {"watch": ["field_key", ...], "workflow": {...}} — run WHILE the form is being filled, debounced, whenever one of the watched fields changes (an empty watch list means it never runs).' },
   },
 }
 

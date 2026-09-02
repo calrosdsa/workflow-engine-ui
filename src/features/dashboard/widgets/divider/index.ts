@@ -9,6 +9,7 @@ registerWidget<Record<string, never>>({
   icon: Minus,
   category: 'Content',
   description: 'Horizontal line',
+  configSchema: { type: 'object', description: 'A horizontal rule. No configuration.' },
   parseConfig: () => ({}),
   createDefaultConfig: () => ({}),
   defaultLayout: { w: 6, h: 1, minW: 2, minH: 1 },

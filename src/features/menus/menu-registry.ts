@@ -193,7 +193,7 @@ export const MENU_TYPE_REGISTRY: Record<MenuType, MenuTypeRegistryEntry> = {
       description: 'A canvas holding only content widgets (heading, paragraph, image) is a page — pages and dashboards share one model rather than being two features.',
       required: ['schema'],
       properties: {
-        schema: { type: 'object', description: 'DashboardSchema — the widget grid. Opaque to the backend.' },
+        schema: { type: 'object', description: 'DashboardSchema — the widget grid. Authored against this catalog’s `dashboards` section: dashboards.envelope for this object’s shape, dashboards.widget_envelope for each tile, dashboards.widgets for every widget type and its config.' },
       },
     },
     configPanel: DashboardMenuConfigPanel,

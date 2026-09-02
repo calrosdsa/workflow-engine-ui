@@ -12,6 +12,7 @@ function fakeWidget(type: string): WidgetDefinition<{ note: string }> {
     icon: LayoutTemplate,
     category: 'Content',
     description: 'fake',
+    configSchema: { type: 'object' },
     parseConfig: (raw) => (raw && typeof raw === 'object' ? (raw as { note: string }) : { note: '' }),
     createDefaultConfig: () => ({ note: 'default' }),
     defaultLayout: { w: 4, h: 3, minW: 2, minH: 2 },

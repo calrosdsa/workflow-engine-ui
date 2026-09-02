@@ -1,3 +1,5 @@
+import type { ConfigSchema } from '@/lib/config-schema'
+
 export interface EmbedWidgetConfig {
   url: string
   /** When set, references a registered Embedded Integration
@@ -21,4 +23,14 @@ export function parseEmbedConfig(raw: unknown): EmbedWidgetConfig {
 
 export function createDefaultEmbedConfig(): EmbedWidgetConfig {
   return { url: '' }
+}
+
+export const EMBED_CONFIG_SCHEMA: ConfigSchema = {
+  type: 'object',
+  description: 'An external page embedded in an iframe.',
+  required: ['url'],
+  properties: {
+    url: { type: 'string', description: 'Page to embed.' },
+    integrationId: { type: 'string', description: 'Id of a registered Embedded Integration — makes the embed SSO-aware (signed token in the URL fragment plus the postMessage handshake). Omit for a plain iframe.' },
+  },
 }

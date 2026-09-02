@@ -1,3 +1,5 @@
+import type { ConfigSchema } from '@/lib/config-schema'
+
 export type ButtonLinkType = 'menu' | 'external'
 export type ButtonVariant = 'primary' | 'secondary' | 'outline'
 
@@ -29,4 +31,17 @@ export function parseButtonConfig(raw: unknown): ButtonWidgetConfig {
 
 export function createDefaultButtonConfig(): ButtonWidgetConfig {
   return { label: 'Button', linkType: 'external', variant: 'primary' }
+}
+
+export const BUTTON_CONFIG_SCHEMA: ConfigSchema = {
+  type: 'object',
+  description: 'A single call-to-action button.',
+  required: ['label', 'linkType'],
+  properties: {
+    label: { type: 'string' },
+    linkType: { type: 'string', enum: ['menu', 'external'], description: "Where it goes: another menu in this app, or an external URL." },
+    menuSlug: { type: 'string', description: "Target menu's slug. Required when linkType is 'menu'." },
+    url: { type: 'string', description: "External URL. Required when linkType is 'external'." },
+    variant: { type: 'string', enum: ['primary', 'secondary', 'outline'], description: 'Visual style. Default primary.' },
+  },
 }

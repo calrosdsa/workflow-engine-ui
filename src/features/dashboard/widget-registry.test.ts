@@ -10,6 +10,7 @@ function fakeWidget(type: string, category: WidgetDefinition['category'] = 'Cont
     icon: LayoutTemplate,
     category,
     description: 'a fake widget for tests',
+    configSchema: { type: 'object' },
     parseConfig: (raw) => (raw && typeof raw === 'object' ? (raw as { note: string }) : { note: '' }),
     createDefaultConfig: () => ({ note: '' }),
     defaultLayout: { w: 4, h: 4 },

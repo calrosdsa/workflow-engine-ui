@@ -1,3 +1,5 @@
+import type { ConfigSchema } from '@/lib/config-schema'
+
 export interface ParagraphWidgetConfig {
   text: string
 }
@@ -11,4 +13,11 @@ export function parseParagraphConfig(raw: unknown): ParagraphWidgetConfig {
 
 export function createDefaultParagraphConfig(): ParagraphWidgetConfig {
   return { text: 'Paragraph text. Use this for descriptions or instructions.' }
+}
+
+export const PARAGRAPH_CONFIG_SCHEMA: ConfigSchema = {
+  type: 'object',
+  description: 'A static text block.',
+  required: ['text'],
+  properties: { text: { type: 'string' } },
 }

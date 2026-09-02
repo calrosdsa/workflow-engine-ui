@@ -25,6 +25,29 @@ describe('importing an entry point registers the nodes', () => {
     }
   })
 
+  it('keeps childStepListKeys in step with childStepLists', () => {
+    // childStepLists is a function and childStepListKeys its serializable
+    // twin (exported to /meta/catalog for agents walking stored graphs). A
+    // node declaring one without the other, or with a different list count,
+    // means the catalog lies about how that node nests.
+    for (const def of allUiWorkflowNodes()) {
+      const keys = def.childStepListKeys ?? []
+      const lists = def.childStepLists?.(def.createDefaultConfig()) ?? []
+      expect(keys.length, `${def.type}: childStepListKeys must name each list childStepLists returns`).toBe(lists.length)
+      // The keys must actually address the lists: writing steps under each
+      // key must be what childStepLists reads back, in the same order.
+      if (keys.length > 0) {
+        const probe = { id: 'probe', type: 'show_message', config: {} }
+        const config: Record<string, unknown> = { ...(def.createDefaultConfig() as Record<string, unknown>) }
+        keys.forEach((key, i) => { config[key] = [{ ...probe, id: `probe_${i}` }] })
+        const read = def.childStepLists!(def.parseConfig(config))
+        keys.forEach((_, i) => {
+          expect(read[i]?.[0]?.id, `${def.type}: list ${i} must live under config.${keys[i]}`).toBe(`probe_${i}`)
+        })
+      }
+    }
+  })
+
   it('runs a real step rather than skipping it as unknown', async () => {
     // The user-visible symptom, pinned directly: an unregistered node is
     // *skipped* with a trace entry, not failed, so a run still "completes" —
