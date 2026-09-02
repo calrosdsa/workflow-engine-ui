@@ -8,6 +8,7 @@ import { useBuilderStore } from '@/features/workflows/builder/store'
 import { useExecutionOverlayStore } from '@/features/workflows/builder/execution-overlay-store'
 import { nodeSetupIssue } from '@/features/workflows/builder/node-validation'
 import { VariablesPanel } from '@/features/workflows/builder/VariablesPanel'
+import { OutlinePanel } from '@/features/workflows/builder/OutlinePanel'
 import { NodeConfigPanel } from '@/features/workflows/builder/NodeConfigPanel'
 import { ExecutionsSidebar, statusDot } from '@/features/workflows/builder/ExecutionsSidebar'
 import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
@@ -60,6 +61,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   const [triggeredId, setTriggeredId] = useState<string | null>(null)
   const [initialised, setInitialised] = useState(false)
   const [justSaved,   setJustSaved]   = useState(false)
+  const [outlineOpen, setOutlineOpen] = useState(true)
 
   const clearOverlay = useExecutionOverlayStore((s) => s.select)
   const selectOverlay = useExecutionOverlayStore((s) => s.setSelected)
@@ -346,6 +348,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
 
       {/* ── Main layout ──────────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
+        <OutlinePanel open={outlineOpen} onToggle={() => setOutlineOpen((o) => !o)} />
         <VariablesPanel />
         <FlowLayout />
         <NodeConfigPanel />

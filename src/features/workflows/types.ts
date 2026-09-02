@@ -83,7 +83,10 @@ export interface WorkflowMetadata {
 
 export interface VariableDecl {
   name: string
-  type: 'string' | 'integer' | 'float' | 'boolean' | 'time' | 'datetime'
+  // Mirrors internal/variable's TypeCatalog: object holds one record
+  // (fetch_records mode "one", upsert output), list holds record lists
+  // (fetch "many", transform, save/update output).
+  type: 'string' | 'integer' | 'float' | 'boolean' | 'time' | 'datetime' | 'object' | 'list'
   default?: unknown
 }
 

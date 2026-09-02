@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { useBuilderStore } from './store'
 import type { VariableDecl } from '../types'
 
-const VAR_TYPES: VariableDecl['type'][] = ['string', 'integer', 'float', 'boolean', 'time', 'datetime']
+const VAR_TYPES: VariableDecl['type'][] = ['string', 'integer', 'float', 'boolean', 'time', 'datetime', 'object', 'list']
 
 export function VariablesPanel() {
   const { variables, setVariables, varsPanelOpen, toggleVarsPanel } = useBuilderStore()
