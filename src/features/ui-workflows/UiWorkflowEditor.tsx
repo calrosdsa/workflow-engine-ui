@@ -24,6 +24,9 @@ import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+// Side-effecting: registers every node type. See interpreter.ts's note — this
+// is the authoring half of the same requirement.
+import './nodes'
 import { getUiWorkflowNode, selectableUiWorkflowNodes, graphPlatforms } from './node-registry'
 import { validateUiWorkflow } from './parse'
 import { UiWorkflowJsonEditor } from './UiWorkflowJsonEditor'

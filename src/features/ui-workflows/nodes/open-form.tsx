@@ -9,7 +9,6 @@ import { registerUiWorkflowNode, type UiWorkflowNodeConfigPanelProps } from '../
 import { Field } from './panel-kit'
 import { resolveValue } from '../values'
 import { MAX_FORM_DEPTH } from '../host'
-import { ALL_PLATFORMS } from '../types'
 
 /** Opens a form for the viewer to fill in, and waits.
  *

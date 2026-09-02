@@ -18,6 +18,14 @@
 // step failed. Continuing past a failed step would mean later steps acting on
 // state the author believed the failed step had produced, which is a worse
 // outcome than stopping — especially when the steps after it write records.
+// Side-effecting: registers every node type. Imported HERE because this is
+// one of the feature's two entry points (running a workflow; the editor is the
+// other), and the registry is empty until it loads.
+//
+// Missing this shipped a build where every step read as "Unknown step type" in
+// the real app while every test passed — the tests each import the barrel
+// themselves, so they were setting up state the app never did.
+import './nodes'
 import { getUiWorkflowNode } from './node-registry'
 import type { UiWorkflowHost, UiWorkflowRunContext } from './host'
 import type { UiWorkflowStep } from './types'
