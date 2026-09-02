@@ -1,0 +1,318 @@
+{
+  "_comment": "The UI workflow conformance corpus — the shared spec both interpreters run. Hand-authored, NOT generated: this is the definition of correct behaviour, not a recording of what one implementation happens to do. Adding a case here is how a semantic decision becomes binding on every runtime. See conformance/README.md.",
+  "cases": [
+    {
+      "name": "runs steps in order",
+      "why": "The base case: sequential, and the trace is execution order.",
+      "steps": [
+        { "id": "a", "type": "show_message", "config": { "message": "first", "message_type": "info" } },
+        { "id": "b", "type": "show_message", "config": { "message": "second", "message_type": "success" } }
+      ],
+      "expect": {
+        "status": "completed",
+        "trace": [
+          { "stepId": "a", "status": "ok" },
+          { "stepId": "b", "status": "ok" }
+        ],
+        "calls": [
+          { "kind": "showMessage", "text": "first", "messageType": "info" },
+          { "kind": "showMessage", "text": "second", "messageType": "success" }
+        ]
+      }
+    },
+    {
+      "name": "an empty graph completes",
+      "why": "Nothing to do is success, not an error.",
+      "steps": [],
+      "expect": { "status": "completed", "trace": [], "calls": [] }
+    },
+    {
+      "name": "failure stops the run",
+      "why": "Steps after a failure must not act on state the author believed the failed step produced — worst when they write records.",
+      "steps": [
+        { "id": "u", "type": "update_record", "config": { "form_id": "f1", "values": [{ "field": "a", "source": "static", "value": 1 }] } },
+        { "id": "m", "type": "show_message", "config": { "message": "never", "message_type": "info" } }
+      ],
+      "context": { "formId": "f1", "recordId": "r1" },
+      "host": { "updateRecord": [{ "error": "403 forbidden" }] },
+      "expect": {
+        "status": "failed",
+        "failedStepId": "u",
+        "errorContains": "403",
+        "calls": [{ "kind": "updateRecord", "formId": "f1", "recordId": "r1", "values": { "a": 1 } }]
+      }
+    },
+    {
+      "name": "an unknown step type is skipped, not fatal",
+      "why": "A graph authored in a newer client must still do the parts this one understands.",
+      "steps": [
+        { "id": "x", "type": "from_the_future", "config": { "anything": true } },
+        { "id": "m", "type": "show_message", "config": { "message": "still ran", "message_type": "info" } }
+      ],
+      "expect": {
+        "status": "completed",
+        "trace": [
+          { "stepId": "x", "status": "skipped" },
+          { "stepId": "m", "status": "ok" }
+        ],
+        "calls": [{ "kind": "showMessage", "text": "still ran", "messageType": "info" }]
+      }
+    },
+    {
+      "name": "condition takes the matching branch",
+      "why": "Branching is nested step lists, entered and then returned from.",
+      "steps": [
+        {
+          "id": "if",
+          "type": "condition",
+          "config": {
+            "when": { "combinator": "and", "conditions": [{ "id": "c", "field": "stage", "op": "eq", "value": "won" }], "groups": [] },
+            "then": [{ "id": "t", "type": "show_message", "config": { "message": "matched", "message_type": "success" } }],
+            "else": [{ "id": "e", "type": "show_message", "config": { "message": "no", "message_type": "info" } }]
+          }
+        },
+        { "id": "after", "type": "show_message", "config": { "message": "after", "message_type": "info" } }
+      ],
+      "context": { "record": { "stage": "won" } },
+      "expect": {
+        "status": "completed",
+        "trace": [
+          { "stepId": "if", "status": "ok" },
+          { "stepId": "t", "status": "ok" },
+          { "stepId": "after", "status": "ok" }
+        ],
+        "calls": [
+          { "kind": "showMessage", "text": "matched", "messageType": "success" },
+          { "kind": "showMessage", "text": "after", "messageType": "info" }
+        ]
+      }
+    },
+    {
+      "name": "condition takes the else branch",
+      "steps": [
+        {
+          "id": "if",
+          "type": "condition",
+          "config": {
+            "when": { "combinator": "and", "conditions": [{ "id": "c", "field": "stage", "op": "eq", "value": "won" }], "groups": [] },
+            "then": [{ "id": "t", "type": "show_message", "config": { "message": "matched", "message_type": "success" } }],
+            "else": [{ "id": "e", "type": "show_message", "config": { "message": "no", "message_type": "info" } }]
+          }
+        }
+      ],
+      "context": { "record": { "stage": "lost" } },
+      "expect": {
+        "status": "completed",
+        "calls": [{ "kind": "showMessage", "text": "no", "messageType": "info" }]
+      }
+    },
+    {
+      "name": "an empty condition matches everything",
+      "why": "Consistent with FilterGroup.IsEmpty() compiling to the literal true: an empty filter constrains nothing.",
+      "steps": [
+        {
+          "id": "if",
+          "type": "condition",
+          "config": {
+            "when": { "combinator": "and", "conditions": [], "groups": [] },
+            "then": [{ "id": "t", "type": "show_message", "config": { "message": "yes", "message_type": "info" } }],
+            "else": []
+          }
+        }
+      ],
+      "expect": { "status": "completed", "calls": [{ "kind": "showMessage", "text": "yes", "messageType": "info" }] }
+    },
+    {
+      "name": "an undecidable condition does not match",
+      "why": "An untouched number input holds \"\", which has no ordering against 1000. That is an ordinary at-rest state, not doubt about the rule — restricting on it fires before anyone has typed a character.",
+      "steps": [
+        {
+          "id": "if",
+          "type": "condition",
+          "config": {
+            "when": { "combinator": "and", "conditions": [{ "id": "c", "field": "amount", "op": "gt", "value": 1000 }], "groups": [] },
+            "then": [{ "id": "t", "type": "show_message", "config": { "message": "big", "message_type": "info" } }],
+            "else": [{ "id": "e", "type": "show_message", "config": { "message": "small", "message_type": "info" } }]
+          }
+        }
+      ],
+      "context": { "record": { "amount": "" } },
+      "expect": { "status": "completed", "calls": [{ "kind": "showMessage", "text": "small", "messageType": "info" }] }
+    },
+    {
+      "name": "a condition coerces a numeric string",
+      "why": "The deliberate divergence from Expr: this runs against live form state, where an integer field's input holds \"5000\" while the API returns 5000. Refusing to compare them would make one rule behave differently on a form than on a record page.",
+      "steps": [
+        {
+          "id": "if",
+          "type": "condition",
+          "config": {
+            "when": { "combinator": "and", "conditions": [{ "id": "c", "field": "amount", "op": "gt", "value": 1000 }], "groups": [] },
+            "then": [{ "id": "t", "type": "show_message", "config": { "message": "big", "message_type": "info" } }],
+            "else": []
+          }
+        }
+      ],
+      "context": { "record": { "amount": "5000" } },
+      "expect": { "status": "completed", "calls": [{ "kind": "showMessage", "text": "big", "messageType": "info" }] }
+    },
+    {
+      "name": "variables shadow record fields in a condition",
+      "why": "A variable is what this run just computed, so it is the more specific answer — and the alternative makes set_variable silently ineffective whenever it shares a field's name.",
+      "steps": [
+        { "id": "v", "type": "set_variable", "config": { "name": "stage", "source": "static", "value": "won" } },
+        {
+          "id": "if",
+          "type": "condition",
+          "config": {
+            "when": { "combinator": "and", "conditions": [{ "id": "c", "field": "stage", "op": "eq", "value": "won" }], "groups": [] },
+            "then": [{ "id": "t", "type": "show_message", "config": { "message": "matched", "message_type": "success" } }],
+            "else": []
+          }
+        }
+      ],
+      "context": { "record": { "stage": "lost" } },
+      "expect": {
+        "status": "completed",
+        "variables": { "stage": "won" },
+        "calls": [{ "kind": "showMessage", "text": "matched", "messageType": "success" }]
+      }
+    },
+    {
+      "name": "set_variable copies a field off the record",
+      "steps": [
+        { "id": "v", "type": "set_variable", "config": { "name": "who", "source": "field", "field": "owner" } }
+      ],
+      "context": { "record": { "owner": "Dana" } },
+      "expect": { "status": "completed", "variables": { "who": "Dana" }, "calls": [] }
+    },
+    {
+      "name": "navigation ends the run",
+      "why": "The surface the remaining steps would act on is being torn down.",
+      "steps": [
+        { "id": "n", "type": "navigate", "config": { "target": "menu", "menu_slug": "invoices" } },
+        { "id": "m", "type": "show_message", "config": { "message": "never", "message_type": "info" } }
+      ],
+      "expect": {
+        "status": "completed",
+        "calls": [{ "kind": "navigate", "target": "menu", "slug": "invoices" }]
+      }
+    },
+    {
+      "name": "a created record id reaches a later step",
+      "why": "\"Create it, then open it\" is the flow output_variable exists for.",
+      "steps": [
+        { "id": "c", "type": "create_record", "config": { "form_id": "f1", "values": [{ "field": "name", "source": "static", "value": "Acme" }], "output_variable": "made" } },
+        { "id": "n", "type": "navigate", "config": { "target": "record", "form_id": "f1", "record_id_variable": "made" } }
+      ],
+      "host": { "createRecord": [{ "id": "rec-42" }] },
+      "expect": {
+        "status": "completed",
+        "variables": { "made": "rec-42" },
+        "calls": [
+          { "kind": "createRecord", "formId": "f1", "values": { "name": "Acme" } },
+          { "kind": "navigate", "target": "record", "formId": "f1", "recordId": "rec-42" }
+        ]
+      }
+    },
+    {
+      "name": "fetch_records stores rows and a count",
+      "steps": [
+        { "id": "f", "type": "fetch_records", "config": { "form_id": "f1", "output_variable": "rows", "page_size": 10 } }
+      ],
+      "host": { "searchRecords": [{ "records": [{ "id": "1" }, { "id": "2" }], "total": 7 }] },
+      "expect": {
+        "status": "completed",
+        "variables": { "rows_count": 7 },
+        "calls": [{ "kind": "searchRecords", "formId": "f1", "pageSize": 10 }]
+      }
+    },
+    {
+      "name": "fetch_records clamps an oversized page",
+      "why": "The value ends up on a real query; unbounded lets one step pull a whole table.",
+      "steps": [
+        { "id": "f", "type": "fetch_records", "config": { "form_id": "f1", "output_variable": "rows", "page_size": 99999 } }
+      ],
+      "host": { "searchRecords": [{ "records": [], "total": 0 }] },
+      "expect": {
+        "status": "completed",
+        "calls": [{ "kind": "searchRecords", "formId": "f1", "pageSize": 500 }]
+      }
+    },
+    {
+      "name": "update_record sends only the configured fields",
+      "why": "The endpoint is a partial patch. Resubmitting a whole fetched record is what broke Kanban's cross-column drag: a date round-trips from GET as RFC3339 while the validator demands YYYY-MM-DD.",
+      "steps": [
+        { "id": "u", "type": "update_record", "config": { "form_id": "f1", "values": [{ "field": "stage", "source": "static", "value": "won" }] } }
+      ],
+      "context": { "formId": "f1", "recordId": "r9", "record": { "stage": "lost", "close_date": "2026-11-30T00:00:00Z" } },
+      "host": { "updateRecord": [{}] },
+      "expect": {
+        "status": "completed",
+        "calls": [{ "kind": "updateRecord", "formId": "f1", "recordId": "r9", "values": { "stage": "won" } }]
+      }
+    },
+    {
+      "name": "a step naming an unset variable fails",
+      "why": "Named but unresolved is an authoring error worth surfacing, not a reason to write somewhere arbitrary.",
+      "steps": [
+        { "id": "u", "type": "update_record", "config": { "form_id": "f1", "values": [{ "field": "a", "source": "static", "value": 1 }], "record_id_variable": "missing" } }
+      ],
+      "context": { "formId": "f1" },
+      "expect": { "status": "failed", "failedStepId": "u", "errorContains": "missing", "calls": [] }
+    },
+    {
+      "name": "show_dialog stops the run when dismissed",
+      "why": "The \"are you sure?\" shape: carrying on would do exactly what the viewer declined.",
+      "steps": [
+        { "id": "d", "type": "show_dialog", "config": { "kind": "confirm", "title": "Delete?", "output_variable": "ok", "on_cancel": "stop" } },
+        { "id": "u", "type": "update_record", "config": { "form_id": "f1", "values": [{ "field": "deleted", "source": "static", "value": true }] } }
+      ],
+      "context": { "formId": "f1", "recordId": "r1" },
+      "host": { "askUser": [{ "confirmed": false }] },
+      "expect": {
+        "status": "completed",
+        "variables": { "ok_confirmed": false },
+        "calls": [{ "kind": "askUser", "title": "Delete?" }]
+      }
+    },
+    {
+      "name": "show_dialog carries on when told to",
+      "steps": [
+        { "id": "d", "type": "show_dialog", "config": { "kind": "prompt", "title": "Why?", "output_variable": "reason", "on_cancel": "continue" } },
+        { "id": "m", "type": "show_message", "config": { "message": "carried on", "message_type": "info" } }
+      ],
+      "host": { "askUser": [{ "confirmed": true, "value": "late" }] },
+      "expect": {
+        "status": "completed",
+        "variables": { "reason": "late", "reason_confirmed": true },
+        "calls": [
+          { "kind": "askUser", "title": "Why?" },
+          { "kind": "showMessage", "text": "carried on", "messageType": "info" }
+        ]
+      }
+    },
+    {
+      "name": "set_field writes to the form on screen",
+      "steps": [
+        { "id": "s", "type": "set_field", "config": { "field": "ship_to", "source": "field", "from_field": "bill_to" } }
+      ],
+      "context": { "record": { "bill_to": "10 Main St" } },
+      "expect": {
+        "status": "completed",
+        "calls": [{ "kind": "setFieldValue", "field": "ship_to", "value": "10 Main St" }]
+      }
+    },
+    {
+      "name": "set_field_state carries only the keys that were set",
+      "why": "An omitted key means leave it to the form's own rules; reading it as false would force every field visible, optional and editable.",
+      "steps": [
+        { "id": "s", "type": "set_field_state", "config": { "field": "reason", "visible": true } }
+      ],
+      "expect": {
+        "status": "completed",
+        "calls": [{ "kind": "setFieldState", "field": "reason", "patch": { "visible": true } }]
+      }
+    }
+  ]
+}
