@@ -155,7 +155,7 @@ registerUiWorkflowNode({
     }
 
     const inputs: Record<string, unknown> = {}
-    for (const input of config.inputs) {
+    for (const input of config.inputs ?? []) {
       const value = resolveValue(
         { source: input.source === 'variable' ? 'variable' : 'static', value: input.value, variable: input.variable },
         ctx,

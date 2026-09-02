@@ -23,6 +23,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { runUiWorkflow } from './interpreter'
 import { emptyRunContext, type UiWorkflowHost } from './host'
+import { useUiWorkflowDepth } from './depth'
 import type { UiWorkflow } from './types'
 
 /** How long the values must hold still before a run starts. Long enough to
@@ -65,6 +66,7 @@ export interface UseFieldChangeWorkflowArgs {
 }
 
 export function useFieldChangeWorkflow({ config, values, host, formId, recordId }: UseFieldChangeWorkflowArgs) {
+  const depth = useUiWorkflowDepth()
   const runningRef = useRef(false)
   // Last seen values for the watched fields. Starts unset so the first render
   // establishes a baseline WITHOUT running — otherwise every form would fire
@@ -87,6 +89,9 @@ export function useFieldChangeWorkflow({ config, values, host, formId, recordId 
           formId,
           recordId,
           record: values,
+          // Inherited, so a form opened by a workflow cannot restart the
+          // nesting count at zero.
+          depth,
           // Named so a condition can branch on WHICH field changed — the one
           // piece of context a field-change run has that others don't.
           variables: { changed_field: changedField },
@@ -102,7 +107,7 @@ export function useFieldChangeWorkflow({ config, values, host, formId, recordId 
     // `values` is intentionally read fresh at call time via the closure this
     // callback is rebuilt with; watchedKey is what actually gates the effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [steps, host, formId, recordId, values])
+  }, [steps, host, formId, recordId, values, depth])
 
   useEffect(() => {
     if (watch.length === 0 || steps.length === 0) return

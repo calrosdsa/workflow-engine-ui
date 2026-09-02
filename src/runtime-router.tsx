@@ -14,6 +14,7 @@ import { ThemeProvider } from '@/features/theme/ThemeProvider'
 import { mergeTheme } from '@/features/theme/default-theme'
 import { Toaster } from '@/components/ui/sonner'
 import { UiWorkflowDialogHost } from '@/features/ui-workflows/UiWorkflowDialogHost'
+import { UiWorkflowFormHost } from '@/features/ui-workflows/UiWorkflowFormHost'
 import { RuntimeAppShell } from '@/features/runtime/RuntimeAppShell'
 import { ChatLauncher } from '@/features/runtime/ChatLauncher'
 import { RuntimeRecordPage } from '@/features/runtime/RuntimeRecordPage'
@@ -243,6 +244,7 @@ function RuntimeAppRouteComponent() {
               the component tree. This is what lets a workflow step suspend
               and ask the viewer something. */}
           <UiWorkflowDialogHost />
+          <UiWorkflowFormHost />
           <ChatLauncher />
         </ThemeProvider>
       </RuntimeDraftPreviewContext.Provider>

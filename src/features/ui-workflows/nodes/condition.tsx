@@ -94,7 +94,9 @@ registerUiWorkflowNode({
     // Most often that is just an empty field with nothing to compare yet,
     // not a reason to guess.
     const { matches } = evaluateFilterGroup(config.when, { values: conditionValues(ctx) })
-    return { kind: 'enter', steps: matches ? config.then : config.else }
+    // Nullish-guarded: an unparsed config may carry no branches at all, and
+    // an absent branch means "nothing to run", not a crash.
+    return { kind: 'enter', steps: (matches ? config.then : config.else) ?? [] }
   },
   parseConfig: parseConditionConfig,
   createDefaultConfig: emptyConditionConfig,

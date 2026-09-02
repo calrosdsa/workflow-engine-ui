@@ -38,11 +38,13 @@ export function resolveValue(ref: ValueRef, ctx: UiWorkflowRunContext): unknown 
  *  patch — a key present with undefined would be an explicit "clear this",
  *  which is not what an unresolved reference means. */
 export function buildRecordValues(
-  writes: readonly (ValueRef & { field: string })[],
+  writes: readonly (ValueRef & { field: string })[] | undefined,
   ctx: UiWorkflowRunContext,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {}
-  for (const write of writes) {
+  // Nullable because an executor may receive an unparsed config — see
+  // open-form's own note. An absent list means no writes, not a crash.
+  for (const write of writes ?? []) {
     if (!write.field) continue
     const value = resolveValue(write, ctx)
     if (value === undefined) continue

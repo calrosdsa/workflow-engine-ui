@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import './nodes'
 import { parseUiWorkflow, parseStep, validateUiWorkflow } from './parse'
 import { allUiWorkflowNodes, getUiWorkflowNode, walkSteps, graphPlatforms } from './node-registry'
+import { runUiWorkflow } from './interpreter'
+import { emptyRunContext } from './host'
 import { UI_WORKFLOW_VERSION } from './types'
 import type { ConditionStepConfig } from './types'
 
@@ -145,7 +147,7 @@ describe('the registry contract', () => {
   it('registered the expected node set', () => {
     const types = allUiWorkflowNodes().map((n) => n.type).sort()
     expect(types).toEqual([
-      'condition', 'create_record', 'fetch_records', 'navigate',
+      'condition', 'create_record', 'fetch_records', 'navigate', 'open_form',
       'run_workflow', 'set_field', 'set_field_state', 'set_variable',
       'show_dialog', 'show_message', 'update_record',
     ])
@@ -176,6 +178,44 @@ describe('the registry contract', () => {
     expect(big.page_size).toBe(500)
     const zero = def.parseConfig({ form_id: 'f', page_size: 0 }) as { page_size: number }
     expect(zero.page_size).toBe(1)
+  })
+
+  it('every executor survives a config that never went through parseConfig', async () => {
+    // A config can reach the interpreter unparsed — a caller building a graph
+    // in memory, or a conformance case written as plain JSON. open_form got
+    // this wrong first (`config.prefill is not iterable`), and the same shape
+    // of bug was latent in run_workflow and the record writers, so it is
+    // pinned for every node rather than fixed three times and forgotten.
+    const host = {
+      showMessage: () => {},
+      navigate: () => {},
+      refresh: () => {},
+      askUser: async () => ({ confirmed: true }),
+      openForm: async () => ({ created: true, recordId: 'x' }),
+      setFieldValue: () => {},
+      setFieldState: () => {},
+      searchRecords: async () => ({ records: [], total: 0 }),
+      createRecord: async () => ({ id: 'x' }),
+      updateRecord: async () => {},
+      runServerWorkflow: async () => ({ status: 'COMPLETED' }),
+    }
+
+    for (const node of allUiWorkflowNodes()) {
+      // The bare minimum a step needs to get past its own "not configured"
+      // checks — everything else is deliberately absent.
+      const config: Record<string, unknown> = {
+        form_id: 'f', field: 'a', name: 'v', title: 'T',
+        workflow_definition_id: 'w', menu_slug: 'm', output_variable: 'o',
+      }
+      const result = await runUiWorkflow({
+        steps: [{ id: 's', type: node.type, config }],
+        ctx: emptyRunContext({ formId: 'f', recordId: 'r' }),
+        host,
+      })
+      // A node may legitimately fail on this config; what it must not do is
+      // fail with a TypeError from reading an absent list.
+      expect(result.error ?? '', `${node.type} on an unparsed config`).not.toMatch(/is not iterable|undefined/i)
+    }
   })
 
   it('exposes no node that could hold a credential', () => {

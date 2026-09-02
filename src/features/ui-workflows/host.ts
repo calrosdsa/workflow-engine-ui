@@ -21,6 +21,7 @@
 // workflow can never do more than the person looking at the screen could.
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
 import type { DialogRequest, DialogAnswer } from './ask-store'
+import type { OpenFormRequest, OpenFormResult } from './open-form-store'
 
 export type UiMessageType = 'info' | 'success' | 'warning' | 'error'
 
@@ -68,6 +69,14 @@ export interface UiWorkflowHost {
    *  steps after a cancel branch run on a decision nobody made. */
   askUser?(request: DialogRequest, signal?: AbortSignal): Promise<DialogAnswer>
 
+  /** Opens a form for the viewer to fill in and waits for them to save or
+   *  dismiss — the second suspending capability, and the only one that can
+   *  start further workflow runs of its own (the opened form's).
+   *
+   *  Rejects on abort for the same reason askUser does: a cancelled run did
+   *  not get a "they dismissed it" from anyone. */
+  openForm?(request: OpenFormRequest, signal?: AbortSignal): Promise<OpenFormResult>
+
   // Live-form capabilities: absent unless a form is actually being filled. A
   // record action runs against a SAVED record, where there is no field on
   // screen to write into.
@@ -106,8 +115,25 @@ export interface UiWorkflowRunContext {
   recordId?: string
   record: Record<string, unknown>
   variables: Record<string, unknown>
+  /** How many forms deep this run is.
+   *
+   *  An `open_form` step opens a real form, and a real form runs its OWN
+   *  workflows — an author who put an after-submit workflow on "Customer"
+   *  expects it to run when a customer is created, however that happened.
+   *  Which means form A's workflow can open form B, whose workflow can open
+   *  form C, and so on.
+   *
+   *  Bounded rather than forbidden, for the same reason MAX_STEPS bounds step
+   *  count rather than banning loops: one level of nesting ("add a customer
+   *  while writing an order") is the whole point of the node, and only
+   *  runaway depth is the problem. */
+  depth: number
 }
 
+/** Deeper than this and `open_form` refuses. Three is enough for the nesting
+ *  anyone means on purpose and short of the stack of modals nobody does. */
+export const MAX_FORM_DEPTH = 3
+
 export function emptyRunContext(over: Partial<UiWorkflowRunContext> = {}): UiWorkflowRunContext {
-  return { record: {}, variables: {}, ...over }
+  return { record: {}, variables: {}, depth: 0, ...over }
 }

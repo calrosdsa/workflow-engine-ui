@@ -16,6 +16,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { runUiWorkflow } from './interpreter'
 import { useUiWorkflowHost } from './useUiWorkflowHost'
 import { emptyRunContext } from './host'
+import { useUiWorkflowDepth } from './depth'
 import type { UiWorkflow } from './types'
 
 export interface AfterSubmitResult {
@@ -28,6 +29,7 @@ export interface AfterSubmitResult {
 
 export function useAfterSubmitWorkflow(formId: string | undefined, workflow: UiWorkflow | undefined) {
   const qc = useQueryClient()
+  const depth = useUiWorkflowDepth()
   const navigatedRef = useRef(false)
 
   const host = useUiWorkflowHost({
@@ -50,7 +52,9 @@ export function useAfterSubmitWorkflow(formId: string | undefined, workflow: UiW
         steps,
         // The just-saved record IS the context, so a step can branch on what
         // was entered and update_record can address it with no configuration.
-        ctx: emptyRunContext({ formId, recordId, record: saved }),
+        // Inherits the depth of the form this ran from, so a form opened by
+        // a workflow cannot restart the nesting count at zero.
+        ctx: emptyRunContext({ formId, recordId, record: saved, depth }),
         host,
       })
 
@@ -64,6 +68,6 @@ export function useAfterSubmitWorkflow(formId: string | undefined, workflow: UiW
       }
       return { navigated: navigatedRef.current }
     },
-    [formId, workflow, host],
+    [formId, workflow, host, depth],
   )
 }

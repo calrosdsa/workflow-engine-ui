@@ -133,7 +133,10 @@ export async function runUiWorkflow({
       trace.push({ stepId: step.id, type: step.type, status: 'ok' })
 
       if (outcome.kind === 'stop') return
-      if (outcome.kind === 'enter') await runList(outcome.steps)
+      // Guarded here too, not only in the node: this is the one place every
+      // branching node's steps flow through, so it is where the class of bug
+      // stops rather than each new node having to remember.
+      if (outcome.kind === 'enter') await runList(outcome.steps ?? [])
     }
   }
 

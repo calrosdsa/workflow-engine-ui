@@ -9,6 +9,7 @@ import { useNavigate, useParams } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { formsApi } from '@/features/forms/api'
 import { ask } from './ask-store'
+import { openForm } from './open-form-store'
 import { executionsApi } from '@/features/executions/api'
 import type { UiMessageType, UiWorkflowHost } from './host'
 
@@ -86,6 +87,9 @@ export function useUiWorkflowHost({ onRefresh, onNavigate, formCapabilities }: U
     // Always available: the dialog host is mounted at every app root, so a
     // step can ask from any surface a workflow can start on.
     askUser: ask,
+    // Always available for the same reason askUser is: the form host is
+    // mounted at every app root.
+    openForm,
     // Spread rather than assigned so the KEYS stay absent when there is no
     // form — the nodes check for the method's presence, and an explicit
     // `undefined` would read the same but is easier to leave behind by
