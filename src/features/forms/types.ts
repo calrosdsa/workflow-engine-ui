@@ -72,6 +72,36 @@ export interface FieldDef {
   allowed_mime_types?: string[]
 }
 
+// Every record — of every form — carries these three columns without being
+// declared in FormDefinition.fields: `id` (assigned on create) and the two
+// audit timestamps selectCols() (internal/forms/store/records.go) appends,
+// unaliased, to every SELECT. They're deliberately excluded from a form's own
+// `fields` array (see RESERVED_FIELD_KEYS in features/form-builder/factory.ts
+// — a form field literally named "id" is impossible), which means any
+// FieldDef[] sourced from `form.fields` alone can't offer them as filter/
+// sort/display targets even though the backend has always accepted them
+// (e.g. an update_records node filtering `id = <expr>`). Modeled as synthetic
+// FieldDefs (not real form.fields entries) so a field-picker can treat them
+// identically to a real field without special-casing. Filtering/sorting by
+// `id` was fixed at the execution layer before this list existed to expose
+// it in field pickers — see mergeSystemFields's callers for where that gap
+// showed up as a blank, unselectable dropdown entry.
+export const SYSTEM_FIELDS: FieldDef[] = [
+  { name: 'id', label: 'ID', type: 'string' },
+  { name: 'created_at', label: 'Created At', type: 'datetime' },
+  { name: 'updated_at', label: 'Last Modified', type: 'datetime' },
+]
+
+/** Appends SYSTEM_FIELDS to `fields`, skipping any whose name the caller's
+ *  own list already has (defends against a caller merging twice, or a
+ *  synthetic non-form field list — e.g. workflow variables — that happens to
+ *  declare its own "id"). Order matters for `.find()`-style lookups: the
+ *  caller's own entry always wins. */
+export function mergeSystemFields(fields: FieldDef[]): FieldDef[] {
+  const known = new Set(fields.map((f) => f.name))
+  return [...fields, ...SYSTEM_FIELDS.filter((f) => !known.has(f.name))]
+}
+
 export interface FormDefinition {
   id: string
   name: string

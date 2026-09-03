@@ -2,24 +2,16 @@
 // SavedViewRow (internal/menus/store/saved_views.go) and savedViewResponse
 // (api/menus/saved_views.go) exactly.
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
-import type { FieldDef } from '@/features/forms/types'
 
-// Every form record already carries these two audit columns — selectCols()
-// (internal/forms/store/records.go) appends them, unaliased, to every
-// SELECT for every form, so no backend change was needed to expose them;
-// this is purely a frontend addition making them pickable/sortable/
-// displayable alongside a form's own fields. Modeled as synthetic FieldDefs
-// (not real form.fields entries) so ColumnsPicker/CardLayout/SortRuleList
-// can all treat them identically to a real field without special-casing.
-// "Created by (Account)" was investigated and deliberately NOT added here —
-// no created-by column exists on any record; only a separate audit-log
-// table (internal/audit) tracks the actor per action, not currently exposed
-// through the search endpoint records use. Flagged as separate, larger
-// follow-up work, not bundled into this pass.
-export const SYSTEM_FIELDS: FieldDef[] = [
-  { name: 'created_at', label: 'Created At', type: 'datetime' },
-  { name: 'updated_at', label: 'Last Modified', type: 'datetime' },
-]
+// Re-exported from features/forms/types.ts, the canonical definition (shared
+// with FilterBuilder's own system-field merge) — kept as a re-export here
+// since ColumnsPicker/CardLayout/SortRuleList in this feature already import
+// it from './types'. "Created by (Account)" was investigated and
+// deliberately NOT added — no created-by column exists on any record; only a
+// separate audit-log table (internal/audit) tracks the actor per action, not
+// currently exposed through the search endpoint records use. Flagged as
+// separate, larger follow-up work, not bundled into this pass.
+export { SYSTEM_FIELDS } from '@/features/forms/types'
 
 export type SavedViewVisibility = 'private' | 'public' | 'role'
 export type ViewLayout = 'list' | 'card' | 'calendar' | 'kanban'

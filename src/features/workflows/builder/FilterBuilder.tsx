@@ -28,6 +28,7 @@ import { ExpressionEditor } from './ExpressionEditor'
 import { FilterReferenceValuePicker } from './FilterReferenceValuePicker'
 import { nanoid } from './nanoid'
 import type { NodeOutputSchema } from './node-output-schema'
+import { mergeSystemFields } from '@/features/forms/types'
 import type { FieldDef } from '@/features/forms/types'
 import type { VariableDecl, FilterGroup, FilterCondition, CompareOp } from '../types'
 
@@ -109,6 +110,18 @@ interface FilterBuilderProps {
 }
 
 export function FilterBuilder({ group, fields, variables, nodeContext = [], onChange, onRemove, depth = 0, hideExpressions = false, fieldGroups }: FilterBuilderProps) {
+  // Every caller's `fields` ultimately means "what can this condition match
+  // against" — for the common case (a form's own declared fields) that's
+  // missing id/created_at/updated_at, which exist on every record but are
+  // deliberately absent from FormDefinition.fields (see SYSTEM_FIELDS's doc
+  // comment). Merging here, once, means every current and future caller gets
+  // them for free instead of relying on each call site to remember its own
+  // copy — several didn't (that's the bug this fixes). Harmless for callers
+  // whose `fields` isn't form-shaped (e.g. the Condition node's workflow
+  // variables): fieldGroups, not this flat list, drives the rendered
+  // dropdown there, so an unused synthetic entry never surfaces.
+  const fieldsWithSystem = mergeSystemFields(fields)
+
   const setCombinator = (combinator: 'and' | 'or') => onChange({ ...group, combinator })
 
   const addCondition = () => onChange({ ...group, conditions: [...group.conditions, newCondition()] })
@@ -178,7 +191,7 @@ export function FilterBuilder({ group, fields, variables, nodeContext = [], onCh
           <Fragment key={c.id}>
             <ConditionRow
               condition={c}
-              fields={fields}
+              fields={fieldsWithSystem}
               variables={variables}
               nodeContext={nodeContext}
               onChange={(patch) => updateCondition(c.id, patch)}
@@ -200,7 +213,7 @@ export function FilterBuilder({ group, fields, variables, nodeContext = [], onCh
             <Fragment key={g.id ?? idx}>
               <FilterBuilder
                 group={g}
-                fields={fields}
+                fields={fieldsWithSystem}
                 variables={variables}
                 nodeContext={nodeContext}
                 onChange={(ng) => updateGroup(idx, ng)}
