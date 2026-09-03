@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useRecordDetail, useAuditLog, useLinkedRecords } from './record-detail-hooks'
 import { InlineFieldEditor } from './InlineFieldEditor'
+import { resolveAdvancedSettings } from './advanced-settings'
+import { useCurrentViewer } from './detail-tabs/useTabVisible'
 import { COLUMN_LAYOUTS } from '@/features/form-builder/schema'
 import { COMPONENT_REGISTRY } from '@/features/form-builder/component-registry'
 import { formatValue, formatFileOrValue } from './format-value'
@@ -87,6 +89,7 @@ export function DetailsTab({
   groupDepth?: number
 }) {
   const { data: record, isLoading } = useRecordDetail(formId, recordId)
+  const viewer = useCurrentViewer()
   // Only one field can be in edit mode at a time across this whole record —
   // lifted here (rather than each InlineFieldEditor owning independent
   // local state) so opening a second field's editor forces the first one
@@ -142,14 +145,25 @@ export function DetailsTab({
               // the same way elementToField does on the write side.
               // Without this, an adopted Line Items grid's section renders
               // with a heading and nothing else in read-only view.
-              const visibleElements = column.elements.filter((el) => {
-                if (el.component === 'hidden') return false
-                if (el.component === 'line_items') return el.sourceMode === 'existing'
-                return COMPONENT_REGISTRY[el.component].dataBearing
-              })
+              // Advanced Settings apply on this surface too: the detail page
+              // renders the same form UI the fill form does, so a field
+              // hidden_in_ui for this viewer must not display its stored
+              // value here either, and read_only must survive into inline
+              // editing. Resolved once per element against the RECORD's
+              // saved values (there is no draft on a read surface);
+              // clear_value is a fill-time side effect and has no meaning on
+              // display, so only hidden/readOnly are consumed.
+              const visibleElements = column.elements
+                .filter((el) => {
+                  if (el.component === 'hidden') return false
+                  if (el.component === 'line_items') return el.sourceMode === 'existing'
+                  return COMPONENT_REGISTRY[el.component].dataBearing
+                })
+                .map((el) => ({ el, effects: resolveAdvancedSettings(el.advancedSettings, viewer, record) }))
+                .filter(({ effects }) => !effects.hidden)
               return (
                 <div key={column.id} className="space-y-3" style={{ flex: ratios[idx] ?? 1 }}>
-                  {visibleElements.map((el) => (
+                  {visibleElements.map(({ el, effects }) => (
                     <div key={el.id} className="text-sm">
                       <div className="mb-1 text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
                         {el.label}
@@ -159,6 +173,7 @@ export function DetailsTab({
                         record={record}
                         formId={formId}
                         recordId={recordId}
+                        advancedReadOnly={effects.readOnly}
                         isEditing={editingFieldId === el.id}
                         anyFieldEditing={editingFieldId !== null}
                         onStartEdit={() => setEditingFieldId(el.id)}

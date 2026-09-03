@@ -32,16 +32,28 @@ const SINGLE_FIELD_WRITABLE_TYPES = new Set<FormElement['component']>([
  *  guessing keeps this safe, since a field that SHOULD be blocked by an
  *  expression never becomes writable this way, it just stays unavailable). */
 export function isFieldSingleWritable(el: FormElement): boolean {
+  // Advanced Settings can hide or lock this field for the current viewer, and
+  // resolving that needs a viewer this function deliberately has no access to
+  // (see the doc comment above). Excluded for exactly the same reason as the
+  // expression modes: staying unavailable is safe, guessing writable is not.
+  // A caller that DOES hold a viewer and the record's values should resolve
+  // the rules itself (runtime/advanced-settings.ts) and combine the result
+  // with isFieldStaticallyWritable — InlineFieldEditor does exactly that, so
+  // a rule restricting one role no longer locks inline editing for everyone.
+  if (el.advancedSettings?.length) return false
+  return isFieldStaticallyWritable(el)
+}
+
+/** isFieldSingleWritable minus the Advanced Settings blanket: the checks that
+ *  hold for every viewer regardless of who is looking. For callers that have
+ *  already resolved the element's Advanced Settings against a real viewer and
+ *  the record's values, and so don't need the viewer-less over-exclusion. */
+export function isFieldStaticallyWritable(el: FormElement): boolean {
   if (!SINGLE_FIELD_WRITABLE_TYPES.has(el.component)) return false
   if (el.behavior.readOnly === 'always') return false
   if (el.behavior.visibility === 'hidden') return false
   if (el.behavior.readOnly === 'expression') return false
   if (el.behavior.visibility === 'expression') return false
-  // Advanced Settings can hide or lock this field for the current viewer, and
-  // resolving that needs a viewer this function deliberately has no access to
-  // (see the doc comment above). Excluded for exactly the same reason as the
-  // expression modes: staying unavailable is safe, guessing writable is not.
-  if (el.advancedSettings?.length) return false
   return true
 }
 

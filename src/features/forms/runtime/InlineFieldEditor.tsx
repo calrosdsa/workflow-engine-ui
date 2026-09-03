@@ -23,7 +23,7 @@ import { Check, X, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { FieldValueDisplay } from './FieldValueDisplay'
 import { FieldInput } from './FieldRenderer'
-import { fieldSchema, isFieldSingleWritable } from './schema-to-zod'
+import { fieldSchema, isFieldStaticallyWritable } from './schema-to-zod'
 import { useUpdateRecord } from '@/features/forms/hooks'
 import { usePermission } from '@/features/auth/permissions'
 import type { FormElement } from '@/features/form-builder/schema'
@@ -37,23 +37,29 @@ import type { FormRecord } from '@/features/forms/types'
  *  static half, evaluated at Form Builder config time where no "current
  *  viewer" exists to check canEdit against.
  *
- *  'file'/'image' are deliberately NOT part of isFieldSingleWritable's own
- *  SINGLE_FIELD_WRITABLE_TYPES (see that file's doc comment) — that set also
- *  gates update_field, a bare-value-write action with no upload UI, where a
- *  file/image target genuinely doesn't make sense. But FileFieldInput IS a
- *  real, self-contained interactive control here (it owns its own upload/
- *  preflight/preview flow, unlike a plain value input) — this was flagged as
- *  "separate, follow-up scope" by isFieldSingleWritable's own comment, and
- *  never built until now. Checked as its own explicit allowance, alongside
- *  (not instead of) the shared static check, so update_field's exclusion is
- *  untouched. */
-function isFieldEligible(el: FormElement, canEdit: boolean): boolean {
-  if (!canEdit) return false
+ *  'file'/'image' are deliberately NOT part of the shared
+ *  SINGLE_FIELD_WRITABLE_TYPES (see schema-to-zod's doc comment) — that set
+ *  also gates update_field, a bare-value-write action with no upload UI,
+ *  where a file/image target genuinely doesn't make sense. But
+ *  FileFieldInput IS a real, self-contained interactive control here (it
+ *  owns its own upload/preflight/preview flow, unlike a plain value input) —
+ *  this was flagged as "separate, follow-up scope" by that file's own
+ *  comment, and never built until now. Checked as its own explicit
+ *  allowance, alongside (not instead of) the shared static check, so
+ *  update_field's exclusion is untouched.
+ *
+ *  advancedReadOnly is the RESOLVED Advanced Settings verdict for this
+ *  viewer and this record's values, computed by RecordDetailPanel (which
+ *  also drops hidden fields before they reach here). Evaluated, not the
+ *  old blanket "any rule present disables editing for everyone" — a rule
+ *  restricting one role no longer locks the field for every other viewer. */
+function isFieldEligible(el: FormElement, canEdit: boolean, advancedReadOnly: boolean): boolean {
+  if (!canEdit || advancedReadOnly) return false
   if (el.component === 'file' || el.component === 'image') {
     return el.behavior.readOnly !== 'always' && el.behavior.readOnly !== 'expression'
       && el.behavior.visibility !== 'hidden' && el.behavior.visibility !== 'expression'
   }
-  return isFieldSingleWritable(el)
+  return isFieldStaticallyWritable(el)
 }
 
 /** Order-sensitive deep-ish equality via JSON — correct for every value
@@ -65,11 +71,14 @@ function valuesEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 }
 
-export function InlineFieldEditor({ el, record, formId, recordId, isEditing, anyFieldEditing, onStartEdit, onStopEdit }: {
+export function InlineFieldEditor({ el, record, formId, recordId, advancedReadOnly = false, isEditing, anyFieldEditing, onStartEdit, onStopEdit }: {
   el: FormElement
   record: FormRecord
   formId: string
   recordId: string
+  /** Resolved Advanced Settings read_only verdict for the current viewer —
+   *  see isFieldEligible. Defaults to unrestricted for callers without one. */
+  advancedReadOnly?: boolean
   /** Whether THIS field is the one currently open for editing — controlled
    *  by DetailsTab so at most one field across the record is ever true. */
   isEditing: boolean
@@ -84,7 +93,7 @@ export function InlineFieldEditor({ el, record, formId, recordId, isEditing, any
   onStopEdit: () => void
 }) {
   const canEdit = usePermission(`forms:${formId}:edit`)
-  const eligible = isFieldEligible(el, canEdit)
+  const eligible = isFieldEligible(el, canEdit, advancedReadOnly)
   const [value, setValue] = useState<unknown>(record[el.key])
   const [error, setError] = useState<string | null>(null)
   const updateRecord = useUpdateRecord(formId)
