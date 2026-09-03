@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import {
-  Settings, ChevronLeft, ChevronRight, SlidersHorizontal, Maximize2, Minimize2, Plug,
-} from 'lucide-react'
+  Settings, ChevronLeft, ChevronRight, SlidersHorizontal, Maximize2, Minimize2, Plug, FileCode2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -187,10 +186,23 @@ export function NodeConfigPanel() {
         <>
           <div className="flex items-center gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--foreground))]/10 px-4 py-3.5">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--foreground))]/10 ring-1 ring-[hsl(var(--foreground))]/15">
-              <Plug size={17} strokeWidth={2.25} className="text-[hsl(var(--foreground))]" />
+              {/* A template and a connector are both configured through this
+                  same schema-driven form — that is the point, and why a
+                  template needed no frontend code. They are still drawn
+                  differently, because "this node's behaviour is data we hold"
+                  and "this node talks to a process" are different things to
+                  know when something misbehaves. */}
+              {connectorEntry.kind === 'template'
+                ? <FileCode2 size={17} strokeWidth={2.25} className="text-[hsl(var(--foreground))]" />
+                : <Plug size={17} strokeWidth={2.25} className="text-[hsl(var(--foreground))]" />}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold text-[hsl(var(--foreground))]">{connectorEntry.label}</p>
+              <p className="flex items-center gap-1.5 truncate text-[13px] font-semibold text-[hsl(var(--foreground))]">
+                {connectorEntry.label}
+                <span className="rounded-full border border-[hsl(var(--border))] px-1.5 py-px text-[9px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
+                  {connectorEntry.kind}
+                </span>
+              </p>
               <p className="truncate font-mono text-[10px] text-[hsl(var(--muted-foreground))]">{node.id}</p>
             </div>
           </div>
