@@ -14,6 +14,7 @@ import { useUiWorkflowHost } from '@/features/ui-workflows/useUiWorkflowHost'
 import { useFieldChangeWorkflow } from '@/features/ui-workflows/useFieldChangeWorkflow'
 import type { FieldStatePatch } from '@/features/ui-workflows/host'
 import { FieldRenderer } from './FieldRenderer'
+import { FormSectionShell, shouldChromeSections } from './FormSectionShell'
 import type { AdvancedFieldEffects } from './advanced-settings'
 import type { FormSchema } from '@/features/form-builder/schema'
 import type { FieldDef } from '@/features/forms/types'
@@ -224,12 +225,18 @@ export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitti
     }
   }, [advancedEffects, liveValues, setValue])
 
+  const chromeSections = shouldChromeSections(schema.sections.length)
+
   return (
-    <form onSubmit={handleSubmit((values) => onSubmit(values))} className="space-y-6">
+    <form onSubmit={handleSubmit((values) => onSubmit(values))} className={chromeSections ? 'space-y-4' : 'space-y-6'}>
       {schema.sections.map((section) => (
-        <div key={section.id}>
-          {section.title && <h3 className="mb-3 text-sm font-semibold text-slate-800">{section.title}</h3>}
-          {section.description && <p className="mb-3 text-xs text-gray-500">{section.description}</p>}
+        <FormSectionShell
+          key={section.id}
+          id={section.id}
+          title={section.title}
+          description={section.description}
+          chrome={chromeSections}
+        >
           {/* A 2/3/4-column section layout (COLUMN_LAYOUTS — all real,
            *  builder-selectable options) has no room to sit side by side on
            *  a phone: a flex row with no wrap/breakpoint here forced every
@@ -299,7 +306,7 @@ export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitti
               )
             })}
           </div>
-        </div>
+        </FormSectionShell>
       ))}
 
       <Button type="submit" disabled={submitting} className="gap-1.5">

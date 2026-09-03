@@ -29,6 +29,7 @@ import { resolveDetailTabs } from './detail-tabs/registry'
 import { DetailTabList } from './detail-tabs/DetailTabList'
 import { ZonedDetailTabList } from './detail-tabs/ZonedDetailTabList'
 import { MAX_GROUP_DEPTH } from './detail-tabs/contract'
+import { FormSectionShell, shouldChromeSections } from './FormSectionShell'
 import './detail-tabs'
 import type { FormSchema, DetailTabConfig } from '@/features/form-builder/schema'
 import type { FieldDef, AuditLogEntry, AuditFieldChange, LinkedRecordGroup } from '@/features/forms/types'
@@ -127,13 +128,22 @@ export function DetailsTab({
   ) : null
 
   if (schema && schema.sections.length > 0) {
+    const chromeSections = shouldChromeSections(schema.sections.length)
     return (
-    <div className="space-y-6">
+    <div className={chromeSections ? 'space-y-4' : 'space-y-6'}>
       {schema.sections.map((section) => (
-        <div key={section.id}>
-          {section.title && <h3 className="mb-3 text-sm font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{section.title}</h3>}
-          {section.description && <p className="mb-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{section.description}</p>}
-          <div className="flex gap-4">
+        <FormSectionShell
+          key={section.id}
+          id={section.id}
+          title={section.title}
+          description={section.description}
+          chrome={chromeSections}
+        >
+          {/* Stacks to one column below `md` for the same reason FormRenderer's
+           *  own section row does: a 2/3/4-column layout has no room to sit
+           *  side by side on a phone, and a bare flex row squeezed every column
+           *  into a sliver rather than wrapping. */}
+          <div className="flex flex-col gap-4 md:flex-row">
             {section.columns.map((column) => {
               const ratios = COLUMN_LAYOUTS[section.layout]?.ratios ?? [1]
               const idx = section.columns.indexOf(column)
@@ -185,7 +195,7 @@ export function DetailsTab({
               )
             })}
           </div>
-        </div>
+        </FormSectionShell>
       ))}
       {childTabList}
     </div>

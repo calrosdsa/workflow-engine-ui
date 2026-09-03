@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-09-03",
+    "scope": "component",
+    "macrostructure": "unchanged — component-scope redesign of form-section chrome, no shell or route change",
+    "theme": "unchanged (design.md token pickup only; retired two hardcoded Tailwind colors in FormRenderer)",
+    "enrichment": "none",
+    "brief": "Form sections had no visual separation on the record detail page — a titled section rendered as bold text followed by fields, so a multi-section form read as one flat list. Added a shared FormSectionShell (border + header hairline card, no fill, since --card === --background in both themes) used by BOTH RecordDetailPanel's DetailsTab and FormRenderer; chrome only when sections.length > 1, so a single-section form stays plain. Sections became labelled <section> landmarks (aria-labelledby). Adjacent fixes: DetailsTab's column row was a bare flex that squeezed columns on mobile (now flex-col md:flex-row, matching FormRenderer); FormRenderer's section title/description used hardcoded text-slate-800/text-gray-500 that broke in dark theme (now tokens)."
+  },
+  {
     "date": "2026-09-01",
     "scope": "component",
     "macrostructure": "unchanged (canvas+rail, per design.md family) — component-scope redesign, no shell change",
