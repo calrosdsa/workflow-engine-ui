@@ -71,10 +71,17 @@ export interface NodeFormProps {
   onChange: (c: unknown) => void
 }
 
-// Node picker category tabs. Only meaningful for PALETTE_NODES members —
-// non-addable types (entry/trigger/exit/loop_end/subflow) leave `category`
-// unset since they never appear in the picker.
-export type NodeCategory = 'Data' | 'Logic' | 'Integrations' | 'Notify' | 'Knowledge' | 'Debug' | 'Agent'
+// A category id from the SHARED vocabulary, which lives in Go
+// (internal/graph's categoryCatalog) and is served via /meta/node-taxonomy —
+// see node-taxonomy.ts for the full rationale.
+//
+// Deliberately `string`, not a union of the ids this build happens to know.
+// A union here is what this replaced: it drifted from the backend's list in
+// both directions, and made a category added server-side unrepresentable
+// without a frontend release. The value below is a FALLBACK used until the
+// taxonomy fetch lands; the server's answer wins from then on, so an id this
+// build has never seen must be expressible.
+export type NodeCategory = string
 
 export interface NodeRegistryEntry {
   label: string
@@ -91,10 +98,16 @@ export interface NodeRegistryEntry {
    *  type's well-formed shape. Identity for types whose config shape has
    *  been stable since the DAG redesign (condition/subflow/iterator). */
   normalise: (raw: unknown) => unknown
-  /** Node picker tab this type appears under. Required for every
-   *  PALETTE_NODES member (enforced by a startup assertion below) so the
-   *  picker's category tabs can never drift out of sync with the palette
-   *  the way they once did (FR-C5-012). */
+  /** Fallback category for this type, used until /meta/node-taxonomy loads
+   *  (and on a backend that predates it). Required for every PALETTE_NODES
+   *  member — enforced by assertPaletteCategories below — so the picker's
+   *  tabs can never drift out of sync with the palette the way they once
+   *  did (FR-C5-012).
+   *
+   *  Not authoritative: the served taxonomy overrides it, which is how a
+   *  node can be re-grouped without a frontend release. Lining the two up
+   *  for the first time found generate_report filed here under 'Knowledge'
+   *  while the backend had always called it 'output'. */
   category?: NodeCategory
 }
 
@@ -130,7 +143,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Assign a variable value',
     form: SetVariableForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseSetVariableConfig(raw),
-    category: 'Data',
+    category: 'data',
   },
   condition: {
     label: 'Condition', icon: GitBranch,
@@ -139,7 +152,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Continue only when a condition holds (optionally branch true/false)',
     form: ConditionForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseConditionConfig(raw),
-    category: 'Logic',
+    category: 'logic',
   },
   subflow: {
     label: 'Execute Workflow', icon: Box,
@@ -148,7 +161,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Run another saved workflow, with input/output mapping',
     form: SubflowForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseSubflowConfig(raw),
-    category: 'Logic',
+    category: 'logic',
   },
   merge: {
     label: 'Merge', icon: GitMerge,
@@ -157,7 +170,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Join parallel branches',
     form: NoAdditionalConfig as ComponentType<NodeFormProps>,
     normalise: (raw) => raw,
-    category: 'Logic',
+    category: 'logic',
   },
   fetch_records: {
     label: 'Fetch Records', icon: Database,
@@ -166,7 +179,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Query records from a form',
     form: FetchRecordsForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseFetchRecordsConfig(raw),
-    category: 'Data',
+    category: 'data',
   },
   upsert_records: {
     label: 'Upsert Record', icon: DatabaseZap,
@@ -175,7 +188,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Create or update a record by its unique fields',
     form: UpsertRecordsForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseUpsertRecordsConfig(raw),
-    category: 'Data',
+    category: 'data',
   },
   update_records: {
     label: 'Update Records', icon: Pencil,
@@ -184,7 +197,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Update record(s) matching a filter',
     form: UpdateRecordsForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseUpdateRecordsConfig(raw),
-    category: 'Data',
+    category: 'data',
   },
   delete_records: {
     label: 'Delete Records', icon: Trash2,
@@ -193,7 +206,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Delete record(s) matching a filter',
     form: DeleteRecordsForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseDeleteRecordsConfig(raw),
-    category: 'Data',
+    category: 'data',
   },
   iterator: {
     label: 'Iterator', icon: Repeat,
@@ -202,7 +215,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Loop over a list, running the body per item',
     form: IteratorForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseIteratorConfig(raw),
-    category: 'Logic',
+    category: 'logic',
   },
   loop_end: {
     label: 'Loop End', icon: FlagOff,
@@ -219,7 +232,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Make an outbound HTTP call',
     form: HttpRequestForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseHttpRequestConfig(raw),
-    category: 'Integrations',
+    category: 'integration',
   },
   show_message: {
     label: 'Show Message', icon: MessageSquare,
@@ -228,7 +241,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Publish a success/error/info message',
     form: ShowMessageForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseShowMessageConfig(raw),
-    category: 'Notify',
+    category: 'notify',
   },
   transform: {
     label: 'Transform', icon: Wand2,
@@ -237,7 +250,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Map a source list into a target form’s schema',
     form: TransformForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseTransformConfig(raw),
-    category: 'Data',
+    category: 'data',
   },
   save_records: {
     label: 'Save Records', icon: Save,
@@ -246,7 +259,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Bulk upsert a list of records at once',
     form: SaveRecordsForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseSaveRecordsConfig(raw),
-    category: 'Data',
+    category: 'data',
   },
   notification: {
     label: 'Notification', icon: Bell,
@@ -255,7 +268,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Notify a user — appears in their notification center',
     form: NotificationForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseNotificationConfig(raw),
-    category: 'Notify',
+    category: 'notify',
   },
   knowledge_retrieval: {
     label: 'Knowledge Retrieval', icon: BookOpenCheck,
@@ -264,7 +277,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Query a knowledge base for context or a grounded answer',
     form: KnowledgeRetrievalForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseKnowledgeRetrievalConfig(raw),
-    category: 'Knowledge',
+    category: 'ai',
   },
   knowledge_ingest: {
     label: 'Knowledge Ingest', icon: BookOpen,
@@ -273,7 +286,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Insert text into a knowledge base for asynchronous indexing',
     form: KnowledgeIngestForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseKnowledgeIngestConfig(raw),
-    category: 'Knowledge',
+    category: 'ai',
   },
   debug: {
     label: 'Debug', icon: Bug,
@@ -282,7 +295,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Capture a variable snapshot at this point in the graph',
     form: DebugForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseDebugConfig(raw),
-    category: 'Debug',
+    category: 'logic',
   },
   run_agent: {
     label: 'Run Agent', icon: Bot,
@@ -291,7 +304,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Start an Agent run and wait for its result',
     form: RunAgentForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseRunAgentConfig(raw),
-    category: 'Agent',
+    category: 'ai',
   },
   send_to_session: {
     label: 'Send to Session', icon: MessageCircle,
@@ -300,7 +313,7 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Post a message into an existing Agent session',
     form: SendToSessionForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseSendToSessionConfig(raw),
-    category: 'Agent',
+    category: 'ai',
   },
   generate_report: {
     label: 'Generate Report', icon: FileBarChart,
@@ -309,7 +322,10 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     description: 'Generate a report and get back a downloadable file',
     form: GenerateReportForm as unknown as ComponentType<NodeFormProps>,
     normalise: (raw) => normaliseReportGenerateConfig(raw),
-    category: 'Knowledge',
+    // Was 'Knowledge' here while the backend had always classified it
+    // 'output' — a live instance of the drift the shared vocabulary exists
+    // to remove, found by lining the two lists up for the first time.
+    category: 'output',
   },
 }
 
@@ -450,25 +466,28 @@ export const PALETTE_NODES: NodeType[] = [
   'run_agent', 'send_to_session', 'generate_report',
 ]
 
-// Node picker category tabs, derived from each PALETTE_NODES member's own
-// `category` field — cannot drift out of sync with the palette the way the
-// picker's tabs once did as a separately hand-maintained list (FR-C5-012).
-// Every PALETTE_NODES member must carry a `category`; a missing one is a
-// registry authoring bug, not a runtime condition to degrade gracefully
+// Every PALETTE_NODES member must carry a fallback `category`; a missing one
+// is a registry authoring bug, not a runtime condition to degrade gracefully
 // from, so it throws immediately at module load rather than silently
 // omitting that type from every tab.
-const CATEGORY_ORDER: NodeCategory[] = ['Data', 'Logic', 'Integrations', 'Notify', 'Knowledge', 'Agent', 'Debug']
+//
+// What is NOT here any more is the tab list itself. It used to be built from
+// a hand-written CATEGORY_ORDER array — a second list to maintain, and the
+// one that had drifted from the backend's vocabulary (it named tabs Go had
+// never heard of, and omitted categories Go had). Tab construction now lives
+// in node-taxonomy.ts's groupByCategory, driven by the served vocabulary, so
+// the ordering is decided in exactly one place: Go.
+function assertPaletteCategories() {
+  for (const type of PALETTE_NODES) {
+    if (!NODE_REGISTRY[type].category) {
+      throw new Error(`node-registry: PALETTE_NODES member "${type}" has no category`)
+    }
+  }
+}
+assertPaletteCategories()
 
-export const NODE_CATEGORIES: { label: string; types: NodeType[] }[] = [
-  { label: 'All', types: PALETTE_NODES },
-  ...CATEGORY_ORDER.map((category) => ({
-    label: category,
-    types: PALETTE_NODES.filter((type) => {
-      const entry = NODE_REGISTRY[type]
-      if (!entry.category) {
-        throw new Error(`node-registry: PALETTE_NODES member "${type}" has no category`)
-      }
-      return entry.category === category
-    }),
-  })).filter((c) => c.types.length > 0),
-]
+/** Fallback category for a built-in type, for use before the served taxonomy
+ *  arrives. Callers should prefer the taxonomy's answer when they have it. */
+export function fallbackCategory(type: NodeType): NodeCategory {
+  return NODE_REGISTRY[type]?.category ?? 'logic'
+}

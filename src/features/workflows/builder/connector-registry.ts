@@ -18,12 +18,19 @@
 // registry as the fallback.
 
 import type { JSONSchema } from './SchemaForm'
+import type { NodeKind } from './node-taxonomy'
 
 /** Mirrors api/connectors/handler.go's manifestResponse wire shape exactly
  *  — field-for-field, not renamed, so there's no translation layer to keep
  *  in sync with the backend's own JSON tags. */
 export interface ConnectorManifest {
   type: string
+  /** Provenance, stated by the backend rather than inferred here: a gRPC
+   *  connector process or a declarative node template. Both publish their own
+   *  config schema and both render through SchemaForm, which is why they share
+   *  this shape — but the palette badges them differently, and only a template
+   *  is fully described by data this deployment holds. */
+  kind: NodeKind
   config_schema_version: number
   display_name: string
   description: string
@@ -41,6 +48,7 @@ export interface ConnectorManifest {
  *  must stay closed. */
 export interface ConnectorRegistryEntry {
   type: string
+  kind: NodeKind
   label: string
   description: string
   category: string
@@ -53,9 +61,16 @@ export interface ConnectorRegistryEntry {
 export function toRegistryEntry(m: ConnectorManifest): ConnectorRegistryEntry {
   return {
     type: m.type,
+    // Older backends predate the field; treating an absent kind as
+    // 'connector' is right because that is the only thing this endpoint could
+    // have been serving before templates existed.
+    kind: m.kind ?? 'connector',
     label: m.display_name || m.type,
     description: m.description,
-    category: m.category || 'Integrations',
+    // Already normalized against the shared vocabulary server-side
+    // (graph.NormalizeCategory), so this is a defensive default for an older
+    // backend, not a translation.
+    category: m.category || 'integration',
     configSchema: m.config_json_schema,
     outputSchema: m.output_json_schema,
     iconHint: m.icon_hint,

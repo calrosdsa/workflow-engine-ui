@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Search, X, Plug } from 'lucide-react'
-import { NODE_REGISTRY, PALETTE_NODES, NODE_CATEGORIES } from './node-registry'
+import { Search, X, Plug, FileCode2 } from 'lucide-react'
+import { NODE_REGISTRY, PALETTE_NODES, fallbackCategory } from './node-registry'
 import { useConnectorRegistry } from './connector-hooks'
+import { useNodeTaxonomy, groupByCategory, type PaletteEntry } from './node-taxonomy'
 import { cn } from '@/lib/utils'
 import type { NodeType } from '../types'
 
@@ -10,21 +11,12 @@ interface NodePickerModalProps {
   onClose:  () => void
 }
 
-// A candidate is either a built-in NodeType (rendered via NODE_REGISTRY, as
-// always) or a runtime-discovered connector type (no NODE_REGISTRY entry —
-// rendered with a generic plug icon and slate color instead). Discriminated
-// by `kind` rather than trying to duck-type "is this a NodeType," which
-// would need a runtime membership check against the same union
-// widening this file is specifically trying to avoid needing elsewhere.
-type Candidate =
-  | { kind: 'builtin'; type: NodeType }
-  | { kind: 'connector'; type: string; label: string; description: string }
-
 export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
   const [search,    setSearch]    = useState('')
   const [activeTab, setActiveTab] = useState(0)
   const searchRef = useRef<HTMLInputElement>(null)
   const { data: connectorEntries } = useConnectorRegistry()
+  const { data: taxonomy } = useNodeTaxonomy()
 
   useEffect(() => {
     searchRef.current?.focus()
@@ -37,41 +29,47 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
-  // Categories gain one more tab, "Connectors", only when at least one is
-  // configured — appended after the built-in tabs (NODE_CATEGORIES itself
-  // stays untouched, per the connector plan §07) rather than merged into
-  // "Integrations", so a connector's presence/absence never shifts where
-  // any built-in tab sits.
-  const connectorCandidates: Candidate[] = useMemo(
-    () => (connectorEntries ?? []).map((c) => ({ kind: 'connector' as const, type: c.type, label: c.label, description: c.description })),
-    [connectorEntries],
-  )
-  const tabs = useMemo(() => {
-    const builtinTabs = NODE_CATEGORIES.map((cat) => ({
-      label: cat.label,
-      candidates: cat.types.map((t): Candidate => ({ kind: 'builtin', type: t })),
+  // Every addable node type, whatever its provenance, in ONE list — built-in,
+  // connector, and (once they exist) declarative template. Grouping happens
+  // downstream on `category`, so this file no longer needs to know which
+  // source an entry came from except to badge and colour it.
+  //
+  // Category comes from the served taxonomy when it has arrived, falling back
+  // to the compiled-in one. That is what lets the backend re-group a node, or
+  // introduce a category this bundle predates, without a frontend release.
+  const entries: PaletteEntry[] = useMemo(() => {
+    const servedCategory = new Map((taxonomy?.nodes ?? []).map((n) => [n.type, n.category]))
+    const builtins: PaletteEntry[] = PALETTE_NODES.map((type) => ({
+      type,
+      kind: 'core',
+      category: servedCategory.get(type) ?? fallbackCategory(type),
+      label: NODE_REGISTRY[type].label,
+      description: NODE_REGISTRY[type].description,
     }))
-    if (connectorCandidates.length === 0) return builtinTabs
-    // "All" (index 0) also gains the connector entries, so searching or
-    // browsing the default tab surfaces everything.
-    builtinTabs[0] = { ...builtinTabs[0], candidates: [...builtinTabs[0].candidates, ...connectorCandidates] }
-    return [...builtinTabs, { label: 'Connectors', candidates: connectorCandidates }]
-  }, [connectorCandidates])
+    const runtime: PaletteEntry[] = (connectorEntries ?? []).map((c) => ({
+      type: c.type,
+      kind: c.kind,
+      category: servedCategory.get(c.type) ?? c.category,
+      label: c.label,
+      description: c.description,
+    }))
+    return [...builtins, ...runtime]
+  }, [connectorEntries, taxonomy])
 
-  const searchPool: Candidate[] = useMemo(
-    () => [...PALETTE_NODES.map((t): Candidate => ({ kind: 'builtin', type: t })), ...connectorCandidates],
-    [connectorCandidates],
-  )
-
-  const candidateLabel = (c: Candidate) => (c.kind === 'builtin' ? NODE_REGISTRY[c.type].label : c.label)
-  const candidateDescription = (c: Candidate) => (c.kind === 'builtin' ? NODE_REGISTRY[c.type].description : c.description)
+  // "All" first, then one tab per OCCUPIED category. A category with no
+  // members never renders, which is what lets the vocabulary reserve a name
+  // ahead of the nodes that will fill it.
+  const tabs = useMemo(() => {
+    const groups = groupByCategory(entries, taxonomy?.categories ?? [])
+    return [{ id: 'all', label: 'All', entries }, ...groups]
+  }, [entries, taxonomy])
 
   const candidates = search
-    ? searchPool.filter((c) =>
-        candidateLabel(c).toLowerCase().includes(search.toLowerCase()) ||
-        candidateDescription(c).toLowerCase().includes(search.toLowerCase())
+    ? entries.filter((c) =>
+        c.label.toLowerCase().includes(search.toLowerCase()) ||
+        c.description.toLowerCase().includes(search.toLowerCase())
       )
-    : tabs[activeTab].candidates
+    : (tabs[activeTab]?.entries ?? [])
 
   return (
     // Backdrop
@@ -111,7 +109,7 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
           <div className="flex gap-1 px-4 pt-3">
             {tabs.map((tab, i) => (
               <button
-                key={tab.label}
+                key={tab.id}
                 onClick={() => setActiveTab(i)}
                 className={cn(
                   'rounded-lg px-3 py-1.5 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
@@ -136,10 +134,16 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
           ) : (
             <div className="grid grid-cols-3 gap-2.5">
               {candidates.map((c) => {
-                const label = candidateLabel(c)
-                const description = candidateDescription(c)
-                const Icon = c.kind === 'builtin' ? NODE_REGISTRY[c.type].icon : Plug
-                const gradient = c.kind === 'builtin' ? NODE_REGISTRY[c.type].gradient : 'bg-[hsl(var(--foreground))]/70'
+                const builtin = c.kind === 'core' ? NODE_REGISTRY[c.type as NodeType] : undefined
+                const label = c.label
+                const description = c.description
+                // A template gets its own icon rather than reusing the
+                // connector plug: sharing one would erase the only
+                // distinction that matters to someone reading the palette —
+                // whether this node's behaviour is data this deployment
+                // holds, or a process it merely talks to.
+                const Icon = builtin?.icon ?? (c.kind === 'template' ? FileCode2 : Plug)
+                const gradient = builtin?.gradient ?? 'bg-[hsl(var(--foreground))]/70'
                 return (
                   <button
                     key={c.type}
@@ -157,7 +161,18 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
                       <Icon size={18} strokeWidth={2.25} />
                     </div>
                     <div>
-                      <p className="text-[13px] font-semibold text-[hsl(var(--foreground))]">{label}</p>
+                      <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[hsl(var(--foreground))]">
+                        {label}
+                        {/* Provenance, shown only when it is not the default.
+                            Grouping by function means a connector now shares a
+                            tab with built-ins, so the badge is what still
+                            answers "where does this one actually run?". */}
+                        {c.kind !== 'core' && (
+                          <span className="rounded-full border border-[hsl(var(--border))] px-1.5 py-px text-[9px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
+                            {c.kind}
+                          </span>
+                        )}
+                      </p>
                       <p className="mt-0.5 text-[10px] leading-snug text-[hsl(var(--muted-foreground))]">{description}</p>
                     </div>
                   </button>
