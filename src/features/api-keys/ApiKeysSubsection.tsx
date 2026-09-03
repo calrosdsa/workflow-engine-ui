@@ -1,12 +1,13 @@
-import { useState } from 'react'
-import { Plus, Webhook, Trash2, Loader2, AlertCircle, Copy, Check, ShieldAlert } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import { Plus, Webhook, Trash2, Loader2, AlertCircle, Copy, Check, ShieldAlert, Wrench } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
 import { useApiKeys, useCreateApiKey, useRevokeApiKey } from './hooks'
 import { usePermission } from '@/features/auth/permissions'
-import type { ApiKeySummary, CreateApiKeyResponse } from './types'
+import { apiKeyKind, type ApiKeyKind, type ApiKeySummary, type CreateApiKeyResponse } from './types'
 
 export function ApiKeysSubsection() {
   // apikeys:read is a dedicated permission, deliberately NOT implied by
@@ -31,9 +32,12 @@ export function ApiKeysSubsection() {
         <div>
           <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">API keys</h2>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
-            Long-lived credentials for a third party to call this app's API directly — no login required. Each key
-            grants access to every form's records plus the Knowledge Base/RAG endpoints. Revoking is immediate and
-            permanent.
+            Long-lived credentials for a third party to call this app's API directly — no login required. An
+            <span className="font-medium text-[hsl(var(--foreground))]"> Integration</span> key grants access to
+            every form's records plus the Knowledge Base/RAG endpoints; a
+            <span className="font-medium text-[hsl(var(--foreground))]"> Management</span> key grants full
+            design-time control (forms, workflows, menus, roles, other keys) for a headless builder to operate this
+            app. Revoking is immediate and permanent.
           </p>
         </div>
         {canWrite && (
@@ -89,12 +93,15 @@ function ApiKeyRow({ apiKey, canWrite, onRevoke }: {
   onRevoke: () => void
 }) {
   const revoked = !!apiKey.revoked_at
+  const kind = apiKeyKind(apiKey.permissions)
+  const scopeLabel = kind === 'management' ? 'Full design-time access' : 'All forms + Knowledge Base/RAG'
   return (
     <div className={`flex items-center gap-3 rounded-lg border p-3 ${revoked ? 'border-[hsl(var(--border))]/50 bg-[hsl(var(--muted))]/40' : 'border-[hsl(var(--border))] bg-[hsl(var(--card))]'}`}>
       <Webhook size={16} className={`shrink-0 ${revoked ? 'text-[hsl(var(--muted-foreground))]' : 'text-[hsl(var(--success))]'}`} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className={`truncate text-sm font-medium ${revoked ? 'text-[hsl(var(--muted-foreground))] line-through' : 'text-[hsl(var(--foreground))]'}`}>{apiKey.name}</p>
+          <ApiKeyKindBadge kind={kind} />
           {revoked && (
             <span className="shrink-0 rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
               Revoked
@@ -102,7 +109,7 @@ function ApiKeyRow({ apiKey, canWrite, onRevoke }: {
           )}
         </div>
         <p className="truncate font-mono text-xs text-[hsl(var(--muted-foreground))]">
-          {apiKey.key_prefix}··· · All forms + Knowledge Base/RAG
+          {apiKey.key_prefix}··· · {scopeLabel}
           {apiKey.last_used_at && !revoked ? ` · Last used ${formatRelative(apiKey.last_used_at)}` : ''}
           {!apiKey.last_used_at && !revoked ? ' · Never used' : ''}
         </p>
@@ -120,15 +127,70 @@ function ApiKeyRow({ apiKey, canWrite, onRevoke }: {
   )
 }
 
+function ApiKeyKindBadge({ kind }: { kind: ApiKeyKind }) {
+  if (kind === 'management') {
+    return (
+      <span className="flex shrink-0 items-center gap-1 rounded-full bg-[hsl(var(--warning))]/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--warning))]">
+        <Wrench size={10} />Management
+      </span>
+    )
+  }
+  return (
+    <span className="shrink-0 rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
+      Integration
+    </span>
+  )
+}
+
+function KindOption({ selected, onSelect, icon, title, description, warning = false }: {
+  selected: boolean
+  onSelect: () => void
+  icon: ReactNode
+  title: string
+  description: string
+  /** Styles the option in the warning hue and adds a ShieldAlert marker —
+   *  for "management", which grants wildcard design-time control including
+   *  apikeys:* (a management key can mint/revoke keys, itself included). */
+  warning?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={cn(
+        'flex w-full items-start gap-2.5 rounded-lg border p-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]',
+        selected
+          ? warning
+            ? 'border-[hsl(var(--warning))] bg-[hsl(var(--warning))]/10'
+            : 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10'
+          : 'border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]',
+      )}
+    >
+      <span className={cn('mt-0.5 shrink-0', selected ? (warning ? 'text-[hsl(var(--warning))]' : 'text-[hsl(var(--primary))]') : 'text-[hsl(var(--muted-foreground))]')}>
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5 text-sm font-medium text-[hsl(var(--foreground))]">
+          {title}
+          {warning && <ShieldAlert size={12} className="text-[hsl(var(--warning))]" />}
+        </span>
+        <span className="mt-0.5 block text-xs text-[hsl(var(--muted-foreground))]">{description}</span>
+      </span>
+    </button>
+  )
+}
+
 function CreateApiKeyDialog({ onClose, onCreated }: {
   onClose: () => void
   onCreated: (created: CreateApiKeyResponse) => void
 }) {
   const createMutation = useCreateApiKey()
   const [name, setName] = useState('')
+  const [kind, setKind] = useState<ApiKeyKind>('integration')
 
   const handleCreate = async () => {
-    const created = await createMutation.mutateAsync({ name: name.trim() })
+    const created = await createMutation.mutateAsync({ name: name.trim(), kind })
     onCreated(created)
   }
 
@@ -138,12 +200,11 @@ function CreateApiKeyDialog({ onClose, onCreated }: {
         <DialogHeader>
           <DialogTitle>Generate API key</DialogTitle>
           <DialogDescription>
-            Grants the holder access to every form's records and the Knowledge Base/RAG endpoints for this app. The
-            secret is shown once, immediately after creation — save it somewhere safe.
+            The secret is shown once, immediately after creation — save it somewhere safe.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 px-6 py-4">
+        <div className="space-y-4 px-6 py-4">
           <div>
             <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name</label>
             <Input
@@ -154,6 +215,27 @@ function CreateApiKeyDialog({ onClose, onCreated }: {
               autoFocus
             />
             <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">A label to help you tell keys apart later — not shown to whoever holds the key.</p>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Access</label>
+            <div className="space-y-2">
+              <KindOption
+                selected={kind === 'integration'}
+                onSelect={() => setKind('integration')}
+                icon={<Webhook size={15} />}
+                title="Integration"
+                description="Every form's records, plus the Knowledge Base/RAG endpoints. For a third party reading or writing this app's data."
+              />
+              <KindOption
+                selected={kind === 'management'}
+                onSelect={() => setKind('management')}
+                icon={<Wrench size={15} />}
+                title="Management"
+                warning
+                description="Full design-time control — create/edit forms, workflows, menus, roles, and other API keys (including itself). For a headless builder that operates this app, not just one that reads/writes its data. Treat like an owner-level credential."
+              />
+            </div>
           </div>
 
           {createMutation.isError && (
@@ -194,9 +276,13 @@ function SecretRevealDialog({ secret, onClose }: { secret: CreateApiKeyResponse;
             <ShieldAlert size={16} className="text-[hsl(var(--warning))]" />
             Save this key now
           </DialogTitle>
-          <DialogDescription>
-            This is the only time <span className="font-medium text-[hsl(var(--foreground))]">{secret.name}</span>'s secret is shown. Once you
-            close this dialog, it cannot be retrieved again — only revoked and replaced with a new key.
+          <DialogDescription className="flex flex-wrap items-center gap-1.5">
+            <span>
+              This is the only time <span className="font-medium text-[hsl(var(--foreground))]">{secret.name}</span>'s
+              secret is shown. Once you close this dialog, it cannot be retrieved again — only revoked and replaced
+              with a new key.
+            </span>
+            <ApiKeyKindBadge kind={apiKeyKind(secret.permissions)} />
           </DialogDescription>
         </DialogHeader>
 

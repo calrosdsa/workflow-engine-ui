@@ -104,6 +104,33 @@ export interface RecordsTableProps {
 // DataTable render, and the record-detail drawer. SearchMenuRuntime and the
 // table widget both become thin callers supplying only what differs between
 // them (title, header actions, filter UI toggle, expand navigation).
+// Re-guards a FilterGroup that may have reached here as opaque, externally-
+// authored JSONB — a Search menu's own config.default_filter, or (FR-D2-014)
+// a saved view's config.filter — both accepted by the app-builder MCP
+// server's create_menu/create_saved_view tools with no server-side
+// validation of this NESTED shape, only of the request's top-level fields
+// (see internal/menus/config.go's "config is opaque JSON" convention, and
+// api/menus/saved_views.go's validateSavedViewRequest, which checks name/
+// visibility only). This app's own FilterBuilder-driven UI always produces
+// a well-formed group (newGroup()'s shape); an MCP-authored one can easily
+// omit `groups` (or `conditions`, or `combinator`) since nothing forces an
+// agent to know the full shape. Mirrors SaveViewDialog.tsx's own
+// ensureGroupIds for ITS seeding path (ITS own doc comment explains why
+// that's a small local copy rather than a shared helper) — this is
+// RecordsTable's: the one every filter reaching ActiveFiltersBar
+// (filter.groups.some(...), unconditional) passes through, for BOTH
+// callers (SearchMenuRuntime and the dashboard table widget). Without this,
+// one malformed default-visibility saved view crashes the page for every
+// viewer, not just whoever authored it.
+function ensureGroupIds(g: FilterGroup): FilterGroup {
+  return {
+    id: g.id ?? nanoid(),
+    combinator: g.combinator ?? 'and',
+    conditions: (g.conditions ?? []).map((c) => ({ ...c, id: c.id ?? nanoid() })),
+    groups: (g.groups ?? []).map((sub) => ensureGroupIds(sub)),
+  }
+}
+
 export function RecordsTable({
   formId, columns: columnsProp, defaultFilter, defaultSort, pageSize: pageSizeProp,
   allowFilter = false, allowSearch = false, rowClick = true, headerActions, onExpandRecord, title,
@@ -115,7 +142,7 @@ export function RecordsTable({
   const [sort, setSort] = useState<SortRule[]>(
     (defaultSort ?? []).map((s) => ({ ...s, id: s.id ?? nanoid() })),
   )
-  const [filter, setFilter] = useState<FilterGroup>(defaultFilter ?? newGroup())
+  const [filter, setFilter] = useState<FilterGroup>(ensureGroupIds(defaultFilter ?? newGroup()))
   // columns was a plain pass-through prop until Kanban/List's column
   // drag-reorder needed something to mutate — now local state (seeded once
   // from the prop, same convention filter/sort already use), so a drag

@@ -28,7 +28,9 @@ export interface FieldDef {
   required?: boolean
   unique?: boolean
   index?: boolean
-  default?: string
+  /** Value applied when a record is created without one: a typed JSON value
+   *  matching `type` (true, 0, "draft"), never a SQL literal. */
+  default?: unknown
   enum_values?: string[]
   reference_table?: string
   /** Name of the field on the target form (reference_table) to display/search

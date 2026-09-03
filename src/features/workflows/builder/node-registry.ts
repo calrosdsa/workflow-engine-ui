@@ -18,6 +18,7 @@ import {
   Wand2,
   Save,
   Bell,
+  Mail,
   BookOpen,
   BookOpenCheck,
   Bug,
@@ -29,7 +30,7 @@ import {
 import type {
   NodeType, Port, VariableDecl, SetVariableConfig, ConditionConfig, FetchRecordsConfig, IteratorConfig,
   UpsertRecordsConfig, UpdateRecordsConfig, DeleteRecordsConfig, HttpRequestConfig,
-  TriggerConfig, ShowMessageConfig, TransformConfig, SaveRecordsConfig, NotificationConfig,
+  TriggerConfig, ShowMessageConfig, TransformConfig, SaveRecordsConfig, NotificationConfig, EmailConfig,
   KnowledgeRetrievalConfig, KnowledgeIngestConfig, DebugConfig, SubflowConfig,
   RunAgentConfig, SendToSessionConfig, ReportGenerateConfig,
 } from '../types'
@@ -48,6 +49,7 @@ import { SaveRecordsForm, normaliseSaveRecordsConfig } from './node-forms/SaveRe
 import { IteratorForm, normaliseIteratorConfig } from './node-forms/IteratorForm'
 import { HttpRequestForm, normaliseHttpRequestConfig } from './node-forms/HttpRequestForm'
 import { NotificationForm, normaliseNotificationConfig } from './node-forms/NotificationForm'
+import { EmailForm, normaliseEmailConfig } from './node-forms/EmailForm'
 import { KnowledgeRetrievalForm, normaliseKnowledgeRetrievalConfig } from './node-forms/KnowledgeRetrievalForm'
 import { KnowledgeIngestForm, normaliseKnowledgeIngestConfig } from './node-forms/KnowledgeIngestForm'
 import { DebugForm, normaliseDebugConfig } from './node-forms/DebugForm'
@@ -270,6 +272,15 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
     normalise: (raw) => normaliseNotificationConfig(raw),
     category: 'notify',
   },
+  email: {
+    label: 'Send Email', icon: Mail,
+    color: 'bg-rose-600', gradient: 'bg-gradient-to-br from-rose-600 to-pink-700',
+    accent: '#e11d48', textColor: 'text-rose-700', ring: 'bg-rose-50',
+    description: 'Send a real email off-platform, unlike an in-app notification',
+    form: EmailForm as unknown as ComponentType<NodeFormProps>,
+    normalise: (raw) => normaliseEmailConfig(raw),
+    category: 'notify',
+  },
   knowledge_retrieval: {
     label: 'Knowledge Retrieval', icon: BookOpenCheck,
     color: 'bg-teal-600', gradient: 'bg-gradient-to-br from-teal-600 to-cyan-700',
@@ -375,7 +386,7 @@ export function defaultPorts(type: NodeType | (string & {})): { inputs: Port[]; 
 export function defaultConfig(type: NodeType | (string & {})):
   | SetVariableConfig | ConditionConfig | FetchRecordsConfig | IteratorConfig
   | UpsertRecordsConfig | UpdateRecordsConfig | DeleteRecordsConfig | HttpRequestConfig
-  | TriggerConfig | ShowMessageConfig | TransformConfig | SaveRecordsConfig | NotificationConfig
+  | TriggerConfig | ShowMessageConfig | TransformConfig | SaveRecordsConfig | NotificationConfig | EmailConfig
   | KnowledgeRetrievalConfig | KnowledgeIngestConfig | DebugConfig | SubflowConfig
   | RunAgentConfig | SendToSessionConfig | ReportGenerateConfig
   | Record<string, never> {
@@ -425,6 +436,8 @@ export function defaultConfig(type: NodeType | (string & {})):
       return { source_expr: '', form_id: '' } satisfies SaveRecordsConfig
     case 'notification':
       return { recipient_mode: 'static', title: '', severity: 'info' } satisfies NotificationConfig
+    case 'email':
+      return { to: '', reply_to: '', subject: '', body: '' } satisfies EmailConfig
     case 'knowledge_retrieval':
       return {
         kb_id: '', mode: 'mix', query_mode: 'static', query: '', include_answer: true, output_var: '',
@@ -462,7 +475,7 @@ export function defaultConfig(type: NodeType | (string & {})):
 export const PALETTE_NODES: NodeType[] = [
   'set_variable', 'condition', 'fetch_records', 'upsert_records', 'update_records',
   'delete_records', 'transform', 'save_records', 'iterator', 'http_request', 'show_message',
-  'notification', 'knowledge_retrieval', 'knowledge_ingest', 'merge', 'debug', 'subflow',
+  'notification', 'email', 'knowledge_retrieval', 'knowledge_ingest', 'merge', 'debug', 'subflow',
   'run_agent', 'send_to_session', 'generate_report',
 ]
 

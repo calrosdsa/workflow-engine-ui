@@ -580,6 +580,21 @@ export interface NotificationConfig {
 }
 
 // ---------------------------------------------------------------------------
+// email — mirrors internal/graph/configs_email.go
+// ---------------------------------------------------------------------------
+
+// Every field is a TEMPLATE: literal text with {{ }} holes holding Expr
+// expressions. There is deliberately no ValueMode here — text with no holes is
+// the static case, so a mode field would be a choice with no consequence.
+export interface EmailConfig {
+  to: string
+  reply_to?: string
+  subject: string
+  /** HTML. Values substituted into holes are HTML-escaped; this template is not. */
+  body: string
+}
+
+// ---------------------------------------------------------------------------
 // knowledge_retrieval / knowledge_ingest — mirrors internal/graph/configs_rag.go
 // ---------------------------------------------------------------------------
 

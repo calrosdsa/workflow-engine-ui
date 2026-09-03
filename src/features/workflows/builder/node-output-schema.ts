@@ -470,6 +470,26 @@ export function buildNodeOutputSchema(
       }]
     }
 
+    case 'email': {
+      // Mirrors EmailActivity's NodeOutput map exactly
+      // (internal/activities/email.go). `sent` and `deduped` are separate on
+      // purpose: a node that found its message already in the send ledger
+      // reports success with sent=false, so a downstream branch can tell
+      // "delivered just now" from "a retry that correctly declined to send a
+      // second copy" — one is worth logging, the other is not.
+      return [{
+        nodeId: node.id,
+        nodeLabel: label,
+        nodeType: type,
+        fields: [
+          { key: 'recipient', type: 'string' },
+          { key: 'subject', type: 'string' },
+          { key: 'sent', type: 'boolean' },
+          { key: 'deduped', type: 'boolean' },
+        ],
+      }]
+    }
+
     case 'generate_report': {
       // Mirrors GenerateReportActivity's actual NodeOutput map exactly
       // (internal/activities/report.go) — content_id/filename/format/

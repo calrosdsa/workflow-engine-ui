@@ -289,9 +289,20 @@ export function KanbanLayout({ formId, fields, config, filter, sort, columns, ro
       // Crossed columns — a real field edit (validated, triggered, audited),
       // exactly like the record-detail drawer's own Edit button, PLUS the
       // position write below — a cross-column drop is always both.
-      const movedRecord = endedInHandle.records.find((r) => (r.id as string) === recordId)
+      //
+      // Sends ONLY the changed field, not the whole fetched record — this
+      // endpoint is a genuine partial patch (RecordStore.Update only builds
+      // a SET clause for keys actually present in the body, see its own doc
+      // comment), so there is nothing to gain from resubmitting the rest,
+      // and doing so actively broke every cross-column move: a `date`-typed
+      // field like close_date round-trips from GET as full RFC3339
+      // ("2026-11-30T00:00:00Z"), but the validator demands strict
+      // YYYY-MM-DD on write — so spreading movedRecord back into the PUT
+      // 422'd on any form with a date field, silently reverting the drag
+      // (onSettled's invalidate still fired, refetching the unchanged real
+      // data) with no visible error.
       updateRecord.mutate(
-        { recordId, data: { ...movedRecord, [config.groupField]: endedInKey } },
+        { recordId, data: { [config.groupField]: endedInKey } },
         { onSettled: () => qc.invalidateQueries({ queryKey: ['forms', formId, 'kanban-column'] }) },
       )
       formsApi.setKanbanOrder(formId, recordId, order)

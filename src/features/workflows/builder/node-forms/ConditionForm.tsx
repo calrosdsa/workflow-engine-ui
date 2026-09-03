@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { Braces, Code2, ListFilter, Split } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { cn } from '@/lib/utils'
 import { ExpressionEditor } from '../ExpressionEditor'
-import { FilterBuilder, newGroup } from '../FilterBuilder'
+import { FilterBuilder, newGroup, type FieldGroup } from '../FilterBuilder'
 import { useBuilderStore } from '../store'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, ConditionConfig, FilterGroup } from '../../types'
-import type { FieldDef, FieldType } from '@/features/forms/types'
+import type { FieldType } from '@/features/forms/types'
 
 // condition — no normalisation needed; the config shape has been stable
 // since the DAG redesign and is safe to cast directly (the structured
@@ -24,23 +25,42 @@ const VAR_TYPE_TO_FIELD_TYPE: Record<string, FieldType> = {
   time: 'date', datetime: 'datetime', object: 'json', list: 'json',
 }
 
-/** The structured builder's addressable "fields": declared variables plus
- *  the triggering record's fields (the trigger's `(triggering record)`
- *  schema entries). Both resolve as Vars[field] when the backend compiles
- *  the group — declared variables winning a name collision — so offering
- *  them in one list matches exactly what the expression will read. */
-function conditionFields(variables: VariableDecl[], nodeContext: NodeOutputSchema[]): FieldDef[] {
-  const out = new Map<string, FieldDef>()
-  for (const s of nodeContext) {
-    if (s.root !== 'trigger_record') continue
-    for (const f of s.fields) {
-      out.set(f.key, { name: f.key, label: `${f.key} (record)`, type: (f.type as FieldType) || 'string' })
-    }
+/** The structured builder's addressable fields, grouped for display: one
+ *  section for the trigger's record fields, one for declared workflow
+ *  variables. Both resolve as Vars[field] when the backend compiles the
+ *  group (a Trigger Record field is overlaid into Vars for exactly this
+ *  reason — see internal/activities/helpers.go) — that's also why an
+ *  upstream node's own output (e.g. a Fetch Records node's found record)
+ *  can't be offered here: NodeOutputs["<nodeId>"][...] lives in a separate
+ *  namespace the structured Field compiler never reads. Reaching one
+ *  requires either a Set Variable node bridging it into a workflow variable
+ *  first, or switching this condition to Expression mode, whose editor
+ *  already browses every upstream node's outputs (grouped exactly like
+ *  this) via nodeContext.
+ *
+ *  A variable sharing a name with a trigger field appears in both groups —
+ *  picking either produces the same `field` string, so both resolve to
+ *  whichever value actually ended up in Vars at runtime (the variable, per
+ *  the collision rule above) rather than being silently deduped away. */
+function conditionFieldGroups(variables: VariableDecl[], nodeContext: NodeOutputSchema[]): FieldGroup[] {
+  const groups: FieldGroup[] = []
+
+  const triggerSchema = nodeContext.find((s) => s.root === 'trigger_record')
+  if (triggerSchema && triggerSchema.fields.length > 0) {
+    groups.push({
+      label: 'Trigger Record',
+      fields: triggerSchema.fields.map((f) => ({ name: f.key, label: f.label || f.key, type: (f.type as FieldType) || 'string' })),
+    })
   }
-  for (const v of variables) {
-    out.set(v.name, { name: v.name, label: `${v.name} (variable)`, type: VAR_TYPE_TO_FIELD_TYPE[v.type] ?? 'string' })
+
+  if (variables.length > 0) {
+    groups.push({
+      label: 'Workflow Variables',
+      fields: variables.map((v) => ({ name: v.name, label: v.name, type: VAR_TYPE_TO_FIELD_TYPE[v.type] ?? 'string' })),
+    })
   }
-  return [...out.values()]
+
+  return groups
 }
 
 export interface ConditionFormProps {
@@ -62,7 +82,8 @@ export function ConditionForm({ config, variables, nodeContext, onChange }: Cond
   const twoWay = (node?.data.outputs?.length ?? 1) > 1
 
   const group: FilterGroup = config.condition ?? newGroup()
-  const fields = conditionFields(variables, nodeContext)
+  const fieldGroups = conditionFieldGroups(variables, nodeContext)
+  const fields = fieldGroups.flatMap((g) => g.fields)
 
   return (
     <div className="space-y-3">
@@ -75,11 +96,13 @@ export function ConditionForm({ config, variables, nodeContext, onChange }: Cond
             <button
               key={m}
               onClick={() => setMode(m)}
-              className={`flex items-center gap-1 px-2 py-1 text-[10px] font-medium transition-colors ${
+              aria-pressed={mode === m}
+              className={cn(
+                'flex items-center gap-1 px-2 py-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[hsl(var(--ring))]',
                 mode === m
                   ? 'bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]'
-                  : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]'
-              }`}
+                  : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]',
+              )}
             >
               <Icon size={11} />
               {lbl}
@@ -92,6 +115,7 @@ export function ConditionForm({ config, variables, nodeContext, onChange }: Cond
         <FilterBuilder
           group={group}
           fields={fields}
+          fieldGroups={fieldGroups}
           variables={variables}
           nodeContext={nodeContext}
           onChange={(g) => onChange({ condition: g })}
@@ -112,7 +136,7 @@ export function ConditionForm({ config, variables, nodeContext, onChange }: Cond
           </div>
           <button
             onClick={() => setEditorOpen(true)}
-            className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 transition-colors"
+            className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium text-[hsl(var(--primary))] transition-colors hover:bg-[hsl(var(--primary))]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
           >
             <Code2 size={11} />
             Open editor
@@ -120,9 +144,19 @@ export function ConditionForm({ config, variables, nodeContext, onChange }: Cond
         </>
       )}
 
-      <div className="flex items-center justify-between rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 px-3 py-2">
+      {/* The whole row is the click target (via the <label>/htmlFor pairing
+          below, which native-forwards a click to the Switch's own button) —
+          not just the small thumb — and the icon picks up the accent color
+          live so the row visibly confirms its own state at a glance. */}
+      <label
+        htmlFor="condition-two-path-branch"
+        className={cn(
+          'flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-[hsl(var(--border))] px-3 py-2 transition-colors hover:bg-[hsl(var(--muted))]/60',
+          twoWay ? 'bg-[hsl(var(--primary))]/5' : 'bg-[hsl(var(--muted))]/40',
+        )}
+      >
         <div className="flex items-center gap-2">
-          <Split size={12} className="text-[hsl(var(--muted-foreground))]" />
+          <Split size={12} className={cn('transition-colors', twoWay ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--muted-foreground))]')} />
           <div>
             <p className="text-[11px] font-medium text-[hsl(var(--foreground))]">Two-path branch</p>
             <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
@@ -133,10 +167,11 @@ export function ConditionForm({ config, variables, nodeContext, onChange }: Cond
           </div>
         </div>
         <Switch
+          id="condition-two-path-branch"
           checked={twoWay}
           onCheckedChange={(v) => selectedNodeId && setConditionFalseBranch(selectedNodeId, v)}
         />
-      </div>
+      </label>
 
       <ExpressionEditor
         open={editorOpen}

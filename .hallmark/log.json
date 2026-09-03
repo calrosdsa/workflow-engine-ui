@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-09-01",
+    "scope": "component",
+    "macrostructure": "unchanged (canvas+rail, per design.md family) — component-scope redesign, no shell change",
+    "theme": "unchanged (design.md token pickup only, no new colors)",
+    "enrichment": "none",
+    "brief": "Workflow Builder > Condition node config panel (ConditionForm.tsx, FilterBuilder.tsx): merged the per-condition Value/Expression tab-bar into a compact icon toggle, added a live AND/OR connector chip between sibling conditions/groups, redesigned the empty state, made the Two-path branch row a full-width clickable label with live icon-color feedback, converted inline `style` color props to token classNames so hover/focus states actually apply, added missing focus-visible rings"
+  },
+  {
     "date": "2026-08-31",
     "scope": "app",
     "macrostructure": "unchanged (Dashboard-Workbench, per design.md family)",

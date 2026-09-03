@@ -71,6 +71,25 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
 
   const set = (patch: Partial<TriggerConfig>) => onChange({ ...config, ...patch })
 
+  // Switching mode clears the form-scoping field belonging to the mode being
+  // LEFT, because the two are not interchangeable: form_id is the form whose
+  // writes fire a before/after trigger, source_form_id is the form whose
+  // records may manually dispatch an on_demand_data_driven one (see
+  // internal/graph/configs_trigger.go, which spells out why they are separate
+  // fields). Without this, `set({ mode })` spreads the whole config forward and
+  // strands the previous mode's id — which the backend now rejects on save when
+  // a stray form_id is the ONLY scoping present, since that combination reads
+  // as "scoped" while dispatching from any form.
+  const setMode = (mode: TriggerMode) => {
+    if (mode === 'on_demand_data_driven') {
+      set({ mode, form_id: '' })
+    } else if (mode === 'before' || mode === 'after' || mode === 'after_async') {
+      set({ mode, source_form_id: '' })
+    } else {
+      set({ mode })
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Enabled toggle */}
@@ -105,7 +124,7 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
               <button
                 key={m.value}
                 type="button"
-                onClick={() => set({ mode: m.value })}
+                onClick={() => setMode(m.value)}
                 className={cn(
                   'flex w-full items-start gap-2.5 rounded-xl border p-2.5 text-left transition-colors',
                   active ? 'border-[hsl(var(--success))]/50 bg-[hsl(var(--success))]/10' : 'border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:border-[hsl(var(--muted-foreground))]/40',

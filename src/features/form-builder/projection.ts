@@ -171,15 +171,23 @@ function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | nul
     if (el.validation.allowedMimeTypes && el.validation.allowedMimeTypes.length > 0) field.allowed_mime_types = el.validation.allowedMimeTypes
   }
 
-  // SQL default — only emit for primitive static defaults we can express safely.
-  const def = staticDefaultLiteral(el)
+  // Field default — only emit for primitive static defaults the backend
+  // accepts for this field type.
+  const def = staticDefaultValue(el)
   if (def !== undefined) field.default = def
 
   return field
 }
 
-/** Returns a SQL literal string for an element's static default, or undefined. */
-function staticDefaultLiteral(el: FormElement): string | undefined {
+/** Returns an element's static default as a typed value, or undefined.
+ *
+ *  This is a plain JSON value — a boolean, a number, a string — NOT a SQL
+ *  literal. It used to be quoted and escaped here, which made this function
+ *  the only thing standing between a field definition and arbitrary DDL;
+ *  every other client of the API (and the MCP server) wrote straight through
+ *  it. The backend now binds the default as a query argument and applies it
+ *  at insert time, so quoting here would store the quotes. */
+function staticDefaultValue(el: FormElement): string | number | boolean | undefined {
   const reg = COMPONENT_REGISTRY[el.component]
   if (el.defaultValue === undefined || el.defaultValue === null || el.defaultValue === '') return undefined
   // Don't emit defaults for expression-driven values.
@@ -187,20 +195,17 @@ function staticDefaultLiteral(el: FormElement): string | undefined {
 
   switch (reg.fieldType) {
     case 'boolean':
-      return el.defaultValue ? 'true' : 'false'
+      return Boolean(el.defaultValue)
     case 'integer':
     case 'decimal': {
       const n = Number(el.defaultValue)
-      return Number.isFinite(n) ? String(n) : undefined
+      return Number.isFinite(n) ? n : undefined
     }
     case 'string':
     case 'text':
     case 'email':
-    case 'phone': {
-      // Single-quote and escape for SQL.
-      const s = String(el.defaultValue).replace(/'/g, "''")
-      return `'${s}'`
-    }
+    case 'phone':
+      return String(el.defaultValue)
     default:
       return undefined
   }

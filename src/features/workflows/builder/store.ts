@@ -443,7 +443,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
   varsPanelOpen:       true,
   configPanelOpen:     false,
   executionsPanelOpen: false,
-  configPanelWide:     false,
+  configPanelWide:     true,
   toggleVarsPanel: () => set((s) => {
     const next = s.activeSidebar === 'variables' ? null : 'variables'
     return { activeSidebar: next, varsPanelOpen: next === 'variables', configPanelOpen: next === 'config', executionsPanelOpen: next === 'executions' }

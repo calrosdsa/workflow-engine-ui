@@ -11,12 +11,17 @@
 // and the old hardcoded palette showed as a jarring white card in the dark
 // runtime theme. Tokens resolve correctly in both places since :root/.dark
 // both define the full palette.
+//
+// Colors are applied as Tailwind arbitrary-value classes (not inline `style`
+// objects) so hover/focus-visible variants actually take effect — an inline
+// style's background/border wins the cascade over any class, which silently
+// defeated hover states the previous version of this file tried to add.
 
-import { useState } from 'react'
-import { Plus, Trash2, Code2, FolderPlus } from 'lucide-react'
+import { useState, Fragment } from 'react'
+import { Plus, Trash2, Code2, FolderPlus, Braces, ListFilter } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
+import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectGroup, SelectLabel } from '@/components/ui/select-menu'
 import { DatePicker, DateTimePicker } from '@/components/ui/date-time-picker'
 import { cn } from '@/lib/utils'
 import { ExpressionEditor } from './ExpressionEditor'
@@ -66,6 +71,14 @@ export function newGroup(): FilterGroup {
   return { id: nanoid(), combinator: 'and', conditions: [], groups: [] }
 }
 
+/** One labeled section of the field picker — e.g. "Trigger Record" or
+ *  "Workflow Variables". Purely a rendering concern: `fields` (the flat
+ *  list every other lookup in this file uses) is unaffected either way. */
+export interface FieldGroup {
+  label: string
+  fields: FieldDef[]
+}
+
 interface FilterBuilderProps {
   group: FilterGroup
   fields: FieldDef[]
@@ -75,6 +88,13 @@ interface FilterBuilderProps {
   /** Root group can't be removed; nested groups get a remove handler. */
   onRemove?: () => void
   depth?: number
+  /** Renders the Field picker as labeled sections instead of one flat list —
+   *  e.g. one section per upstream node plus "Workflow Variables". Only the
+   *  workflow canvas's Condition node passes this (it has real node/variable
+   *  context to group by); every other caller (Fetch/Update/Delete Records'
+   *  filter, a single form's own field list) has nothing to group and omits
+   *  it, keeping their existing flat `fields` list unchanged. */
+  fieldGroups?: FieldGroup[]
   /** Hides the Value/Expression toggle and the Expr expression input/editor
    *  entirely — a condition can only ever be a static value. Expr is an
    *  engineering-facing scripting surface (Vars[...], NodeOutputs[...]) that
@@ -88,7 +108,7 @@ interface FilterBuilderProps {
   hideExpressions?: boolean
 }
 
-export function FilterBuilder({ group, fields, variables, nodeContext = [], onChange, onRemove, depth = 0, hideExpressions = false }: FilterBuilderProps) {
+export function FilterBuilder({ group, fields, variables, nodeContext = [], onChange, onRemove, depth = 0, hideExpressions = false, fieldGroups }: FilterBuilderProps) {
   const setCombinator = (combinator: 'and' | 'or') => onChange({ ...group, combinator })
 
   const addCondition = () => onChange({ ...group, conditions: [...group.conditions, newCondition()] })
@@ -107,19 +127,10 @@ export function FilterBuilder({ group, fields, variables, nodeContext = [], onCh
   const isEmpty = group.conditions.length === 0 && group.groups.length === 0
 
   return (
-    <div
-      className="rounded-xl border p-3"
-      style={{
-        borderColor: 'hsl(var(--border))',
-        backgroundColor: depth === 0 ? 'hsl(var(--muted) / 0.4)' : 'hsl(var(--card))',
-      }}
-    >
+    <div className={cn('rounded-xl border border-[hsl(var(--border))] p-3', depth === 0 ? 'bg-[hsl(var(--muted))]/40' : 'bg-[hsl(var(--card))]')}>
       {/* Header: AND/OR toggle + remove */}
       <div className="mb-2.5 flex items-center justify-between">
-        <div
-          className="flex gap-0.5 rounded-lg border p-0.5"
-          style={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }}
-        >
+        <div className="flex gap-0.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-0.5">
           {(['and', 'or'] as const).map((c) => {
             const selected = group.combinator === c
             return (
@@ -128,12 +139,12 @@ export function FilterBuilder({ group, fields, variables, nodeContext = [], onCh
                 type="button"
                 onClick={() => setCombinator(c)}
                 aria-pressed={selected}
-                className="rounded-md px-3 py-1 text-[11px] font-semibold uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
-                style={
+                className={cn(
+                  'rounded-md px-3 py-1 text-[11px] font-semibold uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]',
                   selected
-                    ? { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }
-                    : { color: 'hsl(var(--muted-foreground))' }
-                }
+                    ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
+                    : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]',
+                )}
               >
                 {c}
               </button>
@@ -145,8 +156,7 @@ export function FilterBuilder({ group, fields, variables, nodeContext = [], onCh
             onClick={onRemove}
             title="Remove group"
             aria-label="Remove group"
-            className="flex h-6 w-6 items-center justify-center rounded-lg transition-colors hover:bg-[hsl(var(--destructive)/0.1)] hover:text-[hsl(var(--destructive))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
-            style={{ color: 'hsl(var(--muted-foreground))' }}
+            className="flex h-6 w-6 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
           >
             <Trash2 size={12} />
           </button>
@@ -154,45 +164,53 @@ export function FilterBuilder({ group, fields, variables, nodeContext = [], onCh
       </div>
 
       {isEmpty && (
-        <p
-          className="rounded-lg border border-dashed px-2 py-3 text-center text-[11px]"
-          style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}
-        >
-          No conditions yet.
-        </p>
+        <div className="flex flex-col items-center gap-1.5 rounded-lg border border-dashed border-[hsl(var(--border))] px-2 py-5 text-center">
+          <ListFilter size={16} className="text-[hsl(var(--muted-foreground))]/50" />
+          <p className="text-[11px] text-[hsl(var(--muted-foreground))]">No conditions yet — add one below.</p>
+        </div>
       )}
 
-      {/* Leaf conditions */}
+      {/* Leaf conditions, with a small AND/OR connector between adjacent
+          rows so a multi-condition group reads correctly without having to
+          look back up at the header toggle. */}
       <div className="space-y-1.5">
-        {group.conditions.map((c) => (
-          <ConditionRow
-            key={c.id}
-            condition={c}
-            fields={fields}
-            variables={variables}
-            nodeContext={nodeContext}
-            onChange={(patch) => updateCondition(c.id, patch)}
-            onRemove={() => removeCondition(c.id)}
-            hideExpressions={hideExpressions}
-          />
+        {group.conditions.map((c, idx) => (
+          <Fragment key={c.id}>
+            <ConditionRow
+              condition={c}
+              fields={fields}
+              variables={variables}
+              nodeContext={nodeContext}
+              onChange={(patch) => updateCondition(c.id, patch)}
+              onRemove={() => removeCondition(c.id)}
+              hideExpressions={hideExpressions}
+              fieldGroups={fieldGroups}
+            />
+            {(idx < group.conditions.length - 1 || group.groups.length > 0) && (
+              <Connector combinator={group.combinator} />
+            )}
+          </Fragment>
         ))}
       </div>
 
       {/* Nested groups */}
       {group.groups.length > 0 && (
-        <div className="mt-1.5 space-y-1.5 border-l-2 pl-2.5" style={{ borderColor: 'hsl(var(--border))' }}>
+        <div className="mt-1.5 space-y-1.5 border-l-2 border-[hsl(var(--border))] pl-2.5">
           {group.groups.map((g, idx) => (
-            <FilterBuilder
-              key={g.id ?? idx}
-              group={g}
-              fields={fields}
-              variables={variables}
-              nodeContext={nodeContext}
-              onChange={(ng) => updateGroup(idx, ng)}
-              onRemove={() => removeGroup(idx)}
-              depth={depth + 1}
-              hideExpressions={hideExpressions}
-            />
+            <Fragment key={g.id ?? idx}>
+              <FilterBuilder
+                group={g}
+                fields={fields}
+                variables={variables}
+                nodeContext={nodeContext}
+                onChange={(ng) => updateGroup(idx, ng)}
+                onRemove={() => removeGroup(idx)}
+                depth={depth + 1}
+                hideExpressions={hideExpressions}
+                fieldGroups={fieldGroups}
+              />
+              {idx < group.groups.length - 1 && <Connector combinator={group.combinator} />}
+            </Fragment>
           ))}
         </div>
       )}
@@ -212,11 +230,25 @@ export function FilterBuilder({ group, fields, variables, nodeContext = [], onCh
   )
 }
 
+// Small centered "and"/"or" chip rendered between sibling conditions/groups —
+// purely presentational (reads the shared group.combinator, no state of its
+// own) so a group of 3+ conditions doesn't force the reader to scroll back up
+// to the header toggle to know how the rows below relate to each other.
+function Connector({ combinator }: { combinator: 'and' | 'or' }) {
+  return (
+    <div className="flex items-center justify-center py-0.5" aria-hidden="true">
+      <span className="rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
+        {combinator}
+      </span>
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Single condition row
 // ---------------------------------------------------------------------------
 
-function ConditionRow({ condition, fields, variables, nodeContext, onChange, onRemove, hideExpressions = false }: {
+function ConditionRow({ condition, fields, variables, nodeContext, onChange, onRemove, hideExpressions = false, fieldGroups }: {
   condition: FilterCondition
   fields: FieldDef[]
   variables: VariableDecl[]
@@ -224,6 +256,7 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
   onChange: (patch: Partial<FilterCondition>) => void
   onRemove: () => void
   hideExpressions?: boolean
+  fieldGroups?: FieldGroup[]
 }) {
   const [editorOpen, setEditorOpen] = useState(false)
   const needsValue = opNeedsValue(condition.op)
@@ -254,10 +287,7 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
   const isReferenceValue = selectedField?.type === 'reference' && !!selectedField.reference_table && !isMultiValue
 
   const fieldControl = ignoresField ? (
-    <div
-      className="min-w-0 flex-1 truncate rounded-md border px-2 py-1.5 text-[11px] italic"
-      style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}
-    >
+    <div className="min-w-0 flex-1 truncate rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-2 py-1.5 text-[11px] italic text-[hsl(var(--muted-foreground))]">
       whole record
     </div>
   ) : (
@@ -275,6 +305,7 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
       onChange={(v) => onChange({ field: v, value: '' })}
       placeholder="field…"
       options={fields.map((f) => ({ value: f.name, label: f.label || f.name }))}
+      groups={fieldGroups?.map((g) => ({ label: g.label, options: g.fields.map((f) => ({ value: f.name, label: f.label || f.name })) }))}
       className="min-w-0 flex-1"
     />
   )
@@ -293,19 +324,17 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
       onClick={onRemove}
       title="Remove condition"
       aria-label="Remove condition"
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-[hsl(var(--destructive)/0.1)] hover:text-[hsl(var(--destructive))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
-      style={{ color: 'hsl(var(--muted-foreground))' }}
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
     >
       <Trash2 size={13} />
     </button>
   )
 
-  // Value/2's whole-column width vs. inline-flex-1 split matches the two
-  // layouts ConditionRow itself renders in below (the builder canvas's own
-  // full-width second row vs. this context's single inline row) — kept as
-  // one shared className expression so every branch stays consistent rather
-  // than repeating the ternary at each call site.
-  const valueWidthClass = hideExpressions ? 'min-w-0 flex-1' : 'w-full'
+  // Both layouts this component renders (the builder canvas's own two-row
+  // form and this context's single inline row) now sit the value control
+  // in a flex row beside a trailing control (the expression toggle, or
+  // nothing) — always flex-1, never a lone full-width block.
+  const valueWidthClass = 'min-w-0 flex-1'
 
   const valueControl = isEnumValue ? (
     <SelectField
@@ -356,6 +385,28 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
     />
   )
 
+  // Toggles value_mode between a static value and an Expr expression — a
+  // compact icon button rather than the two-word tab bar this used to be,
+  // since the choice is minor and made per-condition; a dedicated full-width
+  // row for it got expensive fast on a group with several conditions.
+  const exprToggle = (
+    <button
+      type="button"
+      onClick={() => onChange({ value_mode: isExpr ? 'static' : 'expression' })}
+      title={isExpr ? 'Switch to a static value' : 'Use an expression instead of a static value'}
+      aria-label={isExpr ? 'Switch to a static value' : 'Use an expression instead of a static value'}
+      aria-pressed={isExpr}
+      className={cn(
+        'flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]',
+        isExpr
+          ? 'border-[hsl(var(--primary))]/40 bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]'
+          : 'border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]',
+      )}
+    >
+      <Braces size={13} />
+    </button>
+  )
+
   if (hideExpressions) {
     // Single row: Field, Operator, Value (when the operator needs one),
     // Delete — no Value/Expression toggle and no second row, since there's
@@ -366,10 +417,7 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
     // end-user filtering their own records, so it's never rendered here at
     // all — not hidden behind a toggle, not reachable.
     return (
-      <div
-        className="flex min-w-[26rem] items-center gap-1.5 rounded-lg border p-2 transition-colors"
-        style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--card))' }}
-      >
+      <div className="flex min-w-[26rem] items-center gap-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-2 transition-colors">
         {fieldControl}
         {operatorControl}
         {needsValue && valueControl}
@@ -379,65 +427,33 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
   }
 
   return (
-    <div
-      className="rounded-lg border p-2 transition-colors"
-      style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--card))' }}
-    >
+    <div className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-2 transition-colors hover:border-[hsl(var(--foreground))]/15">
       <div className="flex items-center gap-1.5">
         {fieldControl}
         {operatorControl}
+        {needsValue && (isExpr ? (
+          <>
+            <input
+              value={condition.expression ?? ''}
+              onChange={(e) => onChange({ expression: e.target.value })}
+              placeholder='Vars["country"]'
+              className="h-7 min-w-0 flex-1 rounded-md border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-2 font-mono text-[11px] text-[hsl(var(--foreground))] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+            />
+            <button
+              onClick={() => setEditorOpen(true)}
+              title="Open expression editor"
+              aria-label="Open expression editor"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] transition-colors hover:border-[hsl(var(--primary))] hover:text-[hsl(var(--primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+            >
+              <Code2 size={13} />
+            </button>
+          </>
+        ) : (
+          valueControl
+        ))}
+        {needsValue && exprToggle}
         {removeButton}
       </div>
-
-      {/* Value (static or expression) */}
-      {needsValue && (
-        <div className="mt-1.5 space-y-1.5">
-          <div className="flex gap-0.5 rounded-md p-0.5" style={{ backgroundColor: 'hsl(var(--muted))' }}>
-            {(['static', 'expression'] as const).map((m) => {
-              const selected = (condition.value_mode ?? 'static') === m
-              return (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => onChange({ value_mode: m })}
-                  aria-pressed={selected}
-                  className="flex-1 rounded px-1.5 py-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
-                  style={
-                    selected
-                      ? { backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--foreground))', boxShadow: '0 1px 2px hsl(var(--foreground) / 0.06)' }
-                      : { color: 'hsl(var(--muted-foreground))' }
-                  }
-                >
-                  {m === 'static' ? 'Value' : 'Expression'}
-                </button>
-              )
-            })}
-          </div>
-
-          {isExpr ? (
-            <div className="flex items-center gap-1.5">
-              <input
-                value={condition.expression ?? ''}
-                onChange={(e) => onChange({ expression: e.target.value })}
-                placeholder='Vars["country"]'
-                className="h-7 min-w-0 flex-1 rounded-md border px-2 font-mono text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
-                style={{ borderColor: 'hsl(var(--input))', backgroundColor: 'hsl(var(--background))', color: 'hsl(var(--foreground))' }}
-              />
-              <button
-                onClick={() => setEditorOpen(true)}
-                title="Open expression editor"
-                aria-label="Open expression editor"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition-colors hover:border-[hsl(var(--primary))] hover:text-[hsl(var(--primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
-                style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}
-              >
-                <Code2 size={13} />
-              </button>
-            </div>
-          ) : (
-            valueControl
-          )}
-        </div>
-      )}
 
       <ExpressionEditor
         open={editorOpen}
@@ -465,10 +481,14 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
 // with-a-none-option call sites.
 const SELECT_FIELD_EMPTY = '__empty__'
 
-function SelectField({ value, onChange, options, placeholder, className, size = 'compact' }: {
+function SelectField({ value, onChange, options, groups, placeholder, className, size = 'compact' }: {
   value: string
   onChange: (v: string) => void
-  options: { value: string; label: string }[]
+  /** Flat option list — ignored when `groups` is given. */
+  options?: { value: string; label: string }[]
+  /** Labeled sections (e.g. one per upstream node, plus "Workflow
+   *  Variables") — only the Condition node's field picker passes this today. */
+  groups?: { label: string; options: { value: string; label: string }[] }[]
   placeholder?: string
   className?: string
   size?: 'compact' | 'value'
@@ -483,9 +503,18 @@ function SelectField({ value, onChange, options, placeholder, className, size = 
       </SelectTrigger>
       <SelectContent container={document.getElementById('runtime-root') ?? document.body}>
         {placeholder && <SelectItem value={SELECT_FIELD_EMPTY} className="text-[12px] italic">{placeholder}</SelectItem>}
-        {options.map((o) => (
-          <SelectItem key={o.value} value={o.value} className="text-[12px]">{o.label}</SelectItem>
-        ))}
+        {groups
+          ? groups.map((g) => (
+              <SelectGroup key={g.label}>
+                <SelectLabel>{g.label}</SelectLabel>
+                {g.options.map((o) => (
+                  <SelectItem key={o.value} value={o.value} className="text-[12px]">{o.label}</SelectItem>
+                ))}
+              </SelectGroup>
+            ))
+          : (options ?? []).map((o) => (
+              <SelectItem key={o.value} value={o.value} className="text-[12px]">{o.label}</SelectItem>
+            ))}
       </SelectContent>
     </SelectMenu>
   )

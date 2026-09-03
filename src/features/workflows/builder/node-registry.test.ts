@@ -29,6 +29,13 @@ describe('normaliseTriggerConfig', () => {
       webhook_token: '',
       source_definition_id: '',
       enabled: true,
+      // Expose-as-Tool defaults (FR-C8-004) — this expectation went stale when
+      // normaliseTriggerConfig gained them, since toEqual compares the whole
+      // object and the four new keys were never added here.
+      expose_as_tool: false,
+      tool_name: '',
+      tool_description: '',
+      tool_parameters: [],
     })
   })
 
