@@ -102,14 +102,20 @@ export function createSection(title = 'New Section', layout: ColumnLayout = '1')
   }
 }
 
-/** Deep-clones an element with fresh ids and a de-duplicated key. */
+/** Deep-clones an element with fresh ids and a de-duplicated key.
+ *
+ *  `column` is the backend-assigned physical storage slot (schema.ts's
+ *  `column?: string`) and must NOT be carried over: a duplicated field is a
+ *  brand-new field, and echoing the original's column would alias the two
+ *  fields onto the same underlying data on save (EnsureIdentity only fills
+ *  columns that are empty, so the clone would otherwise keep the original's
+ *  forever). Clearing it here lets EnsureIdentity mint a fresh one. */
+function cloneElementAsNew(el: FormElement, overrides: Partial<FormElement> = {}): FormElement {
+  return { ...structuredClone(el), id: nanoid(), column: undefined, ...overrides }
+}
+
 export function duplicateElement(el: FormElement): FormElement {
-  return {
-    ...structuredClone(el),
-    id: nanoid(),
-    key: `${el.key}_copy`,
-    label: `${el.label} (copy)`,
-  }
+  return cloneElementAsNew(el, { key: `${el.key}_copy`, label: `${el.label} (copy)` })
 }
 
 /** Deep-clones a section with fresh ids throughout. */
@@ -121,7 +127,7 @@ export function duplicateSection(section: FormSection): FormSection {
     columns: section.columns.map((col) => ({
       ...structuredClone(col),
       id: nanoid(),
-      elements: col.elements.map((el) => ({ ...structuredClone(el), id: nanoid() })),
+      elements: col.elements.map((el) => cloneElementAsNew(el)),
     })),
   }
 }
