@@ -1,3 +1,5 @@
+import type { FilterGroup } from '@/features/workflows/types'
+
 export type FieldType =
   | 'string' | 'text' | 'integer' | 'decimal' | 'boolean'
   | 'date' | 'time' | 'datetime' | 'email' | 'phone'
@@ -37,6 +39,16 @@ export interface FieldDef {
    *  for this reference. Optional; when absent, consumers fall back to
    *  name/label/id heuristics. Only meaningful when type === 'reference'. */
   display_field?: string
+  /** Viewer-scoped filter limiting which reference_table records this field
+   *  may point at — enforced server-side on BOTH the picker's reference-
+   *  options endpoint and record writes (never client-only). Conditions may
+   *  use value_mode 'static', 'current_user' (value = an attribute of the
+   *  viewer's user-account record, or built-ins record_id/user_id/email) or
+   *  'this_record' (value = "<sibling reference field>.<attr>", one hop);
+   *  'expression'/'change_flag' are refused at save time. Only meaningful
+   *  when type === 'reference'. Ids inside are UI-only and dropped by the
+   *  backend's round-trip. */
+  reference_filter?: FilterGroup
   /** Which aggregate a 'line_item_count' field computes over reference_table's
    *  rows. Undefined/'count' is the original count-only behavior. */
   aggregate_fn?: 'count' | 'sum' | 'avg' | 'min' | 'max'

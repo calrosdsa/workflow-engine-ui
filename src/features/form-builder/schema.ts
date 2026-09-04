@@ -22,6 +22,7 @@
 import type { ConfigSchema } from '@/lib/config-schema'
 import type { UiWorkflow } from '@/features/ui-workflows/types'
 import type { FieldChangeWorkflowConfig } from '@/features/ui-workflows/useFieldChangeWorkflow'
+import type { FilterGroup } from '@/features/workflows/types'
 
 export type ComponentType =
   // Text inputs
@@ -607,6 +608,16 @@ export interface FormElement {
   // form (formRef) to use as this reference's display/search value at
   // runtime, instead of the name/label/id fallback heuristic. Optional.
   displayField?: string
+
+  // Relational ('form' component): viewer-scoped filter limiting which
+  // records of formRef this field may point at ("only suppliers in the
+  // current user's area"). This is the REAL workflows FilterGroup shape —
+  // unlike AdvancedSettingGroup below, it round-trips to the backend's
+  // FieldDef.reference_filter (projection.ts strips the UI-only ids;
+  // heal.ts hydrates an API-authored filter back in so a builder save
+  // can't silently drop it). Enforced server-side on the picker AND on
+  // writes; deleting it here genuinely widens who can pick what.
+  referenceFilter?: FilterGroup
 
   // 'line_item_count' component: which aggregate to compute over the target
   // grid's rows (formRef). Undefined/'count' is the original, count-only

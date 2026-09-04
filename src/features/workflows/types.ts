@@ -188,7 +188,18 @@ export type CompareOp =
   // node's filter (before/after/after_async modes).
   | 'was_updated'
 
-export type ValueMode = 'static' | 'expression' | 'change_flag'
+/** Where a condition/value slot gets its value. 'static'/'expression'/
+ *  'change_flag' are the workflow-canvas modes. 'current_user' and
+ *  'this_record' are the VIEWER-SCOPED modes (a closed language, no
+ *  expressions — mirrors internal/graph's FilterValueModes catalog): they
+ *  only resolve where a signed-in viewer exists (a reference field's
+ *  reference_filter, menu filters, form access scopes) and are refused
+ *  inside workflow node filters, which run as the system with no viewer.
+ *  current_user → value is an attribute name: built-ins record_id/user_id/
+ *  email, or a field on the app's user-account form. this_record → value is
+ *  "<reference_field>.<attr>": exactly one hop through a reference field on
+ *  the record being authored. */
+export type ValueMode = 'static' | 'expression' | 'change_flag' | 'current_user' | 'this_record'
 
 export interface FilterCondition {
   id: string                // UI-only key for list rendering (stripped on save)

@@ -37,6 +37,7 @@ import { DisplayFieldSelect } from './DisplayFieldSelect'
 import { AdoptedReferenceFieldSelect } from './AdoptedReferenceFieldSelect'
 import { LineItemsColumnsEditor } from './LineItemsColumnsEditor'
 import { AdvancedSettingsSection } from './AdvancedSettingsSection'
+import { ReferenceFilterSection } from './ReferenceFilterSection'
 import type { LineItemsConfig } from '../schema'
 import type { VariableDecl } from '@/features/workflows/types'
 
@@ -865,6 +866,13 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                   <Field label="Option Source" hint="Named source (future API-backed).">
                     <Input value={element.binding.optionSource ?? ''} onChange={(e) => setBinding({ optionSource: e.target.value })} placeholder="e.g. countries" className="h-8 text-sm" />
                   </Field>
+                )}
+
+                {isFormRef && (
+                  <>
+                    <div className="h-px bg-[hsl(var(--border))]" />
+                    <ReferenceFilterSection element={element} schema={schema} onChange={onChange} />
+                  </>
                 )}
 
                 <div className="h-px bg-[hsl(var(--border))]" />

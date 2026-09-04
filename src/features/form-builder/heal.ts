@@ -45,6 +45,7 @@ import {
 import { createSection } from './factory'
 import { specFieldToElement, type FormSpecField } from './form-spec'
 import { projectedBaseName } from './projection'
+import { hydrateReferenceFilter, sameReferenceFilter } from './reference-filter'
 import type { FieldDef } from '@/features/forms/types'
 
 /** The slice of a backend form definition healing needs. Structural, so
@@ -96,26 +97,45 @@ export function healSchema(parsed: FormSchema, def: HealableForm): FormSchema {
   const fields = def.fields ?? []
   const fieldByName = new Map(fields.map((f) => [f.name, f]))
 
-  // Pass 1 — drop orphans, and take stock of what the layout already covers.
+  // Pass 1 — drop orphans, reconcile backend-enforced per-field settings,
+  // and take stock of what the layout already covers.
   let sectionsChanged = false
   const present = new Set<string>()
   const usedKeys = new Set<string>()
   const sections: FormSection[] = parsed.sections.map((section) => {
     let changed = false
     const columns = section.columns.map((column) => {
-      const kept = column.elements.filter((el) => {
+      let colChanged = false
+      const kept: FormElement[] = []
+      for (const el of column.elements) {
         usedKeys.add(el.key)
         const name = projectedBaseName(el)
-        if (name === null) return true // presentational, or unconfigured WIP
-        if (fieldByName.has(name)) {
-          present.add(name)
-          return true
+        if (name === null) {
+          kept.push(el) // presentational, or unconfigured WIP
+          continue
         }
-        // Projects to a field the backend no longer has: keeping it would
-        // show a ghost input AND resurrect the column on the next save.
-        return false
-      })
-      if (kept.length !== column.elements.length) {
+        const f = fieldByName.get(name)
+        if (!f) {
+          // Projects to a field the backend no longer has: keeping it would
+          // show a ghost input AND resurrect the column on the next save.
+          colChanged = true
+          continue
+        }
+        present.add(name)
+        // reference_filter is server-ENFORCED config, so like the createUser
+        // mirrors it follows the "backend is the truth" rule: an API/MCP-
+        // authored (or -removed) filter is hydrated into the element, and the
+        // next builder save round-trips it. Without this, a builder save
+        // would project the layout's stale copy — silently REPLACING a
+        // narrower filter, or resurrecting a deleted one.
+        if (el.component === 'form' && !sameReferenceFilter(el.referenceFilter, f.reference_filter)) {
+          colChanged = true
+          kept.push({ ...el, referenceFilter: f.reference_filter ? hydrateReferenceFilter(f.reference_filter) : undefined })
+          continue
+        }
+        kept.push(el)
+      }
+      if (colChanged) {
         changed = true
         return { ...column, elements: kept }
       }
@@ -145,6 +165,7 @@ export function healSchema(parsed: FormSchema, def: HealableForm): FormSchema {
       }
     }
     if (f.type === 'reference' && f.display_field) el.displayField = f.display_field
+    if (f.type === 'reference' && f.reference_filter) el.referenceFilter = hydrateReferenceFilter(f.reference_filter)
     synthesized.push(el)
   }
 

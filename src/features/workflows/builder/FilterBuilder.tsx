@@ -29,8 +29,9 @@ import { FilterReferenceValuePicker } from './FilterReferenceValuePicker'
 import { nanoid } from './nanoid'
 import type { NodeOutputSchema } from './node-output-schema'
 import { mergeSystemFields } from '@/features/forms/types'
+import { useForm as useFormDef } from '@/features/forms/hooks'
 import type { FieldDef } from '@/features/forms/types'
-import type { VariableDecl, FilterGroup, FilterCondition, CompareOp } from '../types'
+import type { VariableDecl, FilterGroup, FilterCondition, CompareOp, ValueMode } from '../types'
 
 const OPERATORS: { value: CompareOp; label: string }[] = [
   { value: 'eq', label: '=' },
@@ -56,6 +57,32 @@ const OPERATORS: { value: CompareOp; label: string }[] = [
 
 function opNeedsValue(op: CompareOp): boolean {
   return op !== 'is_null' && op !== 'not_null' && op !== 'was_updated'
+}
+
+// Viewer-scoped filters drop the two workflow-only operators: 'was_updated'
+// needs an old/new record pair that a picker query never has, and full-text
+// 'search' matches the whole record (the options endpoint already ANDs the
+// user's typed search separately).
+const VIEWER_OPERATORS = OPERATORS.filter((o) => o.value !== 'was_updated' && o.value !== 'search')
+
+/** Context for the viewer-scoped value modes ('current_user'/'this_record')
+ *  — the closed filter language enforced server-side on reference-field
+ *  option filters (and, later, menu filters and form access scopes). Passing
+ *  this REPLACES the static/expression toggle with a value-source picker:
+ *  expressions are refused by the backend on these surfaces, so the editor
+ *  never offers them. */
+export interface ViewerFilterContext {
+  /** What `current_user.<attr>` may name: built-ins (record_id/user_id/
+   *  email) plus the user-account form's own fields. The caller resolves
+   *  the account form; an app without one still gets the built-ins. */
+  currentUserAttrs: { value: string; label: string }[]
+  /** Shown under a current_user condition — e.g. which form the attributes
+   *  come from, or that the app has no user-account form yet. */
+  currentUserHint?: string
+  /** Reference/parent-link fields on the SOURCE form (the record being
+   *  authored) available for `this_record.<ref>.<attr>` hops. Omit entirely
+   *  to hide the this_record mode (a menu filter has no "this record"). */
+  thisRecordRefs?: { name: string; label: string; targetFormId: string }[]
 }
 
 /** True when op ignores the condition's `field` (matches the whole record
@@ -107,9 +134,13 @@ interface FilterBuilderProps {
    *  default — every builder-canvas caller (node config forms) keeps the
    *  existing two-row, expression-capable layout unchanged. */
   hideExpressions?: boolean
+  /** Enables the viewer-scoped value modes and disables expressions — see
+   *  ViewerFilterContext. Takes precedence over hideExpressions. Off by
+   *  default: every existing caller is unchanged. */
+  viewerModes?: ViewerFilterContext
 }
 
-export function FilterBuilder({ group, fields, variables, nodeContext = [], onChange, onRemove, depth = 0, hideExpressions = false, fieldGroups }: FilterBuilderProps) {
+export function FilterBuilder({ group, fields, variables, nodeContext = [], onChange, onRemove, depth = 0, hideExpressions = false, fieldGroups, viewerModes }: FilterBuilderProps) {
   // Every caller's `fields` ultimately means "what can this condition match
   // against" — for the common case (a form's own declared fields) that's
   // missing id/created_at/updated_at, which exist on every record but are
@@ -198,6 +229,7 @@ export function FilterBuilder({ group, fields, variables, nodeContext = [], onCh
               onRemove={() => removeCondition(c.id)}
               hideExpressions={hideExpressions}
               fieldGroups={fieldGroups}
+              viewerModes={viewerModes}
             />
             {(idx < group.conditions.length - 1 || group.groups.length > 0) && (
               <Connector combinator={group.combinator} />
@@ -221,6 +253,7 @@ export function FilterBuilder({ group, fields, variables, nodeContext = [], onCh
                 depth={depth + 1}
                 hideExpressions={hideExpressions}
                 fieldGroups={fieldGroups}
+                viewerModes={viewerModes}
               />
               {idx < group.groups.length - 1 && <Connector combinator={group.combinator} />}
             </Fragment>
@@ -261,7 +294,7 @@ function Connector({ combinator }: { combinator: 'and' | 'or' }) {
 // Single condition row
 // ---------------------------------------------------------------------------
 
-function ConditionRow({ condition, fields, variables, nodeContext, onChange, onRemove, hideExpressions = false, fieldGroups }: {
+function ConditionRow({ condition, fields, variables, nodeContext, onChange, onRemove, hideExpressions = false, fieldGroups, viewerModes }: {
   condition: FilterCondition
   fields: FieldDef[]
   variables: VariableDecl[]
@@ -270,6 +303,7 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
   onRemove: () => void
   hideExpressions?: boolean
   fieldGroups?: FieldGroup[]
+  viewerModes?: ViewerFilterContext
 }) {
   const [editorOpen, setEditorOpen] = useState(false)
   const needsValue = opNeedsValue(condition.op)
@@ -327,7 +361,7 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
     <SelectField
       value={condition.op}
       onChange={(v) => onChange({ op: v as CompareOp, field: v === 'search' ? '_search' : condition.field })}
-      options={OPERATORS}
+      options={viewerModes ? VIEWER_OPERATORS : OPERATORS}
       className="w-[7.5rem] shrink-0"
     />
   )
@@ -420,6 +454,65 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
     </button>
   )
 
+  if (viewerModes) {
+    // Viewer-scoped layout: Field/Operator row, then a value row whose
+    // SOURCE picker replaces the static/expression toggle — the closed
+    // language has no expressions to offer (the server refuses them on
+    // these surfaces), and the two viewer modes need pickers of their own.
+    const sourceMode: ValueMode =
+      condition.value_mode === 'current_user' || condition.value_mode === 'this_record'
+        ? condition.value_mode
+        : 'static'
+    return (
+      <div className="space-y-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-2 transition-colors">
+        <div className="flex items-center gap-1.5">
+          {fieldControl}
+          {operatorControl}
+          {removeButton}
+        </div>
+        {needsValue && (
+          <>
+            <div className="flex items-center gap-1.5">
+              <SelectField
+                value={sourceMode}
+                // Switching the source resets the value — an attribute name
+                // means nothing as a static value and vice versa.
+                onChange={(m) => onChange({ value_mode: m as ValueMode, value: '' })}
+                options={[
+                  { value: 'static', label: 'Fixed value' },
+                  { value: 'current_user', label: "Current user's…" },
+                  ...(viewerModes.thisRecordRefs ? [{ value: 'this_record', label: "This record's…" }] : []),
+                ]}
+                className="w-[8.5rem] shrink-0"
+              />
+              {sourceMode === 'static' && valueControl}
+              {sourceMode === 'current_user' && (
+                <SelectField
+                  value={condition.value == null ? '' : String(condition.value)}
+                  onChange={(v) => onChange({ value: v })}
+                  placeholder="attribute…"
+                  options={viewerModes.currentUserAttrs}
+                  className="min-w-0 flex-1"
+                  size="value"
+                />
+              )}
+              {sourceMode === 'this_record' && viewerModes.thisRecordRefs && (
+                <ThisRecordValuePicker
+                  value={condition.value == null ? '' : String(condition.value)}
+                  refs={viewerModes.thisRecordRefs}
+                  onChange={(v) => onChange({ value: v })}
+                />
+              )}
+            </div>
+            {sourceMode === 'current_user' && viewerModes.currentUserHint && (
+              <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{viewerModes.currentUserHint}</p>
+            )}
+          </>
+        )}
+      </div>
+    )
+  }
+
   if (hideExpressions) {
     // Single row: Field, Operator, Value (when the operator needs one),
     // Delete — no Value/Expression toggle and no second row, since there's
@@ -478,6 +571,42 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
         label={condition.field || 'filter value'}
       />
     </div>
+  )
+}
+
+/** Composes this_record's "<reference field>.<attr>" value from two
+ *  dropdowns: a reference field on the source form, then a field on THAT
+ *  reference's target form (loaded on demand). Exactly one hop, by design —
+ *  the server rejects anything deeper, and the picker can't express it. */
+function ThisRecordValuePicker({ value, refs, onChange }: {
+  value: string
+  refs: { name: string; label: string; targetFormId: string }[]
+  onChange: (v: string) => void
+}) {
+  const dot = value.indexOf('.')
+  const refName = dot === -1 ? value : value.slice(0, dot)
+  const attr = dot === -1 ? '' : value.slice(dot + 1)
+  const selectedRef = refs.find((r) => r.name === refName)
+  const { data: hopForm } = useFormDef(selectedRef?.targetFormId ?? '')
+  return (
+    <>
+      <SelectField
+        value={refName}
+        onChange={(r) => onChange(r ? `${r}.` : '')}
+        placeholder="reference…"
+        options={refs.map((r) => ({ value: r.name, label: r.label }))}
+        className="min-w-0 flex-1"
+        size="value"
+      />
+      <SelectField
+        value={attr}
+        onChange={(a) => { if (refName) onChange(`${refName}.${a}`) }}
+        placeholder={refName ? 'attribute…' : 'pick a reference first'}
+        options={(hopForm?.fields ?? []).map((f) => ({ value: f.name, label: f.label || f.name }))}
+        className="min-w-0 flex-1"
+        size="value"
+      />
+    </>
   )
 }
 

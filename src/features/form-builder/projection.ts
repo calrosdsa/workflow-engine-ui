@@ -8,6 +8,7 @@
 import type { FormSchema, FormElement } from './schema'
 import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable } from './component-registry'
 import { slugifyKey, RESERVED_FIELD_KEYS } from './factory'
+import { canonicalReferenceFilter } from './reference-filter'
 import type { FieldDef } from '@/features/forms/types'
 
 /** Walks the schema in document order and yields every element. */
@@ -144,6 +145,15 @@ function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | nul
   // of the runtime's name/label/id fallback heuristic.
   if (el.component === 'form' && el.displayField) {
     field.display_field = el.displayField
+  }
+
+  // Viewer-scoped option filter — emitted in the backend's canonical, id-free
+  // form (see reference-filter.ts) so the stored value equals what the API
+  // echoes back. An empty filter projects to NO reference_filter at all:
+  // omitting the key on a full-replace save is how the builder clears one.
+  if (el.component === 'form' && el.referenceFilter) {
+    const rf = canonicalReferenceFilter(el.referenceFilter)
+    if (rf) field.reference_filter = rf
   }
 
   // Marks this field as part of the record's title (see FieldDef.is_record_title's
