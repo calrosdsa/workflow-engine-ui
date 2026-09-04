@@ -92,6 +92,7 @@ export function FieldRenderer({ element: el, control, formId, runtimeState, erro
             el={el}
             field={field}
             formId={formId}
+            control={control}
             disabled={runtimeState.readOnly}
             id={controlId}
             labelledBy={labelId}
@@ -111,13 +112,17 @@ export function FieldRenderer({ element: el, control, formId, runtimeState, erro
 
 // Exported for InlineFieldEditor.tsx's per-field editing on the record
 // detail view — this switch never touches react-hook-form internals
-// directly (no `control`/`formState`), only the plain {value, onChange,
-// onBlur} shape Controller happens to hand it above, so it's safe to call
-// standalone outside any <form>/Controller context.
-export function FieldInput({ el, field, formId, disabled, id, labelledBy, describedBy, required, invalid }: {
+// directly, only the plain {value, onChange, onBlur} shape Controller hands
+// it above, so it's safe to call standalone outside any <form>/Controller
+// context. `control` is the one exception: purely FORWARDED (never read) to
+// the reference picker, whose filtered mode watches sibling draft values for
+// cascading refetch — callers without an enclosing form omit it and the
+// picker uses its legacy unfiltered path.
+export function FieldInput({ el, field, formId, control, disabled, id, labelledBy, describedBy, required, invalid }: {
   el: FormElement
   field: { value: unknown; onChange: (v: unknown) => void; onBlur: () => void }
   formId?: string
+  control?: Control
   disabled: boolean
   /** Accessibility wiring from FieldRenderer. All optional: InlineFieldEditor
    *  calls this standalone with its own surrounding markup, and a control with

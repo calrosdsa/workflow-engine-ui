@@ -44,7 +44,7 @@ const echoed: FilterGroup = {
     { field: 'active', op: 'eq', value: true },
   ],
   groups: [],
-} as FilterGroup
+} as unknown as FilterGroup // conditions deliberately lack UI ids — the backend's shape
 
 describe('canonicalReferenceFilter', () => {
   it('strips ids, expression, explicit static mode, and empty sub-groups', () => {
