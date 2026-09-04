@@ -1212,9 +1212,9 @@ function RowFieldInput({ column, value, row, disabled, parentFormId, referenceSo
   column: FormElement
   value: unknown
   /** The full sibling row, for the 'form' case's this_record hop draft only
-   *  — every other case ignores it. Optional because a couple of call sites
-   *  (SummaryRowProps' inline cells, before this prop existed) genuinely
-   *  don't have a reason to build one when referenceSourceFormId is unset. */
+   *  — every other case ignores it. Every call site passes it today; kept
+   *  optional only so a future caller with no row in scope (e.g. a
+   *  standalone field editor) isn't forced to fabricate one. */
   row?: Row
   disabled: boolean
   /** A nested 'line_items' element (a Line Items grid whose OWN row also has
