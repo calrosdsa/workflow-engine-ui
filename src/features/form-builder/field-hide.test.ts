@@ -156,8 +156,16 @@ describe('heal', () => {
   it('reconciling a MIXED rule strips only the hidden_in_ui action, keeping read_only intact', () => {
     const el = ssnElement()
     el.advancedSettings = [mixedRoleRule()] // hides+read-only for sales_rep
-    // Backend now says: no hide rule for sales_rep, but DOES hide from everyone.
-    const healed = healSchema(schemaWith([el]), { fields: [backendField] })
+    // Backend now says: no hide rule for sales_rep, but DOES hide from
+    // everyone -- and, since SEC-1, ALSO confirms the mixed entry's
+    // read_only half really is backend-tracked (its own heal reconciliation
+    // runs too; omitting read_only_rules here would make IT the one with
+    // drift to fix, stripping read_only instead -- this field's mixed entry
+    // has a matching rule on both sides, so neither reconciliation touches
+    // the other's action).
+    const healed = healSchema(schemaWith([el]), {
+      fields: [{ ...backendField, read_only_rules: [{ audience: { type: 'specific_role', role_ids: ['sales_rep'] } }] }],
+    })
     const healedEl = healed.sections[0].columns[0].elements[0]
     const settings = healedEl.advancedSettings ?? []
 

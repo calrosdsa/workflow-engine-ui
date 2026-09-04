@@ -10,6 +10,7 @@ import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearch
 import { slugifyKey, RESERVED_FIELD_KEYS } from './factory'
 import { canonicalReferenceFilter } from './reference-filter'
 import { elementHideRules } from './field-hide'
+import { elementReadOnlyRules } from './field-readonly'
 import type { FieldDef } from '@/features/forms/types'
 
 /** Walks the schema in document order and yields every element. */
@@ -163,6 +164,11 @@ function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | nul
   // full-replace save is how the builder clears a field's hide rules.
   const hideRules = elementHideRules(el.advancedSettings)
   if (hideRules) field.hide_rules = hideRules
+
+  // Server-enforced write-protection (SEC-1) — every 'read_only' Advanced
+  // Setting action on this element, same projection shape as hide_rules.
+  const readOnlyRules = elementReadOnlyRules(el.advancedSettings)
+  if (readOnlyRules) field.read_only_rules = readOnlyRules
 
   // Marks this field as part of the record's title (see FieldDef.is_record_title's
   // doc comment). Re-checked against supportsRecordTitle here (not just trusted

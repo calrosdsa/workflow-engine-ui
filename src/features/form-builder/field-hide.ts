@@ -36,7 +36,10 @@ import {
 } from './schema'
 import { canonicalReferenceFilter } from './reference-filter'
 
-function toFilterGroup(when: AdvancedSettingGroup): FilterGroup {
+// Exported for field-readonly.ts's reuse — these four are pure shape
+// conversions with nothing hidden_in_ui-specific in them (audience/when
+// structure is identical between hide_rules and read_only_rules).
+export function toFilterGroup(when: AdvancedSettingGroup): FilterGroup {
   return {
     combinator: when.combinator === 'or' ? 'or' : 'and',
     // id is FilterCondition's UI-only key — canonicalReferenceFilter strips
@@ -51,7 +54,7 @@ function toFilterGroup(when: AdvancedSettingGroup): FilterGroup {
 // into the shape the condition builder needs (UI ids, AdvancedSettingGroup's
 // narrower op union — safe by construction, since a saved hide_rules `when`
 // can only ever hold ops field.fieldHideAllowedOps accepted at save time).
-function toAdvancedSettingGroup(g: FilterGroup): AdvancedSettingGroup {
+export function toAdvancedSettingGroup(g: FilterGroup): AdvancedSettingGroup {
   return {
     id: nanoid(),
     combinator: g.combinator === 'or' ? 'or' : 'and',
@@ -65,7 +68,7 @@ function toAdvancedSettingGroup(g: FilterGroup): AdvancedSettingGroup {
   }
 }
 
-function audienceFromSetting(appliesTo: AdvancedSettingAudience, roleIds?: string[], userIds?: string[]): FieldHideAudience {
+export function audienceFromSetting(appliesTo: AdvancedSettingAudience, roleIds?: string[], userIds?: string[]): FieldHideAudience {
   switch (appliesTo) {
     case 'specific_role':
       return { type: 'specific_role', role_ids: roleIds ?? [] }
@@ -76,7 +79,7 @@ function audienceFromSetting(appliesTo: AdvancedSettingAudience, roleIds?: strin
   }
 }
 
-function settingFromAudience(a: FieldHideAudience): { appliesTo: AdvancedSettingAudience; roleIds?: string[]; userIds?: string[] } {
+export function settingFromAudience(a: FieldHideAudience): { appliesTo: AdvancedSettingAudience; roleIds?: string[]; userIds?: string[] } {
   switch (a.type) {
     case 'specific_role':
       return { appliesTo: 'specific_role', roleIds: a.role_ids ?? [] }
@@ -102,7 +105,7 @@ export function elementHideRules(advancedSettings: AdvancedSetting[] | undefined
   return rules.length > 0 ? rules : undefined
 }
 
-function canonicalAudience(a: FieldHideAudience): FieldHideAudience {
+export function canonicalAudience(a: FieldHideAudience): FieldHideAudience {
   switch (a.type) {
     case 'specific_role':
       return { type: 'specific_role', role_ids: [...(a.role_ids ?? [])].sort() }

@@ -48,6 +48,7 @@ import { projectedBaseName } from './projection'
 import { hydrateReferenceFilter, sameReferenceFilter } from './reference-filter'
 import { hydrateAccessScope, sameAccessScope } from './access-scope'
 import { elementHideRules, sameFieldHideRules, reconcileHideRuleActions } from './field-hide'
+import { elementReadOnlyRules, sameFieldReadOnlyRules, reconcileReadOnlyRuleActions } from './field-readonly'
 import type { FieldDef, AccessScopeRule } from '@/features/forms/types'
 
 /** The slice of a backend form definition healing needs. Structural, so
@@ -143,9 +144,17 @@ export function healSchema(parsed: FormSchema, def: HealableForm): FormSchema {
         // copy on the next save, which for a masking rule would mean
         // silently UNMASKING a field. See field-hide.ts's header for why
         // this only ever touches the hidden_in_ui action, never a whole
-        // Advanced Setting entry.
-        if (!sameFieldHideRules(elementHideRules(el.advancedSettings), f.hide_rules)) {
-          healedEl = { ...healedEl, advancedSettings: reconcileHideRuleActions(el.advancedSettings, f.hide_rules) }
+        // Advanced Setting entry. Reads/writes healedEl.advancedSettings,
+        // not el's — so it composes with the read_only_rules check right
+        // below rather than clobbering it if both fired in the same pass.
+        if (!sameFieldHideRules(elementHideRules(healedEl.advancedSettings), f.hide_rules)) {
+          healedEl = { ...healedEl, advancedSettings: reconcileHideRuleActions(healedEl.advancedSettings, f.hide_rules) }
+          elChanged = true
+        }
+        // read_only_rules (SEC-1) gets the identical treatment, chained
+        // onto whatever the hide_rules check above already produced.
+        if (!sameFieldReadOnlyRules(elementReadOnlyRules(healedEl.advancedSettings), f.read_only_rules)) {
+          healedEl = { ...healedEl, advancedSettings: reconcileReadOnlyRuleActions(healedEl.advancedSettings, f.read_only_rules) }
           elChanged = true
         }
         if (elChanged) {

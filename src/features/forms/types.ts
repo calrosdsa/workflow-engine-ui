@@ -44,6 +44,20 @@ export interface FieldHideRule {
   when?: FilterGroup
 }
 
+/** One server-enforced write-protection rule (field.FieldReadOnlyRule): a
+ *  viewer matched by `audience` may not CHANGE this field's value on an
+ *  UPDATE when `when` evaluates true against the record's STORED
+ *  (pre-write) values — same in-record-predicate shape as FieldHideRule,
+ *  reusing FieldHideAudience for the identical "who does this restrict"
+ *  question. This is the backend-readable projection of ONLY the form
+ *  builder's 'read_only' Advanced Setting action, and only applies to
+ *  UpdateRecord — never CreateRecord (SEC-1's scope decision: read_only
+ *  means "locked after creation", not "server-computed at creation"). */
+export interface FieldReadOnlyRule {
+  audience: FieldHideAudience
+  when?: FilterGroup
+}
+
 export type FieldType =
   | 'string' | 'text' | 'integer' | 'decimal' | 'boolean'
   | 'date' | 'time' | 'datetime' | 'email' | 'phone'
@@ -126,6 +140,12 @@ export interface FieldDef {
    *  the builder's own source of truth stays advancedSettings, hydrated
    *  from `layout` as usual. */
   hide_rules?: FieldHideRule[]
+  /** This field's server-enforced write-protection rules — the backend-
+   *  readable counterpart of this element's Advanced Settings 'read_only'
+   *  actions, enforced on UpdateRecord only. Same derivation pattern as
+   *  hide_rules, via form-builder/field-readonly.ts's
+   *  elementReadOnlyRules. */
+  read_only_rules?: FieldReadOnlyRule[]
   /** Caps an uploaded file's size, in bytes, for type === 'file' fields.
    *  Enforced server-side (api/content's Upload handler, before any bytes
    *  are stored — the real gate) and re-checked at record-save time
