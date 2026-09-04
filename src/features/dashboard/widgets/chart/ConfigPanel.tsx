@@ -1,6 +1,7 @@
 import { BarChart3, LineChart as LineChartIcon, AreaChart as AreaChartIcon, PieChart as PieChartIcon, Hash, Plus, Trash2 } from 'lucide-react'
 import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenceSelect'
 import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuilder'
+import { useCurrentUserAttrs } from '@/features/workflows/builder/useCurrentUserAttrs'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -36,6 +37,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
   const { data: form } = useForm(config.formId)
   const fields = form?.fields ?? []
   const numericFields = fields.filter((f) => NUMERIC_TYPES.includes(f.type))
+  const viewerModes = useCurrentUserAttrs()
 
   const patch = (p: Partial<ChartWidgetConfig>) => onChange({ ...config, ...p })
 
@@ -139,6 +141,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
             group={config.filter ?? newGroup()}
             fields={form.fields}
             variables={[]}
+            viewerModes={viewerModes}
             onChange={(g) => patch({ filter: g })}
           />
         </div>

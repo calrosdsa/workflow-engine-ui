@@ -498,7 +498,17 @@ export function RecordsTable({
             onSortChange={toggleSort}
             onRowDoubleClick={rowClick ? (onExpandRecord ?? openRecord) : undefined}
             loading={isLoading}
-            emptyMessage={isSearchError ? "Couldn't load records — try again." : undefined}
+            emptyMessage={
+              isSearchError
+                ? "Couldn't load records — try again."
+                : results?.unresolved_reason
+                  ? // Fail-closed, legibly: a current_user condition in the
+                    // filter couldn't resolve for this viewer — say why
+                    // instead of a blank "no records" that reads as broken
+                    // data or missing rows (see formsApi's SearchRecordsResponse doc).
+                    `No records: ${results.unresolved_reason}`
+                  : undefined
+            }
             onColumnsReorder={columnDragEnabled ? applyColumns : undefined}
           />
         )}

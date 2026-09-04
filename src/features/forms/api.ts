@@ -17,6 +17,12 @@ export interface SearchRecordsResponse {
   total: number
   page: number
   page_size: number
+  /** Set when the filter carried a current_user condition that failed to
+   *  resolve (no signed-in viewer, or no matching account record) — records
+   *  is then empty BY DESIGN (fail closed), and this says why, so a "my
+   *  records" menu with no results reads as "you have no linked account,"
+   *  not "this menu is broken." */
+  unresolved_reason?: string
 }
 
 export type AggregateFn = 'count' | 'sum' | 'avg' | 'min' | 'max'
@@ -53,6 +59,9 @@ export interface AggregateGroupResponse {
 
 export interface AggregateRecordsResponse {
   groups: AggregateGroupResponse[]
+  /** Mirrors SearchRecordsResponse's own field — see its doc comment.
+   *  groups is empty BY DESIGN when this is set. */
+  unresolved_reason?: string
 }
 
 // Mirrors api/forms/handler.go's triggerWorkflowResponse (FR-B3-007's

@@ -1,6 +1,7 @@
 import { nanoid } from '@/features/workflows/builder/nanoid'
 import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenceSelect'
 import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuilder'
+import { useCurrentUserAttrs } from '@/features/workflows/builder/useCurrentUserAttrs'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
@@ -35,6 +36,7 @@ function ensureSortIds(sort: SortRule[] | undefined): SortRule[] {
 export function SearchMenuConfigPanel({ menu, onChange }: SearchMenuConfigPanelProps) {
   const config = menu.config as SearchMenuConfig
   const { data: form } = useForm(config.form_id)
+  const viewerModes = useCurrentUserAttrs()
 
   const patch = (p: Partial<SearchMenuConfig>) => onChange({ ...config, ...p })
 
@@ -86,10 +88,16 @@ export function SearchMenuConfigPanel({ menu, onChange }: SearchMenuConfigPanelP
       {form && (
         <div>
           <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Default filter</Label>
+          <p className="mb-1.5 text-[11px] text-[hsl(var(--muted-foreground))]">
+            A condition's value can come from the current user's own account record — "Owner = current user" — for
+            a "my records" menu. This is UX scoping, resolved server-side but not a security boundary: a viewer can
+            still edit or clear it from their own filter popover unless the field/form itself restricts access.
+          </p>
           <FilterBuilder
             group={ensureGroupIds(config.default_filter)}
             fields={form.fields}
             variables={[]}
+            viewerModes={viewerModes}
             onChange={(g) => patch({ default_filter: g })}
           />
         </div>

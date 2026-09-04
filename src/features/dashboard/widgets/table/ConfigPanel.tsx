@@ -1,6 +1,7 @@
 import { nanoid } from '@/features/workflows/builder/nanoid'
 import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenceSelect'
 import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuilder'
+import { useCurrentUserAttrs } from '@/features/workflows/builder/useCurrentUserAttrs'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -36,6 +37,7 @@ function ensureSortIds(sort: SortRule[] | undefined): SortRule[] {
 export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<TableWidgetConfig>) {
   const { data: form } = useForm(config.formId)
   const referenceFields = (form?.fields ?? []).filter((f) => f.type === 'reference')
+  const viewerModes = useCurrentUserAttrs()
 
   const patch = (p: Partial<TableWidgetConfig>) => onChange({ ...config, ...p })
 
@@ -73,6 +75,7 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
             group={ensureGroupIds(config.defaultFilter)}
             fields={form.fields}
             variables={[]}
+            viewerModes={viewerModes}
             onChange={(g) => patch({ defaultFilter: g })}
           />
         </div>

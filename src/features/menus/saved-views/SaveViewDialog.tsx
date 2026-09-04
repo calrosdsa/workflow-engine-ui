@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Spinner } from '@/components/ui/spinner'
 import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuilder'
+import { useCurrentUserAttrs } from '@/features/workflows/builder/useCurrentUserAttrs'
 import { SortRuleList } from '@/components/ui/sort-rule-list'
 import { nanoid } from '@/features/workflows/builder/nanoid'
 import { cn } from '@/lib/utils'
@@ -92,6 +93,7 @@ export function SaveViewDialog({ open, onClose, appId, fields, enumLabels, confi
   const [isDefault, setIsDefault] = useState(editing?.is_default ?? false)
   const [layout, setLayout] = useState<ViewLayout>(seed.layout ?? 'list')
   const [columns, setColumns] = useState<string[]>(seed.columns ?? [])
+  const viewerModes = useCurrentUserAttrs()
   const [filter, setFilter] = useState<FilterGroup>(ensureGroupIds(seed.filter))
   const [sort, setSort] = useState<SortRule[]>(ensureSortIds(seed.sort))
   const [dateField, setDateField] = useState<string>(
@@ -253,20 +255,22 @@ export function SaveViewDialog({ open, onClose, appId, fields, enumLabels, confi
 
           <div>
             <FieldLabel>Filter</FieldLabel>
-            {/* hideExpressions: a saved view's filter is end-user-facing
-               config (the same shape RecordsTable's own runtime filter
-               popover edits), not workflow-canvas scripting — Expr access
-               (Vars[...], NodeOutputs[...]) has no meaning for "when should
-               this view's rows be included" and collapsing to one line per
-               condition matches this drawer's own compact field/column
-               rows above it. overflow-x-auto matches RecordsTable's own
-               filter popover: hideExpressions's condition row has a
-               min-width floor (FilterBuilder.tsx) so Field/Value stop
-               getting squeezed as controls stack up — scrolling only this
-               section horizontally, rather than the whole drawer body,
-               keeps Name/Columns/Sort/Visibility unaffected. */}
+            {/* viewerModes (not hideExpressions — it takes precedence and
+               implies the same collapsed, no-expression layout): a saved
+               view's filter is end-user-facing config, not workflow-canvas
+               scripting — Expr access (Vars[...], NodeOutputs[...]) has no
+               meaning for "when should this view's rows be included" — but
+               a value can still come from the current user's own account
+               record ("Owner = current user", the same "my records" case
+               the menu's own default filter offers). overflow-x-auto
+               matches RecordsTable's own filter popover: the collapsed
+               condition row has a min-width floor (FilterBuilder.tsx) so
+               Field/Value stop getting squeezed as controls stack up —
+               scrolling only this section horizontally, rather than the
+               whole drawer body, keeps Name/Columns/Sort/Visibility
+               unaffected. */}
             <div className="overflow-x-auto">
-              <FilterBuilder group={filter} fields={fieldsWithSystem} variables={[]} onChange={setFilter} hideExpressions />
+              <FilterBuilder group={filter} fields={fieldsWithSystem} variables={[]} onChange={setFilter} viewerModes={viewerModes} />
             </div>
           </div>
 

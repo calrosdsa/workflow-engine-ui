@@ -14,7 +14,8 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '@/components/ui/drawer'
 import { FilterBuilder, newGroup, type ViewerFilterContext } from '@/features/workflows/builder/FilterBuilder'
-import { useForm as useFormDef, useForms } from '@/features/forms/hooks'
+import { useCurrentUserAttrs } from '@/features/workflows/builder/useCurrentUserAttrs'
+import { useForm as useFormDef } from '@/features/forms/hooks'
 import { countFilterConditions } from '../reference-filter'
 import { iterElements } from '../projection'
 import type { FormElement, FormSchema } from '../schema'
@@ -35,40 +36,12 @@ export function ReferenceFilterSection({ element, schema, onChange }: ReferenceF
   const { data: targetForm } = useFormDef(element.formRef ?? '')
 
   // current_user attributes come from the app's user-account form (the one
-  // with "create a user with each enrollment" turned on). The server links
-  // viewer → record by email and FAILS CLOSED when that's ambiguous, so
-  // with several account forms only the built-ins are offered here — a
-  // custom attribute could never resolve, and save-time validation would
-  // refuse it anyway.
-  const { data: allForms } = useForms()
-  const accountForms = useMemo(() => (allForms ?? []).filter((f) => f.create_user_on_submit), [allForms])
-  const accountForm = accountForms.length === 1 ? accountForms[0] : undefined
-  const { data: accountDef } = useFormDef(accountForm?.id ?? '')
+  // with "create a user with each enrollment" turned on) — see
+  // useCurrentUserAttrs's own doc comment for the fail-closed/ambiguity
+  // rules, shared by every current_user-capable filter section.
+  const { currentUserAttrs, currentUserHint } = useCurrentUserAttrs()
 
   const viewerModes: ViewerFilterContext = useMemo(() => {
-    const currentUserAttrs = [
-      // record_id compares against the viewer's account RECORD id — the
-      // value reference/parent fields actually store — never the login
-      // user id. "Assigned To = current user" means exactly this one.
-      { value: 'record_id', label: accountForm ? `Their ${accountForm.name} record` : 'Their account record' },
-      { value: 'user_id', label: 'Their user id' },
-      { value: 'email', label: 'Their email' },
-      ...(accountDef?.fields ?? [])
-        .filter((f) => f.type !== 'line_item_count' && f.type !== 'line_item_adopted' && f.type !== 'parent_link')
-        .map((f) => ({ value: f.name, label: `Their ${f.label || f.name}` })),
-    ]
-
-    let currentUserHint: string
-    if (accountForms.length === 0) {
-      currentUserHint =
-        'No form in this app creates user accounts yet, so only user id and email can resolve — turn on "create a user with each enrollment" on a form to filter by its fields.'
-    } else if (accountForms.length > 1) {
-      currentUserHint =
-        'Several forms create user accounts, so the server cannot tell which record is the viewer\'s — only user id and email will resolve until a single form creates users.'
-    } else {
-      currentUserHint = `Attributes come from the viewer's "${accountForm!.name}" record, matched by email. A viewer with no matching record gets no options (fail closed).`
-    }
-
     const thisRecordRefs = [...iterElements(schema)]
       .filter((e) => e.component === 'form' && e.formRef && e.id !== element.id)
       .map((e) => ({ name: e.key, label: e.label || e.key, targetFormId: e.formRef! }))
@@ -78,7 +51,7 @@ export function ReferenceFilterSection({ element, schema, onChange }: ReferenceF
       currentUserHint,
       thisRecordRefs: thisRecordRefs.length > 0 ? thisRecordRefs : undefined,
     }
-  }, [accountForm, accountForms.length, accountDef, schema, element.id])
+  }, [currentUserAttrs, currentUserHint, schema, element.id])
 
   const count = countFilterConditions(element.referenceFilter)
 
