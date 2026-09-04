@@ -136,6 +136,13 @@ export const formsApi = {
   },
   searchRecords: (formId: string, req: SearchRecordsRequest) =>
     api.post(`forms/${formId}/records/search`, { json: req }).json<SearchRecordsResponse>(),
+  // The reference-field picker's data source: the TARGET form's records with
+  // the field's reference_filter enforced server-side (current_user resolved
+  // against the caller's session, this_record hops against `draft`). An
+  // unresolvable viewer returns EMPTY records plus unresolved_reason — fail
+  // closed, with the why — never an error and never the unfiltered list.
+  referenceOptions: (formId: string, fieldName: string, req: ReferenceOptionsRequest) =>
+    api.post(`forms/${formId}/fields/${fieldName}/reference-options`, { json: req }).json<ReferenceOptionsResponse>(),
   aggregateRecords: (formId: string, req: AggregateRecordsRequest) =>
     api.post(`forms/${formId}/records/aggregate`, { json: req }).json<AggregateRecordsResponse>(),
   getRecordAuditLog: (formId: string, recordId: string, params: { page: number; page_size: number }) =>
@@ -183,6 +190,27 @@ export const formsApi = {
     api.post(`forms/${formId}/records/${recordId}/account/remove-access`).json<RecordAccountStatus>(),
   enableRecordAccess: (formId: string, recordId: string, data: { email: string; role_id: string }) =>
     api.post(`forms/${formId}/records/${recordId}/account/enable-access`, { json: data }).json<RecordAccountStatus>(),
+}
+
+export interface ReferenceOptionsRequest {
+  search?: string
+  /** One target-form field to contains-match `search` against (the picker's
+   *  display-field convention); omitted, `search` is full-text over the
+   *  target's Searchable fields. */
+  search_field?: string
+  /** The record-being-authored's current reference values, for this_record
+   *  hops — {"<sibling reference field>": "<record id>"}. */
+  draft?: Record<string, unknown>
+  page_size?: number
+}
+
+export interface ReferenceOptionsResponse {
+  records: FormRecord[]
+  total: number
+  /** Set when the viewer-scoped filter could not resolve (no viewer, no
+   *  account record, an empty hop field): records is then empty BY DESIGN,
+   *  and this says why — surface it instead of "no records found". */
+  unresolved_reason?: string
 }
 
 export interface RecordAccountStatus {

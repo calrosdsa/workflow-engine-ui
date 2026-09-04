@@ -18,6 +18,7 @@
 // search field — see that function's doc comment.
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useForm as useRHF, useWatch, type Control } from 'react-hook-form'
 import { Check, ChevronsUpDown, X, Loader2, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -52,9 +53,20 @@ interface ReferenceFieldAutocompleteProps {
    *  name this control — the trigger is the focusable element here, there is
    *  no native input to carry the id. */
   id?: string
+  /** The form THIS field lives on. When set (with `control`), options come
+   *  from the server's reference-options endpoint, which enforces the
+   *  field's reference_filter — current_user resolved against the session,
+   *  this_record hops against the draft's sibling reference values. Without
+   *  it (e.g. a report argument, which belongs to no form), the legacy
+   *  unfiltered target-form search is used. */
+  sourceFormId?: string
+  /** The enclosing form's RHF control — watched so a filter hopping through
+   *  a sibling reference field (Supplier limited by Manager's area) refetches
+   *  the moment that sibling changes: the cascading-select behaviour. */
+  control?: Control
 }
 
-export function ReferenceFieldAutocomplete({ el, field, disabled, id }: ReferenceFieldAutocompleteProps) {
+export function ReferenceFieldAutocomplete({ el, field, disabled, id, sourceFormId, control }: ReferenceFieldAutocompleteProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search, 300)
@@ -68,16 +80,60 @@ export function ReferenceFieldAutocomplete({ el, field, disabled, id }: Referenc
     return displayField(hasName, hasLabel)
   }, [el.displayField, targetForm])
 
+  // Hooks must run unconditionally, so callers without an enclosing form
+  // (report arguments) watch a throwaway local form instead of branching.
+  const fallbackForm = useRHF()
+  const watchedValues = useWatch({ control: control ?? fallbackForm.control }) as Record<string, unknown>
+
+  // The draft sent for this_record hops: just the sibling REFERENCE values —
+  // the only ones a hop can read — keyed by field name. Also the query-key
+  // ingredient that makes dependent pickers refetch when a sibling changes.
+  const { data: sourceForm } = useFormDef(sourceFormId ?? '')
+  const filtered = !!sourceFormId && !!control && !!el.key
+  const refDraft = useMemo(() => {
+    if (!filtered || !sourceForm) return undefined
+    const draft: Record<string, unknown> = {}
+    for (const f of sourceForm.fields) {
+      if (f.type !== 'reference' && f.type !== 'parent_link') continue
+      const v = watchedValues?.[f.name]
+      if (typeof v === 'string' && v !== '') draft[f.name] = v
+    }
+    return draft
+  }, [filtered, sourceForm, watchedValues])
+
   const { data: results, isLoading } = useQuery({
-    queryKey: ['forms', el.formRef, 'reference-options', debouncedSearch],
-    queryFn: () =>
-      formsApi.searchRecords(el.formRef!, {
+    queryKey: filtered
+      ? ['forms', sourceFormId, 'field-options', el.key, debouncedSearch, JSON.stringify(refDraft ?? {})]
+      : ['forms', el.formRef, 'reference-options', debouncedSearch],
+    queryFn: async (): Promise<{ records: Record<string, unknown>[]; unresolved_reason?: string }> => {
+      if (filtered) {
+        try {
+          return await formsApi.referenceOptions(sourceFormId!, el.key, {
+            search: debouncedSearch || undefined,
+            search_field: searchField ?? undefined,
+            draft: refDraft,
+            page_size: 20,
+          })
+        } catch (err: unknown) {
+          // A backend predating the endpoint 404s — fall through to the
+          // legacy unfiltered search rather than a dead picker. Safe: the
+          // old backend has no reference_filter enforcement to bypass, and
+          // the write gate (which ships with the endpoint) stays the
+          // boundary everywhere it exists.
+          const status = (err as { response?: { status?: number } })?.response?.status
+          if (status !== 404) throw err
+        }
+      }
+      if (!el.formRef) return { records: [] }
+      const res = await formsApi.searchRecords(el.formRef, {
         filter: searchField ? buildContainsFilter(searchField, debouncedSearch) : undefined,
         sort: [],
         page: 1,
         page_size: 20,
-      }),
-    enabled: !!el.formRef && open,
+      })
+      return { records: res.records }
+    },
+    enabled: (filtered || !!el.formRef) && open,
   })
 
   // Resolve the currently-selected value's display label independently of
@@ -134,7 +190,15 @@ export function ReferenceFieldAutocomplete({ el, field, disabled, id }: Referenc
               </div>
             ) : (
               <>
-                <CommandEmpty>No records found.</CommandEmpty>
+                <CommandEmpty>
+                  {results?.unresolved_reason
+                    ? // Fail-closed, legibly: the filter could not resolve for
+                      // this viewer/draft — say why ("choose a manager first",
+                      // "no account record matches…") instead of a blank
+                      // "no records" that reads as broken data.
+                      `No options available: ${results.unresolved_reason}`
+                    : 'No records found.'}
+                </CommandEmpty>
                 <CommandGroup>
                   {options.map((r) => {
                     const id = r.id as string

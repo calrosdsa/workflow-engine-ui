@@ -270,7 +270,7 @@ export function FieldInput({ el, field, formId, disabled, id, labelledBy, descri
     }
 
     case 'form':
-      return <ReferenceFieldAutocomplete el={el} field={field} disabled={disabled} id={id} />
+      return <ReferenceFieldAutocomplete el={el} field={field} disabled={disabled} id={id} sourceFormId={formId} control={control} />
 
     // The remaining three are composites of several controls, so the label
     // names the wrapper rather than reaching inside to pick one of them.
