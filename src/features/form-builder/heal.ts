@@ -46,7 +46,8 @@ import { createSection } from './factory'
 import { specFieldToElement, type FormSpecField } from './form-spec'
 import { projectedBaseName } from './projection'
 import { hydrateReferenceFilter, sameReferenceFilter } from './reference-filter'
-import type { FieldDef } from '@/features/forms/types'
+import { hydrateAccessScope, sameAccessScope } from './access-scope'
+import type { FieldDef, AccessScopeRule } from '@/features/forms/types'
 
 /** The slice of a backend form definition healing needs. Structural, so
  *  callers holding a full FormDefinition or just {layout, fields} both fit. */
@@ -56,6 +57,7 @@ export interface HealableForm {
   create_user_name_field?: string
   create_user_email_field?: string
   create_user_role_field?: string
+  access_scope?: AccessScopeRule[]
 }
 
 /** Field types that never get an element synthesized:
@@ -212,13 +214,27 @@ export function healSchema(parsed: FormSchema, def: HealableForm): FormSchema {
     existing?.emailFieldKey !== healedCU.emailFieldKey ||
     existing?.roleFieldKey !== healedCU.roleFieldKey
 
-  if (!sectionsChanged && !cuChanged) return parsed
+  // Pass 4 — access_scope, the same "backend-enforced setting is the truth"
+  // rule as createUser and reference_filter: an API/MCP-authored (or
+  // -removed) rule set is hydrated into settings, and the next builder save
+  // round-trips it rather than silently replacing it with the layout's
+  // stale copy — which, for a row-level security rule, means silently
+  // WIDENING what a viewer can read or write.
+  const asChanged = !sameAccessScope(parsed.settings?.accessScope, def.access_scope)
+  const healedAS = def.access_scope ? hydrateAccessScope(def.access_scope) : undefined
 
+  if (!sectionsChanged && !cuChanged && !asChanged) return parsed
+
+  const settingsChanged = cuChanged || asChanged
   return {
     ...parsed,
     sections: outSections,
-    settings: cuChanged
-      ? { ...(parsed.settings ?? emptyFormSettings()), createUser: healedCU }
+    settings: settingsChanged
+      ? {
+          ...(parsed.settings ?? emptyFormSettings()),
+          ...(cuChanged ? { createUser: healedCU } : {}),
+          ...(asChanged ? { accessScope: healedAS } : {}),
+        }
       : (parsed.settings ?? emptyFormSettings()),
   }
 }

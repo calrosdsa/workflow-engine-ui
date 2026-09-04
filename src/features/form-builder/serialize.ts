@@ -8,6 +8,7 @@ import { type FormSchema, emptySchema } from './schema'
 import { projectToFields } from './projection'
 import { parseLayout } from './parse-layout'
 import { healSchema, type HealableForm } from './heal'
+import { canonicalAccessScope } from './access-scope'
 import type { FormDefinition, CreateFormPayload, FieldDef } from '@/features/forms/types'
 
 // parseLayout lives in its own leaf module now (see parse-layout.ts for the
@@ -97,5 +98,10 @@ export function toPayload(state: BuilderFormState): CreateFormPayload {
     create_user_name_field: cu?.nameFieldKey,
     create_user_email_field: cu?.emailFieldKey,
     create_user_role_field: cu?.roleFieldKey,
+    // Same explicit-column mirror, for the same reason: access_scope gates
+    // reads and writes server-side and must be readable without parsing
+    // layout. canonicalAccessScope strips the builder's UI-only filter ids
+    // and normalizes an empty rule list to undefined (unrestricted).
+    access_scope: canonicalAccessScope(state.schema.settings?.accessScope),
   }
 }

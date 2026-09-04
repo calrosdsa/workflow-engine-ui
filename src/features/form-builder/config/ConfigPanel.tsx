@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { SlidersHorizontal, Layers, FileText, LayoutPanelTop, LayoutGrid, Zap } from 'lucide-react'
+import { SlidersHorizontal, Layers, FileText, LayoutPanelTop, LayoutGrid, Zap, ShieldCheck } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -14,9 +14,10 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, Dr
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useForm as useFormDef } from '@/features/forms/hooks'
-import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection, updateDetailTabs, updateDetailLayout, updateTabOrientation, updateCustomActions, updateAfterSubmitWorkflow, updateFieldChangeWorkflow } from '../store'
+import { useFormBuilderStore, useFormMetaStore, insertAccountSection, removeAccountSection, updateDetailTabs, updateDetailLayout, updateTabOrientation, updateCustomActions, updateAfterSubmitWorkflow, updateFieldChangeWorkflow, updateAccessScope } from '../store'
 import { DetailPageConfigSection } from './DetailPageConfigSection'
 import { CustomActionsConfigSection } from './CustomActionsConfigSection'
+import { AccessScopeConfigSection } from './AccessScopeConfigSection'
 import { UiWorkflowEditor } from '@/features/ui-workflows/UiWorkflowEditor'
 import { emptyUiWorkflow } from '@/features/ui-workflows/types'
 import { emptyFieldChangeWorkflow } from '@/features/ui-workflows/useFieldChangeWorkflow'
@@ -141,8 +142,10 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
   const [customActionsOpen, setCustomActionsOpen] = useState(false)
   const [afterSubmitOpen, setAfterSubmitOpen] = useState(false)
   const [whileFillingOpen, setWhileFillingOpen] = useState(false)
+  const [accessScopeOpen, setAccessScopeOpen] = useState(false)
   const tabCount = resolveDetailTabs(schema.settings?.detailTabs).filter((t) => !t.hidden).length
   const actionCount = (schema.settings?.customActions ?? []).length
+  const accessScopeRules = schema.settings?.accessScope ?? []
   const afterSubmitCount = (schema.settings?.afterSubmitWorkflow?.steps ?? []).length
   const fieldChange = schema.settings?.fieldChangeWorkflow ?? emptyFieldChangeWorkflow()
   const fields = useMemo(() => projectToFields(schema).fields, [schema])
@@ -246,6 +249,29 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
 
           <div className="h-px bg-[hsl(var(--border))]" />
           <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Access Scope</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
+              Row-level security: which of this form's records each viewer may see and edit. Enforced server-side —
+              this is a real access boundary, not just what the UI shows.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAccessScopeOpen(true)}
+              className="flex w-full items-center justify-between gap-2 text-[12px]"
+            >
+              <span className="flex items-center gap-2">
+                <ShieldCheck size={14} className="text-[hsl(var(--muted-foreground))]" />
+                Configure Access Scope
+              </span>
+              <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
+                {accessScopeRules.length === 0 ? 'Unrestricted' : `${accessScopeRules.length} rule${accessScopeRules.length === 1 ? '' : 's'}`}
+              </span>
+            </Button>
+          </div>
+
+          <div className="h-px bg-[hsl(var(--border))]" />
+          <div className="space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">While Filling In</p>
             <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
               Steps that run as someone fills this form in, when a watched field changes.
@@ -339,6 +365,34 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
                 : `${fieldChange.workflow.steps.length} step${fieldChange.workflow.steps.length === 1 ? '' : 's'}, ${fieldChange.watch.length} watched`}
             </p>
             <Button type="button" onClick={() => setWhileFillingOpen(false)}>Done</Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
+      <Drawer open={accessScopeOpen} onOpenChange={setAccessScopeOpen}>
+        <DrawerContent size="lg">
+          <DrawerHeader>
+            <DrawerTitle>Access Scope</DrawerTitle>
+            <DrawerDescription>
+              Row-level security rules, enforced server-side wherever this form's records are read or written — not
+              just what the app's UI shows. A viewer matched by more than one rule sees the union of what each
+              allows; a viewer matched by NO rule sees every record, same as a form with no rules configured at all.
+            </DrawerDescription>
+          </DrawerHeader>
+          <ScrollArea className="flex-1">
+            <div className="p-6">
+              <AccessScopeConfigSection
+                rules={accessScopeRules}
+                onChange={updateAccessScope}
+                fields={fields}
+              />
+            </div>
+          </ScrollArea>
+          <DrawerFooter className="items-center justify-between sm:justify-between">
+            <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
+              {accessScopeRules.length === 0 ? 'Unrestricted' : `${accessScopeRules.length} rule${accessScopeRules.length === 1 ? '' : 's'}`} — changes apply instantly, use the builder's Save to persist them.
+            </p>
+            <Button type="button" onClick={() => setAccessScopeOpen(false)}>Done</Button>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>

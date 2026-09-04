@@ -1,5 +1,22 @@
 import type { FilterGroup } from '@/features/workflows/types'
 
+/** Which of a form's viewers an AccessScopeRule applies to. 'role' requires
+ *  at least one id in role_ids; 'everyone' ignores it. */
+export interface AccessScopeAudience {
+  type: 'everyone' | 'role'
+  role_ids?: string[]
+}
+
+/** One row-level security rule on a form (field.AccessScopeRule): a viewer
+ *  matched by `audience` may only read/write records matching `filter`.
+ *  Rules whose audience matches a given viewer OR together; a viewer
+ *  matched by NO rule is unrestricted, same as a form with no rules at all
+ *  — see FormDefinition.access_scope's own doc comment. */
+export interface AccessScopeRule {
+  audience: AccessScopeAudience
+  filter: FilterGroup
+}
+
 export type FieldType =
   | 'string' | 'text' | 'integer' | 'decimal' | 'boolean'
   | 'date' | 'time' | 'datetime' | 'email' | 'phone'
@@ -148,6 +165,15 @@ export interface FormDefinition {
    *  on every child-form save. 0/absent means "no bound" for either. */
   line_items_min_rows?: number
   line_items_max_rows?: number
+  /** This form's row-level security rules — explicit typed field (not
+   *  parsed out of the opaque `layout` blob), mirroring create_user_on_submit's
+   *  own precedent, since server-side enforcement code needs to read it
+   *  directly. Derived from schema.settings.accessScope by form-builder/
+   *  serialize.ts's toPayload; the builder's own source of truth stays
+   *  schema.settings.accessScope, hydrated from `layout` as usual. A nil/
+   *  empty/absent list means unrestricted — see AccessScopeRule's own doc
+   *  comment for the "no matching rule" case too. */
+  access_scope?: AccessScopeRule[]
   /** The app that OWNS this form. Differs from the caller's own app only
    *  for a form reached through a cross-app link (see is_linked). */
   owner_app_id?: string

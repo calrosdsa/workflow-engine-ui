@@ -23,6 +23,7 @@ import type { ConfigSchema } from '@/lib/config-schema'
 import type { UiWorkflow } from '@/features/ui-workflows/types'
 import type { FieldChangeWorkflowConfig } from '@/features/ui-workflows/useFieldChangeWorkflow'
 import type { FilterGroup } from '@/features/workflows/types'
+import type { AccessScopeRule } from '@/features/forms/types'
 
 export type ComponentType =
   // Text inputs
@@ -552,6 +553,14 @@ export interface FormSettings {
    *  the fields is also what stops a set_field step from re-triggering the
    *  workflow that wrote it. */
   fieldChangeWorkflow?: FieldChangeWorkflowConfig
+  /** This form's row-level security rules — see AccessScopeRule's own doc
+   *  comment. Authored here (viewerModes FilterBuilder, no this_record: a
+   *  rule filters every record, not one being authored) but, like
+   *  createUser, also projected to an explicit backend column
+   *  (access_scope) by serialize.ts's toPayload, since enforcement code
+   *  needs to read it directly rather than parsing this opaque blob.
+   *  Absent/empty means unrestricted. */
+  accessScope?: AccessScopeRule[]
 }
 
 export const INVITATION_STATUS_COLUMN: ViewOnlyColumn = { id: 'invitation_status', label: 'Invitation Status' }
@@ -975,7 +984,7 @@ export const FORM_LAYOUT_ROOT_SCHEMA: ConfigSchema = {
     version: { type: 'integer', enum: [1] },
     sections: { type: 'array', items: { type: 'object', description: 'Per canvas.section_envelope.' } },
     variables: { type: 'array', items: { type: 'object', required: ['name', 'type'], properties: { name: { type: 'string' }, type: { type: 'string' } } } },
-    settings: { type: 'object', description: 'Form-wide settings: createUser (mirrors the create_user_* form arguments), detailTabs, detailLayout, tabOrientation, customActions — shapes under forms.detail_page. Plus two UI-workflow attach points (ui_workflows.envelope): afterSubmitWorkflow, run in the viewer’s client AFTER a record is saved from this form (it cannot veto the save, which has already happened by then); and fieldChangeWorkflow — {"watch": ["field_key", ...], "workflow": {...}} — run WHILE the form is being filled, debounced, whenever one of the watched fields changes (an empty watch list means it never runs).' },
+    settings: { type: 'object', description: 'Form-wide settings: createUser (mirrors the create_user_* form arguments), detailTabs, detailLayout, tabOrientation, customActions — shapes under forms.detail_page. Plus two UI-workflow attach points (ui_workflows.envelope): afterSubmitWorkflow, run in the viewer’s client AFTER a record is saved from this form (it cannot veto the save, which has already happened by then); and fieldChangeWorkflow — {"watch": ["field_key", ...], "workflow": {...}} — run WHILE the form is being filled, debounced, whenever one of the watched fields changes (an empty watch list means it never runs). Plus accessScope (mirrors the access_scope form argument): [{"audience": {"type": "everyone"|"role", "role_ids": [...]}, "filter": <FilterGroup, current_user allowed, no this_record/expression>}, ...] — row-level security enforced server-side on every read and write; a viewer matched by no rule is unrestricted, same as an empty list.' },
   },
 }
 

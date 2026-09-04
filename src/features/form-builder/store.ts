@@ -6,6 +6,7 @@ import {
   DETAIL_PAGE_LAYOUTS, DEFAULT_DETAIL_PAGE_ZONE,
   emptySchema, emptyFormSettings, emptyCreateUserSettings,
 } from './schema'
+import type { AccessScopeRule } from '@/features/forms/types'
 import type { UiWorkflow } from '@/features/ui-workflows/types'
 import type { FieldChangeWorkflowConfig } from '@/features/ui-workflows/useFieldChangeWorkflow'
 import { createElement, createSection, duplicateElement, duplicateSection, relayoutSection, createAccountSection, createParentReferenceField } from './factory'
@@ -106,6 +107,19 @@ export function updateCustomActions(next: CustomActionConfig[]) {
       settings: {
         ...(s.schema.settings ?? emptyFormSettings()),
         customActions: next,
+      },
+    },
+  }))
+  useFormMetaStore.getState().markDirty()
+}
+
+export function updateAccessScope(next: AccessScopeRule[]) {
+  useFormBuilderStore.setState((s) => ({
+    schema: {
+      ...s.schema,
+      settings: {
+        ...(s.schema.settings ?? emptyFormSettings()),
+        accessScope: next,
       },
     },
   }))
