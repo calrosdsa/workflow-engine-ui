@@ -245,6 +245,9 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
               </p>
               <p className="mb-2 text-[11px] text-[hsl(var(--muted-foreground))]">
                 Checked fields never appear on any record this role reads — the field itself, not just editing it, is hidden.
+                For new masking, consider a field's own Hide Rule (Advanced Settings on the field, in the form builder) instead
+                — same effect, but per field/condition and never bypassed for a Super Admin. This role-level setting still
+                works and isn't going away.
               </p>
               <Accordion type="multiple" className="rounded-md border border-[hsl(var(--border))]">
                 {maskableForms.map((form) => {
