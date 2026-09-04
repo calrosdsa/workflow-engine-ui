@@ -9,6 +9,7 @@ import type { FormSchema, FormElement } from './schema'
 import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable } from './component-registry'
 import { slugifyKey, RESERVED_FIELD_KEYS } from './factory'
 import { canonicalReferenceFilter } from './reference-filter'
+import { elementHideRules } from './field-hide'
 import type { FieldDef } from '@/features/forms/types'
 
 /** Walks the schema in document order and yields every element. */
@@ -155,6 +156,13 @@ function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | nul
     const rf = canonicalReferenceFilter(el.referenceFilter)
     if (rf) field.reference_filter = rf
   }
+
+  // Server-enforced audience-hide — every 'hidden_in_ui' Advanced Setting
+  // action on this element, regardless of field type (unlike reference_filter,
+  // this isn't reference-only). An empty result omits the key entirely: a
+  // full-replace save is how the builder clears a field's hide rules.
+  const hideRules = elementHideRules(el.advancedSettings)
+  if (hideRules) field.hide_rules = hideRules
 
   // Marks this field as part of the record's title (see FieldDef.is_record_title's
   // doc comment). Re-checked against supportsRecordTitle here (not just trusted

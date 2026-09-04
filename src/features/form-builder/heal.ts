@@ -47,6 +47,7 @@ import { specFieldToElement, type FormSpecField } from './form-spec'
 import { projectedBaseName } from './projection'
 import { hydrateReferenceFilter, sameReferenceFilter } from './reference-filter'
 import { hydrateAccessScope, sameAccessScope } from './access-scope'
+import { elementHideRules, sameFieldHideRules, reconcileHideRuleActions } from './field-hide'
 import type { FieldDef, AccessScopeRule } from '@/features/forms/types'
 
 /** The slice of a backend form definition healing needs. Structural, so
@@ -124,6 +125,8 @@ export function healSchema(parsed: FormSchema, def: HealableForm): FormSchema {
           continue
         }
         present.add(name)
+        let healedEl = el
+        let elChanged = false
         // reference_filter is server-ENFORCED config, so like the createUser
         // mirrors it follows the "backend is the truth" rule: an API/MCP-
         // authored (or -removed) filter is hydrated into the element, and the
@@ -131,8 +134,23 @@ export function healSchema(parsed: FormSchema, def: HealableForm): FormSchema {
         // would project the layout's stale copy — silently REPLACING a
         // narrower filter, or resurrecting a deleted one.
         if (el.component === 'form' && !sameReferenceFilter(el.referenceFilter, f.reference_filter)) {
+          healedEl = { ...healedEl, referenceFilter: f.reference_filter ? hydrateReferenceFilter(f.reference_filter) : undefined }
+          elChanged = true
+        }
+        // hide_rules gets the identical "backend is the truth" treatment —
+        // an API/MCP-authored (or -removed) audience-hide rule is adopted
+        // into advancedSettings rather than clobbered by the layout's stale
+        // copy on the next save, which for a masking rule would mean
+        // silently UNMASKING a field. See field-hide.ts's header for why
+        // this only ever touches the hidden_in_ui action, never a whole
+        // Advanced Setting entry.
+        if (!sameFieldHideRules(elementHideRules(el.advancedSettings), f.hide_rules)) {
+          healedEl = { ...healedEl, advancedSettings: reconcileHideRuleActions(el.advancedSettings, f.hide_rules) }
+          elChanged = true
+        }
+        if (elChanged) {
           colChanged = true
-          kept.push({ ...el, referenceFilter: f.reference_filter ? hydrateReferenceFilter(f.reference_filter) : undefined })
+          kept.push(healedEl)
           continue
         }
         kept.push(el)

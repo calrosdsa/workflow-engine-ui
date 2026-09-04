@@ -17,6 +17,33 @@ export interface AccessScopeRule {
   filter: FilterGroup
 }
 
+/** Which of a field's viewers a FieldHideRule applies to. Unlike
+ *  AccessScopeAudience, this mirrors the form builder's Advanced Settings
+ *  audience exactly (three types, not two) since FieldHideRule projects
+ *  from an existing authoring concept (AdvancedSetting.appliesTo) rather
+ *  than introducing a new one — see field-hide.ts. */
+export interface FieldHideAudience {
+  type: 'everyone' | 'specific_role' | 'specific_people'
+  role_ids?: string[]
+  user_ids?: string[]
+}
+
+/** One server-enforced field-masking rule (field.FieldHideRule): a viewer
+ *  matched by `audience` never sees this field's value when `when`
+ *  evaluates true against the RECORD'S OWN field values — there is no
+ *  current_user/this_record concept here, only an in-record predicate
+ *  (e.g. "hide ssn unless verified eq true"). An absent/empty `when`
+ *  matches every record unconditionally — a common, valid rule shape, not
+ *  a degenerate one. This is the backend-readable projection of ONLY the
+ *  form builder's 'hidden_in_ui' Advanced Setting action; read_only/
+ *  show_exception/clear_value stay presentation-only (see the plan's P4
+ *  entry — read_only write-protection is a separate, not-yet-built
+ *  surface). */
+export interface FieldHideRule {
+  audience: FieldHideAudience
+  when?: FilterGroup
+}
+
 export type FieldType =
   | 'string' | 'text' | 'integer' | 'decimal' | 'boolean'
   | 'date' | 'time' | 'datetime' | 'email' | 'phone'
@@ -90,6 +117,15 @@ export interface FieldDef {
    *  column ("tsv", generated server-side from all searchable fields).
    *  Only meaningful for text-like types (string/text/email/phone). */
   searchable?: boolean
+  /** This field's server-enforced audience-hide rules — the backend-
+   *  readable counterpart of this element's Advanced Settings
+   *  'hidden_in_ui' actions (still authored/stored only in the opaque
+   *  layout blob's advancedSettings). Derived from FormElement.
+   *  advancedSettings by form-builder/field-hide.ts's elementHideRules,
+   *  same explicit-projection pattern as access_scope/reference_filter;
+   *  the builder's own source of truth stays advancedSettings, hydrated
+   *  from `layout` as usual. */
+  hide_rules?: FieldHideRule[]
   /** Caps an uploaded file's size, in bytes, for type === 'file' fields.
    *  Enforced server-side (api/content's Upload handler, before any bytes
    *  are stored — the real gate) and re-checked at record-save time
