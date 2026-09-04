@@ -54,7 +54,12 @@ createRoot(document.getElementById('root')!).render(
           it can ask the viewer something. */}
       <UiWorkflowDialogHost />
       <UiWorkflowFormHost />
-      <ReactQueryDevtools initialIsOpen={false} />
+      {/* bottom-left, not the library default of bottom-right: that corner
+          is where the config panel's own row actions (e.g. Advanced
+          Settings' Edit/Remove buttons) and the runtime ChatLauncher both
+          sit, and the devtools toggle's high z-index was winning every
+          click there — silently swallowing clicks meant for the app. */}
+      <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
     </QueryClientProvider>
   </StrictMode>,
 )
