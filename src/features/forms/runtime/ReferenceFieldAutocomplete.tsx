@@ -64,9 +64,15 @@ interface ReferenceFieldAutocompleteProps {
    *  a sibling reference field (Supplier limited by Manager's area) refetches
    *  the moment that sibling changes: the cascading-select behaviour. */
   control?: Control
+  /** Pre-built this_record hop source, for a caller whose rows are NOT
+   *  RHF-backed (LineItemsGrid's grid rows are plain objects, not react-
+   *  hook-form fields) — the raw sibling values, same shape `control`'s
+   *  useWatch would otherwise produce. Takes precedence over control when
+   *  both are absent; a caller passes exactly one of the two, never both. */
+  refDraft?: Record<string, unknown>
 }
 
-export function ReferenceFieldAutocomplete({ el, field, disabled, id, sourceFormId, control }: ReferenceFieldAutocompleteProps) {
+export function ReferenceFieldAutocomplete({ el, field, disabled, id, sourceFormId, control, refDraft }: ReferenceFieldAutocompleteProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search, 300)
@@ -81,29 +87,34 @@ export function ReferenceFieldAutocomplete({ el, field, disabled, id, sourceForm
   }, [el.displayField, targetForm])
 
   // Hooks must run unconditionally, so callers without an enclosing form
-  // (report arguments) watch a throwaway local form instead of branching.
+  // (report arguments, or LineItemsGrid's refDraft path) watch a throwaway
+  // local form instead of branching.
   const fallbackForm = useRHF()
   const watchedValues = useWatch({ control: control ?? fallbackForm.control }) as Record<string, unknown>
+  // refDraft's raw sibling values win when passed explicitly; otherwise fall
+  // back to whatever the RHF watch produced (garbage/unused when control is
+  // also absent, matching the existing no-enclosing-form case).
+  const rawSiblingValues = refDraft ?? watchedValues
 
   // The draft sent for this_record hops: just the sibling REFERENCE values —
   // the only ones a hop can read — keyed by field name. Also the query-key
   // ingredient that makes dependent pickers refetch when a sibling changes.
   const { data: sourceForm } = useFormDef(sourceFormId ?? '')
-  const filtered = !!sourceFormId && !!control && !!el.key
-  const refDraft = useMemo(() => {
+  const filtered = !!sourceFormId && !!el.key && (!!control || !!refDraft)
+  const siblingDraft = useMemo(() => {
     if (!filtered || !sourceForm) return undefined
     const draft: Record<string, unknown> = {}
     for (const f of sourceForm.fields) {
       if (f.type !== 'reference' && f.type !== 'parent_link') continue
-      const v = watchedValues?.[f.name]
+      const v = rawSiblingValues?.[f.name]
       if (typeof v === 'string' && v !== '') draft[f.name] = v
     }
     return draft
-  }, [filtered, sourceForm, watchedValues])
+  }, [filtered, sourceForm, rawSiblingValues])
 
   const { data: results, isLoading } = useQuery({
     queryKey: filtered
-      ? ['forms', sourceFormId, 'field-options', el.key, debouncedSearch, JSON.stringify(refDraft ?? {})]
+      ? ['forms', sourceFormId, 'field-options', el.key, debouncedSearch, JSON.stringify(siblingDraft ?? {})]
       : ['forms', el.formRef, 'reference-options', debouncedSearch],
     queryFn: async (): Promise<{ records: Record<string, unknown>[]; unresolved_reason?: string }> => {
       if (filtered) {
@@ -111,7 +122,7 @@ export function ReferenceFieldAutocomplete({ el, field, disabled, id, sourceForm
           return await formsApi.referenceOptions(sourceFormId!, el.key, {
             search: debouncedSearch || undefined,
             search_field: searchField ?? undefined,
-            draft: refDraft,
+            draft: siblingDraft,
             page_size: 20,
           })
         } catch (err: unknown) {

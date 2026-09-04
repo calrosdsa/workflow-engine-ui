@@ -9,9 +9,8 @@
 // multiple mount and stack independently).
 import { lazy, Suspense, useMemo, useRef, useState } from 'react'
 import { nanoid } from 'nanoid'
-import { useQuery } from '@tanstack/react-query'
 import {
-  GripVertical, Plus, Copy, Trash2, Check, ChevronsUpDown, Loader2, FileText, Pencil, Search, X, PackageOpen,
+  GripVertical, Plus, Copy, Trash2, Pencil, Search, X, PackageOpen,
 } from 'lucide-react'
 import {
   DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors, closestCenter,
@@ -27,19 +26,16 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '@/components/ui/drawer'
 import { DatePicker, DateTimePicker } from '@/components/ui/date-time-picker'
 import { TimePicker } from '@/components/ui/time-picker'
 import { cn } from '@/lib/utils'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useForm as useFormDef, useUpdateRecord } from '@/features/forms/hooks'
-import { formsApi } from '@/features/forms/api'
 import { usePermission } from '@/features/auth/permissions'
 import { formatValue } from './format-value'
-import { resolveReferenceLabel } from './record-title'
 import { ReferenceValueLabel } from './ReferenceValueLabel'
+import { ReferenceFieldAutocomplete } from './ReferenceFieldAutocomplete'
 import { FileCellDisplay } from './FileCellDisplay'
 import { FileFieldInput } from './FileFieldInput'
 import { COLUMN_LAYOUTS } from '@/features/form-builder/schema'
@@ -47,7 +43,6 @@ import { iterLineItemElements } from '@/features/form-builder/lineItemsSync'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
 import type { LineItemSection, FormElement, FormColumn, ComponentType } from '@/features/form-builder/schema'
 import type { FormRecord, FieldDef, FieldType, FormDefinition } from '@/features/forms/types'
-import type { FilterGroup } from '@/features/workflows/types'
 
 // Best-fit ComponentType for a backend FieldType, used ONLY to render an
 // ADOPTED form's own real fields as grid columns (see fieldDefToElement) —
@@ -322,6 +317,17 @@ function LineItemsGridInner({
 }: LineItemsGridProps) {
   const columns = useMemo(() => [...iterLineItemElements(sections)], [sections])
   const allRows = toRows(field.value)
+  // The reference_filter picker (ReferenceFieldAutocomplete's `sourceFormId`)
+  // only has a real form id to check the field against for an ADOPTED grid
+  // (effectiveFormId = el.adoptedFormRef, a real independent form). For a
+  // GENERATED grid, effectiveFormId falls back to the ENCLOSING form's own
+  // id (used only as a permission-check proxy above) — that is NOT the
+  // generated child form el.key actually lives on, and the frontend has no
+  // way to learn the generated child's real id today (see P1 remainder
+  // memory). Passing it through anyway would call reference-options against
+  // the wrong form. undefined here makes ReferenceFieldAutocomplete fall
+  // back to its legacy unfiltered search, same as before this fix.
+  const referenceSourceFormId = isAdopted ? effectiveFormId : undefined
   // usePermission must run unconditionally (rules of hooks) — a fixed
   // placeholder resource is passed when effectiveFormId is unknown, and its
   // result is simply ignored (treated as allowed) in that case, since
@@ -592,6 +598,7 @@ function LineItemsGridInner({
                   atMax={atMax}
                   isInline={cfg.rowEditMode === 'inline'}
                   disabled={disabled}
+                  referenceSourceFormId={referenceSourceFormId}
                   onEdit={() => openRow(row)}
                   onDelete={() => deleteRow(row._row_key)}
                   onDuplicate={() => duplicateRow(row._row_key)}
@@ -653,6 +660,7 @@ function LineItemsGridInner({
                       alternate={cfg.alternateRowColors !== false && i % 2 === 1}
                       isInline={cfg.rowEditMode === 'inline'}
                       disabled={disabled}
+                      referenceSourceFormId={referenceSourceFormId}
                       onEdit={() => openRow(row)}
                       onDelete={() => deleteRow(row._row_key)}
                       onDuplicate={() => duplicateRow(row._row_key)}
@@ -708,6 +716,7 @@ function LineItemsGridInner({
           disabled={sidebarDisabled}
           isDraft={editingIsDraft}
           parentFormId={effectiveFormId}
+          referenceSourceFormId={referenceSourceFormId}
           onChange={(patch) => updateRow(editingRow._row_key, patch)}
           onConfirm={() => { if (editingIsDraft) commitDraftRow(); setEditingRowKey(null) }}
           onDiscard={() => { if (editingIsDraft) discardDraftRow(); setEditingRowKey(null) }}
@@ -810,6 +819,12 @@ interface SummaryRowProps {
   alternate: boolean
   isInline: boolean
   disabled: boolean
+  /** The form to check this row's reference fields' reference_filter
+   *  against, when this grid is adopted — see LineItemsGridInner's own
+   *  referenceSourceFormId comment. undefined (generated grids) means no
+   *  filtering: RowFieldInput's 'form' case falls back to an unfiltered
+   *  search, unchanged from before this prop existed. */
+  referenceSourceFormId?: string
   onEdit: () => void
   onDelete: () => void
   onDuplicate: () => void
@@ -829,7 +844,7 @@ interface SummaryRowProps {
  *  opacity-0 until the row is hovered/focused-within — keeps a dense grid
  *  visually quiet at rest without hiding the affordance from keyboard/touch
  *  users, who always get it via :focus-within. */
-function SummaryRow({ row, columns, colWidths, canReorder, canDelete, canDuplicate, canSelect, isSelected, atMin, atMax, rowPad, alternate, isInline, disabled, onEdit, onDelete, onDuplicate, onToggleSelected, onUpdate }: SummaryRowProps) {
+function SummaryRow({ row, columns, colWidths, canReorder, canDelete, canDuplicate, canSelect, isSelected, atMin, atMax, rowPad, alternate, isInline, disabled, referenceSourceFormId, onEdit, onDelete, onDuplicate, onToggleSelected, onUpdate }: SummaryRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: row._row_key })
   const style = { transform: CSS.Transform.toString(transform), transition }
 
@@ -889,7 +904,7 @@ function SummaryRow({ row, columns, colWidths, canReorder, canDelete, canDuplica
               <FileCellDisplay value={row[c.key]} />
             </button>
           ) : isInline ? (
-            <RowFieldInput column={c} value={row[c.key]} disabled={disabled} onChange={(v) => onUpdate({ [c.key]: v })} />
+            <RowFieldInput column={c} value={row[c.key]} row={row} disabled={disabled} referenceSourceFormId={referenceSourceFormId} onChange={(v) => onUpdate({ [c.key]: v })} />
           ) : c.component === 'form' ? (
             <span className="block truncate"><ReferenceValueLabel formId={c.formRef} recordId={row[c.key]} displayField={c.displayField} /></span>
           ) : (
@@ -924,7 +939,7 @@ function SummaryRow({ row, columns, colWidths, canReorder, canDelete, canDuplica
  *  usefully show side by side. Column labels are shown here (a table's
  *  header row has nowhere to go in a card layout), unlike SummaryRow's cells
  *  which rely on the shared <thead>. */
-function CardRow({ row, columns, canReorder, canDelete, canDuplicate, canSelect, isSelected, atMin, atMax, isInline, disabled, onEdit, onDelete, onDuplicate, onToggleSelected, onUpdate }: Omit<SummaryRowProps, 'rowPad' | 'alternate' | 'colWidths'>) {
+function CardRow({ row, columns, canReorder, canDelete, canDuplicate, canSelect, isSelected, atMin, atMax, isInline, disabled, referenceSourceFormId, onEdit, onDelete, onDuplicate, onToggleSelected, onUpdate }: Omit<SummaryRowProps, 'rowPad' | 'alternate' | 'colWidths'>) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: row._row_key })
   const style = { transform: CSS.Transform.toString(transform), transition }
 
@@ -987,7 +1002,7 @@ function CardRow({ row, columns, canReorder, canDelete, canDuplicate, canSelect,
                   <FileCellDisplay value={row[c.key]} />
                 </button>
               ) : isInline ? (
-                <RowFieldInput column={c} value={row[c.key]} disabled={disabled} onChange={(v) => onUpdate({ [c.key]: v })} />
+                <RowFieldInput column={c} value={row[c.key]} row={row} disabled={disabled} referenceSourceFormId={referenceSourceFormId} onChange={(v) => onUpdate({ [c.key]: v })} />
               ) : c.component === 'form' ? (
                 <ReferenceValueLabel formId={c.formRef} recordId={row[c.key]} displayField={c.displayField} />
               ) : (
@@ -1016,6 +1031,10 @@ interface RowEditorSidebarProps {
   /** Passed through to a nested 'line_items' element inside this row — see
    *  RowFieldInput's doc comment. */
   parentFormId?: string
+  /** See LineItemsGridInner's own referenceSourceFormId comment — threaded
+   *  through to RowFieldInput's 'form' case for a reference field's
+   *  reference_filter check. */
+  referenceSourceFormId?: string
   onChange: (patch: FormRecord) => void
   /** "Done" — for a draft row this is what actually adds it to the grid;
    *  for an existing row it's just closing (already-live edits stay). */
@@ -1034,7 +1053,7 @@ interface RowEditorSidebarProps {
  *  renders as a nested LineItemsGrid; opening one of its own rows stacks
  *  another Drawer on top (each Drawer is an independent Radix root/portal,
  *  so they layer naturally without any manual z-index bookkeeping here). */
-function RowEditorSidebar({ row, sections, disabled, isDraft, parentFormId, onChange, onConfirm, onDiscard }: RowEditorSidebarProps) {
+function RowEditorSidebar({ row, sections, disabled, isDraft, parentFormId, referenceSourceFormId, onChange, onConfirm, onDiscard }: RowEditorSidebarProps) {
   // 'runtime-root' only exists in the end-user-facing runtime shell (Add
   // menu, record detail drawer, etc.) — LineItemsGrid also renders inside
   // the admin's own record CRUD page (FormRecordsPage), which has no such
@@ -1063,6 +1082,7 @@ function RowEditorSidebar({ row, sections, disabled, isDraft, parentFormId, onCh
                     row={row}
                     disabled={disabled}
                     parentFormId={parentFormId}
+                    referenceSourceFormId={referenceSourceFormId}
                     onChange={onChange}
                   />
                 ))}
@@ -1152,7 +1172,7 @@ function RowDetailDrawer({ formId, recordId, fields, layout, onClose }: {
   )
 }
 
-function RowEditorColumn({ column, ratio, row, disabled, parentFormId, onChange }: {
+function RowEditorColumn({ column, ratio, row, disabled, parentFormId, referenceSourceFormId, onChange }: {
   column: FormColumn
   ratio: number
   row: Row
@@ -1161,6 +1181,8 @@ function RowEditorColumn({ column, ratio, row, disabled, parentFormId, onChange 
    *  RowFieldInput's doc comment on why a nested grid falls back to the
    *  OUTER grid's own effectiveFormId rather than resolving its own. */
   parentFormId?: string
+  /** See LineItemsGridInner's own referenceSourceFormId comment. */
+  referenceSourceFormId?: string
   onChange: (patch: FormRecord) => void
 }) {
   return (
@@ -1174,8 +1196,10 @@ function RowEditorColumn({ column, ratio, row, disabled, parentFormId, onChange 
           <RowFieldInput
             column={el}
             value={row[el.key]}
+            row={row}
             disabled={disabled}
             parentFormId={parentFormId}
+            referenceSourceFormId={referenceSourceFormId}
             onChange={(v) => onChange({ [el.key]: v })}
           />
         </div>
@@ -1184,9 +1208,14 @@ function RowEditorColumn({ column, ratio, row, disabled, parentFormId, onChange 
   )
 }
 
-function RowFieldInput({ column, value, disabled, parentFormId, onChange }: {
+function RowFieldInput({ column, value, row, disabled, parentFormId, referenceSourceFormId, onChange }: {
   column: FormElement
   value: unknown
+  /** The full sibling row, for the 'form' case's this_record hop draft only
+   *  — every other case ignores it. Optional because a couple of call sites
+   *  (SummaryRowProps' inline cells, before this prop existed) genuinely
+   *  don't have a reason to build one when referenceSourceFormId is unset. */
+  row?: Row
   disabled: boolean
   /** A nested 'line_items' element (a Line Items grid whose OWN row also has
    *  a Line Items field) has no independent form id of its own to resolve
@@ -1197,6 +1226,13 @@ function RowFieldInput({ column, value, disabled, parentFormId, onChange }: {
    *  exactly the same fallback chain LineItemsGrid already uses for a
    *  generated (non-adopted) row's permission checks. */
   parentFormId?: string
+  /** See LineItemsGridInner's own referenceSourceFormId comment — the
+   *  'form' case's sourceFormId for ReferenceFieldAutocomplete's
+   *  reference_filter check. Distinct from parentFormId above: that one is
+   *  always available (permission fallback), this one is only set for an
+   *  ADOPTED grid, since a generated child form's fields aren't reachable
+   *  by id at all yet. */
+  referenceSourceFormId?: string
   onChange: (v: unknown) => void
 }) {
   switch (column.component) {
@@ -1248,7 +1284,19 @@ function RowFieldInput({ column, value, disabled, parentFormId, onChange }: {
       )
     }
     case 'form':
-      return <ReferenceFieldInput column={column} value={value as string} disabled={disabled} onChange={onChange} />
+      // referenceSourceFormId unset (generated grids, or any context that
+      // predates this prop) falls back to ReferenceFieldAutocomplete's own
+      // legacy unfiltered search — behaviorally identical to this file's
+      // former standalone ReferenceFieldInput, which it replaces.
+      return (
+        <ReferenceFieldAutocomplete
+          el={column}
+          field={{ value, onChange }}
+          disabled={disabled}
+          sourceFormId={referenceSourceFormId}
+          refDraft={row}
+        />
+      )
     case 'file':
     case 'image':
       // Previously fell through to `default:` below — casting a
@@ -1270,104 +1318,4 @@ function RowFieldInput({ column, value, disabled, parentFormId, onChange }: {
     default:
       return <Input value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
   }
-}
-
-// A searchable reference field — same server-side search/debounce/display
-// heuristic as ReferenceFieldAutocomplete, sized for the sidebar's full-width
-// field list rather than a compact table cell.
-function ReferenceFieldInput({ column, value, disabled, onChange }: {
-  column: FormElement
-  value: string | undefined
-  disabled: boolean
-  onChange: (v: string) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const debouncedSearch = useDebouncedValue(search, 300)
-
-  const { data: targetForm } = useFormDef(column.formRef ?? '')
-  const searchField = useMemo(() => {
-    if (column.displayField) return column.displayField
-    if (!targetForm) return null
-    const hasName = targetForm.fields.some((f) => f.name === 'name')
-    const hasLabel = targetForm.fields.some((f) => f.name === 'label')
-    return hasName ? 'name' : hasLabel ? 'label' : null
-  }, [column.displayField, targetForm])
-
-  const { data: results, isLoading } = useQuery({
-    queryKey: ['forms', column.formRef, 'reference-options', debouncedSearch],
-    queryFn: () =>
-      formsApi.searchRecords(column.formRef!, {
-        filter: searchField
-          ? ({ combinator: 'and', conditions: [{ id: 'search', field: searchField, op: 'contains', value_mode: 'static', value: debouncedSearch }], groups: [] } as FilterGroup)
-          : undefined,
-        sort: [],
-        page: 1,
-        page_size: 20,
-      }),
-    enabled: !!column.formRef && open,
-  })
-
-  const { data: currentRecord } = useQuery({
-    queryKey: ['forms', column.formRef, 'records', value],
-    queryFn: () => formsApi.getRecord(column.formRef!, value!),
-    enabled: !!column.formRef && !!value,
-  })
-
-  if (!column.formRef) return <span className="text-[11px] text-[hsl(var(--destructive))]">No form configured</span>
-
-  const options = results?.records ?? []
-  const displayOf = (r: FormRecord) => resolveReferenceLabel(targetForm?.fields, r, column.displayField)
-  const selectedLabel = currentRecord ? displayOf(currentRecord) : value || undefined
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          role="combobox"
-          disabled={disabled}
-          className={cn('h-9 w-full justify-between gap-2 px-3 font-normal', !value && 'text-[hsl(var(--muted-foreground))]')}
-        >
-          <span className="flex min-w-0 items-center gap-1.5">
-            <FileText size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
-            <span className="truncate">{selectedLabel ?? 'Search…'}</span>
-          </span>
-          <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-[--radix-popover-trigger-width] p-0"
-        align="start"
-        container={document.getElementById('runtime-root') ?? document.body}
-      >
-        <Command shouldFilter={false}>
-          <CommandInput placeholder="Type to search…" value={search} onValueChange={setSearch} />
-          <CommandList>
-            {isLoading ? (
-              <div className="flex items-center justify-center gap-2 py-4 text-[11px] text-[hsl(var(--muted-foreground))]">
-                <Loader2 size={12} className="animate-spin" /> Searching…
-              </div>
-            ) : (
-              <>
-                <CommandEmpty>No records found.</CommandEmpty>
-                <CommandGroup>
-                  {options.map((r) => {
-                    const id = r.id as string
-                    return (
-                      <CommandItem key={id} value={id} onSelect={() => { onChange(id === value ? '' : id); setOpen(false) }}>
-                        <Check size={13} className={cn('shrink-0', id === value ? 'opacity-100 text-[hsl(var(--primary))]' : 'opacity-0')} />
-                        <span className="truncate">{displayOf(r)}</span>
-                      </CommandItem>
-                    )
-                  })}
-                </CommandGroup>
-              </>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  )
 }
