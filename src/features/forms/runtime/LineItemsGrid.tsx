@@ -176,6 +176,10 @@ interface LineItemsGridProps {
    *  is UI polish only either way; the backend re-validates every request
    *  regardless of what this computes. */
   effectiveFormId?: string
+  /** The generated child form's own real id — see referenceSourceFormId's
+   *  comment inside LineItemsGridInner for why a GENERATED grid needs this
+   *  (rather than effectiveFormId) to filter its own reference columns. */
+  childFormId?: string
 }
 
 // _row_key rides along inside field.value (unlike a typical "strip before
@@ -212,6 +216,10 @@ export function LineItemsGrid({ el, field, parentFormId, disabled }: {
     sourceMode?: 'generated' | 'existing'
     adoptedFormRef?: string
     adoptedReferenceField?: string
+    /** The generated child form's own real id (FormElement.childFormId) —
+     *  see LineItemsGridInner's referenceSourceFormId comment for why this
+     *  is what makes a GENERATED grid's own reference columns filterable. */
+    childFormId?: string
   }
   field: { value: unknown; onChange: (v: unknown) => void }
   /** The form this Line Items field itself lives on (the outer record being
@@ -270,6 +278,7 @@ export function LineItemsGrid({ el, field, parentFormId, disabled }: {
       adoptedFormRef={el.adoptedFormRef}
       adoptedForm={adoptedForm}
       effectiveFormId={effectiveFormId}
+      childFormId={el.childFormId}
     />
   )
 }
@@ -313,21 +322,26 @@ function sumColumn(rows: Row[], key: string): number {
 
 function LineItemsGridInner({
   sections, config: cfg, field, disabled, saveRowIndependently,
-  isAdopted, adoptedFormRef, adoptedForm, effectiveFormId,
+  isAdopted, adoptedFormRef, adoptedForm, effectiveFormId, childFormId,
 }: LineItemsGridProps) {
   const columns = useMemo(() => [...iterLineItemElements(sections)], [sections])
   const allRows = toRows(field.value)
   // The reference_filter picker (ReferenceFieldAutocomplete's `sourceFormId`)
-  // only has a real form id to check the field against for an ADOPTED grid
-  // (effectiveFormId = el.adoptedFormRef, a real independent form). For a
-  // GENERATED grid, effectiveFormId falls back to the ENCLOSING form's own
-  // id (used only as a permission-check proxy above) — that is NOT the
-  // generated child form el.key actually lives on, and the frontend has no
-  // way to learn the generated child's real id today (see P1 remainder
-  // memory). Passing it through anyway would call reference-options against
-  // the wrong form. undefined here makes ReferenceFieldAutocomplete fall
-  // back to its legacy unfiltered search, same as before this fix.
-  const referenceSourceFormId = isAdopted ? effectiveFormId : undefined
+  // needs the form a column's reference field actually lives ON, not the
+  // enclosing record's form. For an ADOPTED grid that's effectiveFormId
+  // (= el.adoptedFormRef, a real independent form); for a GENERATED grid
+  // it's childFormId (FormElement.childFormId, populated by the builder's
+  // syncOneGrid on save and delivered here via the ordinary GetForm/layout
+  // response — see FieldRenderer.tsx passing the full `element` through).
+  // Undefined (a schema saved before childFormId existed, or a call site
+  // like FormRendererHarness with no real form context) makes
+  // ReferenceFieldAutocomplete fall back to its legacy unfiltered search,
+  // same as before this fix. The backend's reference-options route grants
+  // this generated child a permission check of its own (deferring to the
+  // parent form's "view") — see RequireViewOrParentView's doc comment —
+  // so a non-wildcard custom role scoped only to the parent form can use
+  // this picker too, not just Super Admin/Owner/Editor/Viewer.
+  const referenceSourceFormId = isAdopted ? effectiveFormId : childFormId
   // usePermission must run unconditionally (rules of hooks) — a fixed
   // placeholder resource is passed when effectiveFormId is unknown, and its
   // result is simply ignored (treated as allowed) in that case, since
@@ -1229,9 +1243,10 @@ function RowFieldInput({ column, value, row, disabled, parentFormId, referenceSo
   /** See LineItemsGridInner's own referenceSourceFormId comment — the
    *  'form' case's sourceFormId for ReferenceFieldAutocomplete's
    *  reference_filter check. Distinct from parentFormId above: that one is
-   *  always available (permission fallback), this one is only set for an
-   *  ADOPTED grid, since a generated child form's fields aren't reachable
-   *  by id at all yet. */
+   *  always available (permission fallback), this one resolves to the
+   *  ADOPTED target form or the GENERATED child's own real id (childFormId)
+   *  — undefined only for a schema saved before childFormId existed, or a
+   *  call site with no real form context at all. */
   referenceSourceFormId?: string
   onChange: (v: unknown) => void
 }) {
@@ -1284,10 +1299,11 @@ function RowFieldInput({ column, value, row, disabled, parentFormId, referenceSo
       )
     }
     case 'form':
-      // referenceSourceFormId unset (generated grids, or any context that
-      // predates this prop) falls back to ReferenceFieldAutocomplete's own
-      // legacy unfiltered search — behaviorally identical to this file's
-      // former standalone ReferenceFieldInput, which it replaces.
+      // referenceSourceFormId unset (a schema saved before childFormId
+      // existed, or a context with no real form at all) falls back to
+      // ReferenceFieldAutocomplete's own legacy unfiltered search —
+      // behaviorally identical to this file's former standalone
+      // ReferenceFieldInput, which it replaces.
       return (
         <ReferenceFieldAutocomplete
           el={column}
