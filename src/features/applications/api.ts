@@ -1,6 +1,7 @@
 import { api } from '@/lib/api'
 import type {
   Application, UpdateApplicationSettingsPayload, UpdateApplicationThemePayload,
+  UpdateApplicationTranslationsPayload, TranslationsConfig,
   ThemeConfig, PublishResult, PublishPayload, AppVersion, AppVersionDetail, VersionDiff,
   SaveVersionPayload, SaveVersionResult, RollbackResult, AppSnapshot, ImportResult,
   AppSummary, CreateAppPayload,
@@ -12,6 +13,8 @@ export const applicationsApi = {
   updateSettings: (p: UpdateApplicationSettingsPayload) => api.put('application', { json: p }).json<Application>(),
   getTheme:      () => api.get('application/theme').json<{ theme: Partial<ThemeConfig> }>(),
   updateTheme:   (p: UpdateApplicationThemePayload) => api.put('application/theme', { json: p }).json<{ theme: Partial<ThemeConfig> }>(),
+  getTranslations:    () => api.get('application/translations').json<{ translations: TranslationsConfig }>(),
+  updateTranslations: (p: UpdateApplicationTranslationsPayload) => api.put('application/translations', { json: p }).json<{ translations: TranslationsConfig }>(),
   getMobileNav:    () => api.get('application/mobile-nav').json<{ mobile_nav: unknown }>(),
   updateMobileNav: (mobileNav: MobileNavConfig) => api.put('application/mobile-nav', { json: { mobile_nav: mobileNav } }).json<{ mobile_nav: unknown }>(),
   publish:       (p?: PublishPayload) => api.post('application/publish', { json: p ?? {} }).json<PublishResult>(),

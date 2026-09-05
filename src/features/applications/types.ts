@@ -1,5 +1,7 @@
 import type { ThemeConfig } from '@/features/theme/types'
+import type { TranslationsConfig } from '@/features/i18n/types'
 export type { ThemeConfig } from '@/features/theme/types'
+export type { TranslationsConfig } from '@/features/i18n/types'
 
 export interface ApplicationSettings {
   description?: string
@@ -27,6 +29,10 @@ export interface UpdateApplicationSettingsPayload {
 
 export interface UpdateApplicationThemePayload {
   theme: Partial<ThemeConfig>
+}
+
+export interface UpdateApplicationTranslationsPayload {
+  translations: TranslationsConfig
 }
 
 export interface PublishResult {
@@ -191,6 +197,7 @@ export interface AppSnapshot {
   menus: MenuSnapshotItem[]
   theme: Partial<ThemeConfig>
   mobile_nav?: unknown
+  translations?: TranslationsConfig
   forms: FormSnapshotItem[] | null
   workflows: WorkflowSnapshotItem[] | null
   roles: RoleSnapshotItem[] | null

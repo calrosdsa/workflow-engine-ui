@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/auth'
 import { runtimeApi } from '@/features/runtime/api'
 import { ThemeProvider } from '@/features/theme/ThemeProvider'
 import { mergeTheme } from '@/features/theme/default-theme'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import { Toaster } from '@/components/ui/sonner'
 import { UiWorkflowDialogHost } from '@/features/ui-workflows/UiWorkflowDialogHost'
 import { UiWorkflowFormHost } from '@/features/ui-workflows/UiWorkflowFormHost'
@@ -218,35 +219,41 @@ function RuntimeAppRouteComponent() {
   return (
     <RuntimeSnapshotContext.Provider value={snapshot}>
       <RuntimeDraftPreviewContext.Provider value={draft}>
-        {/* Single shared ThemeProvider for the whole runtime session, scoped
-            here rather than in each leaf page (RuntimeAppShell/RuntimeRecordPage/
-            RuntimeFormRecordPage). Those three are separate route matches, so
-            navigating between them (e.g. a reference-field link from a Search
-            menu to a form's own detail page) unmounts one leaf and mounts the
-            next — if each owned its own ThemeProvider, the outgoing instance's
-            cleanup strips .dark/CSS vars from #runtime-root a tick before the
+        {/* Single shared I18nProvider/ThemeProvider for the whole runtime
+            session, scoped here rather than in each leaf page
+            (RuntimeAppShell/RuntimeRecordPage/RuntimeFormRecordPage). Those
+            three are separate route matches, so navigating between them
+            (e.g. a reference-field link from a Search menu to a form's own
+            detail page) unmounts one leaf and mounts the next — if each
+            owned its own ThemeProvider, the outgoing instance's cleanup
+            strips .dark/CSS vars from #runtime-root a tick before the
             incoming instance's effect re-applies them, producing a visible
             light/dark flash on every such navigation. One provider that
-            outlives all of them removes that gap entirely. */}
-        <ThemeProvider theme={theme} scopeElement={document.getElementById('runtime-root')}>
-          <Outlet />
-          {/* offset shifts toasts up so they never overlap ChatLauncher's own
-              fixed bottom-right bubble (FR-D4-001 v0.2's resolved layout
-              decision: the launcher is the persistent fixture, toasts are
-              transient, so the transient element yields position). Applied
-              unconditionally rather than only when an Agent is enabled — a
-              fixed offset with no bubble present just leaves a little extra
-              bottom margin, simpler than conditioning this on ChatLauncher's
-              own (async) visibility check. */}
-          <Toaster position="bottom-right" offset={{ bottom: 88 }} />
-          {/* Mounted beside the Toaster for the same reason: both are
-              app-level overlays driven by a module-level call from outside
-              the component tree. This is what lets a workflow step suspend
-              and ask the viewer something. */}
-          <UiWorkflowDialogHost />
-          <UiWorkflowFormHost />
-          <ChatLauncher />
-        </ThemeProvider>
+            outlives all of them removes that gap entirely. I18nProvider has
+            no such DOM-mutation concern, but it rides along at the same
+            level so both "how this app looks" and "what language it speaks"
+            come from the same one-per-session provider pair. */}
+        <I18nProvider overrides={snapshot.translations}>
+          <ThemeProvider theme={theme} scopeElement={document.getElementById('runtime-root')}>
+            <Outlet />
+            {/* offset shifts toasts up so they never overlap ChatLauncher's own
+                fixed bottom-right bubble (FR-D4-001 v0.2's resolved layout
+                decision: the launcher is the persistent fixture, toasts are
+                transient, so the transient element yields position). Applied
+                unconditionally rather than only when an Agent is enabled — a
+                fixed offset with no bubble present just leaves a little extra
+                bottom margin, simpler than conditioning this on ChatLauncher's
+                own (async) visibility check. */}
+            <Toaster position="bottom-right" offset={{ bottom: 88 }} />
+            {/* Mounted beside the Toaster for the same reason: both are
+                app-level overlays driven by a module-level call from outside
+                the component tree. This is what lets a workflow step suspend
+                and ask the viewer something. */}
+            <UiWorkflowDialogHost />
+            <UiWorkflowFormHost />
+            <ChatLauncher />
+          </ThemeProvider>
+        </I18nProvider>
       </RuntimeDraftPreviewContext.Provider>
     </RuntimeSnapshotContext.Provider>
   )

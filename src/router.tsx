@@ -292,7 +292,7 @@ const appFormDetailRoute = createRoute({
 // promoted to its own top-level route. An old link carrying one of those
 // values now validates to `undefined` and lands on Theme rather than
 // erroring — the same thing any unrecognised value has always done here.
-const DESIGN_TABS = ['theme', 'menus', 'mobile'] as const
+const DESIGN_TABS = ['theme', 'menus', 'mobile', 'localization'] as const
 type DesignTabParam = (typeof DESIGN_TABS)[number]
 
 const appDesignRoute = createRoute({

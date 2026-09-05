@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useSearch } from '@tanstack/react-router'
-import { Palette, ListTree, Smartphone } from 'lucide-react'
+import { Palette, ListTree, Smartphone, Languages } from 'lucide-react'
 import { ThemeSection } from './sections/ThemeSection'
 import { MenusSection } from './sections/MenusSection'
 import { MobileLayoutSection } from './sections/MobileLayoutSection'
+import { LocalizationSection } from './sections/LocalizationSection'
 import { useApplication } from '@/features/applications/hooks'
 import { Spinner } from '@/components/ui/spinner'
 
-export type DesignTab = 'theme' | 'menus' | 'mobile'
+export type DesignTab = 'theme' | 'menus' | 'mobile' | 'localization'
 
 // Design surfaces only. General/Reports/Version History/Environment Link/
 // Marketplace moved to App Configuration (AppConfigurationPage) — they
@@ -18,6 +19,7 @@ const TABS: { id: DesignTab; label: string; icon: typeof Palette }[] = [
   { id: 'theme', label: 'Theme', icon: Palette },
   { id: 'menus', label: 'Menus', icon: ListTree },
   { id: 'mobile', label: 'Mobile Layout', icon: Smartphone },
+  { id: 'localization', label: 'Localization', icon: Languages },
 ]
 
 // "App Design" under /applications/$appId/design — the app's design-time
@@ -57,6 +59,7 @@ export function AppDesignPage({ appId }: { appId: string }) {
         {tab === 'theme' && <ThemeSection />}
         {tab === 'menus' && <MenusSection appId={appId} />}
         {tab === 'mobile' && <MobileLayoutSection appId={appId} />}
+        {tab === 'localization' && <LocalizationSection />}
       </div>
     </div>
   )

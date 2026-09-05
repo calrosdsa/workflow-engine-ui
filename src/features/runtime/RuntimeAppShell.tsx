@@ -133,7 +133,7 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
               {session && (
                 <>
                   <NotificationBell clientId={clientId} appId={appId} />
-                  <ProfileMenu session={session} />
+                  <ProfileMenu session={session} showThemeToggle />
                 </>
               )}
             </div>

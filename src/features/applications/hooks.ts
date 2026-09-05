@@ -5,13 +5,15 @@ import { useAuthStore } from '@/stores/auth'
 import { parseMobileNavConfig } from '@/features/menus/mobile-nav-types'
 import type { MobileNavConfig } from '@/features/menus/mobile-nav-types'
 import type {
-  Application, UpdateApplicationSettingsPayload, UpdateApplicationThemePayload, CreateAppPayload,
+  Application, UpdateApplicationSettingsPayload, UpdateApplicationThemePayload,
+  UpdateApplicationTranslationsPayload, CreateAppPayload,
   SaveVersionPayload, AppSnapshot, PublishPayload,
 } from './types'
 
 export const applicationKeys = {
   detail:    () => ['application'] as const,
   theme:     () => ['application', 'theme'] as const,
+  translations: () => ['application', 'translations'] as const,
   mobileNav: () => ['application', 'mobile-nav'] as const,
   versions:  () => ['application', 'versions'] as const,
   versionDetail: (n: number) => ['application', 'versions', n] as const,
@@ -53,6 +55,21 @@ export function useUpdateApplicationTheme() {
     mutationFn: (p: UpdateApplicationThemePayload) => applicationsApi.updateTheme(p),
     onSuccess: (res) => {
       qc.setQueryData(applicationKeys.theme(), res)
+      qc.invalidateQueries({ queryKey: applicationKeys.detail() })
+    },
+  })
+}
+
+export function useApplicationTranslations() {
+  return useQuery({ queryKey: applicationKeys.translations(), queryFn: applicationsApi.getTranslations })
+}
+
+export function useUpdateApplicationTranslations() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (p: UpdateApplicationTranslationsPayload) => applicationsApi.updateTranslations(p),
+    onSuccess: (res) => {
+      qc.setQueryData(applicationKeys.translations(), res)
       qc.invalidateQueries({ queryKey: applicationKeys.detail() })
     },
   })

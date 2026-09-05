@@ -1,4 +1,5 @@
 import type { ThemeConfig } from '@/features/theme/types'
+import type { TranslationsConfig } from '@/features/i18n/types'
 import type { MenuType, MenuConfig, PermissionMode } from '@/features/menus/types'
 
 // Mirrors internal/appbuilder.AppSnapshot / MenuSnapshotItem exactly — the
@@ -29,4 +30,8 @@ export interface AppSnapshot {
   app: AppSnapshotMeta
   menus: MenuSnapshotItem[]
   theme: Partial<ThemeConfig>
+  /** Absent for any snapshot published before this feature existed — see the
+   *  backend AppSnapshot struct's own `omitempty` doc comment. I18nProvider
+   *  treats a missing/undefined value as "no overrides", not an error. */
+  translations?: TranslationsConfig
 }
