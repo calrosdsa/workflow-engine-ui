@@ -181,3 +181,22 @@ export async function syncLineItemsChildren(schema: FormSchema, parentFormId: st
 
   return { changed, schema: next }
 }
+
+/** This form's own top-level 'line_items' elements that already have a live,
+ *  synced GENERATED child form (childFormId set) -- i.e. "which of this
+ *  form's Line Items grids resolve to a real child form id right now."
+ *  Excludes adopted-mode grids (sourceMode 'existing'), which never get a
+ *  childFormId (see schema.ts's doc comment on that field), and any
+ *  in-progress grid added to the canvas but not yet saved. Nested grids (a
+ *  'line_items' field inside another grid's row editor) are deliberately
+ *  NOT included -- same top-level-only scope as syncLineItemsChildren above
+ *  and the Line Item Count target-grid picker (form-builder/config/
+ *  ConfigPanel.tsx), which this mirrors for callers with a FormSchema but no
+ *  live builder state of their own -- e.g. reports' "related" block, which
+ *  resolves a separately-fetched PARENT form's schema (resolveFormSchema)
+ *  rather than reading the form builder's own in-memory schema. */
+export function generatedLineItemsChildren(schema: FormSchema): FormElement[] {
+  return [...iterElements(schema)].filter(
+    (el) => el.component === 'line_items' && el.sourceMode !== 'existing' && el.childFormId,
+  )
+}

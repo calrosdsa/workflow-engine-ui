@@ -3,23 +3,37 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useForms, useForm } from '@/features/forms/hooks'
+import { resolveFormSchema } from '@/features/form-builder/serialize'
+import { generatedLineItemsChildren } from '@/features/form-builder/lineItemsSync'
 import type { ReportBlockConfigPanelProps } from '../../report-block-contract'
 import type { RelatedBlockConfig } from './schema'
 
-// Config surface for the "related" block type (FR-J1-002 §1): a parent-form
+// Config surface for the "related" block type (FR-J1-002 section 1): a parent-form
 // picker, then a child-form picker restricted to forms that are GENERATED
-// Line Items children of the selected parent (is_line_items && parent_form_id
-// matches) — the same "restrict the picker to only legal choices" precedent
-// trigger_workflow's own ConfigPanel already establishes (FR-D2-017), rather
-// than letting an author pick an unrelated form that would fail server-side
-// validation at generation time.
+// Line Items children of the selected parent -- the same "restrict the
+// picker to only legal choices" precedent trigger_workflow's own
+// ConfigPanel already establishes (FR-D2-017), rather than letting an
+// author pick an unrelated form that would fail server-side validation at
+// generation time.
+//
+// useForms() (GET /forms, ListForms in api/forms/handler.go) deliberately
+// excludes every is_line_items row -- Line Items children are generated/
+// managed implicitly by their parent's builder config and are never a
+// standalone list entry. So the eligible-children list can't be built by
+// filtering `forms`; instead it's read off the PARENT form's own layout
+// (fetched separately via useForm + resolveFormSchema), which already
+// carries each generated grid's childFormId -- lineItemsSync.ts's
+// syncOneGrid sets it there at save time, and generatedLineItemsChildren
+// walks the schema for it, the same source field-ref's own ConfigPanel and
+// the form builder's Line Item Count picker both read to answer the
+// identical "which child forms does this form's Line Items grids resolve
+// to" question.
 export function RelatedBlockConfigPanel({ config, onChange }: ReportBlockConfigPanelProps<RelatedBlockConfig>) {
   const { data: forms } = useForms()
+  const { data: parentForm } = useForm(config.parent_form_id)
   const { data: childForm } = useForm(config.child_form_id)
 
-  const eligibleChildren = (forms ?? []).filter(
-    (f) => f.is_line_items && f.parent_form_id === config.parent_form_id,
-  )
+  const eligibleChildren = generatedLineItemsChildren(resolveFormSchema(parentForm))
 
   const selectedKeys = new Set((config.columns ?? []).map((c) => c.key))
   const usingDefaultColumns = !config.columns || config.columns.length === 0
@@ -63,8 +77,8 @@ export function RelatedBlockConfigPanel({ config, onChange }: ReportBlockConfigP
                   No Line Items children found on this form.
                 </div>
               ) : (
-                eligibleChildren.map((f) => (
-                  <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>
+                eligibleChildren.map((el) => (
+                  <SelectItem key={el.childFormId} value={el.childFormId!} className="text-xs">{el.label || el.key}</SelectItem>
                 ))
               )}
             </SelectContent>

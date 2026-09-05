@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { syncLineItemsChildren } from './lineItemsSync'
+import { syncLineItemsChildren, generatedLineItemsChildren } from './lineItemsSync'
 import { formsApi } from '@/features/forms/api'
 import { emptySchema, emptyLineItemsConfig } from './schema'
 import type { FormDefinition } from '@/features/forms/types'
@@ -121,5 +121,49 @@ describe('syncLineItemsChildren', () => {
     expect(formsApi.update).toHaveBeenCalledTimes(1)
     expect(formsApi.create).not.toHaveBeenCalled()
     expect(vi.mocked(formsApi.update).mock.calls[0][0]).toBe('child-1')
+  })
+})
+
+// generatedLineItemsChildren backs the "related" report block's child-form
+// picker (reports/blocks/related/ConfigPanel.tsx): given a PARENT form's own
+// resolved schema, which of its Line Items grids resolve to a real,
+// already-synced child form id. useForms()'s own list can't answer this --
+// ListForms (api/forms/handler.go) excludes every is_line_items row, so
+// filtering that list can never find a match; this reads childFormId off
+// the parent's own layout elements instead, same as the Line Item Count
+// target-grid picker (form-builder/config/ConfigPanel.tsx) already does
+// from the builder's own live schema.
+describe('generatedLineItemsChildren', () => {
+  it('includes a top-level generated grid that already has a childFormId', () => {
+    const el = lineItemsElement({ childFormId: 'child-1', label: 'Order Lines' })
+    const result = generatedLineItemsChildren(schemaWith(el))
+
+    expect(result.map((e) => e.childFormId)).toEqual(['child-1'])
+  })
+
+  it('excludes a grid that has not been saved yet (no childFormId)', () => {
+    const el = lineItemsElement() // no childFormId override
+    const result = generatedLineItemsChildren(schemaWith(el))
+
+    expect(result).toHaveLength(0)
+  })
+
+  it('excludes an adopted (sourceMode "existing") grid even if childFormId were somehow set', () => {
+    const el = lineItemsElement({ sourceMode: 'existing', adoptedFormRef: 'other-form', childFormId: 'stale-id' })
+    const result = generatedLineItemsChildren(schemaWith(el))
+
+    expect(result).toHaveLength(0)
+  })
+
+  it('excludes a nested grid (inside another grid\'s row editor) -- top-level only, same scope as syncLineItemsChildren', () => {
+    const nested = lineItemsElement({ id: 'el-nested', key: 'sub_lines', childFormId: 'nested-child' })
+    const outer = lineItemsElement({ childFormId: 'outer-child', lineItemColumns: lineItemSections(nested) })
+    const result = generatedLineItemsChildren(schemaWith(outer))
+
+    expect(result.map((e) => e.childFormId)).toEqual(['outer-child'])
+  })
+
+  it('returns nothing for an empty schema', () => {
+    expect(generatedLineItemsChildren(emptySchema())).toHaveLength(0)
   })
 })
