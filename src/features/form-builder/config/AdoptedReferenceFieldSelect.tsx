@@ -3,7 +3,7 @@
 // DisplayFieldSelect's shape exactly, but filters to 'reference'-type fields
 // that specifically target parentFormId — not just any reference field on
 // the form, which could point at a completely unrelated third form.
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import {
   SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select-menu'
@@ -27,6 +27,18 @@ export function AdoptedReferenceFieldSelect({ formId, parentFormId, value, onCha
     () => (targetForm?.fields ?? []).filter((f) => f.type === 'reference' && f.reference_table === parentFormId),
     [targetForm, parentFormId],
   )
+
+  // A form nested via "Add Dependent Form" always gets exactly one
+  // back-reference field auto-injected — the common case by construction
+  // now that the Line Items form picker only offers genuine dependents.
+  // Auto-filling it here turns the new two-step flow (nest, then adopt)
+  // into effectively one click on the second step; still a real picker
+  // (not hidden) for the rarer case of more than one candidate.
+  useEffect(() => {
+    if (!value && !isLoading && options.length === 1) {
+      onChange(options[0].name)
+    }
+  }, [value, isLoading, options, onChange])
 
   if (!formId) {
     return (

@@ -27,11 +27,22 @@ interface FormReferenceSelectProps {
    *  whose reference_table points at this form id — i.e. forms that could
    *  actually be adopted as a Line Items child of it. Used by the adopted
    *  Line Items "Form" picker so you can't pick an unrelated form and only
-   *  discover the mismatch afterward in the reference-field picker. */
+   *  discover the mismatch afterward in the reference-field picker. Kept
+   *  deliberately separate from requireDependentOf below — this prop is
+   *  ALSO used by the unrelated Related Form detail-tab picker, which
+   *  intentionally allows any reference relationship, not just dependents. */
   requireReferenceTo?: string
+  /** When set, additionally restricts the list to forms whose parent_form_id
+   *  equals this id — i.e. genuine dependents of it (nested via "Add
+   *  Dependent Form"), not merely any form that happens to hold a matching
+   *  reference field. Used ONLY by the Line Items adopted-form picker,
+   *  passed alongside requireReferenceTo (both must hold); every other
+   *  requireReferenceTo caller leaves this unset and keeps its existing,
+   *  looser behavior. */
+  requireDependentOf?: string
 }
 
-export function FormReferenceSelect({ value, onChange, excludeId, requireReferenceTo }: FormReferenceSelectProps) {
+export function FormReferenceSelect({ value, onChange, excludeId, requireReferenceTo, requireDependentOf }: FormReferenceSelectProps) {
   const { data: forms, isLoading } = useForms()
   const [open, setOpen] = useState(false)
 
@@ -39,9 +50,10 @@ export function FormReferenceSelect({ value, onChange, excludeId, requireReferen
     () => (forms ?? []).filter((f) => {
       if (f.id === excludeId) return false
       if (requireReferenceTo && !f.fields.some((fd) => fd.type === 'reference' && fd.reference_table === requireReferenceTo)) return false
+      if (requireDependentOf && f.parent_form_id !== requireDependentOf) return false
       return true
     }),
-    [forms, excludeId, requireReferenceTo],
+    [forms, excludeId, requireReferenceTo, requireDependentOf],
   )
 
   const selected = useMemo(
@@ -97,9 +109,11 @@ export function FormReferenceSelect({ value, onChange, excludeId, requireReferen
               ) : (
                 <>
                   <CommandEmpty>
-                    {requireReferenceTo
-                      ? 'No forms with a reference field pointing back at this form. Add one on the target form first.'
-                      : 'No forms found.'}
+                    {requireDependentOf
+                      ? 'No forms are nested as dependents of this form yet. Use "Add Dependent Form" from the Forms list first, then come back here to pick it.'
+                      : requireReferenceTo
+                        ? 'No forms with a reference field pointing back at this form. Add one on the target form first.'
+                        : 'No forms found.'}
                   </CommandEmpty>
                   <CommandGroup>
                     {options.map((f) => (

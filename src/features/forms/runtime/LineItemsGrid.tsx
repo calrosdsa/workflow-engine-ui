@@ -391,7 +391,11 @@ function LineItemsGridInner({
   const canAdd = cfg.allowAddRows !== false && !disabled && hasCreatePermission
   const canDelete = cfg.allowDeleteRows !== false && !disabled && hasDeletePermission
   const canDuplicate = cfg.allowDuplicateRows !== false && !disabled && hasCreatePermission
-  const canReorder = cfg.allowReorderRows !== false && !disabled && hasEditPermission && allRows.length > 1 && !debouncedSearch.trim()
+  // Adopted/existing-form grids have no persisted row order (no _row_order
+  // system column — they always sort by created_at, see the backend's
+  // lineItemsChild.rowOrderField), so drag-to-reorder would silently do
+  // nothing for them regardless of cfg.allowReorderRows.
+  const canReorder = !isAdopted && cfg.allowReorderRows !== false && !disabled && hasEditPermission && allRows.length > 1 && !debouncedSearch.trim()
   const canResize = cfg.allowResize !== false && (cfg.displayMode ?? 'table') === 'table'
   // Bulk select/delete rides on the same allowDeleteRows permission as a
   // single-row delete — there's no separate "bulk" grant, since selecting

@@ -79,6 +79,13 @@ export function createElement(component: ComponentType): FormElement {
     case 'line_items':
       base.lineItemColumns = []
       base.lineItemConfig = emptyLineItemsConfig()
+      // A NEW grid only ever adopts an existing dependent form now — the
+      // generated hidden-child model is no longer offered for anything
+      // created from here on (existing 'generated' elements, from before
+      // this changed, keep working unchanged; see ConfigPanel.tsx's
+      // LineItemsConfigTabs, which only shows that option when an element
+      // is ALREADY in that mode).
+      base.sourceMode = 'existing'
       break
   }
   return base

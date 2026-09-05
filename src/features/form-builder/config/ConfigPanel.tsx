@@ -1043,18 +1043,27 @@ export function LineItemsConfigTabs({ element, formId, onChange }: {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="generated">Generated (auto-create a child form)</SelectItem>
+                    {/* "Generated" only stays offered for an element that's
+                        ALREADY in that mode (or a legacy element with a
+                        childFormId from before this changed) — a brand-new
+                        grid starts in 'existing' mode (factory.ts) and never
+                        sees this option at all. Only ever adopting an
+                        EXISTING form going forward. */}
+                    {currentMode === 'generated' && (
+                      <SelectItem value="generated">Generated (auto-create a child form)</SelectItem>
+                    )}
                     <SelectItem value="existing">Existing form</SelectItem>
                   </SelectContent>
                 </SelectMenu>
               </Field>
               {element.sourceMode === 'existing' && (
                 <>
-                  <Field label="Form" hint="An existing form with a reference field pointing back at this form — that's what makes it eligible to adopt as a Line Items child.">
+                  <Field label="Form" hint="Only forms already nested as a dependent of this one (Add Dependent Form) are eligible — that relationship is what lets this grid adopt it as a Line Items source.">
                     <FormReferenceSelect
                       value={element.adoptedFormRef}
                       excludeId={formId ?? undefined}
                       requireReferenceTo={formId ?? undefined}
+                      requireDependentOf={formId ?? undefined}
                       onChange={(adoptedFormRef) => onChange({ adoptedFormRef, adoptedReferenceField: undefined })}
                     />
                   </Field>
@@ -1134,7 +1143,13 @@ export function LineItemsConfigTabs({ element, formId, onChange }: {
             <ToggleRow label="Allow Add Rows" checked={cfg.allowAddRows !== false} onCheckedChange={(v) => setConfig({ allowAddRows: v })} />
             <ToggleRow label="Allow Delete Rows" checked={cfg.allowDeleteRows !== false} onCheckedChange={(v) => setConfig({ allowDeleteRows: v })} />
             <ToggleRow label="Allow Duplicate Rows" checked={cfg.allowDuplicateRows !== false} onCheckedChange={(v) => setConfig({ allowDuplicateRows: v })} />
-            <ToggleRow label="Allow Reorder Rows" checked={cfg.allowReorderRows !== false} onCheckedChange={(v) => setConfig({ allowReorderRows: v })} />
+            {/* Adopted/existing-form grids have no persisted row order (they
+                sort by created_at) — showing this toggle would imply an
+                effect it doesn't have. Only generated grids (their own
+                _row_order system column) actually honor it. */}
+            {element.sourceMode !== 'existing' && (
+              <ToggleRow label="Allow Reorder Rows" checked={cfg.allowReorderRows !== false} onCheckedChange={(v) => setConfig({ allowReorderRows: v })} />
+            )}
             <div className="grid grid-cols-3 gap-2">
               <Field label="Min Rows">
                 <Input type="number" min={0} value={cfg.minRows ?? ''} onChange={(e) => setConfig({ minRows: e.target.value === '' ? undefined : Number(e.target.value) })} className="h-8 text-sm" />
