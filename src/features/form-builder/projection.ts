@@ -109,6 +109,10 @@ function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | nul
   // dependent-form relationship: at most one child record per parent.
   if (el.unique && (supportsUnique(el.component) || el.component === 'form')) field.unique = true
 
+  // Btree index — no component-type restriction, unlike unique/searchable,
+  // mirroring FieldDef.Index's own lack of a type gate on the backend.
+  if (el.index) field.index = true
+
   if (el.description) field.description = el.description
 
   // Enum-typed components carry their option values as the CHECK constraint set.
@@ -210,8 +214,13 @@ function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | nul
  *  the only thing standing between a field definition and arbitrary DDL;
  *  every other client of the API (and the MCP server) wrote straight through
  *  it. The backend now binds the default as a query argument and applies it
- *  at insert time, so quoting here would store the quotes. */
-function staticDefaultValue(el: FormElement): string | number | boolean | undefined {
+ *  at insert time, so quoting here would store the quotes.
+ *
+ *  Exported for heal-on-load (heal.ts), which needs to know what an element
+ *  would CURRENTLY project to in order to detect drift against the backend's
+ *  stored FieldDef.default — the same "would this element project to X"
+ *  question projectedBaseName answers for orphan detection above. */
+export function staticDefaultValue(el: FormElement): string | number | boolean | undefined {
   const reg = COMPONENT_REGISTRY[el.component]
   if (el.defaultValue === undefined || el.defaultValue === null || el.defaultValue === '') return undefined
   // Don't emit defaults for expression-driven values.
@@ -230,6 +239,13 @@ function staticDefaultValue(el: FormElement): string | number | boolean | undefi
     case 'email':
     case 'phone':
       return String(el.defaultValue)
+    case 'enum': {
+      // Only emit a default that's still one of this element's own options —
+      // a stale default left over from a removed/renamed option would
+      // otherwise project a value the enum's own enum_values don't contain.
+      const value = String(el.defaultValue)
+      return el.options?.some((o) => o.value === value) ? value : undefined
+    }
     default:
       return undefined
   }

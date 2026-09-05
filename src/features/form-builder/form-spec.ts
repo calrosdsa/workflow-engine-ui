@@ -63,6 +63,9 @@ export interface FormSpecField {
   type?: string
   required?: boolean
   unique?: boolean
+  /** Creates a btree index on this column for faster queries/sorts. No
+   *  component-type restriction. */
+  index?: boolean
   description?: string
   placeholder?: string
   /** Static default. Ignored for types that can't express one in SQL. */
@@ -400,6 +403,7 @@ export function specFieldToElement(
   // spec can't set a flag the config panel would never have offered (the
   // projection re-checks these too — this just keeps the canvas honest).
   if (raw.unique === true && supportsUnique(component)) el.unique = true
+  if (raw.index === true) el.index = true
   if ((raw.recordTitle === true || raw.is_record_title === true) && supportsRecordTitle(component)) el.isRecordTitle = true
   if (raw.searchable === true && supportsSearchable(component)) el.searchable = true
 
@@ -566,6 +570,7 @@ function elementToSpecField(el: FormElement): FormSpecField {
   if (el.behavior.visibility === 'hidden') out.hidden = true
   if (el.behavior.readOnly === 'always') out.readOnly = true
   if (el.unique) out.unique = true
+  if (el.index) out.index = true
   if (el.isRecordTitle) out.recordTitle = true
   if (el.searchable) out.searchable = true
   if (el.description) out.description = el.description

@@ -790,6 +790,14 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                     <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Included when users search this form's records.</p>
                   </div>
                 )}
+                <div className="space-y-1">
+                  <ToggleRow
+                    label="Index"
+                    checked={!!element.index}
+                    onCheckedChange={(v) => onChange({ index: v })}
+                  />
+                  <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Speeds up queries and sorts on this field.</p>
+                </div>
                 {isTextual && (
                   <div className="grid grid-cols-2 gap-2">
                     <Field label="Min Length">

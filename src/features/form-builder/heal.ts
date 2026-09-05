@@ -44,7 +44,8 @@ import {
 } from './schema'
 import { createSection } from './factory'
 import { specFieldToElement, type FormSpecField } from './form-spec'
-import { projectedBaseName } from './projection'
+import { projectedBaseName, staticDefaultValue } from './projection'
+import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable } from './component-registry'
 import { hydrateReferenceFilter, sameReferenceFilter } from './reference-filter'
 import { hydrateAccessScope, sameAccessScope } from './access-scope'
 import { elementHideRules, sameFieldHideRules, reconcileHideRuleActions } from './field-hide'
@@ -80,6 +81,15 @@ const BACKEND_TYPE_COMPONENT_OVERRIDES: Record<string, string> = {
   text: 'textarea',
 }
 
+/** Order-sensitive equality for the plain string-array backend properties
+ *  reconciled below (enum_values, allowed_mime_types) — both are stored and
+ *  re-emitted in a fixed order, so a reorder is treated as a real change
+ *  rather than shrugged off, keeping healing convergent with what the next
+ *  save would actually project. */
+function sameStringArray(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((v, i) => v === b[i])
+}
+
 function fieldToSpec(f: FieldDef): FormSpecField {
   return {
     key: f.name,
@@ -88,10 +98,23 @@ function fieldToSpec(f: FieldDef): FormSpecField {
     required: f.required === true,
     unique: f.unique === true,
     description: f.description,
-    options: f.enum_values,
+    // Pre-built {label, value} pairs, NOT bare strings — a bare string is
+    // treated by specFieldToElement's normalizeOption as an author-typed
+    // label and gets slugified into a value (e.g. "Draft" -> "draft"),
+    // which would silently rewrite the backend's exact enum_values strings
+    // the moment this field's element is synthesized (or reconciled below).
+    options: f.enum_values?.map((v) => ({ label: v, value: v })),
     searchable: f.searchable === true,
     is_record_title: f.is_record_title === true,
     formRef: f.reference_table,
+    // index/default are plain backend-set column properties, routinely set
+    // via the API/MCP directly (create_form/update_form) with no layout
+    // element yet — carried through the same way every other field here is,
+    // so a freshly synthesized element doesn't start life already missing
+    // them (see the index/default reconciliation below for the companion
+    // case: an element that already exists but has drifted from these).
+    index: f.index === true,
+    default: f.default,
   }
 }
 
@@ -157,6 +180,124 @@ export function healSchema(parsed: FormSchema, def: HealableForm): FormSchema {
           healedEl = { ...healedEl, advancedSettings: reconcileReadOnlyRuleActions(healedEl.advancedSettings, f.read_only_rules) }
           elChanged = true
         }
+        // index/default get the identical "backend is the truth" treatment.
+        // Both are plain FieldDef columns an API/MCP caller can set directly
+        // on a field that ALREADY has a layout element (unlike the pass-2
+        // synthesis case below, which only covers fields with no element at
+        // all) — without this, a builder save touching anything else on the
+        // form re-projects this element's own (unset) index/defaultValue and
+        // silently wipes the API-set value, with no error surfaced anywhere.
+        if (Boolean(healedEl.index) !== (f.index === true)) {
+          healedEl = { ...healedEl, index: f.index === true || undefined }
+          elChanged = true
+        }
+        if (!healedEl.behavior.dynamicDefault && staticDefaultValue(healedEl) !== (f.default ?? undefined)) {
+          healedEl = { ...healedEl, defaultValue: f.default ?? undefined }
+          elChanged = true
+        }
+        // required (NOT NULL at the DB layer) gets the identical treatment —
+        // except when the element's OWN conditional-required expression
+        // (requiredWhen) already governs it: elementToField can only ever
+        // project `required: false` for an 'expression'-mode element (it
+        // reads behavior.required === 'always' alone), so there is no
+        // backend-authored `true` to adopt without destroying the
+        // expression. Mirrors the dynamicDefault carve-out just above, for
+        // the identical reason.
+        if (healedEl.behavior.required !== 'expression') {
+          const wantRequired = f.required === true ? 'always' : 'optional'
+          if (healedEl.behavior.required !== wantRequired) {
+            healedEl = { ...healedEl, behavior: { ...healedEl.behavior, required: wantRequired } }
+            elChanged = true
+          }
+        }
+        // unique (a real UNIQUE constraint) gets the identical treatment,
+        // gated by the exact same supportsUnique/'form' check elementToField
+        // itself applies before emitting it — so heal never hydrates a flag
+        // a subsequent save would immediately strip again, which would
+        // otherwise make this non-idempotent.
+        {
+          const wantUnique = f.unique === true && (supportsUnique(el.component) || el.component === 'form')
+          if (Boolean(healedEl.unique) !== wantUnique) {
+            healedEl = { ...healedEl, unique: wantUnique || undefined }
+            elChanged = true
+          }
+        }
+        // searchable / is_record_title get the identical treatment, each
+        // gated by the same supportsX check elementToField re-applies before
+        // emitting them (see that function's own comments on why: a field
+        // flagged before its component type changed can't silently project a
+        // stale, no-longer-valid flag).
+        {
+          const wantSearchable = f.searchable === true && supportsSearchable(el.component)
+          if (Boolean(healedEl.searchable) !== wantSearchable) {
+            healedEl = { ...healedEl, searchable: wantSearchable || undefined }
+            elChanged = true
+          }
+        }
+        {
+          const wantTitle = f.is_record_title === true && supportsRecordTitle(el.component)
+          if (Boolean(healedEl.isRecordTitle) !== wantTitle) {
+            healedEl = { ...healedEl, isRecordTitle: wantTitle || undefined }
+            elChanged = true
+          }
+        }
+        // enum_values (the CHECK constraint's value set) gets the identical
+        // treatment for enum-typed elements — an option added or removed via
+        // API/MCP directly on a field the builder already has an element for
+        // would otherwise be silently reverted by the layout's stale options
+        // list on the next unrelated save, re-narrowing the CHECK constraint
+        // out from under values already written to existing records. Existing
+        // labels are preserved by value; a value with no prior option (freshly
+        // added on the backend) falls back to the value itself as its label,
+        // same fallback fieldToSpec's own options mapping above uses.
+        if (COMPONENT_REGISTRY[el.component].fieldType === 'enum') {
+          const currentValues = (healedEl.options ?? []).map((o) => o.value)
+          const wantValues = f.enum_values ?? []
+          if (!sameStringArray(currentValues, wantValues)) {
+            const byValue = new Map((healedEl.options ?? []).map((o) => [o.value, o]))
+            healedEl = { ...healedEl, options: wantValues.map((v) => byValue.get(v) ?? { label: v, value: v }) }
+            elChanged = true
+          }
+        }
+        // display_field is the same kind of backend-enforced-at-read setting
+        // as reference_filter above (which fields), just for what a reference
+        // column displays/searches instead of the runtime's id/name/label
+        // fallback — missed when index/default were added despite sitting
+        // right next to reference_filter's own reconciliation.
+        if (el.component === 'form') {
+          const wantDisplayField = f.display_field || undefined
+          if (healedEl.displayField !== wantDisplayField) {
+            healedEl = { ...healedEl, displayField: wantDisplayField }
+            elChanged = true
+          }
+        }
+        // File Upload's size/type rule (FR-C1-012) gets the identical
+        // treatment — these are backend-ENFORCED (api/content's Upload
+        // handler is the real gate, before any bytes are stored; see
+        // projection.ts's elementToField comment), so a stale/absent layout
+        // value would silently WIDEN what the next save accepts — the same
+        // security-relevant direction hide_rules/access_scope guard against
+        // elsewhere in this file.
+        if (COMPONENT_REGISTRY[el.component].fieldType === 'file') {
+          const wantMaxSize = f.max_file_size_bytes || undefined
+          if ((healedEl.validation.maxFileSizeBytes ?? undefined) !== wantMaxSize) {
+            healedEl = { ...healedEl, validation: { ...healedEl.validation, maxFileSizeBytes: wantMaxSize } }
+            elChanged = true
+          }
+          const wantMimeTypes = f.allowed_mime_types && f.allowed_mime_types.length > 0 ? f.allowed_mime_types : undefined
+          if (!sameStringArray(healedEl.validation.allowedMimeTypes ?? [], wantMimeTypes ?? [])) {
+            healedEl = { ...healedEl, validation: { ...healedEl.validation, allowedMimeTypes: wantMimeTypes } }
+            elChanged = true
+          }
+        }
+        // f.label and f.description are DELIBERATELY not reconciled here,
+        // unlike everything above — they're pure display metadata with no
+        // backend enforcement (no constraint, no runtime behavior hinges on
+        // them), and the builder canvas is the primary place an author edits
+        // either one. A drift here is cosmetic and immediately visible the
+        // next time someone opens the builder, not a silently-widened
+        // constraint or a silently-reverted security rule — so "layout is
+        // the truth" stays correct for these two.
         if (elChanged) {
           colChanged = true
           kept.push(healedEl)
@@ -195,6 +336,12 @@ export function healSchema(parsed: FormSchema, def: HealableForm): FormSchema {
     }
     if (f.type === 'reference' && f.display_field) el.displayField = f.display_field
     if (f.type === 'reference' && f.reference_filter) el.referenceFilter = hydrateReferenceFilter(f.reference_filter)
+    // File Upload's backend-enforced size/type rule (FR-C1-012) — like
+    // display_field/reference_filter above, FormSpecField has no slot for
+    // these, so a brand-new element synthesized straight from fieldToSpec
+    // would otherwise start life already missing them.
+    if (f.type === 'file' && f.max_file_size_bytes) el.validation.maxFileSizeBytes = f.max_file_size_bytes
+    if (f.type === 'file' && f.allowed_mime_types && f.allowed_mime_types.length > 0) el.validation.allowedMimeTypes = f.allowed_mime_types
     synthesized.push(el)
   }
 

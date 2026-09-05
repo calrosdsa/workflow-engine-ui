@@ -586,6 +586,10 @@ export interface FormElement {
   key: string               // editable machine name / data key (freely renameable)
   column?: string           // immutable physical column name (backend-assigned)
   unique?: boolean          // adds a UNIQUE constraint (string/number fields only)
+  // Creates a btree index on this column (FieldDef.index) for faster
+  // queries/sorts. Unlike unique/searchable, the backend imposes no
+  // component-type restriction, so this carries no supportsX() gate.
+  index?: boolean
   defaultValue?: unknown
 
   // Marks this field as (one of, possibly several) fields used to build a
@@ -880,6 +884,7 @@ export const FORM_ELEMENT_ENVELOPE_SCHEMA: ConfigSchema = {
     key: { type: 'string', description: 'The wire field name (matches FieldDef.name). Freely renameable.' },
     column: { type: 'string', description: 'Immutable physical column, backend-assigned. Echo it back when editing; never invent one.' },
     unique: { type: 'boolean' },
+    index: { type: 'boolean', description: 'Creates a btree index on this column for faster queries/sorts. No component-type restriction.' },
     defaultValue: { description: 'Static default value.' },
     isRecordTitle: { type: 'boolean', description: 'Part of the record’s human-readable title (scalar components only).' },
     searchable: { type: 'boolean', description: 'Included in full-text search (text-like components only).' },
