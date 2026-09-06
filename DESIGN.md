@@ -4,13 +4,23 @@ A locked design system for this app. Every page redesign reads this file
 before emitting code. Do not regenerate per page — extend or amend this file
 when the system needs to grow.
 
-**This file replaces the prior system documented in [`DESIGN.md`](DESIGN.md)
-("The Instrument Panel").** That file is kept in place as historical record
-of the previous, deliberately-quiet light system — do not delete it, do not
-read it as current. This `design.md` is the one subsequent Hallmark runs
-defer to. The replacement is a genuine identity change, confirmed explicitly
-by the requester: RAGFlow's dark, gradient-accented DNA (studied and
-recorded in full at [`../docs/design/ragflow-dna.md`](../docs/design/ragflow-dna.md))
+**This file (`DESIGN.md`) is the single, current design system. There is no
+second design doc.** On 2026-08-29 it replaced a prior light system called
+"The Instrument Panel" — replaced *in place*, in this same file. Earlier
+revisions of this document described that replacement as though the old
+system survived at a separate path, and `src/index.css` still carried the
+same confusion by naming `design.md` and `DESIGN.md` as if they were two
+files. They are one file: this repo is developed on a case-insensitive
+filesystem and `git ls-files` tracks exactly one path. Corrected 2026-09-05.
+
+The Instrument Panel's contents are therefore **gone**, recoverable only from
+git history (`git log --follow -- DESIGN.md`) — deliberately not summarized
+here, since a reconstructed-from-memory description of a superseded system
+would be worse than none.
+
+The replacement was a genuine identity change, confirmed explicitly by the
+requester: RAGFlow's dark, gradient-accented DNA (studied and recorded in
+full at [`../docs/design/ragflow-dna.md`](../docs/design/ragflow-dna.md))
 becomes App Builder's own system, not a borrowed mechanism bolted onto the
 old palette.
 
