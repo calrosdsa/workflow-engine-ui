@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
-import { localizeFormSchema } from '@/features/form-builder/localize-schema'
+import { localizeFormSchema, localizeFormName } from '@/features/form-builder/localize-schema'
 import { useI18n } from '@/features/i18n/I18nProvider'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { useCreateRecord } from '@/features/forms/hooks'
@@ -44,7 +44,7 @@ function OpenFormDialog() {
     >
       <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{request.title || form?.name || 'New record'}</DialogTitle>
+          <DialogTitle>{request.title || (form && localizeFormName(form.id, form.name, tc)) || 'New record'}</DialogTitle>
         </DialogHeader>
 
         <div className="px-6 pb-6">

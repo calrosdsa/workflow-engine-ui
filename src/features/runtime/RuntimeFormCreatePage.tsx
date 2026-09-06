@@ -9,7 +9,7 @@ import { PermissionDeniedPage } from './PermissionDeniedPage'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
 import { useForm as useFormDef, useCreateRecord } from '@/features/forms/hooks'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
-import { localizeFormSchema } from '@/features/form-builder/localize-schema'
+import { localizeFormSchema, localizeFormName } from '@/features/form-builder/localize-schema'
 import { useI18n } from '@/features/i18n/I18nProvider'
 import { useAfterSubmitWorkflow } from '@/features/ui-workflows/useAfterSubmitWorkflow'
 import type { AppSnapshot } from './types'
@@ -129,7 +129,7 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId }: Run
 
           <div className="flex items-center justify-between gap-3 border-b px-4 py-2" style={{ borderColor: 'hsl(var(--border))' }}>
             <span className="truncate text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
-              {form?.name ? `New ${form.name}` : 'New Record'}
+              {form?.name ? `New ${localizeFormName(form.id, form.name, tc)}` : 'New Record'}
             </span>
             <button
               onClick={() => runtimeRouter.history.back()}

@@ -7,7 +7,7 @@ import { RuntimeLink } from '@/features/runtime/RuntimeLink'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { buildEnumLabels } from '@/features/forms/runtime/enum-labels'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
-import { localizeFormSchema } from '@/features/form-builder/localize-schema'
+import { localizeFormSchema, localizeFormName } from '@/features/form-builder/localize-schema'
 import { useI18n } from '@/features/i18n/I18nProvider'
 import { useSavedViews, useUpdateSavedView } from '@/features/menus/saved-views/hooks'
 import { ViewSwitcher } from '@/features/menus/saved-views/ViewSwitcher'
@@ -98,7 +98,6 @@ export function SearchMenuRuntime({ menu, menus, clientId, appId, onNavigate }: 
   // yet (brief) or failed to load (PermissionGate already covers the "no
   // access" case; this is just a label, so it degrades quietly).
   const { data: form } = useFormDef(config.form_id)
-  const createLabel = form?.name ? `Create ${form.name}` : 'Create Record'
   // Real Select-option display labels ("Active," not "active") for
   // ViewSwitcher's Edit View drawer's Kanban column picker — the same
   // parseLayout(form.layout)/buildEnumLabels(schema) pair RecordsTable
@@ -107,6 +106,7 @@ export function SearchMenuRuntime({ menu, menus, clientId, appId, onNavigate }: 
   // existing plumbing to share one between this component and it.
   const { tc } = useI18n()
   const enumLabels = buildEnumLabels(localizeFormSchema(resolveFormSchema(form), config.form_id, tc))
+  const createLabel = form?.name ? `Create ${localizeFormName(config.form_id, form.name, tc)}` : 'Create Record'
 
   const currentConfig: SavedViewConfig = liveActiveView
     ? liveActiveView.config

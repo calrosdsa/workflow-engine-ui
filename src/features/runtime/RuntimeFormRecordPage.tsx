@@ -11,7 +11,7 @@ import { resolveRecordTitle } from '@/features/forms/runtime/record-title'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { useRecordDetail } from '@/features/forms/runtime/record-detail-hooks'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
-import { localizeFormSchema } from '@/features/form-builder/localize-schema'
+import { localizeFormSchema, localizeFormName } from '@/features/form-builder/localize-schema'
 import { useI18n } from '@/features/i18n/I18nProvider'
 import type { AppSnapshot } from './types'
 
@@ -104,7 +104,7 @@ export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recor
 
           <div className="flex items-center justify-between gap-3 border-b px-4 py-2" style={{ borderColor: 'hsl(var(--border))' }}>
             <span className="truncate text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
-              {form?.name ?? 'Record'}
+              {form ? localizeFormName(form.id, form.name, tc) : 'Record'}
             </span>
             <button
               onClick={() => runtimeRouter.history.back()}

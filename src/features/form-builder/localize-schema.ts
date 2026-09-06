@@ -100,13 +100,24 @@ export function localizeFormSchema(schema: FormSchema, formId: string, tc: Resol
   return { ...schema, sections: localizeSections(schema.sections, formId, [], tc) }
 }
 
+// The form's own NAME isn't part of FormSchema at all (FormSchema is just
+// {version, sections, variables, settings} — see schema.ts) even though it's
+// authored alongside everything else in the same form-builder page. It lives
+// on FormDefinition instead, so it gets its own tiny standalone resolver
+// rather than being folded into localizeFormSchema's tree walk — callers
+// call this ALONGSIDE localizeFormSchema, not through it, and keep their own
+// null-form fallback text ('New Record'/'Record'/etc) around the result.
+export function localizeFormName(formId: string, name: string, tc: Resolver): string {
+  return tc(`form.${formId}.name`, name)
+}
+
 // ---------------------------------------------------------------------------
 // Design-app enumeration (LocalizationSection.tsx)
 // ---------------------------------------------------------------------------
 
 export type FieldContentKind =
   | 'label' | 'placeholder' | 'help_text' | 'content' | 'option' | 'validation_message'
-  | 'section_title' | 'section_description'
+  | 'section_title' | 'section_description' | 'form_name'
 
 export const FIELD_CONTENT_KIND_LABELS: Record<FieldContentKind, string> = {
   label: 'Label',
@@ -117,6 +128,7 @@ export const FIELD_CONTENT_KIND_LABELS: Record<FieldContentKind, string> = {
   validation_message: 'Validation message',
   section_title: 'Section title',
   section_description: 'Section description',
+  form_name: 'Form name',
 }
 
 export interface CollectedField {
@@ -146,6 +158,10 @@ const SUFFIX_KINDS: [string, FieldContentKind][] = [
   ['.content', 'content'],
   ['.title', 'section_title'],
   ['.description', 'section_description'],
+  // Bare "form.<id>.name" — no ".field."/".section." in between — so this
+  // never matches any field/section key, all of which have one of the
+  // suffixes above between the form id and their own trailing segment.
+  ['.name', 'form_name'],
 ]
 
 function classifyKey(key: string): { fieldPath: string; kind: FieldContentKind; optionValue?: string } {
@@ -160,17 +176,19 @@ function classifyKey(key: string): { fieldPath: string; kind: FieldContentKind; 
   return { fieldPath: key, kind: 'label' }
 }
 
-/** Enumerates every translatable key/default-value pair a form's schema
- *  currently contains, for the design-app Localization tab. Reuses
- *  localizeFormSchema's own traversal by running it with a RECORDING
- *  resolver instead of a real one, rather than a hand-duplicated walk — the
- *  exact same code path that produces the runtime lookup keys, so this list
- *  can never drift out of sync with what actually gets resolved at render
- *  time. The recording resolver returns `fallback` unchanged, so
- *  localizeFormSchema's own return value here is just the original schema
- *  and can be discarded. */
-export function collectTranslatableFields(schema: FormSchema, formId: string): CollectedField[] {
-  const raw: { key: string; defaultValue: string }[] = []
+/** Enumerates every translatable key/default-value pair a form currently
+ *  contains — its own name, plus everything in its schema — for the
+ *  design-app Localization tab. Reuses localizeFormSchema's own traversal by
+ *  running it with a RECORDING resolver instead of a real one, rather than a
+ *  hand-duplicated walk — the exact same code path that produces the
+ *  runtime lookup keys, so this list can never drift out of sync with what
+ *  actually gets resolved at render time. The recording resolver returns
+ *  `fallback` unchanged, so localizeFormSchema's own return value here is
+ *  just the original schema and can be discarded. The form-name entry is
+ *  pushed first (localizeFormName isn't part of that traversal — see its
+ *  own doc comment), so it's the first row the design-app table shows. */
+export function collectTranslatableFields(schema: FormSchema, formId: string, formName: string): CollectedField[] {
+  const raw: { key: string; defaultValue: string }[] = [{ key: `form.${formId}.name`, defaultValue: formName }]
   localizeFormSchema(schema, formId, (key, fallback) => {
     raw.push({ key, defaultValue: fallback })
     return fallback

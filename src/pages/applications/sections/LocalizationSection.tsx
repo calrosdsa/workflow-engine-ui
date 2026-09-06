@@ -31,13 +31,16 @@ function draftFrom(loaded: TranslationsConfig | undefined): Draft {
 }
 
 /** One display name per group of CollectedField rows sharing a fieldPath —
- *  prefers that element's own `.label` entry, then `.section_title` (a
+ *  prefers that element's own `.label` entry, then `.form_name` (the form's
+ *  own name row groups with nothing else, but still wants ITS OWN value as
+ *  its heading rather than a raw fieldPath), then `.section_title` (a
  *  section groups its own title+description rows), then `.content` (a
- *  presentational heading/paragraph has neither), then falls back to the
- *  raw key so a row is never unlabeled. */
+ *  presentational heading/paragraph has none of those), then falls back to
+ *  the raw key so a row is never unlabeled. */
 function groupLabels(fields: CollectedField[]): Map<string, string> {
   const map = new Map<string, string>()
   for (const f of fields) if (f.kind === 'label') map.set(f.fieldPath, f.defaultValue)
+  for (const f of fields) if (!map.has(f.fieldPath) && f.kind === 'form_name') map.set(f.fieldPath, f.defaultValue)
   for (const f of fields) if (!map.has(f.fieldPath) && f.kind === 'section_title') map.set(f.fieldPath, f.defaultValue)
   for (const f of fields) if (!map.has(f.fieldPath) && f.kind === 'content') map.set(f.fieldPath, f.defaultValue)
   for (const f of fields) if (!map.has(f.fieldPath)) map.set(f.fieldPath, f.fieldPath.split('.').pop() ?? f.fieldPath)
@@ -248,7 +251,7 @@ function FormFieldsTable({ draft, setCell, canWrite }: TableProps) {
   const selected = forms?.find((f) => f.id === formId) ?? forms?.[0]
 
   const fields = useMemo(
-    () => (selected ? collectTranslatableFields(resolveFormSchema(selected), selected.id) : []),
+    () => (selected ? collectTranslatableFields(resolveFormSchema(selected), selected.id, selected.name) : []),
     [selected],
   )
   const labels = useMemo(() => groupLabels(fields), [fields])
