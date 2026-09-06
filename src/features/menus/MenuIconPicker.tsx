@@ -9,7 +9,7 @@ import { contentApi, type ContentOwner } from '@/features/content/api'
 import type { ContentObject } from '@/features/content/types'
 import { MenuIcon } from './MenuIcon'
 import {
-  MENU_ICON_GROUPS, resolveMenuIcon, iconSearchText,
+  MENU_ICON_GROUPS, resolveMenuIcon, iconSearchText, toKebabIconName,
   customIconContentId, customIconValue,
   CUSTOM_ICON_MIME_TYPES, validateCustomIconFile,
 } from './menu-icons'
@@ -264,24 +264,31 @@ export function MenuIconPicker({ value, onChange, fallbackIcon: Fallback, disabl
                   {group.label}
                 </p>
                 <div className="grid grid-cols-8 gap-1">
-                  {group.icons.map(({ name, Icon }) => (
-                    <button
-                      key={name}
-                      type="button"
-                      title={name}
-                      aria-label={name}
-                      aria-pressed={value === name}
-                      onClick={() => choose(name)}
-                      className={cn(
-                        'flex h-8 w-full items-center justify-center rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]',
-                        value === name
-                          ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]'
-                          : 'border-transparent text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]/60 hover:text-[hsl(var(--foreground))]',
-                      )}
-                    >
-                      <Icon size={15} />
-                    </button>
-                  ))}
+                  {group.icons.map(({ name, Icon }) => {
+                    // Written and compared in lucide's own kebab spelling —
+                    // matches what the app-builder API writes directly, and
+                    // what resolveMenuIcon() normalizes any stored value to.
+                    // See menu-icons.ts's module doc comment.
+                    const kebab = toKebabIconName(name)
+                    return (
+                      <button
+                        key={name}
+                        type="button"
+                        title={name}
+                        aria-label={name}
+                        aria-pressed={value === kebab}
+                        onClick={() => choose(kebab)}
+                        className={cn(
+                          'flex h-8 w-full items-center justify-center rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]',
+                          value === kebab
+                            ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]'
+                            : 'border-transparent text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]/60 hover:text-[hsl(var(--foreground))]',
+                        )}
+                      >
+                        <Icon size={15} />
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             ))

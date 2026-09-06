@@ -1,6 +1,7 @@
 import { FolderTree, Search as SearchIcon, PlusSquare, LayoutTemplate, LayoutDashboard, Code2, LayoutGrid } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { buildMenuTree } from '../tree'
+import { MenuIcon } from '../MenuIcon'
 import type { Menu, MenuType } from '../types'
 
 interface ParentMenuRuntimeProps {
@@ -49,7 +50,6 @@ export function ParentMenuRuntime({ menu, menus = [], onNavigate }: ParentMenuRu
   return (
     <div className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3">
       {children.map((child) => {
-        const Icon = TYPE_ICONS[child.menu_type]
         return (
           <button
             key={child.id}
@@ -58,7 +58,7 @@ export function ParentMenuRuntime({ menu, menus = [], onNavigate }: ParentMenuRu
             style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--card))' }}
           >
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: 'hsl(var(--primary) / 0.1)', color: 'hsl(var(--primary))' }}>
-              <Icon size={18} />
+              <MenuIcon icon={child.icon} fallback={TYPE_ICONS[child.menu_type]} size={18} />
             </div>
             <span className="min-w-0 truncate text-sm font-medium" style={{ color: 'hsl(var(--foreground))' }}>{child.name}</span>
           </button>

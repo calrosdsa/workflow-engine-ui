@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import type { LucideIcon } from 'lucide-react'
+import { DynamicIcon } from 'lucide-react/dynamic'
 import { contentApi } from '@/features/content/api'
 import { cn } from '@/lib/utils'
-import { resolveMenuIcon, customIconContentId } from './menu-icons'
+import { resolveMenuIcon, customIconContentId, toKebabIconName, isKnownIconName } from './menu-icons'
 
 interface MenuIconProps {
   /** The stored `Menu.icon` — a catalog name, a "content:<id>" upload, or
@@ -42,8 +43,30 @@ export function MenuIcon({ icon, fallback: Fallback, size = 14, className }: Men
     return <UploadedMenuIcon contentId={contentId} fallback={Fallback} size={size} className={className} />
   }
 
-  const Icon = resolveMenuIcon(icon) ?? Fallback
-  return <Icon size={size} className={cn('shrink-0', className)} />
+  // The curated catalog first: synchronous, already in the bundle, no flash.
+  const Curated = resolveMenuIcon(icon)
+  if (Curated) return <Curated size={size} className={cn('shrink-0', className)} />
+
+  // Outside the curated ~115 — most menus authored via the app-builder API
+  // rather than this picker (see menu-icons.ts) — fall through to lucide's
+  // full catalog on demand instead of settling for the type default.
+  const kebab = icon ? toKebabIconName(icon) : ''
+  if (isKnownIconName(kebab)) {
+    return (
+      <DynamicIcon
+        name={kebab}
+        size={size}
+        // DynamicIcon's generic wrapper doesn't stamp the per-icon
+        // `lucide-<name>` class that a statically-imported icon gets for
+        // free — added by hand so a dynamically-resolved icon looks the
+        // same in the DOM either way (and stays inspectable the same way).
+        className={cn('shrink-0', `lucide-${kebab}`, className)}
+        fallback={() => <Fallback size={size} className={cn('shrink-0', className)} />}
+      />
+    )
+  }
+
+  return <Fallback size={size} className={cn('shrink-0', className)} />
 }
 
 function UploadedMenuIcon({ contentId, fallback: Fallback, size, className }: {

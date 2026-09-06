@@ -7,21 +7,40 @@
 // missing half: a name→component resolver plus the catalog the picker
 // renders.
 //
-// WHY A CURATED LIST RATHER THAN ALL OF LUCIDE
+// WHY A CURATED LIST, PLUS A DYNAMIC FALLBACK
 // -------------------------------------------
-// lucide-react ships ~1,500 icons and tree-shakes on named imports. A
-// `import * as icons` resolver would defeat that and pull every one of them
-// into the bundle — including the RUNTIME bundle, which renders these in its
-// sidebar and which this codebase deliberately keeps separate from the
-// builder's (see workflow-engine-ui's two-bundle split). The ~90 icons below
-// are the ones that actually read as navigation at 14px, grouped the way
-// someone naming a menu would look for them.
+// This module hand-picks ~115 of lucide's ~2,000 icons — the ones that read
+// as navigation at 14px, grouped the way someone naming a menu would look
+// for them — and that curated set is the PICKER's whole world: a browsable
+// grid, eagerly bundled (named imports, not `import * as`, so it tree-shakes
+// like any other), resolved synchronously via resolveMenuIcon() so a menu
+// row never flashes a fallback before its real icon appears.
 //
-// Adding one is a two-line change: import it, and add it to a group's
-// `icons` array. Names are lucide's own PascalCase component names, stored
-// verbatim as the `icon` string, so a name is portable to any other client
-// rendering the same menu (the KMP mobile runtime included).
+// But the picker is not the only writer of `Menu.icon` — most menus in a
+// real app are authored through the app-builder API (an MCP tool, a
+// workflow, a script), which accepts any of lucide's real icon names, not
+// only these ~115. resolveMenuIcon() only ever covers the curated set;
+// MenuIcon.tsx covers the rest by falling through to lucide-react's own
+// `lucide-react/dynamic` entry point (dynamicIconImports + DynamicIcon),
+// which code-splits every icon into its own tiny chunk fetched on first use.
+// Supporting the full catalog this way costs nothing until a menu actually
+// names one of those icons, and the runtime bundle stays exactly as small as
+// it was when this file only knew ~115 names — see MenuIcon.tsx.
+//
+// Icon names round-trip as lucide's own kebab-case identifiers (`id-card`,
+// not `IdCard`) — that's what dynamicIconImports is keyed by, what
+// lucide.dev calls the icon, and what the auto-generated CSS class
+// (`lucide-id-card`) already reveals. A menu built before this file's
+// catalog switched to writing that convention may still carry the old
+// PascalCase spelling; toKebabIconName() below is the one seam every lookup
+// goes through so either spelling resolves to the same icon, keeping a name
+// portable to any other client rendering the same menu (the KMP mobile
+// runtime included) regardless of which era wrote it.
+//
+// Adding a curated entry is a two-line change: import it, and add it to a
+// group's `icons` array.
 
+import { dynamicIconImports, type IconName } from 'lucide-react/dynamic'
 import {
   // General / navigation
   Home, LayoutDashboard, LayoutGrid, LayoutList, Menu as MenuIcon, Compass,
@@ -235,8 +254,27 @@ export const MENU_ICON_GROUPS: MenuIconGroup[] = [
   },
 ]
 
+/** Canonicalizes a stored icon value to lucide's own kebab-case spelling —
+ *  "IdCard" (a catalog name, lucide's PascalCase component identifier) and
+ *  "id-card" (lucide's real icon name, and everything the app-builder API
+ *  writes directly) must resolve to the same icon. Idempotent on an
+ *  already-kebab name: with no lowercase→uppercase/digit boundary to split,
+ *  the replace is a no-op and `.toLowerCase()` leaves it unchanged. Same
+ *  boundary regex as iconSearchText below, just hyphen- rather than
+ *  space-joined — including "Table2" → "table-2", lucide's own name for it. */
+export function toKebabIconName(name: string): string {
+  return name.replace(/([a-z])([A-Z0-9])/g, '$1-$2').toLowerCase()
+}
+
+/** True for any name lucide-react can load dynamically — the ~2,000-icon
+ *  superset of the curated catalog below (see the module doc comment and
+ *  MenuIcon.tsx's use of this as the gate before rendering a DynamicIcon). */
+export function isKnownIconName(name: string): name is IconName {
+  return name in dynamicIconImports
+}
+
 const BY_NAME: Record<string, LucideIcon> = Object.fromEntries(
-  MENU_ICON_GROUPS.flatMap((g) => g.icons.map((i) => [i.name, i.Icon] as const)),
+  MENU_ICON_GROUPS.flatMap((g) => g.icons.map((i) => [toKebabIconName(i.name), i.Icon] as const)),
 )
 
 // ---------------------------------------------------------------------------
@@ -287,7 +325,7 @@ export function customIconValue(contentId: string): string {
  *  rendering a hole. */
 export function resolveMenuIcon(name: string | undefined | null): LucideIcon | null {
   if (!name || isCustomIcon(name)) return null
-  return BY_NAME[name] ?? null
+  return BY_NAME[toKebabIconName(name)] ?? null
 }
 
 /** Accepted upload types for a custom icon. SVG is included and rendered
