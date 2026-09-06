@@ -496,7 +496,8 @@ export function RecordsTable({
             sortField={sort[0]?.field}
             sortDir={sort[0]?.dir as 'asc' | 'desc' | undefined}
             onSortChange={toggleSort}
-            onRowDoubleClick={rowClick ? (onExpandRecord ?? openRecord) : undefined}
+            onRowClick={rowClick ? openRecord : undefined}
+            onRowDoubleClick={rowClick && onExpandRecord ? onExpandRecord : undefined}
             loading={isLoading}
             emptyMessage={
               isSearchError

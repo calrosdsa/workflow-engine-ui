@@ -7,7 +7,7 @@ import {
   SortableContext, horizontalListSortingStrategy, useSortable, arrayMove, sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { cn } from '@/lib/utils'
+import { cn, onKeyboardActivate } from '@/lib/utils'
 
 export interface DataTableColumn {
   key: string
@@ -105,21 +105,30 @@ export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortC
                 </td>
               </tr>
             )}
-            {rows.map((row) => (
-              <tr
-                key={getRowId(row)}
-                onClick={() => onRowClick?.(row)}
-                onDoubleClick={() => onRowDoubleClick?.(row)}
-                className={cn('border-b transition-colors', (onRowClick || onRowDoubleClick) && 'cursor-pointer hover:bg-black/5')}
-                style={{ borderColor: 'hsl(var(--border))' }}
-              >
-                {columns.map((col) => (
-                  <td key={col.key} className={cn('px-3 py-2', col.align === 'right' && 'text-right')}>
-                    {col.render ? col.render(row) : formatCell(row[col.key])}
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {rows.map((row) => {
+              const activatable = onRowClick || onRowDoubleClick
+              return (
+                <tr
+                  key={getRowId(row)}
+                  onClick={() => onRowClick?.(row)}
+                  onDoubleClick={() => onRowDoubleClick?.(row)}
+                  tabIndex={activatable ? 0 : undefined}
+                  onKeyDown={activatable ? onKeyboardActivate(() => (onRowClick ?? onRowDoubleClick)?.(row)) : undefined}
+                  className={cn(
+                    'border-b transition-colors',
+                    activatable &&
+                      'cursor-pointer hover:bg-[hsl(var(--accent))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[hsl(var(--ring))]',
+                  )}
+                  style={{ borderColor: 'hsl(var(--border))' }}
+                >
+                  {columns.map((col) => (
+                    <td key={col.key} className={cn('px-3 py-2', col.align === 'right' && 'text-right')}>
+                      {col.render ? col.render(row) : formatCell(row[col.key])}
+                    </td>
+                  ))}
+                </tr>
+              )
+            })}
           </>
         )}
       </tbody>
