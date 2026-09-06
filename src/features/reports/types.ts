@@ -9,6 +9,41 @@ import type { FilterGroup } from '@/features/workflows/types'
 
 export type ExportFormat = 'csv' | 'xlsx' | 'xls' | 'pdf' | 'docx' | 'markdown'
 
+/** Display label per export format. Lives here beside ExportFormat rather
+ *  than in whichever component happened to need it first, so the settings
+ *  panel's format picker and the preview screen's cannot drift apart. */
+export const FORMAT_LABELS: Record<ExportFormat, string> = {
+  csv: 'CSV',
+  xlsx: 'Excel (.xlsx)',
+  xls: 'Excel 97-2003 (.xls)',
+  pdf: 'PDF',
+  docx: 'Word (.docx)',
+  markdown: 'Markdown',
+}
+
+export const ALL_FORMATS = Object.keys(FORMAT_LABELS) as ExportFormat[]
+
+/**
+ * How a generated file of this format can be shown on screen.
+ *
+ *  - 'pdf'  — the browser renders it natively in an iframe (the app's CSP
+ *             allows blob: under frame-src; note object-src is 'none', so it
+ *             must be an <iframe>, never an <object>/<embed>).
+ *  - 'text' — plain text we can read out of the blob and print as-is.
+ *  - 'none' — a binary office format with no renderer in this app. There is
+ *             deliberately no client-side xlsx/docx renderer: showing a
+ *             re-rendered approximation is exactly how a preview starts
+ *             disagreeing with the file it claims to preview.
+ */
+export const FORMAT_PREVIEW_KIND: Record<ExportFormat, 'pdf' | 'text' | 'none'> = {
+  pdf: 'pdf',
+  markdown: 'text',
+  csv: 'text',
+  xlsx: 'none',
+  xls: 'none',
+  docx: 'none',
+}
+
 export type VisibilityMode = 'public' | 'specific_roles' | 'specific_people'
 
 export interface ReportVisibility {

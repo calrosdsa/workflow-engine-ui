@@ -59,4 +59,20 @@ export const en = {
   'tags.tab.add': 'Add',
   'tags.tab.no_permission': 'You do not have permission to tag this record.',
   'tags.tab.remove': 'Remove tag',
+  // Report builder's on-screen preview (ReportPreviewDialog). It shows the
+  // real generated file, so "not viewable" is about the BROWSER lacking a
+  // renderer for that format, never about the report failing to generate —
+  // the wording keeps those two apart on purpose.
+  'reports.preview.title': 'Preview',
+  'reports.preview.untitled': 'Untitled report',
+  'reports.preview.generating': 'Generating preview…',
+  'reports.preview.failed': "Couldn't generate this report",
+  'reports.preview.row_count_one': '1 row',
+  'reports.preview.row_count_other': '{{count}} rows',
+  'reports.preview.download': 'Download',
+  'reports.preview.not_viewable': '{{format}} files open in a spreadsheet or word processor',
+  'reports.preview.not_viewable_hint':
+    'Your browser has no viewer for this format. Download the file to check it, or switch to PDF to see the page layout on screen.',
+  'reports.preview.download_to_view': 'Download to view',
+  'reports.preview.view_pdf_instead': 'View as PDF',
 } satisfies Record<string, string>

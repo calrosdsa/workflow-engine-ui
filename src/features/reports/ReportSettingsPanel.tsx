@@ -12,17 +12,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { useReportStore } from './store'
 import { StyleEditor } from './StyleEditor'
 import { ReportVisibilityEditor } from './ReportVisibilityEditor'
+import { ALL_FORMATS, FORMAT_LABELS } from './types'
 import type { ExportFormat, ReportSettings } from './types'
 
-const FORMAT_LABELS: Record<ExportFormat, string> = {
-  csv: 'CSV',
-  xlsx: 'Excel (.xlsx)',
-  xls: 'Excel 97-2003 (.xls)',
-  pdf: 'PDF',
-  docx: 'Word (.docx)',
-  markdown: 'Markdown',
-}
-const ALL_FORMATS = Object.keys(FORMAT_LABELS) as ExportFormat[]
 
 export function ReportSettingsPanel({ onBeforeChange }: { onBeforeChange?: () => void }) {
   const settings = useReportStore((s) => s.definition.settings)
