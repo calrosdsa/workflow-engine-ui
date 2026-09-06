@@ -13,7 +13,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { extractApiError } from '@/lib/api'
 import { declaredArguments, needsPrompt } from './arguments'
 import { ReportArgumentsDialog } from './ReportArgumentsDialog'
-import { runReportToDownload } from './run-report'
+import { hasRenderableContent, runReportToDownload } from './run-report'
 import { useReportStore } from './store'
 
 export function PreviewButton() {
@@ -46,7 +46,7 @@ export function PreviewButton() {
 
   const handlePreview = () => {
     if (pending) return
-    if (definition.blocks.length === 0) {
+    if (!hasRenderableContent(definition)) {
       toast.error('Add a block before previewing', { description: 'An empty report has nothing to render.' })
       return
     }
