@@ -1,4 +1,16 @@
-@import "tailwindcss";
+/* source("../") pins the utility-class scan root to this file's own parent
+   (the project root, workflow-engine-ui/) instead of leaving it to Tailwind's
+   default "current working directory" heuristic. Behavior-preserving for the
+   real app (its own Vite already runs with cwd == project root, so this is
+   the same directory, just pinned instead of inferred) — added because the
+   Ladle component workbench (.ladle/, which imports this same file) runs its
+   own internal Vite instance under a different effective root, and without
+   an explicit source() Tailwind silently generated almost no utility classes
+   for it (confirmed empirically: only 110 CSS rules total, vs. thousands in
+   the real app — every arbitrary-value class like `bg-[hsl(var(--primary))]`
+   existed in the DOM as a class name but matched no CSS rule, rendering
+   fully transparent). See workflow-engine-ui/.ladle/components.tsx. */
+@import "tailwindcss" source("../");
 
 /* Radix/shadcn dialog animation keyframes */
 @keyframes fade-in  { from { opacity: 0; } to { opacity: 1; } }
@@ -106,12 +118,13 @@
 
 @layer base {
   :root {
-    /* Builder shell theme, replaced 2026-08-29 per workflow-engine-ui/design.md
+    /* Builder shell theme, replaced 2026-08-29 per workflow-engine-ui/DESIGN.md
        (Hallmark redesign, studied DNA: docs/design/ragflow-dna.md). Was a
-       light shadcn/ui default ("The Instrument Panel", see DESIGN.md) —
-       now RAGFlow's dark palette, adopted as this shell's one fixed theme.
-       Values below are exact HSL conversions of the studied hex/rgb source;
-       see design.md's Theme section for the full per-variable mapping. */
+       light shadcn/ui default ("The Instrument Panel", replaced in place in
+       that same file — there is no second design doc) — now RAGFlow's dark
+       palette, adopted as this shell's one fixed theme. Values below are
+       exact HSL conversions of the studied hex/rgb source; see DESIGN.md's
+       Theme section for the full per-variable mapping. */
     color-scheme: dark;
     --background: 240 4% 8%;              /* #161618 */
     --foreground: 240 2% 97%;             /* #f6f6f7 */

@@ -8,6 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "ladle": "ladle serve",
+    "ladle:build": "ladle build",
     "test": "vitest run",
     "gen:ui-catalog": "vitest run src/lib/ui-catalog.gen.test.ts --update",
     "gen:conformance": "vitest run src/features/ui-workflows/conformance/gen-kotlin.test.ts --update"
@@ -72,6 +74,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@ladle/react": "^5.1.1",
     "@tailwindcss/vite": "^4.3.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^24.13.2",
@@ -84,6 +87,7 @@
     "tailwindcss": "^4.3.1",
     "typescript": "~6.0.2",
     "vite": "^6.4.3",
+    "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.10"
   }
 }

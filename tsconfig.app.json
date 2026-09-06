@@ -24,5 +24,10 @@
     "baseUrl": ".",
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["src"]
+  // ".ladle/components.tsx" is browser-side React (Ladle's global story
+  // wrapper — see that file's own doc comment), not Node tooling, so it
+  // belongs in THIS project (react-jsx + the @/* alias it needs to import
+  // I18nProvider), not tsconfig.node.json. ".ladle/vite.config.ts" is the
+  // opposite case — see tsconfig.node.json's own include for that one.
+  "include": ["src", ".ladle/components.tsx"]
 }
