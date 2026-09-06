@@ -3,41 +3,105 @@ import {
   createRootRoute,
   createRoute,
   redirect,
+  lazyRouteComponent,
   Outlet,
 } from '@tanstack/react-router'
 import { AppShell } from '@/components/layout/AppShell'
 import { NotFoundPage } from '@/features/runtime/NotFoundPage'
-import { HomePage } from '@/pages/HomePage'
-import { MarketplaceBrowsePage } from '@/pages/marketplace/MarketplaceBrowsePage'
-import { DashboardPage } from '@/pages/DashboardPage'
-import { WorkflowsPage } from '@/pages/WorkflowsPage'
-import { WorkflowBuilderPage } from '@/pages/workflows/WorkflowBuilderPage'
-import { ExecutionsPage } from '@/pages/ExecutionsPage'
-import { ExecutionDetailPage } from '@/pages/ExecutionDetailPage'
-import { FormsPage } from '@/pages/FormsPage'
-import { FormRecordsPage } from '@/pages/FormRecordsPage'
-import { FormBuilderPage } from '@/pages/forms/FormBuilderPage'
-import { ApplicationDesignShell } from '@/pages/applications/ApplicationDesignShell'
-import { AppDesignPage } from '@/pages/applications/AppDesignPage'
-import { AppConfigurationPage } from '@/pages/applications/AppConfigurationPage'
-import { AgentsSection } from '@/pages/applications/sections/AgentsSection'
-import { DashboardEditorPage } from '@/pages/applications/DashboardEditorPage'
-import { ReportBuilderPage } from '@/pages/applications/ReportBuilderPage'
-import { TeamPage } from '@/pages/team/TeamPage'
-import { ModelProvidersPage } from '@/pages/ModelProvidersPage'
-import { KnowledgeBasesPage } from '@/pages/KnowledgeBasesPage'
-import { KnowledgeBaseDetailPage } from '@/pages/knowledge/KnowledgeBaseDetailPage'
-import { FormRendererHarness } from '@/pages/dev/FormRendererHarness'
-import { PageBuilderHarness } from '@/pages/dev/PageBuilderHarness'
-import { DashboardBuilderHarness } from '@/pages/dev/DashboardBuilderHarness'
+import { Spinner } from '@/components/ui/spinner'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { AcceptInvitePage } from '@/features/auth/AcceptInvitePage'
 import { requireSession } from '@/features/auth/requireSession'
 import { qualifiesForBuilder, isSuperAdmin } from '@/features/auth/access'
-import { RuntimePortalPage } from '@/pages/portal/RuntimePortalPage'
 import { runtimeUrlFor } from '@/features/runtime/urls'
 import { useAuthStore } from '@/stores/auth'
-import TestLayout from './pages/test/Test'
+
+// Route-level code splitting. Every screen below this line used to be a
+// static top-level import, so ANY route — including the small Forms list
+// page — pulled in every other screen's dependencies too: React Flow (the
+// Workflow Builder canvas), dnd-kit + the 25-type field registry (the Form
+// Builder), and the Univer spreadsheet engine (the Report Builder, ~80
+// per-language hyphenation-pattern chunks). A production build showed a
+// single ~6.6MB (1.8MB gzip) entry chunk before this change. `lazyRouteComponent`
+// gives each route its own chunk, fetched only when that route is visited;
+// the router's own Suspense boundary (via `defaultPendingComponent` below)
+// covers the fetch. Keep this file's post-login-critical surfaces (AppShell,
+// login/invite screens, NotFoundPage) as ordinary eager imports above.
+const HomePage = lazyRouteComponent(() =>
+  import('@/pages/HomePage').then((m) => ({ default: m.HomePage })),
+)
+const MarketplaceBrowsePage = lazyRouteComponent(() =>
+  import('@/pages/marketplace/MarketplaceBrowsePage').then((m) => ({ default: m.MarketplaceBrowsePage })),
+)
+const DashboardPage = lazyRouteComponent(() =>
+  import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })),
+)
+const WorkflowsPage = lazyRouteComponent(() =>
+  import('@/pages/WorkflowsPage').then((m) => ({ default: m.WorkflowsPage })),
+)
+const WorkflowBuilderPage = lazyRouteComponent(() =>
+  import('@/pages/workflows/WorkflowBuilderPage').then((m) => ({ default: m.WorkflowBuilderPage })),
+)
+const ExecutionsPage = lazyRouteComponent(() =>
+  import('@/pages/ExecutionsPage').then((m) => ({ default: m.ExecutionsPage })),
+)
+const ExecutionDetailPage = lazyRouteComponent(() =>
+  import('@/pages/ExecutionDetailPage').then((m) => ({ default: m.ExecutionDetailPage })),
+)
+const FormsPage = lazyRouteComponent(() =>
+  import('@/pages/FormsPage').then((m) => ({ default: m.FormsPage })),
+)
+const FormRecordsPage = lazyRouteComponent(() =>
+  import('@/pages/FormRecordsPage').then((m) => ({ default: m.FormRecordsPage })),
+)
+const FormBuilderPage = lazyRouteComponent(() =>
+  import('@/pages/forms/FormBuilderPage').then((m) => ({ default: m.FormBuilderPage })),
+)
+const ApplicationDesignShell = lazyRouteComponent(() =>
+  import('@/pages/applications/ApplicationDesignShell').then((m) => ({ default: m.ApplicationDesignShell })),
+)
+const AppDesignPage = lazyRouteComponent(() =>
+  import('@/pages/applications/AppDesignPage').then((m) => ({ default: m.AppDesignPage })),
+)
+const AppConfigurationPage = lazyRouteComponent(() =>
+  import('@/pages/applications/AppConfigurationPage').then((m) => ({ default: m.AppConfigurationPage })),
+)
+const AgentsSection = lazyRouteComponent(() =>
+  import('@/pages/applications/sections/AgentsSection').then((m) => ({ default: m.AgentsSection })),
+)
+const DashboardEditorPage = lazyRouteComponent(() =>
+  import('@/pages/applications/DashboardEditorPage').then((m) => ({ default: m.DashboardEditorPage })),
+)
+const ReportBuilderPage = lazyRouteComponent(() =>
+  import('@/pages/applications/ReportBuilderPage').then((m) => ({ default: m.ReportBuilderPage })),
+)
+const TeamPage = lazyRouteComponent(() =>
+  import('@/pages/team/TeamPage').then((m) => ({ default: m.TeamPage })),
+)
+const ModelProvidersPage = lazyRouteComponent(() =>
+  import('@/pages/ModelProvidersPage').then((m) => ({ default: m.ModelProvidersPage })),
+)
+const KnowledgeBasesPage = lazyRouteComponent(() =>
+  import('@/pages/KnowledgeBasesPage').then((m) => ({ default: m.KnowledgeBasesPage })),
+)
+const KnowledgeBaseDetailPage = lazyRouteComponent(() =>
+  import('@/pages/knowledge/KnowledgeBaseDetailPage').then((m) => ({ default: m.KnowledgeBaseDetailPage })),
+)
+const FormRendererHarness = lazyRouteComponent(() =>
+  import('@/pages/dev/FormRendererHarness').then((m) => ({ default: m.FormRendererHarness })),
+)
+const PageBuilderHarness = lazyRouteComponent(() =>
+  import('@/pages/dev/PageBuilderHarness').then((m) => ({ default: m.PageBuilderHarness })),
+)
+const DashboardBuilderHarness = lazyRouteComponent(() =>
+  import('@/pages/dev/DashboardBuilderHarness').then((m) => ({ default: m.DashboardBuilderHarness })),
+)
+const RuntimePortalPage = lazyRouteComponent(() =>
+  import('@/pages/portal/RuntimePortalPage').then((m) => ({ default: m.RuntimePortalPage })),
+)
+const TestLayout = lazyRouteComponent(() =>
+  import('./pages/test/Test').then((m) => ({ default: m.default })),
+)
 
 // ---------------------------------------------------------------------------
 // Root
@@ -466,6 +530,16 @@ const routeTree = rootRoute.addChildren([
 // message talks about publishing and nothing here is publishable.
 export const router = createRouter({
   routeTree,
+  // Shown while a lazyRouteComponent's chunk is in flight. defaultPendingMs
+  // delays it briefly so an already-cached/fast chunk swap never flashes a
+  // spinner — matching this codebase's existing `isLoading` spinner pattern
+  // (see e.g. FormsPage) rather than a bare blank screen.
+  defaultPendingComponent: () => (
+    <div className="flex h-64 items-center justify-center">
+      <Spinner />
+    </div>
+  ),
+  defaultPendingMs: 150,
   defaultNotFoundComponent: () => (
     <NotFoundPage message="This page doesn't exist. It may have been deleted, or the link may be out of date." />
   ),
