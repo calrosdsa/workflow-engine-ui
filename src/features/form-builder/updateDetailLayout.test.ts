@@ -27,12 +27,25 @@ describe('updateDetailLayout', () => {
     expect(settings?.detailTabs?.map((t) => t.zone)).toEqual([undefined, undefined])
   })
 
-  it('resets a tab whose zone id the new layout no longer defines back to main', () => {
-    updateDetailTabs([tab('a', 'sidebar')])
-    // 'single' only defines a 'main' zone — 'sidebar' no longer exists.
+  it('resets a tab whose zone id no layout defines back to main', () => {
+    // A zone left over from a template that no longer exists (or a
+    // hand-edited config): no current template defines it, so it must be
+    // re-homed rather than left pointing at nothing.
+    updateDetailTabs([tab('a', 'some-removed-zone')])
     updateDetailLayout('single')
     const tabs = useFormBuilderStore.getState().schema.settings?.detailTabs
     expect(tabs?.[0].zone).toBe(DEFAULT_DETAIL_PAGE_ZONE)
+  })
+
+  it('keeps a sidebar tab when switching to "single", which now defines the same zones as every other template', () => {
+    // Every template carries main + sidebar + activity (schema.ts) — a
+    // record detail page always has the sidebar and activity chrome, so
+    // switching templates only moves which SIDE the sidebar is on and can
+    // no longer orphan a sidebar tab.
+    updateDetailTabs([tab('a', 'sidebar')])
+    updateDetailLayout('single')
+    const tabs = useFormBuilderStore.getState().schema.settings?.detailTabs
+    expect(tabs?.[0].zone).toBe('sidebar')
   })
 
   it('leaves a tab\'s sidebar zone alone when switching between two layouts that both define it', () => {

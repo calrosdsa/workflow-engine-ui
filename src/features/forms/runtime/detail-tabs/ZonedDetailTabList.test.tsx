@@ -16,8 +16,8 @@ import type { DetailTabConfig } from '@/features/form-builder/schema'
 afterEach(() => cleanup())
 
 vi.mock('./DetailTabList', () => ({
-  DetailTabList: ({ tabConfigs }: { tabConfigs: DetailTabConfig[] }) => (
-    <div data-testid="tab-list" data-ids={tabConfigs.map((t) => t.id).join(',')} />
+  DetailTabList: ({ tabConfigs, variant }: { tabConfigs: DetailTabConfig[]; variant?: string }) => (
+    <div data-testid="tab-list" data-ids={tabConfigs.map((t) => t.id).join(',')} data-variant={variant ?? 'tabs'} />
   ),
 }))
 
@@ -95,25 +95,52 @@ describe('ZonedDetailTabList', () => {
 
   // A w-80 (320px) sidebar zone beside a flex-1 main zone, with no wrap, ate
   // ~85% of a 375px viewport before the main content got anything (the
-  // overflow bug this responsive fix addresses). jsdom doesn't run real
-  // layout/media queries, so this only asserts the Tailwind classes that
-  // encode the intended behavior are present on the right elements — the
-  // actual stacking was live-verified in the browser separately.
-  it('sidebar zone is full-width and stacks below md, fixed 320px at md and up', () => {
+  // overflow bug this responsive fix addresses). Sizing is off the
+  // CONTAINER (@3xl:), not the viewport (md:), because this same panel also
+  // renders inside RecordsTable's ~672px drawer, where a viewport
+  // breakpoint would report "wide" and squeeze the content column. jsdom
+  // runs no real layout, so this asserts the Tailwind classes that encode
+  // the intent — the actual stacking is live-verified in the browser.
+  it('sidebar zone is full-width and stacks in a narrow container, fixed 320px in a wide one', () => {
     const tabConfigs = [tab('details'), tab('status', 'sidebar')]
     const { container } = render(<ZonedDetailTabList {...baseProps} tabConfigs={tabConfigs} layout="main-right-sidebar" />)
-    const zoneDivs = container.querySelectorAll(':scope > div > div')
+    const zoneDivs = container.querySelectorAll(':scope > div > div > div')
     const sidebarZone = Array.from(zoneDivs).find((el) => el.querySelector('[data-ids="status"]'))
     expect(sidebarZone).toBeTruthy()
     expect(sidebarZone!.className).toContain('w-full')
-    expect(sidebarZone!.className).toContain('md:w-80')
-    expect(sidebarZone!.className).not.toMatch(/(?<!md:)\bw-80\b/)
+    expect(sidebarZone!.className).toContain('@3xl:w-80')
+    expect(sidebarZone!.className).not.toMatch(/(?<!@3xl:)\bw-80\b/)
   })
 
-  it('outer container stacks zones vertically below md, side by side at md and up', () => {
+  it('row wrapper stacks its zones vertically in a narrow container, side by side in a wide one', () => {
     const tabConfigs = [tab('details'), tab('status', 'sidebar')]
     const { container } = render(<ZonedDetailTabList {...baseProps} tabConfigs={tabConfigs} layout="main-right-sidebar" />)
-    expect(container.firstElementChild!.className).toContain('flex-col')
-    expect(container.firstElementChild!.className).toContain('md:flex-row')
+    // The root establishes the container; its first child is the row.
+    expect(container.firstElementChild!.className).toContain('@container')
+    const row = container.firstElementChild!.firstElementChild!
+    expect(row.className).toContain('flex-col')
+    expect(row.className).toContain('@3xl:flex-row')
+  })
+
+  it('renders the sidebar zone stacked (no tab bar) and every other zone as tabs', () => {
+    const tabConfigs = [tab('details'), tab('status', 'sidebar'), tab('comment', 'activity')]
+    const { container } = render(<ZonedDetailTabList {...baseProps} tabConfigs={tabConfigs} layout="main-right-sidebar" />)
+    const variantOf = (id: string) =>
+      container.querySelector(`[data-ids="${id}"]`)!.getAttribute('data-variant')
+    expect(variantOf('status')).toBe('stacked')
+    expect(variantOf('details')).toBe('tabs')
+    expect(variantOf('comment')).toBe('tabs')
+  })
+
+  it('puts the full-width activity zone in its own row BELOW the main/sidebar row', () => {
+    const tabConfigs = [tab('details'), tab('status', 'sidebar'), tab('comment', 'activity')]
+    const { container } = render(<ZonedDetailTabList {...baseProps} tabConfigs={tabConfigs} layout="main-right-sidebar" />)
+    const root = container.firstElementChild!
+    // Two children: the main/sidebar row, then the activity strip.
+    expect(root.children.length).toBe(2)
+    expect(root.children[0].querySelector('[data-ids="details"]')).toBeTruthy()
+    expect(root.children[0].querySelector('[data-ids="status"]')).toBeTruthy()
+    expect(root.children[1].querySelector('[data-ids="comment"]')).toBeTruthy()
+    expect(root.children[1].className).toContain('border-t')
   })
 })

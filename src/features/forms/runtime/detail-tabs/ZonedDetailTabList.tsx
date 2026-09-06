@@ -1,11 +1,15 @@
 // Layout-aware wrapper around DetailTabList (Detail Page Builder) — groups
 // tabConfigs by zone per the form's chosen DETAIL_PAGE_LAYOUTS template and
-// renders one independent DetailTabList instance per zone, side by side.
-// DetailTabList itself stays completely unchanged: it already owns real,
+// renders one independent DetailTabList instance per zone. DetailTabList
+// itself stays completely unchanged in behavior: it already owns real,
 // non-trivial per-list machinery (visibility, debounced renderIf
 // expressions, hideWhenEmpty tracking) that must not be duplicated or
 // rewritten — this component only decides HOW MANY DetailTabLists to render
 // and where, not how any one of them behaves.
+//
+// Every template defines the same three zones (schema.ts): 'main' and the
+// narrow 'sidebar' share the top row, and the full-width 'activity' zone
+// takes its own row underneath.
 import { cn } from '@/lib/utils'
 import { DetailTabList, type DetailTabListProps } from './DetailTabList'
 import { DETAIL_PAGE_LAYOUTS, DEFAULT_DETAIL_PAGE_ZONE, type DetailPageLayoutId } from '@/features/form-builder/schema'
@@ -29,46 +33,55 @@ export function ZonedDetailTabList({ layout = 'single', tabConfigs, ...rest }: Z
   const effectiveZone = (t: (typeof tabConfigs)[number]) =>
     t.zone && zoneIds.has(t.zone) ? t.zone : DEFAULT_DETAIL_PAGE_ZONE
 
-  // A zone with zero tabs renders nothing (not an empty box) — so 'single'
-  // (one zone, always non-empty since every tab defaults into it) and a
-  // sidebar template with an empty sidebar both degrade to visually
-  // identical single-column output. This is what makes a pre-feature form
-  // (no `zone` on any tab, no `detailLayout` set) render byte-for-byte the
-  // same as before this component existed.
+  // A zone with zero tabs renders nothing (not an empty box), so a form
+  // whose sidebar or activity zone is entirely hidden degrades to exactly
+  // the single-column output it had before those zones existed.
   const zoneTabs = zones.map((zone) => ({
     zone,
     tabs: tabConfigs.filter((t) => effectiveZone(t) === zone.id),
   })).filter((z) => z.tabs.length > 0)
 
+  const rowZones = zoneTabs.filter((z) => z.zone.width !== 'full')
+  const bottomZones = zoneTabs.filter((z) => z.zone.width === 'full')
+
   if (zoneTabs.length <= 1) {
     // Exactly the pre-feature shape: one DetailTabList, no extra wrapper
-    // markup, no border/width styling that a single-column form has no use
-    // for. zoneTabs could be empty (tabConfigs itself is empty) or have
-    // exactly one non-empty zone — both cases want the plain, un-widthed
-    // render DetailTabList already produces on its own.
+    // markup, no border/width styling a single-column form has no use for.
     return <DetailTabList tabConfigs={tabConfigs} {...rest} />
   }
 
+  // @container (not a `md:` viewport breakpoint) because this same panel
+  // renders inside RecordsTable's ~672px drawer as well as a full page: at
+  // viewport width a `md:flex-row` would put a 320px sidebar beside ~350px
+  // of content in that drawer. Sizing off the CONTAINER instead lets the
+  // drawer stack the same way a phone does, with no host-specific prop.
   return (
-    // A sidebar zone template (main-left-sidebar / main-right-sidebar) puts
-    // a fixed 320px (w-80) zone beside the flex-1 main zone with no wrap —
-    // on a phone that sidebar alone is ~85% of the viewport before the main
-    // zone gets anything. Below `md` this stacks every zone full-width
-    // instead (content zone first regardless of the template's visual
-    // left/right order, since that's the zone a user actually came here
-    // for); at `md:` and up it's the original side-by-side layout.
-    <div className={cn('flex flex-col md:flex-row', rest.nested ? '' : 'min-h-0 flex-1')}>
-      {zoneTabs.map(({ zone, tabs }, idx) => (
+    <div className={cn('@container flex flex-col', rest.nested ? '' : 'min-h-0 flex-1')}>
+      <div className="flex min-h-0 flex-1 flex-col @3xl:flex-row">
+        {rowZones.map(({ zone, tabs }, idx) => (
+          <div
+            key={zone.id}
+            className={cn(
+              'flex min-h-0 flex-col',
+              zone.width === 'flex'
+                ? 'order-first flex-1 min-w-0 @3xl:order-none'
+                : 'w-full shrink-0 @3xl:w-80',
+              idx > 0 && '@3xl:border-l',
+            )}
+            style={idx > 0 ? { borderColor: 'hsl(var(--border))' } : undefined}
+          >
+            <DetailTabList tabConfigs={tabs} {...rest} variant={zone.width === 'narrow' ? 'stacked' : 'tabs'} />
+          </div>
+        ))}
+      </div>
+      {/* Bounded, with the DetailTabList's own overflow-y-auto body doing the
+         scrolling inside it — an unbounded activity strip would let a long
+         comment thread push the record's own fields off the page. */}
+      {bottomZones.map(({ zone, tabs }) => (
         <div
           key={zone.id}
-          className={cn(
-            'flex min-h-0 flex-col',
-            zone.width === 'flex'
-              ? 'order-first flex-1 min-w-0 md:order-none'
-              : 'w-full shrink-0 md:w-80',
-            idx > 0 && 'md:border-l',
-          )}
-          style={idx > 0 ? { borderColor: 'hsl(var(--border))' } : undefined}
+          className="flex min-h-0 max-h-[45%] shrink-0 flex-col border-t"
+          style={{ borderColor: 'hsl(var(--border))' }}
         >
           <DetailTabList tabConfigs={tabs} {...rest} />
         </div>

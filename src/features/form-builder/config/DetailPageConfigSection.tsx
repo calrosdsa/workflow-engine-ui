@@ -127,8 +127,15 @@ export function DetailPageConfigSection({ formId, detailTabs, onChange, applyDef
              Detail Page Builder canvas (a field picker, not a generic tab
              type), not this generic type picker — an existing field_ref
              entry still renders/configures fine here if one was added
-             there, this just keeps it out of the "add new" list. */}
-          {allDetailTabs().filter((def) => def.type !== 'field_ref').map((def) => (
+             there, this just keeps it out of the "add new" list.
+
+             Chrome types (Attachments/Tags/Comments/Audit Log) are dropped
+             for the same reason at the TOP level only: resolveDetailTabs
+             guarantees one of each already, so "adding" one could only ever
+             produce a duplicate. Inside a Tab Group (applyDefault false)
+             they stay offered — nesting Comments in a group is still a
+             legitimate arrangement. */}
+          {allDetailTabs().filter((def) => def.type !== 'field_ref' && !(applyDefault && isAlwaysPresentDetailTab(def.type))).map((def) => (
             <DropdownMenuItem key={def.type} onClick={() => addTab(def.type)} className="items-start gap-2.5 py-2">
               <def.icon size={15} className="mt-0.5 shrink-0 text-[hsl(var(--muted-foreground))]" />
               <span className="min-w-0">

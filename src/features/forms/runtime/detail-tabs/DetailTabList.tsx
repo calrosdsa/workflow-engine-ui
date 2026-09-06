@@ -54,6 +54,15 @@ export interface DetailTabListProps {
    *  a lighter-weight sub-navigation rather than a second top-level bar
    *  that also flips orientation. */
   orientation?: DetailTabOrientation
+  /** 'tabs' (default) renders the Tabs/TabsList bar; 'stacked' renders every
+   *  tab at once as labeled sections, one under another, with no bar at all.
+   *  Used for the record detail page's narrow sidebar zone, where two or
+   *  three short panels (Attachments, Tags) read as a single glanceable
+   *  column — a tab strip in a 320px column hides half its content behind a
+   *  click for no benefit. Presentation only: visibility, renderIf and
+   *  hideWhenEmpty resolve identically in both, which is the whole reason
+   *  this is a variant here rather than a second component. */
+  variant?: 'tabs' | 'stacked'
 }
 
 export function DetailTabList({
@@ -61,6 +70,7 @@ export function DetailTabList({
   nested, groupDepth = 0,
   rendererOverride,
   orientation = 'horizontal',
+  variant = 'tabs',
 }: DetailTabListProps) {
   const { t: translate } = useI18n()
   const viewer = useCurrentViewer()
@@ -93,6 +103,62 @@ export function DetailTabList({
   const [emptyTabIds, setEmptyTabIds] = useState<Set<string>>(new Set())
   const visibleTabs = renderableTabs.filter((t) => !emptyTabIds.has(t.id))
 
+  // t.label (when set) already comes back tc()-localized from
+  // localizeFormSchema — only the registry's own fixed default (a platform
+  // string keyed by tab type, not per-app content) needs a t() call here,
+  // since resolving it needs this registry, which the lower-level
+  // schema-only localize-schema.ts deliberately doesn't import.
+  const labelFor = (t: DetailTabConfig) =>
+    t.label || (getDetailTab(t.type) ? translate(`detail_tab.default_label.${t.type}`) : undefined) || t.type
+
+  const onEmptyResolved = (id: string) => (empty: boolean) => {
+    setEmptyTabIds((prev) => {
+      if (empty === prev.has(id)) return prev
+      const next = new Set(prev)
+      if (empty) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
+  const renderBody = (t: DetailTabConfig) => {
+    const def = getDetailTab(t.type)
+    if (!def) return null
+    const Renderer = rendererOverride?.(t.type) ?? def.Renderer
+    return (
+      <Renderer
+        formId={formId}
+        recordId={recordId}
+        fields={fields}
+        schema={schema}
+        config={def.parseConfig(t.config)}
+        onNavigateToRecord={onNavigateToRecord}
+        groupDepth={groupDepth}
+        onEmptyResolved={onEmptyResolved(t.id)}
+      />
+    )
+  }
+
+  if (variant === 'stacked') {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
+        {/* Same "every renderableTab mounts, emptiness only hides chrome"
+           contract the tabs branch documents below. */}
+        {renderableTabs.map((t) => (
+          <section key={t.id} style={emptyTabIds.has(t.id) ? { display: 'none' } : undefined}>
+            <h3
+              className="mb-2 text-[11px] font-semibold uppercase tracking-wider"
+              style={{ color: 'hsl(var(--muted-foreground))' }}
+            >
+              {labelFor(t)}
+            </h3>
+            {renderBody(t)}
+          </section>
+        ))}
+      </div>
+    )
+  }
+
   return (
     // Keyed on the resolved visible-tab-id list, not just formId — if a
     // renderIf expression resolves AFTER first paint (the debounced backend
@@ -116,20 +182,9 @@ export function DetailTabList({
         style={nested ? undefined : { borderColor: 'hsl(var(--border))' }}
       >
         <TabsList>
-          {visibleTabs.map((t) => {
-            const def = getDetailTab(t.type)
-            // t.label (when set) already comes back tc()-localized from
-            // localizeFormSchema — only the registry's own fixed default
-            // (def.label, a platform string keyed by tab type, not per-app
-            // content) needs a separate t() call here, since resolving it
-            // needs this registry, which the lower-level schema-only
-            // localize-schema.ts deliberately doesn't import.
-            return (
-              <TabsTrigger key={t.id} value={t.id}>
-                {t.label || (def ? translate(`detail_tab.default_label.${t.type}`) : undefined) || t.type}
-              </TabsTrigger>
-            )
-          })}
+          {visibleTabs.map((t) => (
+            <TabsTrigger key={t.id} value={t.id}>{labelFor(t)}</TabsTrigger>
+          ))}
         </TabsList>
       </div>
       <div className={nested ? 'min-h-0' : 'min-h-0 flex-1 overflow-y-auto p-6'}>
@@ -140,35 +195,16 @@ export function DetailTabList({
            second, separate polling mechanism. Chrome visibility
            (TabsTrigger above, and the wrapper div's display here) is the
            ONLY thing emptiness affects; the Renderer itself always mounts. */}
-        {renderableTabs.map((t) => {
-          const def = getDetailTab(t.type)
-          if (!def) return null
-          const config = def.parseConfig(t.config)
-          const isVisible = !emptyTabIds.has(t.id)
-          const Renderer = rendererOverride?.(t.type) ?? def.Renderer
-          return (
-            <TabsContent key={t.id} value={t.id} forceMount style={isVisible ? undefined : { display: 'none' }}>
-              <Renderer
-                formId={formId}
-                recordId={recordId}
-                fields={fields}
-                schema={schema}
-                config={config}
-                onNavigateToRecord={onNavigateToRecord}
-                groupDepth={groupDepth}
-                onEmptyResolved={(empty) => {
-                  setEmptyTabIds((prev) => {
-                    if (empty === prev.has(t.id)) return prev
-                    const next = new Set(prev)
-                    if (empty) next.add(t.id)
-                    else next.delete(t.id)
-                    return next
-                  })
-                }}
-              />
-            </TabsContent>
-          )
-        })}
+        {renderableTabs.map((t) => (
+          <TabsContent
+            key={t.id}
+            value={t.id}
+            forceMount
+            style={emptyTabIds.has(t.id) ? { display: 'none' } : undefined}
+          >
+            {renderBody(t)}
+          </TabsContent>
+        ))}
       </div>
     </Tabs>
   )

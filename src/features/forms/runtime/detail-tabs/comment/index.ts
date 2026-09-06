@@ -9,6 +9,9 @@ registerDetailTab({
   icon: MessageSquare,
   description: 'A comment thread on this record — post, edit, and delete comments.',
   configSchema: { type: 'object', description: 'No configuration.', properties: {} },
+  // Platform chrome now — pinned into every record detail page's activity
+  // strip by registry.ts's CHROME_ZONES, hideable but not removable.
+  builtin: true,
   parseConfig: parseCommentTabConfig,
   createDefaultConfig: emptyCommentTabConfig,
   Renderer: CommentTabRenderer,

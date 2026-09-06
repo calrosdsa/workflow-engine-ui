@@ -318,11 +318,14 @@ export interface CreateUserSettings {
 
 /** Which named layout template a form's record-detail page uses (Detail
  *  Page Builder) — mirrors ColumnLayout/COLUMN_LAYOUTS' "small fixed set of
- *  named templates" pattern rather than a freeform zone editor. 'single'
- *  (the implicit default — see FormSettings.detailLayout) has exactly one
- *  zone; every tab/field predating this feature has no `zone` set and
- *  lands there unchanged. The two sidebar templates add a second, narrower
- *  zone, differing only in which side it renders on. */
+ *  named templates" pattern rather than a freeform zone editor.
+ *
+ *  All three templates now define the SAME three zones (see
+ *  DETAIL_PAGE_LAYOUTS) and differ only in which side the sidebar renders
+ *  on — every record detail page has a sidebar and an activity strip,
+ *  regardless of which template a form saved. 'single' predates that and
+ *  is kept only because saved forms reference it; it behaves identically
+ *  to main-right-sidebar. */
 export type DetailPageLayoutId = 'single' | 'main-right-sidebar' | 'main-left-sidebar'
 
 /** Which direction the record-detail page's TOP-LEVEL tab bar renders in.
@@ -346,7 +349,10 @@ export const DEFAULT_DETAIL_PAGE_ZONE = 'main'
 export interface DetailPageZoneDef {
   id: string
   label: string
-  width: 'flex' | 'narrow'
+  /** 'flex'/'narrow' zones share one row (main content beside the narrow
+   *  sidebar); a 'full' zone takes its own full-width row BELOW that row
+   *  — see ZonedDetailTabList, which splits on exactly this. */
+  width: 'flex' | 'narrow' | 'full'
 }
 
 export interface DetailPageLayoutDef {
@@ -362,10 +368,25 @@ export interface DetailPageLayoutDef {
   zones: DetailPageZoneDef[]
 }
 
+const MAIN_ZONE: DetailPageZoneDef = { id: 'main', label: 'Content', width: 'flex' }
+const SIDEBAR_ZONE: DetailPageZoneDef = { id: 'sidebar', label: 'Sidebar', width: 'narrow' }
+const ACTIVITY_ZONE: DetailPageZoneDef = { id: 'activity', label: 'Activity', width: 'full' }
+
+/** Every template defines the same three zones — a record detail page
+ *  ALWAYS has a narrow sidebar (Attachments/Tags) beside its content and a
+ *  full-width activity strip (Comments/Audit Log) underneath, the same
+ *  fixed chrome every record gets in an ERP the platform is modeled on.
+ *  A template now only picks which SIDE the sidebar renders on; 'single'
+ *  is kept as an alias of main-right-sidebar because saved forms still
+ *  reference it (see DetailPageLayoutId).
+ *
+ *  Which tabs land in the sidebar/activity zones isn't left to each form's
+ *  saved config either — detail-tabs/registry.ts's resolveDetailTabs pins
+ *  the four chrome types into their zones on every resolve. */
 export const DETAIL_PAGE_LAYOUTS: Record<DetailPageLayoutId, DetailPageLayoutDef> = {
-  'single':             { label: 'Single column',       zones: [{ id: 'main', label: 'Content', width: 'flex' }] },
-  'main-right-sidebar': { label: 'Main + right sidebar', zones: [{ id: 'main', label: 'Content', width: 'flex' }, { id: 'sidebar', label: 'Sidebar', width: 'narrow' }] },
-  'main-left-sidebar':  { label: 'Main + left sidebar',  zones: [{ id: 'sidebar', label: 'Sidebar', width: 'narrow' }, { id: 'main', label: 'Content', width: 'flex' }] },
+  'single':             { label: 'Sidebar on the right', zones: [MAIN_ZONE, SIDEBAR_ZONE, ACTIVITY_ZONE] },
+  'main-right-sidebar': { label: 'Sidebar on the right', zones: [MAIN_ZONE, SIDEBAR_ZONE, ACTIVITY_ZONE] },
+  'main-left-sidebar':  { label: 'Sidebar on the left',  zones: [SIDEBAR_ZONE, MAIN_ZONE, ACTIVITY_ZONE] },
 }
 
 /** Configurable record-detail-page tab (FR-D2-015). `type` resolves through
