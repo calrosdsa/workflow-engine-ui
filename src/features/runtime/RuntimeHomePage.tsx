@@ -88,7 +88,7 @@ export function RuntimeHomePage({ snapshot, clientId, appId, homeTiles }: Runtim
                 to={`/${clientId}/${appId}/${tile.slug}`}
                 className="flex flex-col items-center gap-2 rounded-lg p-3 text-center transition-colors hover:bg-[hsl(var(--accent))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
               >
-                <MenuIconTile icon={tile.icon} fallback={fallbackIcon ?? MenuIconTile.name as never} size="lg" />
+                <MenuIconTile icon={tile.icon} fallback={fallbackIcon ?? HelpCircle} size="lg" />
                 <span className="line-clamp-2 text-sm font-medium">{tile.name}</span>
               </RuntimeLink>
             )
