@@ -236,7 +236,7 @@ function RuntimeAppRouteComponent() {
             level so both "how this app looks" and "what language it speaks"
             come from the same one-per-session provider pair. */}
         <I18nProvider overrides={snapshot.translations}>
-          <ThemeProvider theme={theme} scopeElement={document.getElementById('runtime-root')}>
+          <ThemeProvider theme={theme} scopeElement={document.getElementById('runtime-root')} syncDocument>
             <Outlet />
             {/* offset shifts toasts up so they never overlap ChatLauncher's own
                 fixed bottom-right bubble (FR-D4-001 v0.2's resolved layout
