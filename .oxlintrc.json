@@ -1,8 +1,36 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
+  "plugins": ["react", "typescript", "oxc", "jsx-a11y"],
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+
+    // Disabled repo-wide, deliberately — NOT a "we'll get to it later" waiver.
+    //
+    // Every one of this rule's hits here is the same false positive: the 12
+    // combobox components (UserSelect, RoleMultiSelect, ModelPicker,
+    // RecordReferencePicker, …) put `role="combobox"` on a Button rendered
+    // through Radix's `<PopoverTrigger asChild>`. PopoverTrigger supplies
+    // `aria-controls={contentId}` at RUNTIME, so it is never in the JSX that
+    // static analysis reads.
+    //
+    // Do not "fix" this by adding a literal aria-controls to those Buttons.
+    // Radix's Slot merges as mergeProps(slotProps, childProps) with CHILD
+    // props winning, so a hand-written value would OVERRIDE Radix's real
+    // content id with one that resolves to nothing — converting a harmless
+    // false positive into an actual accessibility regression.
+    //
+    // The real behavior is pinned by test instead, which is a stronger guard
+    // than this rule was giving us:
+    //   src/features/form-builder/config/combobox-aria.test.tsx
+    // It asserts aria-controls resolves to the live popover element when
+    // open, is correctly absent when closed, and that aria-haspopup="dialog"
+    // on a combobox is valid per ARIA 1.2 (it is — don't "correct" it).
+    //
+    // Cost of the blanket off: we lose this rule's checks on other roles
+    // (checkbox/aria-checked, slider/aria-valuenow, …), which flagged nothing
+    // today. Scoping it to the 12 paths instead was rejected because it would
+    // leave the trap armed for the NEXT combobox someone writes.
+    "jsx-a11y/role-has-required-aria-props": "off"
   }
 }
