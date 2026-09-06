@@ -113,35 +113,41 @@ export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recor
           </div>
 
           <main className="min-h-0 flex-1 overflow-y-auto">
-            {!canView ? (
-              <PermissionDeniedPage />
-            ) : !form ? null : (
-              <>
-                {/* Always rendered, not gated on recordTitle — see
-                    RuntimeRecordPage.tsx's identical comment: recordTitle
-                    only comes back empty while `record` is still loading,
-                    and gating the whole block on it used to hide
-                    RecordDetailToolbar's Edit/Delete controls during that
-                    window too, not just the heading. */}
-                <div className="flex items-center justify-between gap-3 border-b px-6 py-4" style={{ borderColor: 'hsl(var(--border))' }}>
-                  <h1 className="truncate text-lg font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{recordTitle || 'Loading…'}</h1>
-                  <RecordDetailToolbar
+            {/* Width-capped and centered — matches RuntimeAppShell.tsx's own
+               main wrapper, so a record page doesn't stretch full-bleed
+               across a wide monitor while every list page it was opened
+               from is capped. */}
+            <div className="mx-auto w-full max-w-6xl">
+              {!canView ? (
+                <PermissionDeniedPage />
+              ) : !form ? null : (
+                <>
+                  {/* Always rendered, not gated on recordTitle — see
+                      RuntimeRecordPage.tsx's identical comment: recordTitle
+                      only comes back empty while `record` is still loading,
+                      and gating the whole block on it used to hide
+                      RecordDetailToolbar's Edit/Delete controls during that
+                      window too, not just the heading. */}
+                  <div className="flex items-center justify-between gap-3 border-b px-6 py-4" style={{ borderColor: 'hsl(var(--border))' }}>
+                    <h1 className="truncate text-lg font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{recordTitle || 'Loading…'}</h1>
+                    <RecordDetailToolbar
+                      formId={formId}
+                      recordId={recordId}
+                      record={record}
+                      createUserSettings={schema?.settings?.createUser}
+                      schema={schema}
+                      onDeleted={() => runtimeRouter.history.back()}
+                    />
+                  </div>
+                  <RecordDetailPanel
                     formId={formId}
                     recordId={recordId}
-                    record={record}
-                    createUserSettings={schema?.settings?.createUser}
+                    fields={form.fields}
                     schema={schema}
-                    onDeleted={() => runtimeRouter.history.back()}
                   />
-                </div>
-                <RecordDetailPanel
-                  formId={formId}
-                  recordId={recordId}
-                  fields={form.fields}
-                  schema={schema}
-                />
-              </>
-            )}
+                </>
+              )}
+            </div>
           </main>
         </div>
       </div>

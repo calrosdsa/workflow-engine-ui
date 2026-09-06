@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Menu as MenuIcon, X, PencilRuler, Eye } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { runtimeRouter, useRuntimeDraftPreview, exitDraftPreview } from '@/runtime-router'
 import { useAuthStore } from '@/stores/auth'
 import { canViewMenu, hasPermission } from '@/features/auth/permissions'
@@ -152,31 +153,41 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
           </div>
 
           <main className="min-h-0 flex-1 overflow-y-auto">
-            {!canViewCurrent ? (
-              <PermissionDeniedPage />
-            ) : RuntimeRenderer ? (
-              <RuntimeRenderer
-                // Keyed by menu id so navigating between two menus of the
-                // SAME type (e.g. two Search menus) always remounts the
-                // renderer instead of updating it in place. Without this,
-                // React reuses the same SearchMenuRuntime/RecordsTable
-                // instance across the navigation — RecordsTable seeds its
-                // filter/sort/columns from props only on mount (see its own
-                // key comment in SearchMenuRuntime.tsx), so an in-place
-                // update left it rendering the PREVIOUS menu's field/column
-                // state (raw internal field keys instead of labels, blank
-                // cells) even though the new menu's data had already loaded
-                // correctly over the network.
-                key={currentMenu.id}
-                menu={toMenu(currentMenu)}
-                clientId={clientId}
-                appId={appId}
-                menus={snapshot.menus.map(toMenu)}
-                onNavigate={(slug) => runtimeRouter.navigate({ to: `/${clientId}/${appId}/${slug}` })}
-              />
-            ) : (
-              <UnavailableMenu type={currentMenu.menu_type} />
-            )}
+            {/* Width-capped and centered so a wide monitor doesn't stretch a
+               four-column table across the full viewport — matches the
+               dashboard widget grid's own max-w-6xl (RuntimeGrid.tsx). The
+               dashboard menu type is excluded here because it already owns
+               its width via that same wrapper, PLUS a per-dashboard
+               schema.settings.maxWidth override a builder may have widened
+               past 6xl — nesting this cap around it would silently clip
+               that override back down. */}
+            <div className={cn('mx-auto w-full', currentMenu.menu_type !== 'dashboard' && 'max-w-6xl')}>
+              {!canViewCurrent ? (
+                <PermissionDeniedPage />
+              ) : RuntimeRenderer ? (
+                <RuntimeRenderer
+                  // Keyed by menu id so navigating between two menus of the
+                  // SAME type (e.g. two Search menus) always remounts the
+                  // renderer instead of updating it in place. Without this,
+                  // React reuses the same SearchMenuRuntime/RecordsTable
+                  // instance across the navigation — RecordsTable seeds its
+                  // filter/sort/columns from props only on mount (see its own
+                  // key comment in SearchMenuRuntime.tsx), so an in-place
+                  // update left it rendering the PREVIOUS menu's field/column
+                  // state (raw internal field keys instead of labels, blank
+                  // cells) even though the new menu's data had already loaded
+                  // correctly over the network.
+                  key={currentMenu.id}
+                  menu={toMenu(currentMenu)}
+                  clientId={clientId}
+                  appId={appId}
+                  menus={snapshot.menus.map(toMenu)}
+                  onNavigate={(slug) => runtimeRouter.navigate({ to: `/${clientId}/${appId}/${slug}` })}
+                />
+              ) : (
+                <UnavailableMenu type={currentMenu.menu_type} />
+              )}
+            </div>
           </main>
         </div>
       </div>

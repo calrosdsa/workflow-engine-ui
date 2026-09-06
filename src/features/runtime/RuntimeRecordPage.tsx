@@ -111,37 +111,43 @@ export function RuntimeRecordPage({ snapshot, clientId, appId, currentMenu, form
           </div>
 
           <main className="min-h-0 flex-1 overflow-y-auto">
-            {!canView ? (
-              <PermissionDeniedPage />
-            ) : !form ? null : (
-              <>
-                {/* Always rendered, not gated on recordTitle — resolveRecordTitle
-                    only returns '' while `record` is still loading (its own
-                    fallback chain bottoms out at the raw id for a loaded
-                    record with no title fields or name/label, never at '').
-                    Gating this whole block on recordTitle used to hide
-                    RecordDetailToolbar's Edit/Delete controls during that
-                    loading window too, not just the heading — a titleless
-                    flash shouldn't cost the toolbar. */}
-                <div className="flex items-center justify-between gap-3 border-b px-6 py-4" style={{ borderColor: 'hsl(var(--border))' }}>
-                  <h1 className="truncate text-lg font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{recordTitle || 'Loading…'}</h1>
-                  <RecordDetailToolbar
+            {/* Width-capped and centered — matches RuntimeAppShell.tsx's own
+               main wrapper, so a record page doesn't stretch full-bleed
+               across a wide monitor while every list page it was opened
+               from is capped. */}
+            <div className="mx-auto w-full max-w-6xl">
+              {!canView ? (
+                <PermissionDeniedPage />
+              ) : !form ? null : (
+                <>
+                  {/* Always rendered, not gated on recordTitle — resolveRecordTitle
+                      only returns '' while `record` is still loading (its own
+                      fallback chain bottoms out at the raw id for a loaded
+                      record with no title fields or name/label, never at '').
+                      Gating this whole block on recordTitle used to hide
+                      RecordDetailToolbar's Edit/Delete controls during that
+                      loading window too, not just the heading — a titleless
+                      flash shouldn't cost the toolbar. */}
+                  <div className="flex items-center justify-between gap-3 border-b px-6 py-4" style={{ borderColor: 'hsl(var(--border))' }}>
+                    <h1 className="truncate text-lg font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{recordTitle || 'Loading…'}</h1>
+                    <RecordDetailToolbar
+                      formId={formId}
+                      recordId={recordId}
+                      record={record}
+                      createUserSettings={schema?.settings?.createUser}
+                      schema={schema}
+                      onDeleted={() => runtimeRouter.navigate({ to: `/${clientId}/${appId}/${currentMenu.slug}` })}
+                    />
+                  </div>
+                  <RecordDetailPanel
                     formId={formId}
                     recordId={recordId}
-                    record={record}
-                    createUserSettings={schema?.settings?.createUser}
+                    fields={form.fields}
                     schema={schema}
-                    onDeleted={() => runtimeRouter.navigate({ to: `/${clientId}/${appId}/${currentMenu.slug}` })}
                   />
-                </div>
-                <RecordDetailPanel
-                  formId={formId}
-                  recordId={recordId}
-                  fields={form.fields}
-                  schema={schema}
-                />
-              </>
-            )}
+                </>
+              )}
+            </div>
           </main>
         </div>
       </div>
