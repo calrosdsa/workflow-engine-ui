@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import {
   createRouter,
   createRootRoute,
@@ -12,7 +12,8 @@ import { useAuthStore } from '@/stores/auth'
 import { runtimeApi } from '@/features/runtime/api'
 import { ThemeProvider } from '@/features/theme/ThemeProvider'
 import { mergeTheme } from '@/features/theme/default-theme'
-import { I18nProvider } from '@/features/i18n/I18nProvider'
+import { I18nProvider, useI18n } from '@/features/i18n/I18nProvider'
+import { localizeMenus } from '@/features/runtime/localize-menus'
 import { Toaster } from '@/components/ui/sonner'
 import { UiWorkflowDialogHost } from '@/features/ui-workflows/UiWorkflowDialogHost'
 import { UiWorkflowFormHost } from '@/features/ui-workflows/UiWorkflowFormHost'
@@ -219,43 +220,67 @@ function RuntimeAppRouteComponent() {
   const { snapshot, draft } = runtimeAppRoute.useLoaderData()
   const theme = mergeTheme(snapshot.theme)
   return (
-    <RuntimeSnapshotContext.Provider value={snapshot}>
+    // I18nProvider wraps RuntimeSnapshotContext (not the other way around,
+    // as an earlier version of this had it) — LocalizedSnapshotProvider
+    // below needs useI18n()'s `tc` to localize the snapshot's menu names
+    // before anything downstream reads them, which only works from inside
+    // an I18nProvider. Single shared instance for the whole runtime
+    // session, scoped here rather than in each leaf page
+    // (RuntimeAppShell/RuntimeRecordPage/RuntimeFormRecordPage) — those
+    // three are separate route matches, so navigating between them (e.g. a
+    // reference-field link from a Search menu to a form's own detail page)
+    // unmounts one leaf and mounts the next; a per-leaf ThemeProvider would
+    // similarly flash .dark/CSS vars off and back on across that boundary
+    // (this is why ThemeProvider below is ALSO one shared instance, not
+    // per-leaf), and I18nProvider rides along at the same level so both
+    // "how this app looks" and "what language it speaks" come from the same
+    // one-per-session provider pair.
+    <I18nProvider overrides={snapshot.translations}>
+      <LocalizedSnapshotProvider snapshot={snapshot} draft={draft}>
+        <ThemeProvider theme={theme} scopeElement={document.getElementById('runtime-root')} syncDocument>
+          <Outlet />
+          {/* offset shifts toasts up so they never overlap ChatLauncher's own
+              fixed bottom-right bubble (FR-D4-001 v0.2's resolved layout
+              decision: the launcher is the persistent fixture, toasts are
+              transient, so the transient element yields position). Applied
+              unconditionally rather than only when an Agent is enabled — a
+              fixed offset with no bubble present just leaves a little extra
+              bottom margin, simpler than conditioning this on ChatLauncher's
+              own (async) visibility check. */}
+          <Toaster position="bottom-right" offset={{ bottom: 88 }} />
+          {/* Mounted beside the Toaster for the same reason: both are
+              app-level overlays driven by a module-level call from outside
+              the component tree. This is what lets a workflow step suspend
+              and ask the viewer something. */}
+          <UiWorkflowDialogHost />
+          <UiWorkflowFormHost />
+          <ChatLauncher />
+        </ThemeProvider>
+      </LocalizedSnapshotProvider>
+    </I18nProvider>
+  )
+}
+
+// Splits localizeMenus (needs useI18n's `tc`) out of RuntimeAppRouteComponent
+// itself so that component can stay a plain function — useI18n() only works
+// inside I18nProvider, which RuntimeAppRouteComponent itself renders, so the
+// call has to live one component further down.
+function LocalizedSnapshotProvider({ snapshot, draft, children }: { snapshot: AppSnapshot; draft: boolean; children: ReactNode }) {
+  const { tc } = useI18n()
+  // Menu names localized ONCE here, not at each individual consumer — every
+  // reader of useRuntimeSnapshotContext() below (RuntimeSidebar,
+  // RuntimeBreadcrumbs, the nav tree builder, every menu-type
+  // runtimeRenderer) sees already-resolved names for free. See
+  // localize-menus.ts's own doc comment for why menu names get a separate
+  // seam from form content instead of folding into localizeFormSchema.
+  const localizedSnapshot = useMemo<AppSnapshot>(
+    () => ({ ...snapshot, menus: localizeMenus(snapshot.menus, tc) }),
+    [snapshot, tc],
+  )
+  return (
+    <RuntimeSnapshotContext.Provider value={localizedSnapshot}>
       <RuntimeDraftPreviewContext.Provider value={draft}>
-        {/* Single shared I18nProvider/ThemeProvider for the whole runtime
-            session, scoped here rather than in each leaf page
-            (RuntimeAppShell/RuntimeRecordPage/RuntimeFormRecordPage). Those
-            three are separate route matches, so navigating between them
-            (e.g. a reference-field link from a Search menu to a form's own
-            detail page) unmounts one leaf and mounts the next — if each
-            owned its own ThemeProvider, the outgoing instance's cleanup
-            strips .dark/CSS vars from #runtime-root a tick before the
-            incoming instance's effect re-applies them, producing a visible
-            light/dark flash on every such navigation. One provider that
-            outlives all of them removes that gap entirely. I18nProvider has
-            no such DOM-mutation concern, but it rides along at the same
-            level so both "how this app looks" and "what language it speaks"
-            come from the same one-per-session provider pair. */}
-        <I18nProvider overrides={snapshot.translations}>
-          <ThemeProvider theme={theme} scopeElement={document.getElementById('runtime-root')} syncDocument>
-            <Outlet />
-            {/* offset shifts toasts up so they never overlap ChatLauncher's own
-                fixed bottom-right bubble (FR-D4-001 v0.2's resolved layout
-                decision: the launcher is the persistent fixture, toasts are
-                transient, so the transient element yields position). Applied
-                unconditionally rather than only when an Agent is enabled — a
-                fixed offset with no bubble present just leaves a little extra
-                bottom margin, simpler than conditioning this on ChatLauncher's
-                own (async) visibility check. */}
-            <Toaster position="bottom-right" offset={{ bottom: 88 }} />
-            {/* Mounted beside the Toaster for the same reason: both are
-                app-level overlays driven by a module-level call from outside
-                the component tree. This is what lets a workflow step suspend
-                and ask the viewer something. */}
-            <UiWorkflowDialogHost />
-            <UiWorkflowFormHost />
-            <ChatLauncher />
-          </ThemeProvider>
-        </I18nProvider>
+        {children}
       </RuntimeDraftPreviewContext.Provider>
     </RuntimeSnapshotContext.Provider>
   )

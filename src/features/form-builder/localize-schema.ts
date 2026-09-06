@@ -1,7 +1,8 @@
 import type { FormSchema, FormSection, FormElement, SelectOption } from './schema'
 
 // Runtime-only content translation for a form's own authored text (label,
-// placeholder, help text, choice-option labels, custom validation message).
+// placeholder, help text, choice-option labels, custom validation message,
+// section titles/descriptions).
 // Deliberately separate from the form-builder's editing canvas: a designer
 // editing the form must see and edit their OWN authored text, in whatever
 // language they typed it — resolveFormSchema()/toBuilder() (serialize.ts)
@@ -29,6 +30,16 @@ type Resolver = (key: string, fallback: string) => string
 
 function fieldKeyPrefix(formId: string, path: string[]): string {
   return `form.${formId}.field.${path.join('.')}`
+}
+
+// Sections have no "editable machine name" the way FormElement.key is —
+// only `id` — so their key uses the section's own id directly. Collision
+// with a nested Line Items grid's own sections is not a concern: section
+// ids are generated independently of nesting depth (unlike element keys,
+// which a designer could plausibly reuse across a parent form and one of
+// its generated grids), so `formId` + `section.id` alone is unique.
+function sectionKeyPrefix(formId: string, sectionId: string): string {
+  return `form.${formId}.section.${sectionId}`
 }
 
 function localizeElement(el: FormElement, formId: string, path: string[], tc: Resolver): FormElement {
@@ -66,13 +77,18 @@ function localizeElement(el: FormElement, formId: string, path: string[], tc: Re
  *  LineItemsGrid's adopted-mode sections, built by a helper that returns
  *  LineItemSection[] (= FormSection[]) rather than a whole FormSchema. */
 export function localizeSections(sections: FormSection[], formId: string, parentPath: string[], tc: Resolver): FormSection[] {
-  return sections.map((section) => ({
-    ...section,
-    columns: section.columns.map((column) => ({
-      ...column,
-      elements: column.elements.map((el) => localizeElement(el, formId, [...parentPath, el.key], tc)),
-    })),
-  }))
+  return sections.map((section) => {
+    const sectionPrefix = sectionKeyPrefix(formId, section.id)
+    return {
+      ...section,
+      title: section.title ? tc(`${sectionPrefix}.title`, section.title) : section.title,
+      description: section.description ? tc(`${sectionPrefix}.description`, section.description) : section.description,
+      columns: section.columns.map((column) => ({
+        ...column,
+        elements: column.elements.map((el) => localizeElement(el, formId, [...parentPath, el.key], tc)),
+      })),
+    }
+  })
 }
 
 /** Apply this app's per-field translation overrides (design-app Localization
@@ -88,7 +104,9 @@ export function localizeFormSchema(schema: FormSchema, formId: string, tc: Resol
 // Design-app enumeration (LocalizationSection.tsx)
 // ---------------------------------------------------------------------------
 
-export type FieldContentKind = 'label' | 'placeholder' | 'help_text' | 'content' | 'option' | 'validation_message'
+export type FieldContentKind =
+  | 'label' | 'placeholder' | 'help_text' | 'content' | 'option' | 'validation_message'
+  | 'section_title' | 'section_description'
 
 export const FIELD_CONTENT_KIND_LABELS: Record<FieldContentKind, string> = {
   label: 'Label',
@@ -97,13 +115,15 @@ export const FIELD_CONTENT_KIND_LABELS: Record<FieldContentKind, string> = {
   content: 'Text',
   option: 'Option',
   validation_message: 'Validation message',
+  section_title: 'Section title',
+  section_description: 'Section description',
 }
 
 export interface CollectedField {
   key: string
-  /** `key` minus its trailing `.label`/`.placeholder`/etc segment — every row
-   *  belonging to the same form element shares one fieldPath, so the design
-   *  app can group them under one heading. */
+  /** `key` minus its trailing `.label`/`.placeholder`/`.title`/etc segment —
+   *  every row belonging to the same form element OR section shares one
+   *  fieldPath, so the design app can group them under one heading. */
   fieldPath: string
   kind: FieldContentKind
   /** Set only when kind === 'option' — the choice's stored value. */
@@ -114,12 +134,18 @@ export interface CollectedField {
 }
 
 const OPTION_KEY = /^(.*)\.option\.([^.]*)$/
+// Order matters only where one suffix is a substring of another — none of
+// these are today, but '.description' is listed after every field-level
+// suffix so a future field-level property ending the same way still
+// wouldn't get misclassified as a section description.
 const SUFFIX_KINDS: [string, FieldContentKind][] = [
   ['.help_text', 'help_text'],
   ['.placeholder', 'placeholder'],
   ['.validation_message', 'validation_message'],
   ['.label', 'label'],
   ['.content', 'content'],
+  ['.title', 'section_title'],
+  ['.description', 'section_description'],
 ]
 
 function classifyKey(key: string): { fieldPath: string; kind: FieldContentKind; optionValue?: string } {

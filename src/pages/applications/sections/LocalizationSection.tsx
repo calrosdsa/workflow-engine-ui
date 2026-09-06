@@ -8,6 +8,7 @@ import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } fro
 import { useApplicationTranslations, useUpdateApplicationTranslations } from '@/features/applications/hooks'
 import { usePermission } from '@/features/auth/permissions'
 import { useForms } from '@/features/forms/hooks'
+import { useMenus } from '@/features/menus/hooks'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
 import { collectTranslatableFields, FIELD_CONTENT_KIND_LABELS } from '@/features/form-builder/localize-schema'
 import type { CollectedField } from '@/features/form-builder/localize-schema'
@@ -30,21 +31,23 @@ function draftFrom(loaded: TranslationsConfig | undefined): Draft {
 }
 
 /** One display name per group of CollectedField rows sharing a fieldPath —
- *  prefers that element's own `.label` entry, then `.content` (a
- *  presentational heading/paragraph has no label), then falls back to the
- *  element's raw key so a row is never unlabeled. */
+ *  prefers that element's own `.label` entry, then `.section_title` (a
+ *  section groups its own title+description rows), then `.content` (a
+ *  presentational heading/paragraph has neither), then falls back to the
+ *  raw key so a row is never unlabeled. */
 function groupLabels(fields: CollectedField[]): Map<string, string> {
   const map = new Map<string, string>()
   for (const f of fields) if (f.kind === 'label') map.set(f.fieldPath, f.defaultValue)
+  for (const f of fields) if (!map.has(f.fieldPath) && f.kind === 'section_title') map.set(f.fieldPath, f.defaultValue)
   for (const f of fields) if (!map.has(f.fieldPath) && f.kind === 'content') map.set(f.fieldPath, f.defaultValue)
   for (const f of fields) if (!map.has(f.fieldPath)) map.set(f.fieldPath, f.fieldPath.split('.').pop() ?? f.fieldPath)
   return map
 }
 
-type LocalizationTab = 'interface' | 'fields'
+type LocalizationTab = 'interface' | 'fields' | 'menus'
 
 /** Management UI for this app's i18n string overrides — the "dynamic" half
- *  of translation support. Two genuinely different key sources share the
+ *  of translation support. Three genuinely different key sources share the
  *  same underlying strings map, shown as separate tabs rather than one
  *  merged grid since they have different editing semantics:
  *
@@ -52,9 +55,12 @@ type LocalizationTab = 'interface' | 'fields'
  *    features/i18n/dictionaries.ts). Its "default" column IS editable here
  *    — English has nowhere else to be re-worded.
  *  - Form fields: each form's own label/placeholder/help text/choice
- *    options/validation message, authored in the form builder. Its default
- *    column is READ-ONLY reference text — the form builder is the one place
- *    to edit it; this tab only adds OTHER-locale overrides on top. */
+ *    options/validation message/section titles, authored in the form
+ *    builder. Its default column is READ-ONLY reference text — the form
+ *    builder is the one place to edit it; this tab only adds OTHER-locale
+ *    overrides on top.
+ *  - Menus: each menu's own name, authored in the menu builder. Same
+ *    read-only-default treatment as Form fields, for the same reason. */
 export function LocalizationSection() {
   const { data: loaded, isLoading } = useApplicationTranslations()
   const updateMutation = useUpdateApplicationTranslations()
@@ -147,7 +153,7 @@ export function LocalizationSection() {
       </div>
 
       <div className="mb-3 flex gap-1 border-b border-[hsl(var(--border))]">
-        {([['interface', 'Interface text'], ['fields', 'Form fields']] as const).map(([id, label]) => (
+        {([['interface', 'Interface text'], ['fields', 'Form fields'], ['menus', 'Menus']] as const).map(([id, label]) => (
           <button
             key={id}
             onClick={() => setTab(id)}
@@ -164,9 +170,9 @@ export function LocalizationSection() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-hidden">
-        {tab === 'interface'
-          ? <InterfaceTextTable draft={draft} setCell={setCell} canWrite={canWrite} />
-          : <FormFieldsTable draft={draft} setCell={setCell} canWrite={canWrite} />}
+        {tab === 'interface' && <InterfaceTextTable draft={draft} setCell={setCell} canWrite={canWrite} />}
+        {tab === 'fields' && <FormFieldsTable draft={draft} setCell={setCell} canWrite={canWrite} />}
+        {tab === 'menus' && <MenusTable draft={draft} setCell={setCell} canWrite={canWrite} />}
       </div>
 
       <p className="mt-3 flex items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]">
@@ -323,6 +329,65 @@ function FormFieldsTable({ draft, setCell, canWrite }: TableProps) {
           </table>
         </div>
       )}
+    </div>
+  )
+}
+
+/** Each menu's own name, authored in the menu builder — see this file's top
+ *  comment for why the default column is read-only here too. A flat list,
+ *  unlike Form fields: menus have no per-form scoping to pick between, and
+ *  no nested structure worth grouping (see localize-menus.ts's own key
+ *  scheme, one key per menu). */
+function MenusTable({ draft, setCell, canWrite }: TableProps) {
+  const { data: menus, isLoading } = useMenus()
+  const otherLocales = draft.supported_locales.filter((l) => l !== draft.default_locale)
+
+  if (isLoading) return <div className="flex h-32 items-center justify-center"><Spinner /></div>
+  if (!menus || menus.length === 0) {
+    return <p className="p-4 text-sm text-[hsl(var(--muted-foreground))]">This app has no menus yet.</p>
+  }
+  if (otherLocales.length === 0) {
+    return (
+      <p className="p-4 text-center text-sm text-[hsl(var(--muted-foreground))]">
+        Add a second supported language above to translate menu names.
+      </p>
+    )
+  }
+
+  return (
+    <div className="h-full overflow-auto rounded-lg border border-[hsl(var(--border))]">
+      <table className="w-full border-collapse text-sm">
+        <thead className="sticky top-0 bg-[hsl(var(--card))]">
+          <tr>
+            <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">Menu (as authored)</th>
+            {otherLocales.map((locale) => (
+              <th key={locale} className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">
+                {LOCALE_LABELS[locale] ?? locale}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {menus.map((m) => {
+            const key = `menu.${m.id}.name`
+            return (
+              <tr key={m.id} className="border-b border-[hsl(var(--border))] last:border-b-0">
+                <td className="p-2 align-top italic text-[hsl(var(--muted-foreground))]">{m.name}</td>
+                {otherLocales.map((locale) => (
+                  <td key={locale} className="p-2 align-top">
+                    <Input
+                      value={draft.strings[locale]?.[key] ?? ''}
+                      onChange={(e) => setCell(locale, key, e.target.value)}
+                      placeholder={m.name}
+                      disabled={!canWrite}
+                    />
+                  </td>
+                ))}
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
   )
 }

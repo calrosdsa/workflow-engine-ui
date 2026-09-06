@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+
 import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Filter as FilterIcon, Maximize2, Loader2, AlertCircle, Search } from 'lucide-react'
 import { useForm as useFormDef } from '@/features/forms/hooks'
@@ -140,6 +141,15 @@ export function RecordsTable({
   layout = 'list', layoutConfig: layoutConfigProp, columnDragEnabled = false, onLiveConfigChange,
 }: RecordsTableProps) {
   const { data: form, isLoading: isFormLoading, isError: isFormError } = useFormDef(formId)
+  // Called unconditionally, above the early returns below (isFormLoading/
+  // isFormError/!form) — this used to sit right before its first use,
+  // after those returns, which is a real Rules-of-Hooks violation: the very
+  // first render (before the form has loaded) skips this hook entirely,
+  // then a later render calls it, changing this component's hook count
+  // between renders of the same instance. React only warns about this in
+  // dev, but it's not a lint-only concern — it can desync every hook
+  // AFTER this one from its own state once triggered.
+  const { tc } = useI18n()
 
   const [page, setPage] = useState(1)
   const [sort, setSort] = useState<SortRule[]>(
@@ -261,7 +271,6 @@ export function RecordsTable({
   // this recovers the same labels for List/Card's read-only display. Reuses
   // the same parseLayout(form.layout) call the record-detail drawer below
   // already makes, rather than a second, redundant parse.
-  const { tc } = useI18n()
   const formSchema = localizeFormSchema(resolveFormSchema(form), form.id, tc)
   const enumLabels = buildEnumLabels(formSchema)
   // Column headers come from the LOCALIZED layout schema's own elements
