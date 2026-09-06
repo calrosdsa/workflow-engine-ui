@@ -300,6 +300,44 @@ export interface CommentsResponse {
   page_size: number
 }
 
+// Mirrors api/forms/attachments.go's attachmentResponse — the Detail Page
+// "Attachments" tab's wire shape. Deliberately its own type, not
+// ContentObject (features/content/types.ts): that type's owner_kind is a
+// closed union that doesn't include 'record_attachment' (see
+// internal/content.OwnerRecordAttachment's own doc comment on why
+// attachments are never reachable through the generic /content routes),
+// and this response omits owner_kind/owner_resource_id/checksum entirely
+// since the Attachments tab never needs them.
+export interface AttachmentEntry {
+  id: string
+  filename: string
+  content_type: string
+  size_bytes: number
+  created_by?: string
+  created_at: string
+}
+
+// Mirrors api/forms/tags.go's tags.Entry — the Detail Page "Tags" tab's wire
+// shape.
+export interface TagEntry {
+  id: string
+  client_id: string
+  app_id?: string
+  form_id: string
+  record_id: string
+  tag: string
+  created_by?: string
+  created_at: string
+}
+
+export interface TagsResponse {
+  entries: TagEntry[]
+}
+
+export interface TagSuggestionsResponse {
+  tags: string[]
+}
+
 export interface LinkedRecordGroup {
   form_id: string
   form_name: string

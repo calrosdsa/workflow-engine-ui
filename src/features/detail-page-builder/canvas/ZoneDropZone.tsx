@@ -7,6 +7,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { cn } from '@/lib/utils'
 import { TabCard } from './TabCard'
+import { isAlwaysPresentDetailTab } from '@/features/forms/runtime/detail-tabs/registry'
 import type { DetailTabConfig, DetailPageZoneDef } from '@/features/form-builder/schema'
 
 interface ZoneDropZoneProps {
@@ -46,6 +47,7 @@ export function ZoneDropZone({ zone, tabs, selectedTabId, visibleCount, onSelect
                 zoneId={zone.id}
                 selected={selectedTabId === t.id}
                 canHide={t.hidden || visibleCount > 1}
+                canRemove={(t.hidden || visibleCount > 1) && !isAlwaysPresentDetailTab(t.type)}
                 onSelect={() => onSelect(t.id)}
                 onToggleHidden={() => onToggleHidden(t.id)}
                 onRemove={() => onRemove(t.id)}

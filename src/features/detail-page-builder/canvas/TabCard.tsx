@@ -15,12 +15,20 @@ interface TabCardProps {
   zoneId: string
   selected: boolean
   canHide: boolean
+  /** Gates ONLY the Remove button — pass false for a type resolveDetailTabs
+   *  backfills onto every form (see isAlwaysPresentDetailTab's own doc
+   *  comment), even when canHide is true. Hide/Show stays fully available
+   *  regardless — this only closes the "Remove looks like it worked, then
+   *  silently reverts" gap for those specific types. Defaults to true (same
+   *  as an ordinary removable tab) so existing callers/tests that don't
+   *  care about this distinction need no change. */
+  canRemove?: boolean
   onSelect: () => void
   onToggleHidden: () => void
   onRemove: () => void
 }
 
-export function TabCard({ tab, zoneId, selected, canHide, onSelect, onToggleHidden, onRemove }: TabCardProps) {
+export function TabCard({ tab, zoneId, selected, canHide, canRemove = true, onSelect, onToggleHidden, onRemove }: TabCardProps) {
   const def = getDetailTab(tab.type)
   const isConditional = tab.renderIf?.mode === 'expression'
   const hasCustomVisibility = (tab.visibility?.mode ?? 'everyone') !== 'everyone'
@@ -89,8 +97,8 @@ export function TabCard({ tab, zoneId, selected, canHide, onSelect, onToggleHidd
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onRemove() }}
-          disabled={!canHide}
-          title={canHide ? 'Remove tab' : 'At least one tab must stay visible'}
+          disabled={!canRemove}
+          title={!canHide ? 'At least one tab must stay visible' : canRemove ? 'Remove tab' : 'This tab is always shown — hide it instead'}
           className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] transition-colors hover:bg-red-50 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 focus-visible:ring-offset-[hsl(var(--card))] disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Trash2 size={13} />

@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { nanoid } from '@/features/workflows/builder/nanoid'
-import { allDetailTabs, getDetailTab, resolveDetailTabs } from '@/features/forms/runtime/detail-tabs/registry'
+import { allDetailTabs, getDetailTab, resolveDetailTabs, isAlwaysPresentDetailTab } from '@/features/forms/runtime/detail-tabs/registry'
 import { DetailTabConfigForm } from '@/features/forms/runtime/detail-tabs/DetailTabConfigForm'
 import '@/features/forms/runtime/detail-tabs'
 import { cn } from '@/lib/utils'
@@ -106,6 +106,7 @@ export function DetailPageConfigSection({ formId, detailTabs, onChange, applyDef
                 onRemove={() => removeTab(t.id)}
                 onPatch={(patch) => patchTab(t.id, patch)}
                 canHide={t.hidden || visibleCount > 1}
+                canRemove={applyDefault ? !isAlwaysPresentDetailTab(t.type) : true}
               />
             ))}
           </Accordion>
@@ -142,13 +143,17 @@ export function DetailPageConfigSection({ formId, detailTabs, onChange, applyDef
   )
 }
 
-function DetailTabRow({ formId, tab, onToggleHidden, onRemove, onPatch, canHide }: {
+function DetailTabRow({ formId, tab, onToggleHidden, onRemove, onPatch, canHide, canRemove }: {
   formId: string
   tab: DetailTabConfig
   onToggleHidden: () => void
   onRemove: () => void
   onPatch: (patch: Partial<DetailTabConfig>) => void
   canHide: boolean
+  /** Gates ONLY the Remove button — see TabCard.tsx's identical prop (the
+   *  Detail Page Builder canvas's own editing surface for this same data)
+   *  for why. Hide/Show keeps using canHide regardless. */
+  canRemove: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tab.id })
   const def = getDetailTab(tab.type)
@@ -220,8 +225,8 @@ function DetailTabRow({ formId, tab, onToggleHidden, onRemove, onPatch, canHide 
           <button
             type="button"
             onClick={onRemove}
-            disabled={!canHide}
-            title={canHide ? 'Remove tab' : 'At least one tab must stay visible'}
+            disabled={!canRemove}
+            title={!canHide ? 'At least one tab must stay visible' : canRemove ? 'Remove tab' : 'This tab is always shown — hide it instead'}
             className="rounded-md p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
           >
             <Trash2 size={14} />

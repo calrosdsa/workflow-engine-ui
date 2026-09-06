@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import type { FormDefinition, CreateFormPayload, UpdateFormPayload, FormRecord, AuditLogResponse, LinkedRecordsResponse, ConnectionCountTarget, ConnectionCountsResponse, CommentEntry, CommentsResponse, FormVisibility, FormSharingResponse, FormSharingUsageResponse, LinkableForm } from './types'
+import type { FormDefinition, CreateFormPayload, UpdateFormPayload, FormRecord, AuditLogResponse, LinkedRecordsResponse, ConnectionCountTarget, ConnectionCountsResponse, CommentEntry, CommentsResponse, AttachmentEntry, TagEntry, TagsResponse, TagSuggestionsResponse, FormVisibility, FormSharingResponse, FormSharingUsageResponse, LinkableForm } from './types'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
 
 export interface SearchRecordsRequest {
@@ -191,6 +191,35 @@ export const formsApi = {
     api.put(`forms/${formId}/records/${recordId}/comments/${commentId}`, { json: { body } }),
   deleteComment: (formId: string, recordId: string, commentId: string) =>
     api.delete(`forms/${formId}/records/${recordId}/comments/${commentId}`),
+
+  // --- attachments (Detail Page "Attachments" tab) ---
+  getAttachments: (formId: string, recordId: string) =>
+    api.get(`forms/${formId}/records/${recordId}/attachments`).json<AttachmentEntry[]>(),
+  // See features/content/api.ts's contentApi.upload for why
+  // `headers: { 'Content-Type': undefined }` is required here: ky's own
+  // FormData-boundary auto-detection only kicks in when the client's
+  // default 'Content-Type: application/json' header is explicitly deleted
+  // BEFORE Request construction, not merely overridden after.
+  uploadAttachment: (formId: string, recordId: string, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post(`forms/${formId}/records/${recordId}/attachments`, {
+      body: form,
+      headers: { 'Content-Type': undefined },
+    }).json<AttachmentEntry>()
+  },
+  deleteAttachment: (formId: string, recordId: string, attachmentId: string) =>
+    api.delete(`forms/${formId}/records/${recordId}/attachments/${attachmentId}`),
+
+  // --- tags (Detail Page "Tags" tab) ---
+  getTags: (formId: string, recordId: string) =>
+    api.get(`forms/${formId}/records/${recordId}/tags`).json<TagsResponse>(),
+  addTag: (formId: string, recordId: string, tag: string) =>
+    api.post(`forms/${formId}/records/${recordId}/tags`, { json: { tag } }).json<TagEntry>(),
+  removeTag: (formId: string, recordId: string, tagId: string) =>
+    api.delete(`forms/${formId}/records/${recordId}/tags/${tagId}`),
+  getTagSuggestions: (formId: string) =>
+    api.get(`forms/${formId}/tags/suggestions`).json<TagSuggestionsResponse>(),
 
   // --- record-detail account actions (create_user_on_submit forms) ---
   getRecordAccountStatus: (formId: string, recordId: string) =>

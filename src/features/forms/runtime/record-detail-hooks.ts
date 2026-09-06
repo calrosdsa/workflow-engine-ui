@@ -101,6 +101,75 @@ export function useDeleteComment(formId: string, recordId: string) {
   })
 }
 
+// --- attachments (Detail Page "Attachments" tab) ---
+
+const attachmentsKey = (formId: string, recordId: string | null) => ['forms', formId, 'records', recordId, 'attachments']
+
+export function useAttachments(formId: string, recordId: string | null) {
+  return useQuery({
+    queryKey: attachmentsKey(formId, recordId),
+    queryFn: () => formsApi.getAttachments(formId, recordId!),
+    enabled: !!recordId && !isPreviewRecord(recordId),
+  })
+}
+
+export function useUploadAttachment(formId: string, recordId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => formsApi.uploadAttachment(formId, recordId, file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: attachmentsKey(formId, recordId) }),
+  })
+}
+
+export function useDeleteAttachment(formId: string, recordId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (attachmentId: string) => formsApi.deleteAttachment(formId, recordId, attachmentId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: attachmentsKey(formId, recordId) }),
+  })
+}
+
+// --- tags (Detail Page "Tags" tab) ---
+
+const tagsKey = (formId: string, recordId: string | null) => ['forms', formId, 'records', recordId, 'tags']
+
+export function useTags(formId: string, recordId: string | null) {
+  return useQuery({
+    queryKey: tagsKey(formId, recordId),
+    queryFn: () => formsApi.getTags(formId, recordId!),
+    enabled: !!recordId && !isPreviewRecord(recordId),
+  })
+}
+
+export function useAddTag(formId: string, recordId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (tag: string) => formsApi.addTag(formId, recordId, tag),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: tagsKey(formId, recordId) })
+      qc.invalidateQueries({ queryKey: ['forms', formId, 'tags', 'suggestions'] })
+    },
+  })
+}
+
+export function useRemoveTag(formId: string, recordId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (tagId: string) => formsApi.removeTag(formId, recordId, tagId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: tagsKey(formId, recordId) }),
+  })
+}
+
+// Form-wide (not per-record) — every record's Tags tab shares one
+// suggestion list, so this intentionally does NOT key on recordId.
+export function useTagSuggestions(formId: string) {
+  return useQuery({
+    queryKey: ['forms', formId, 'tags', 'suggestions'],
+    queryFn: () => formsApi.getTagSuggestions(formId),
+    staleTime: 60 * 1000,
+  })
+}
+
 // --- record-detail account actions (create_user_on_submit forms) ---
 
 const accountStatusKey = (formId: string, recordId: string | null) => ['forms', formId, 'records', recordId, 'account']
