@@ -350,11 +350,17 @@ function formName(defs: PermissionDef[]): string {
 // shown by the parent group — maps off the stable `action` field rather
 // than re-parsing `label` (a form named e.g. "Q1: Sales" would break a
 // naive label split).
+// Keep in step with auth.PerFormActions (Go) — an action missing here
+// still renders, but falls through to def.label, which carries the form
+// name prefix the group header already shows ("Invoices: Comment on
+// records" sitting under an "Invoices" header, beside a bare "View
+// records").
 const ACTION_LABELS: Record<string, string> = {
   view: 'View records',
   create: 'Create records',
   edit: 'Edit records',
   delete: 'Delete records',
+  comment: 'Comment on records',
 }
 
 function actionLabel(def: PermissionDef): string {
