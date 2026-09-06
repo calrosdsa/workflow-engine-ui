@@ -25,9 +25,11 @@ export function AddMenuRuntime({ menu, onNavigate }: AddMenuRuntimeProps) {
   // FormRenderer owns its values inside react-hook-form and exposes no reset
   // handle, so remounting via `key` is the only way to clear them from out
   // here — and they MUST be cleared: this menu's default config is
-  // success_behavior 'message' with navigate_after_save false, meaning the
-  // user stays on a still-populated form after saving. Clicking Save again
-  // (reasonably, to enter the next record) silently wrote an exact duplicate.
+  // success_behavior 'message', meaning the user stays on a still-populated
+  // form after saving. Clicking Save again (reasonably, to enter the next
+  // record) silently wrote an exact duplicate. Bumping unconditionally (not
+  // just when staying) is harmless when a redirect fires right after, since
+  // this page unmounts before the extra remount would ever paint.
   const [formGeneration, setFormGeneration] = useState(0)
 
   // Resolved above the early returns below, because the hook that reads it
@@ -55,7 +57,7 @@ export function AddMenuRuntime({ menu, onNavigate }: AddMenuRuntimeProps) {
       // would land the viewer wherever the second happens to resolve.
       const { navigated } = await runAfterSubmit({ ...values, ...created })
 
-      if (!navigated && config.navigate_after_save && config.success_behavior === 'redirect' && config.redirect_menu_slug) {
+      if (!navigated && config.success_behavior === 'redirect' && config.redirect_menu_slug) {
         onNavigate?.(config.redirect_menu_slug)
       }
     } catch {

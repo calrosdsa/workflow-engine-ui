@@ -17,7 +17,7 @@ function addMenu(formId: string, overrides: Partial<Menu> = {}): Menu {
   return {
     id: 'add-1', app_id: 'app-1', parent_id: null, menu_type: 'add',
     slug: 'add-abc123', name: 'Add User', sort_order: 0,
-    config: { form_id: formId, success_behavior: 'message', navigate_after_save: false } satisfies AddMenuConfig,
+    config: { form_id: formId, success_behavior: 'message' } satisfies AddMenuConfig,
     permission_mode: 'all', required_role_ids: [], hidden_from_nav: true,
     created_at: '', updated_at: '',
     ...overrides,

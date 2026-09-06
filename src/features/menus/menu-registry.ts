@@ -125,18 +125,17 @@ export const MENU_TYPE_REGISTRY: Record<MenuType, MenuTypeRegistryEntry> = {
     configSchema: {
       type: 'object',
       description: 'A create form for one form’s records. Often hidden from the nav and reached only from a paired ‘search’ menu’s Create button.',
-      required: ['form_id', 'success_behavior', 'navigate_after_save'],
+      required: ['form_id', 'success_behavior'],
       properties: {
         form_id: { type: 'string', description: 'Id of the form being created.' },
         success_behavior: { type: 'string', enum: ['message', 'redirect'], description: 'What happens after a successful save.' },
         success_message: { type: 'string', description: 'Shown when success_behavior is ‘message’.' },
         redirect_menu_slug: { type: 'string', description: 'Menu slug to navigate to when success_behavior is ‘redirect’.' },
-        navigate_after_save: { type: 'boolean', description: 'Whether to leave the form after saving.' },
       },
     },
     configPanel: AddMenuConfigPanel,
     runtimeRenderer: AddMenuRuntime,
-    createDefaultConfig: () => ({ form_id: '', success_behavior: 'message', navigate_after_save: false }),
+    createDefaultConfig: () => ({ form_id: '', success_behavior: 'message' }),
   },
   parent: {
     type: 'parent',

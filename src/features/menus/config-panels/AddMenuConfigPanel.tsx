@@ -1,7 +1,6 @@
 import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenceSelect'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useMenus } from '../hooks'
 import type { Menu, AddMenuConfig } from '../types'
@@ -69,14 +68,6 @@ export function AddMenuConfigPanel({ menu, onChange }: AddMenuConfigPanelProps) 
           </SelectMenu>
         </div>
       )}
-
-      <Label className="flex items-center gap-2 text-[12px] font-normal text-[hsl(var(--foreground))]">
-        <Checkbox
-          checked={config.navigate_after_save}
-          onCheckedChange={(checked) => patch({ navigate_after_save: checked === true })}
-        />
-        Navigate automatically after save (vs. staying on the form)
-      </Label>
     </div>
   )
 }

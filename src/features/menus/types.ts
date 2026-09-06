@@ -28,7 +28,6 @@ export interface AddMenuConfig {
   success_behavior: 'message' | 'redirect'
   success_message?: string
   redirect_menu_slug?: string
-  navigate_after_save: boolean
 }
 
 export interface ParentMenuConfig {
