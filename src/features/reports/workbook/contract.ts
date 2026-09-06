@@ -5,6 +5,7 @@ import type {
   IWorksheetData,
 } from '@univerjs/presets'
 import type {
+  ColumnWidth,
   ReportWorkbook,
   ReportWorkbookSheet,
   WorkbookCell,
@@ -53,11 +54,21 @@ export function toUniverWorkbook(name: string, workbook: ReportWorkbook): Partia
       }
     })
 
+    const columnData: Record<number, { w: number }> = {}
+    sheet.column_widths?.forEach((cw) => {
+      columnData[cw.col] = { w: cw.width }
+    })
+
     sheets[sheet.id] = {
       id: sheet.id,
       name: sheet.name,
       rowCount: sheet.row_count,
       columnCount: sheet.column_count,
+      // 112 is this editor's own unresized-column default — a column with
+      // no entry in columnData renders at this width, and a column the
+      // author never touched stays this way on save too (fromUniverSheet
+      // below only records a column when Univer's own columnData has an
+      // entry for it).
       defaultColumnWidth: 112,
       defaultRowHeight: 28,
       freeze: { xSplit: 0, ySplit: 0, startRow: 0, startColumn: 0 },
@@ -68,6 +79,7 @@ export function toUniverWorkbook(name: string, workbook: ReportWorkbook): Partia
         startColumn: merge.start_col,
         endColumn: merge.end_col,
       })) ?? [],
+      ...(Object.keys(columnData).length > 0 ? { columnData } : {}),
       showGridlines: BOOLEAN_TRUE,
       rowHeader: { width: 46 },
       columnHeader: { height: 30 },
@@ -109,11 +121,24 @@ function fromUniverSheet(
 
   cells.sort((a, b) => a.row - b.row || a.col - b.col)
 
+  const columnCount = sheet.columnCount ?? 12
+  const columnWidths: ColumnWidth[] = Object.entries(sheet.columnData ?? {})
+    .map(([colKey, col]) => ({ col: Number(colKey), width: col?.w }))
+    // A column the author never dragged has no entry at all (Univer only
+    // records columnData for a column once it's touched), and a hidden or
+    // otherwise-flagged column can carry a columnData entry with no `w` —
+    // both cases are "still the editor's own default", not a real width to
+    // persist. Also drop anything outside the sheet's own column_count so a
+    // definition never reaches the backend's stricter bounds validation
+    // (definition.go) with an out-of-range entry.
+    .filter((cw): cw is ColumnWidth => typeof cw.width === 'number' && cw.width > 0 && cw.col >= 0 && cw.col < columnCount)
+    .sort((a, b) => a.col - b.col)
+
   return {
     id: sheet.id ?? fallbackID,
     name: sheet.name ?? fallbackID,
     row_count: sheet.rowCount ?? 36,
-    column_count: sheet.columnCount ?? 12,
+    column_count: columnCount,
     ...(cells.length > 0 ? { cells } : {}),
     ...(sheet.mergeData && sheet.mergeData.length > 0
       ? {
@@ -127,6 +152,7 @@ function fromUniverSheet(
             })),
         }
       : {}),
+    ...(columnWidths.length > 0 ? { column_widths: columnWidths } : {}),
   }
 }
 

@@ -125,4 +125,84 @@ describe('report workbook contract', () => {
       }],
     })
   })
+
+  // A resized column is the bug this feature closes: Univer already lets a
+  // user drag a column wider in the editor (columnData), but fromUniverSheet
+  // never read it, so the resize was silently lost on the next save/reload.
+  it('persists a user-resized column as column_widths', () => {
+    const workbook = fromUniverWorkbook({
+      id: 'report-builder-workbook',
+      name: 'Board pack',
+      sheetOrder: ['overview'],
+      styles: {},
+      sheets: {
+        overview: {
+          id: 'overview',
+          name: 'Overview',
+          rowCount: 20,
+          columnCount: 8,
+          cellData: {},
+          columnData: {
+            0: { w: 240 },
+            // A hidden or otherwise-flagged column can carry a columnData
+            // entry with no width at all — that's not a real resize and
+            // must not turn into a bogus column_widths entry.
+            3: { hd: 1 },
+          },
+        },
+      },
+    })
+
+    expect(workbook.sheets[0].column_widths).toEqual([{ col: 0, width: 240 }])
+  })
+
+  it('drops a columnData entry outside the sheet\'s own column_count', () => {
+    const workbook = fromUniverWorkbook({
+      id: 'report-builder-workbook',
+      name: 'Board pack',
+      sheetOrder: ['overview'],
+      styles: {},
+      sheets: {
+        overview: {
+          id: 'overview',
+          name: 'Overview',
+          rowCount: 20,
+          columnCount: 4,
+          cellData: {},
+          columnData: { 9: { w: 200 } },
+        },
+      },
+    })
+
+    expect(workbook.sheets[0].column_widths).toBeUndefined()
+  })
+
+  it('rehydrates column_widths into Univer columnData, leaving an unspecified column at the editor default', () => {
+    const workbook: ReportWorkbook = {
+      sheets: [{
+        id: 'overview',
+        name: 'Overview',
+        row_count: 20,
+        column_count: 4,
+        column_widths: [{ col: 1, width: 260 }],
+      }],
+    }
+
+    const snapshot = toUniverWorkbook('Board pack', workbook)
+
+    expect(snapshot.sheets?.overview).toEqual(expect.objectContaining({
+      defaultColumnWidth: 112,
+      columnData: { 1: { w: 260 } },
+    }))
+  })
+
+  it('omits columnData entirely when no sheet has an explicit column width', () => {
+    const workbook: ReportWorkbook = {
+      sheets: [{ id: 'overview', name: 'Overview', row_count: 20, column_count: 4 }],
+    }
+
+    const snapshot = toUniverWorkbook('Board pack', workbook)
+
+    expect(snapshot.sheets?.overview).not.toHaveProperty('columnData')
+  })
 })

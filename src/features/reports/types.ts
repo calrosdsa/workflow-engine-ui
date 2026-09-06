@@ -100,6 +100,14 @@ export interface WorkbookMerge {
   end_col: number
 }
 
+// ColumnWidth is one sheet column's author-set width, in the same pixel
+// unit Univer's own column resize uses (IColumnData.w) — see contract.ts's
+// fromUniverSheet/toUniverWorkbook for the round-trip with the editor.
+export interface ColumnWidth {
+  col: number
+  width: number
+}
+
 export interface ReportWorkbookSheet {
   id: string
   name: string
@@ -107,6 +115,7 @@ export interface ReportWorkbookSheet {
   column_count: number
   cells?: WorkbookCell[]
   merges?: WorkbookMerge[]
+  column_widths?: ColumnWidth[]
 }
 
 // Version 2 adds a portable spreadsheet template while retaining `blocks`
