@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Save, Loader2, CheckCircle2, AlertCircle, Languages } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,6 +7,10 @@ import { Spinner } from '@/components/ui/spinner'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useApplicationTranslations, useUpdateApplicationTranslations } from '@/features/applications/hooks'
 import { usePermission } from '@/features/auth/permissions'
+import { useForms } from '@/features/forms/hooks'
+import { resolveFormSchema } from '@/features/form-builder/serialize'
+import { collectTranslatableFields, FIELD_CONTENT_KIND_LABELS } from '@/features/form-builder/localize-schema'
+import type { CollectedField } from '@/features/form-builder/localize-schema'
 import { BASE_DICTIONARIES, BASE_LOCALES, LOCALE_LABELS } from '@/features/i18n/dictionaries'
 import type { TranslationsConfig } from '@/features/applications/types'
 
@@ -25,19 +29,38 @@ function draftFrom(loaded: TranslationsConfig | undefined): Draft {
   }
 }
 
+/** One display name per group of CollectedField rows sharing a fieldPath —
+ *  prefers that element's own `.label` entry, then `.content` (a
+ *  presentational heading/paragraph has no label), then falls back to the
+ *  element's raw key so a row is never unlabeled. */
+function groupLabels(fields: CollectedField[]): Map<string, string> {
+  const map = new Map<string, string>()
+  for (const f of fields) if (f.kind === 'label') map.set(f.fieldPath, f.defaultValue)
+  for (const f of fields) if (!map.has(f.fieldPath) && f.kind === 'content') map.set(f.fieldPath, f.defaultValue)
+  for (const f of fields) if (!map.has(f.fieldPath)) map.set(f.fieldPath, f.fieldPath.split('.').pop() ?? f.fieldPath)
+  return map
+}
+
+type LocalizationTab = 'interface' | 'fields'
+
 /** Management UI for this app's i18n string overrides — the "dynamic" half
- *  of translation support (the other half, the bundled base dictionary a
- *  key falls back to when unset here, lives in code — see
- *  features/i18n/dictionaries.ts's own doc comment). Rows come from that
- *  same base dictionary: there is no separate key registry, a string
- *  becomes editable here simply by being used via t() somewhere and added
- *  to en.ts. Only what a designer actually types is persisted — an
- *  untouched cell keeps using the bundled default shown as its placeholder. */
+ *  of translation support. Two genuinely different key sources share the
+ *  same underlying strings map, shown as separate tabs rather than one
+ *  merged grid since they have different editing semantics:
+ *
+ *  - Interface text: fixed, code-authored chrome (see
+ *    features/i18n/dictionaries.ts). Its "default" column IS editable here
+ *    — English has nowhere else to be re-worded.
+ *  - Form fields: each form's own label/placeholder/help text/choice
+ *    options/validation message, authored in the form builder. Its default
+ *    column is READ-ONLY reference text — the form builder is the one place
+ *    to edit it; this tab only adds OTHER-locale overrides on top. */
 export function LocalizationSection() {
   const { data: loaded, isLoading } = useApplicationTranslations()
   const updateMutation = useUpdateApplicationTranslations()
   const canWrite = usePermission('application:write')
 
+  const [tab, setTab] = useState<LocalizationTab>('interface')
   const [draft, setDraft] = useState<Draft>(draftFrom(undefined))
   const [saved, setSaved] = useState(false)
 
@@ -46,8 +69,6 @@ export function LocalizationSection() {
   }, [loaded])
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Spinner /></div>
-
-  const keys = Object.keys(BASE_DICTIONARIES.en)
 
   const toggleLocale = (locale: string, on: boolean) => {
     setSaved(false)
@@ -80,7 +101,6 @@ export function LocalizationSection() {
           <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Localization</h2>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
             Languages this app's runtime offers end users, and any wording overrides for them.
-            A cell left blank keeps using the runtime's built-in default shown as its placeholder.
           </p>
         </div>
         {canWrite && (
@@ -126,52 +146,183 @@ export function LocalizationSection() {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-[hsl(var(--border))]">
-        <table className="w-full border-collapse text-sm">
-          <thead className="sticky top-0 bg-[hsl(var(--card))]">
-            <tr>
-              <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">Key</th>
-              {draft.supported_locales.map((locale) => (
-                <th key={locale} className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">
-                  {LOCALE_LABELS[locale] ?? locale}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {keys.length === 0 && (
-              <tr>
-                <td colSpan={draft.supported_locales.length + 1} className="p-4 text-center text-[hsl(var(--muted-foreground))]">
-                  No translatable strings yet — nothing in the runtime uses t() yet.
-                </td>
-              </tr>
-            )}
-            {keys.map((key) => (
-              <tr key={key} className="border-b border-[hsl(var(--border))] last:border-b-0">
-                <td className="p-2 align-top font-mono text-xs text-[hsl(var(--muted-foreground))]">
-                  {key}
-                  <div className="mt-0.5 font-sans text-[11px] italic text-[hsl(var(--muted-foreground))]/70">{BASE_DICTIONARIES.en[key]}</div>
-                </td>
-                {draft.supported_locales.map((locale) => (
-                  <td key={locale} className="p-2 align-top">
-                    <Input
-                      value={draft.strings[locale]?.[key] ?? ''}
-                      onChange={(e) => setCell(locale, key, e.target.value)}
-                      placeholder={BASE_DICTIONARIES[locale]?.[key] ?? BASE_DICTIONARIES.en[key]}
-                      disabled={!canWrite}
-                    />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="mb-3 flex gap-1 border-b border-[hsl(var(--border))]">
+        {([['interface', 'Interface text'], ['fields', 'Form fields']] as const).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            aria-current={tab === id ? 'page' : undefined}
+            className={`px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] ${
+              tab === id
+                ? 'border-b-2 border-[hsl(var(--primary))] text-[hsl(var(--primary))]'
+                : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {tab === 'interface'
+          ? <InterfaceTextTable draft={draft} setCell={setCell} canWrite={canWrite} />
+          : <FormFieldsTable draft={draft} setCell={setCell} canWrite={canWrite} />}
       </div>
 
       <p className="mt-3 flex items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]">
         <Languages size={13} />
         End users switch between these from the profile menu in the running app.
       </p>
+    </div>
+  )
+}
+
+interface TableProps {
+  draft: Draft
+  setCell: (locale: string, key: string, value: string) => void
+  canWrite: boolean
+}
+
+/** Fixed, code-authored chrome — see features/i18n/dictionaries.ts's own
+ *  doc comment. Rows come straight from the bundled base dictionary: there
+ *  is no separate key registry, a string becomes editable here simply by
+ *  being used via t() somewhere and added to en.ts. English is editable
+ *  here too (unlike the Form fields tab) since it has nowhere else to be
+ *  re-worded. */
+function InterfaceTextTable({ draft, setCell, canWrite }: TableProps) {
+  const keys = Object.keys(BASE_DICTIONARIES.en)
+  return (
+    <div className="h-full overflow-auto rounded-lg border border-[hsl(var(--border))]">
+      <table className="w-full border-collapse text-sm">
+        <thead className="sticky top-0 bg-[hsl(var(--card))]">
+          <tr>
+            <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">Key</th>
+            {draft.supported_locales.map((locale) => (
+              <th key={locale} className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">
+                {LOCALE_LABELS[locale] ?? locale}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {keys.map((key) => (
+            <tr key={key} className="border-b border-[hsl(var(--border))] last:border-b-0">
+              <td className="p-2 align-top font-mono text-xs text-[hsl(var(--muted-foreground))]">
+                {key}
+                <div className="mt-0.5 font-sans text-[11px] italic text-[hsl(var(--muted-foreground))]/70">{BASE_DICTIONARIES.en[key]}</div>
+              </td>
+              {draft.supported_locales.map((locale) => (
+                <td key={locale} className="p-2 align-top">
+                  <Input
+                    value={draft.strings[locale]?.[key] ?? ''}
+                    onChange={(e) => setCell(locale, key, e.target.value)}
+                    placeholder={BASE_DICTIONARIES[locale]?.[key] ?? BASE_DICTIONARIES.en[key]}
+                    disabled={!canWrite}
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+/** Each form's own authored label/placeholder/help text/choice options/
+ *  validation message — dynamic per-app content, distinct from Interface
+ *  text above (see this file's own top comment). The default column is
+ *  read-only reference text: this tab only adds OTHER-locale overrides,
+ *  never re-edits what the designer typed — that happens in the form
+ *  builder itself. */
+function FormFieldsTable({ draft, setCell, canWrite }: TableProps) {
+  const { data: forms, isLoading } = useForms()
+  const [formId, setFormId] = useState<string | null>(null)
+
+  const selected = forms?.find((f) => f.id === formId) ?? forms?.[0]
+
+  const fields = useMemo(
+    () => (selected ? collectTranslatableFields(resolveFormSchema(selected), selected.id) : []),
+    [selected],
+  )
+  const labels = useMemo(() => groupLabels(fields), [fields])
+  // The Default column already shows the default locale's own authored
+  // text — editing it happens in the form builder, not here (unlike
+  // Interface text's English column) — so only OTHER locales get an
+  // editable cell in this table.
+  const otherLocales = draft.supported_locales.filter((l) => l !== draft.default_locale)
+
+  if (isLoading) return <div className="flex h-32 items-center justify-center"><Spinner /></div>
+  if (!forms || forms.length === 0) {
+    return <p className="p-4 text-sm text-[hsl(var(--muted-foreground))]">This app has no forms yet.</p>
+  }
+
+  let lastFieldPath = ''
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="mb-3">
+        <SelectMenu value={selected?.id ?? ''} onValueChange={setFormId}>
+          <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {forms.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+          </SelectContent>
+        </SelectMenu>
+      </div>
+
+      {fields.length === 0 ? (
+        <p className="p-4 text-center text-sm text-[hsl(var(--muted-foreground))]">
+          This form has no translatable text yet — every label, placeholder, and help text on it is empty.
+        </p>
+      ) : otherLocales.length === 0 ? (
+        <p className="p-4 text-center text-sm text-[hsl(var(--muted-foreground))]">
+          Add a second supported language above to translate this form's fields.
+        </p>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-[hsl(var(--border))]">
+          <table className="w-full border-collapse text-sm">
+            <thead className="sticky top-0 bg-[hsl(var(--card))]">
+              <tr>
+                <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">Field</th>
+                <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">Property</th>
+                <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">Default (as authored)</th>
+                {otherLocales.map((locale) => (
+                  <th key={locale} className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">
+                    {LOCALE_LABELS[locale] ?? locale}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {fields.map((f) => {
+                const showGroup = f.fieldPath !== lastFieldPath
+                lastFieldPath = f.fieldPath
+                return (
+                  <tr key={f.key} className="border-b border-[hsl(var(--border))] last:border-b-0">
+                    <td className="p-2 align-top font-medium text-[hsl(var(--foreground))]">
+                      {showGroup ? labels.get(f.fieldPath) : ''}
+                    </td>
+                    <td className="p-2 align-top text-[hsl(var(--muted-foreground))]">
+                      {FIELD_CONTENT_KIND_LABELS[f.kind]}{f.kind === 'option' ? ` "${f.optionValue}"` : ''}
+                    </td>
+                    <td className="p-2 align-top italic text-[hsl(var(--muted-foreground))]">{f.defaultValue}</td>
+                    {otherLocales.map((locale) => (
+                      <td key={locale} className="p-2 align-top">
+                        <Input
+                          value={draft.strings[locale]?.[f.key] ?? ''}
+                          onChange={(e) => setCell(locale, f.key, e.target.value)}
+                          placeholder={f.defaultValue}
+                          disabled={!canWrite}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

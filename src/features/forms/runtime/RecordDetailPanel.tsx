@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge'
 import { useTeamUsers } from '@/features/users/hooks'
 import type { TeamUser } from '@/features/users/types'
 import { useForm as useFormDef } from '@/features/forms/hooks'
+import { iterElements } from '@/features/form-builder/projection'
 import { resolveDetailTabs } from './detail-tabs/registry'
 import { DetailTabList } from './detail-tabs/DetailTabList'
 import { ZonedDetailTabList } from './detail-tabs/ZonedDetailTabList'
@@ -273,7 +274,12 @@ export function AuditLogTab({ formId, recordId, fields, schema }: { formId: stri
   const { data: users } = useTeamUsers()
   const [expanded, setExpanded] = useState<string | null>(null)
 
-  const fieldLabel = (key: string) => fields.find((f) => f.name === key)?.label ?? key
+  // Prefers the (already-localized, per its caller) layout schema's own
+  // element label over FieldDef.label — same reasoning as RecordsTable's
+  // identical labelByKey, and the same "no schema means no localization to
+  // do" fallback.
+  const labelByKey = schema ? new Map([...iterElements(schema)].map((el) => [el.key, el.label])) : new Map<string, string>()
+  const fieldLabel = (key: string) => labelByKey.get(key) ?? fields.find((f) => f.name === key)?.label ?? key
   const enumLabels = buildEnumLabels(schema)
   const fieldIsEnum = (key: string) => fields.find((f) => f.name === key)?.type === 'enum'
 

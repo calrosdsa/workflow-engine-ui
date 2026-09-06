@@ -9,6 +9,8 @@ import { PermissionDeniedPage } from './PermissionDeniedPage'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
 import { useForm as useFormDef, useCreateRecord } from '@/features/forms/hooks'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
+import { localizeFormSchema } from '@/features/form-builder/localize-schema'
+import { useI18n } from '@/features/i18n/I18nProvider'
 import { useAfterSubmitWorkflow } from '@/features/ui-workflows/useAfterSubmitWorkflow'
 import type { AppSnapshot } from './types'
 
@@ -42,10 +44,11 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId }: Run
 
   const { data: form } = useFormDef(formId)
   const createRecord = useCreateRecord(formId)
+  const { tc } = useI18n()
 
   // The form's own after-submit steps. Undefined-tolerant on both counts: the
   // definition may still be loading, and most forms configure none at all.
-  const schema = useMemo(() => (form ? resolveFormSchema(form) : undefined), [form])
+  const schema = useMemo(() => (form ? localizeFormSchema(resolveFormSchema(form), form.id, tc) : undefined), [form, tc])
   const runAfterSubmit = useAfterSubmitWorkflow(formId, schema?.settings?.afterSubmitWorkflow)
 
   const handleSubmit = async (values: Record<string, unknown>) => {

@@ -11,6 +11,8 @@ import { resolveRecordTitle } from '@/features/forms/runtime/record-title'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { useRecordDetail } from '@/features/forms/runtime/record-detail-hooks'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
+import { localizeFormSchema } from '@/features/form-builder/localize-schema'
+import { useI18n } from '@/features/i18n/I18nProvider'
 import type { AppSnapshot } from './types'
 
 interface RuntimeFormRecordPageProps {
@@ -45,7 +47,8 @@ export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recor
   const { data: form } = useFormDef(formId)
   const { data: record } = useRecordDetail(formId, recordId)
   const recordTitle = resolveRecordTitle(form?.fields, record)
-  const schema = form ? resolveFormSchema(form) : undefined
+  const { tc } = useI18n()
+  const schema = form ? localizeFormSchema(resolveFormSchema(form), form.id, tc) : undefined
 
   return (
     // Theming is provided once by the shared ThemeProvider in

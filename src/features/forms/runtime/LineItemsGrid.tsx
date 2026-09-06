@@ -41,6 +41,8 @@ import { FileFieldInput } from './FileFieldInput'
 import { COLUMN_LAYOUTS } from '@/features/form-builder/schema'
 import { iterLineItemElements } from '@/features/form-builder/lineItemsSync'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
+import { localizeFormSchema, localizeSections } from '@/features/form-builder/localize-schema'
+import { useI18n } from '@/features/i18n/I18nProvider'
 import type { LineItemSection, FormElement, FormColumn, ComponentType } from '@/features/form-builder/schema'
 import type { FormRecord, FieldDef, FieldType, FormDefinition } from '@/features/forms/types'
 
@@ -233,6 +235,7 @@ export function LineItemsGrid({ el, field, parentFormId, disabled }: {
   const isAdopted = el.sourceMode === 'existing'
   const { data: adoptedForm, isLoading: adoptedLoading } = useFormDef(isAdopted ? (el.adoptedFormRef ?? '') : '')
   const updateAdoptedRecord = useUpdateRecord(isAdopted ? (el.adoptedFormRef ?? '') : '')
+  const { tc } = useI18n()
 
   // The form whose permission catalog actually governs this grid's row
   // actions. An ADOPTED row is an independent record of its own form — it
@@ -244,10 +247,16 @@ export function LineItemsGrid({ el, field, parentFormId, disabled }: {
   const effectiveFormId = isAdopted ? el.adoptedFormRef : parentFormId
 
   const sections = useMemo<LineItemSection[]>(() => {
+    // Generated mode: el.lineItemColumns arrives already localized — it's
+    // embedded in the parent form's own schema, which localizeFormSchema
+    // already recursed into (see localize-schema.ts's own doc comment).
+    // Adopted mode: adoptedForm is a genuinely SEPARATE form, resolved via
+    // its own resolveFormSchema call inside adoptedFormSections above, so
+    // its sections need their own localization pass here.
     if (!isAdopted) return el.lineItemColumns ?? []
     if (!adoptedForm) return []
-    return adoptedFormSections(adoptedForm, el.adoptedReferenceField)
-  }, [isAdopted, adoptedForm, el.lineItemColumns, el.adoptedReferenceField])
+    return localizeSections(adoptedFormSections(adoptedForm, el.adoptedReferenceField), adoptedForm.id, [], tc)
+  }, [isAdopted, adoptedForm, el.lineItemColumns, el.adoptedReferenceField, tc])
 
   if (isAdopted && adoptedLoading) {
     return <GridSkeleton />
@@ -1184,7 +1193,8 @@ function RowDetailDrawer({ formId, recordId, fields, layout, onClose }: {
   onClose: () => void
 }) {
   const container = document.getElementById('runtime-root') ?? document.body
-  const schema = resolveFormSchema({ layout, fields })
+  const { tc } = useI18n()
+  const schema = localizeFormSchema(resolveFormSchema({ layout, fields }), formId, tc)
   // Same query key the panel below uses, so this is a cache share, not a
   // second fetch — the toolbar needs the record for its actions.
   const { data: record } = useRecordDetail(formId, recordId)

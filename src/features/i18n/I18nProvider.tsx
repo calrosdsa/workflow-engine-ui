@@ -13,6 +13,14 @@ export interface I18nContextValue {
    *  (which has no single app in scope; see I18nProvider's own comment). */
   supportedLocales: string[]
   t: (key: string, vars?: Record<string, string | number>) => string
+  /** Resolve a per-app CONTENT override — a form field's label/placeholder/
+   *  help text/etc, keyed by features/form-builder/localize-schema.ts's
+   *  `form.<formId>.field.<path>.<prop>` scheme. Deliberately separate from
+   *  `t`: there is no bundled base-dictionary entry for dynamic, per-app
+   *  content, so `fallback` (the field's own authored text) stands in for
+   *  that layer instead — `t`'s chain ends at BASE_DICTIONARIES.en, this
+   *  one ends at whatever the caller already has on hand. */
+  tc: (key: string, fallback: string) => string
 }
 
 const I18nContext = createContext<I18nContextValue | null>(null)
@@ -109,10 +117,15 @@ export function I18nProvider({ overrides, children }: I18nProviderProps) {
     }
   }, [overrides, locale])
 
+  const tc = useMemo(() => {
+    const appStrings = overrides?.strings ?? {}
+    return (key: string, fallback: string) => appStrings[locale]?.[key] ?? fallback
+  }, [overrides, locale])
+
   const value = useMemo(
-    () => ({ locale, setLocale, supportedLocales, t }),
+    () => ({ locale, setLocale, supportedLocales, t, tc }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- supportedKey stands in for supportedLocales' identity
-    [locale, supportedKey, t],
+    [locale, supportedKey, t, tc],
   )
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>

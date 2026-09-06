@@ -20,6 +20,9 @@ import { RoleValueLabel } from './RoleValueLabel'
 import { FileCellDisplay } from './FileCellDisplay'
 import { buildEnumLabels, resolveEnumLabel } from './enum-labels'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
+import { localizeFormSchema } from '@/features/form-builder/localize-schema'
+import { iterElements } from '@/features/form-builder/projection'
+import { useI18n } from '@/features/i18n/I18nProvider'
 import { CardLayout } from '@/features/menus/saved-views/layouts/CardLayout'
 import { CalendarLayout } from '@/features/menus/saved-views/layouts/CalendarLayout'
 import { KanbanLayout } from '@/features/menus/saved-views/layouts/KanbanLayout'
@@ -258,8 +261,16 @@ export function RecordsTable({
   // this recovers the same labels for List/Card's read-only display. Reuses
   // the same parseLayout(form.layout) call the record-detail drawer below
   // already makes, rather than a second, redundant parse.
-  const formSchema = resolveFormSchema(form)
+  const { tc } = useI18n()
+  const formSchema = localizeFormSchema(resolveFormSchema(form), form.id, tc)
   const enumLabels = buildEnumLabels(formSchema)
+  // Column headers come from the LOCALIZED layout schema's own elements
+  // (already-resolved label text), not fieldsWithSystem's raw FieldDef.label
+  // — those are two different objects (the builder's rich per-element schema
+  // vs the backend's plain field metadata) and only the former carries a
+  // translation override. Falls back to FieldDef.label for entries with no
+  // matching schema element (system columns like created_at have none).
+  const labelByKey = new Map([...iterElements(formSchema)].map((el) => [el.key, el.label]))
 
   // §6's named edge case: a saved view's Calendar/Kanban layout_config names
   // a field that was later deleted/renamed on the form — falls back to List
@@ -304,7 +315,7 @@ export function RecordsTable({
     const isTemporal = field?.type === 'date' || field?.type === 'datetime' || field?.type === 'time'
     return {
       key,
-      label: field?.label ?? key,
+      label: labelByKey.get(key) ?? field?.label ?? key,
       sortable: true,
       render: isReference
         ? (row: FormRecord) => <RecordReferenceLink formId={field.reference_table} recordId={row[key]} displayField={field.display_field} />

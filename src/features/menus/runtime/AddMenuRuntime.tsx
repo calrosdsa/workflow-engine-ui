@@ -4,6 +4,8 @@ import { useForm as useFormDef } from '@/features/forms/hooks'
 import { formsApi } from '@/features/forms/api'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
+import { localizeFormSchema } from '@/features/form-builder/localize-schema'
+import { useI18n } from '@/features/i18n/I18nProvider'
 import { useAfterSubmitWorkflow } from '@/features/ui-workflows/useAfterSubmitWorkflow'
 import type { Menu, AddMenuConfig } from '../types'
 
@@ -31,7 +33,8 @@ export function AddMenuRuntime({ menu, onNavigate }: AddMenuRuntimeProps) {
   // Resolved above the early returns below, because the hook that reads it
   // cannot be called conditionally. Both are undefined-tolerant while the
   // form is still loading.
-  const schema = useMemo(() => (form ? resolveFormSchema(form) : undefined), [form])
+  const { tc } = useI18n()
+  const schema = useMemo(() => (form ? localizeFormSchema(resolveFormSchema(form), form.id, tc) : undefined), [form, tc])
   const runAfterSubmit = useAfterSubmitWorkflow(form?.id, schema?.settings?.afterSubmitWorkflow)
 
   if (isLoading) return null

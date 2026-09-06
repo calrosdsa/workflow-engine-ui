@@ -4,6 +4,8 @@ import { useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
+import { localizeFormSchema } from '@/features/form-builder/localize-schema'
+import { useI18n } from '@/features/i18n/I18nProvider'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { useCreateRecord } from '@/features/forms/hooks'
 import { useOpenFormStore, abandonPendingForm } from './open-form-store'
@@ -24,6 +26,11 @@ function OpenFormDialog() {
   const { request, settle } = pending
   const { data: form, isLoading } = useFormDef(request.formId)
   const createRecord = useCreateRecord(request.formId)
+  // Also mounted in the builder entry (see this file's own top comment) —
+  // that I18nProvider always has no per-app overrides (main.tsx's own
+  // comment), so tc() there is a no-op passthrough to the authored text;
+  // this only actually translates anything in the runtime entry.
+  const { tc } = useI18n()
 
   return (
     <Dialog
@@ -50,7 +57,7 @@ function OpenFormDialog() {
             // anything about being nested.
             <UiWorkflowDepthContext.Provider value={request.depth}>
               <FormRenderer
-                schema={resolveFormSchema(form)}
+                schema={localizeFormSchema(resolveFormSchema(form), form.id, tc)}
                 fields={form.fields}
                 formId={form.id}
                 // The step already knows the record it is attached to, which
