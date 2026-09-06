@@ -59,6 +59,16 @@ export function RuntimeRecordPage({ snapshot, clientId, appId, currentMenu, form
 
         {mobileNavOpen && (
           <div className="fixed inset-0 z-50 flex md:hidden">
+              {/* Backdrop click-to-close is a supplementary pointer gesture,
+                 not the keyboard path — same convention as a Radix/Headless
+                 UI dialog overlay. The real keyboard equivalent (Escape) isn't
+                 wired for this mobile slide-over yet; today a keyboard user
+                 closes it via the same toggle button that opened it. Making
+                 this full-viewport div a fake button/tabIndex stop would
+                 insert a giant, purposeless tab stop ahead of the sidebar's
+                 real nav links, which is worse than leaving it out of the
+                 tab order entirely. */}
+              {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
             <div
               className="absolute inset-0 bg-black/40 animate-in fade-in-0 duration-200 motion-reduce:animate-none"
               onClick={() => setMobileNavOpen(false)}

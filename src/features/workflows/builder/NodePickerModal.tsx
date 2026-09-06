@@ -72,7 +72,11 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
     : (tabs[activeTab]?.entries ?? [])
 
   return (
-    // Backdrop
+    // Backdrop. Click-to-close is a supplementary pointer gesture — Escape
+    // (wired above) is the real keyboard equivalent, matching a standard
+    // dialog-overlay convention. A fake role/tabIndex on a full-viewport div
+    // would just be a purposeless tab stop ahead of the modal's real content.
+    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}

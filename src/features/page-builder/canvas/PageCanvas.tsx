@@ -18,6 +18,13 @@ export function PageCanvas() {
   const hasSections = schema.sections.length > 0
 
   return (
+    // Click empty canvas to deselect — a supplementary pointer gesture
+    // (SectionCard's own onClick stops propagation, so this only fires on
+    // the background itself). No keyboard equivalent exists yet for
+    // deselecting; a keyboard user reaches the same end by selecting a
+    // different section. A fake button/tabIndex on this whole canvas would
+    // be a worse regression than the gap it "fixes".
+    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events
     <div className="flex h-full flex-1 flex-col bg-slate-50" onClick={() => selectComponent(null)}>
       <ScrollArea className="flex-1">
         <div className="mx-auto max-w-4xl space-y-4 p-6">

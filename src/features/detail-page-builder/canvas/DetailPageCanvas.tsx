@@ -147,6 +147,13 @@ export function DetailPageCanvas({ tabs, layout, selectedTabId, onSelectTab, onC
       onDragEnd={handleDragEnd}
       onDragCancel={() => setDraggingId(null)}
     >
+      {/* Click empty canvas to deselect — a supplementary pointer gesture
+          (TabCard's own onClick stops propagation, so this only fires on
+          the background itself). No keyboard equivalent exists yet for
+          deselecting; a keyboard user reaches the same end by selecting a
+          different tab. A fake button/tabIndex on this whole scroll area
+          would be a worse regression than the gap it "fixes". */}
+      {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
       <div className="flex min-h-0 flex-1 gap-4 overflow-x-auto p-4" onClick={() => onSelectTab(null)}>
         {zones.map((zone) => (
           <ZoneDropZone

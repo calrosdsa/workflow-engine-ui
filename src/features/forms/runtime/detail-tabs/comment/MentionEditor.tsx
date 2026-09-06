@@ -89,6 +89,30 @@ export const MentionEditor = forwardRef<MentionEditorHandle, MentionEditorProps>
         // children once mounted (all mutation goes through direct DOM APIs
         // in mention-dom.ts, not React state/props).
         suppressContentEditableWarning
+        // A contentEditable div carries no implicit ARIA semantics of its
+        // own — without role="textbox" a screen reader announces it as a
+        // plain, mute div, not an editable field. aria-multiline reflects
+        // that comments can wrap/span lines (a real <textarea>'s default,
+        // unlike role="textbox" alone which implies single-line). aria-label
+        // reuses the same `placeholder` prop already shown visually via
+        // data-placeholder below, since there's no visible <label> element
+        // pointing at this div the way a native form control would have
+        // one. aria-readonly mirrors contentEditable's own !disabled toggle
+        // — accurate, not additive behavior. tabIndex={0} is redundant with
+        // contentEditable's own native implicit focusability (the browser
+        // already makes this tabbable without it) but role="textbox" reads
+        // as a CUSTOM ARIA widget to jsx-a11y's interactive-supports-focus
+        // rule, which expects one explicitly — harmless to add since 0 is
+        // exactly where it would land in tab order anyway. (A sibling
+        // finding, prefer-tag-over-role, suggests swapping this for a real
+        // <textarea> — not done: this is deliberately contentEditable so a
+        // mention can render as an inline "@Name" chip, which a <textarea>
+        // cannot hold; see this file's own top comment.)
+        role="textbox"
+        aria-multiline="true"
+        aria-label={placeholder}
+        aria-readonly={disabled}
+        tabIndex={0}
         onInput={handleInput}
         onKeyDown={onKeyDown}
         data-placeholder={placeholder}

@@ -62,6 +62,13 @@ export function RecordReferenceLink({ formId, recordId, displayField }: RecordRe
     // itself doesn't intercept) while only blocking further propagation to
     // an ancestor row's own onClick (e.g. RecordsTable's row-opens-drawer
     // handler) once RuntimeLink/the browser has already handled it.
+    //
+    // Not a real interactive element in its own right — it does nothing on
+    // its own, it only shields the ancestor row from a click that the real
+    // control (RuntimeLink's <a>) already handled. Giving it a role/tabIndex
+    // to satisfy jsx-a11y here would add a pointless, silent tab stop with
+    // no action of its own behind the genuinely interactive link.
+    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events
     <span onClick={(e) => e.stopPropagation()}>
       <RuntimeLink
         to={`/${activeMembership.client_id}/${activeMembership.app_id}/forms/${formId}/${id}`}

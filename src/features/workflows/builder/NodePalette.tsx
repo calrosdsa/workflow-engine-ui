@@ -4,7 +4,7 @@ import { useBuilderStore } from './store'
 import { PALETTE_NODES, NODE_REGISTRY, fallbackCategory } from './node-registry'
 import { useConnectorRegistry } from './connector-hooks'
 import { useNodeTaxonomy, groupByCategory, type PaletteEntry } from './node-taxonomy'
-import { cn } from '@/lib/utils'
+import { cn, onKeyboardActivate } from '@/lib/utils'
 import type { NodeType } from '../types'
 
 export function NodePalette() {
@@ -70,12 +70,26 @@ export function NodePalette() {
             return (
               <div
                 key={entry.type}
+                // role="button" (unlike the selectable-card pattern
+                // elsewhere in this app, e.g. form-builder/canvas/
+                // ElementCard.tsx's role="group") because clicking this
+                // adds the node — a single, complete action with no nested
+                // interactive descendants of its own. draggable/onDragStart
+                // stays mouse/touch-only (native HTML5 DnD has no keyboard
+                // equivalent), but click already reaches the exact same
+                // outcome, so Enter/Space here gives keyboard users full
+                // parity, not just a partial one.
+                role="button"
+                tabIndex={0}
+                aria-label={`Add ${entry.label} node`}
                 draggable
                 onDragStart={(e) => onDragStart(e, entry.type)}
                 onClick={() => addNode(entry.type)}
+                onKeyDown={onKeyboardActivate(() => addNode(entry.type))}
                 className={cn(
                   'group flex cursor-grab items-center gap-2.5 rounded-xl px-2 py-1.5',
                   'transition-colors hover:bg-[hsl(var(--muted))] active:cursor-grabbing',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]',
                   'select-none',
                 )}
                 title={entry.description}

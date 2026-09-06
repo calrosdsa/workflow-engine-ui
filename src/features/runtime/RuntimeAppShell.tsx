@@ -3,7 +3,7 @@ import { Menu as MenuIcon, X, PencilRuler, Eye } from 'lucide-react'
 import { runtimeRouter, useRuntimeDraftPreview, exitDraftPreview } from '@/runtime-router'
 import { useAuthStore } from '@/stores/auth'
 import { canViewMenu, hasPermission } from '@/features/auth/permissions'
-import { buildRuntimeNavTree, runtimeAncestors, toMenu } from './nav'
+import { resolveSidebarNav, runtimeAncestors, toMenu } from './nav'
 import { RuntimeSidebar } from './RuntimeSidebar'
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
 import { PermissionDeniedPage } from './PermissionDeniedPage'
@@ -38,7 +38,7 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
   const roleId = membership?.role_id
   const canDesign = hasPermission(permissions, 'application:design')
 
-  const navTree = buildRuntimeNavTree(snapshot.menus, roleId, permissions)
+  const { navTree, scopedRoot } = resolveSidebarNav(snapshot.menus, currentMenu.id, roleId, permissions)
   const breadcrumbs = runtimeAncestors(snapshot.menus, currentMenu.id)
 
   const canViewCurrent = canViewMenu(currentMenu, roleId, permissions)
@@ -78,6 +78,7 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
           <RuntimeSidebar
             appName={snapshot.app.name}
             navTree={navTree}
+            scopedRoot={scopedRoot}
             clientId={clientId}
             appId={appId}
             activeMenuId={currentMenu.id}
@@ -87,6 +88,16 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
         {/* Mobile slide-over nav */}
         {mobileNavOpen && (
           <div className="fixed inset-0 z-50 flex md:hidden">
+              {/* Backdrop click-to-close is a supplementary pointer gesture,
+                 not the keyboard path — same convention as a Radix/Headless
+                 UI dialog overlay. The real keyboard equivalent (Escape) isn't
+                 wired for this mobile slide-over yet; today a keyboard user
+                 closes it via the same toggle button that opened it. Making
+                 this full-viewport div a fake button/tabIndex stop would
+                 insert a giant, purposeless tab stop ahead of the sidebar's
+                 real nav links, which is worse than leaving it out of the
+                 tab order entirely. */}
+              {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
             <div
               className="absolute inset-0 bg-black/40 animate-in fade-in-0 duration-200 motion-reduce:animate-none"
               onClick={() => setMobileNavOpen(false)}
@@ -95,6 +106,7 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
               <RuntimeSidebar
                 appName={snapshot.app.name}
                 navTree={navTree}
+                scopedRoot={scopedRoot}
                 clientId={clientId}
                 appId={appId}
                 activeMenuId={currentMenu.id}

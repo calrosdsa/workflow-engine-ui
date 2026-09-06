@@ -525,7 +525,16 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
 
       {/* Header */}
       <div className={cn('relative flex items-center gap-2 rounded-t-2xl px-2 py-1.5', gradient)}>
-        {/* Drag grip — initiates reorder drag (only this is draggable) */}
+        {/* Drag grip — initiates reorder drag (only this is draggable).
+            Native HTML5 `draggable`, unlike dnd-kit elsewhere in this app
+            (see ElementCard.tsx's "Space to drag, arrows to move" grip),
+            has no built-in keyboard-operable equivalent, and there's no
+            separate non-drag path to the same reorder outcome the way
+            NodePalette's click-to-add has for its own drag/click pair.
+            Known, tracked gap — not fixed here; a real fix means replacing
+            this with a dnd-kit-style keyboard sensor, which is a materially
+            bigger change than adding a role to it would honestly imply. */}
+        {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions */}
         <div
           draggable
           onDragStart={handleDragStart}

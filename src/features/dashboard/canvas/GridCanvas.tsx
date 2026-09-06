@@ -129,6 +129,14 @@ export function GridCanvas({ clientId, appId, onAddFirstWidget }: GridCanvasProp
   const hasWidgets = schema.widgets.length > 0
 
   return (
+    // Click empty canvas to deselect — a supplementary pointer gesture
+    // (children with a real selectable tile call e.stopPropagation() on
+    // their own onClick, so this only ever fires on the background
+    // itself). No keyboard equivalent exists yet for deselecting; a
+    // keyboard user reaches the same end by selecting a different tile.
+    // Turning the whole scrollable canvas into a fake button/tabIndex
+    // stop would be a worse regression than the gap it "fixes".
+    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events
     <div
       ref={setNodeRef}
       className={`flex h-full flex-1 flex-col overflow-auto bg-[hsl(var(--background))] ${isOver ? 'ring-2 ring-inset ring-[hsl(var(--primary))]/50' : ''}`}
