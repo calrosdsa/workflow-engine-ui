@@ -1,4 +1,4 @@
-import type { FormSchema, FormSection, FormElement, SelectOption } from './schema'
+import type { FormSchema, FormSection, FormElement, SelectOption, DetailTabConfig, CustomActionConfig } from './schema'
 
 // Runtime-only content translation for a form's own authored text (label,
 // placeholder, help text, choice-option labels, custom validation message,
@@ -91,13 +91,86 @@ export function localizeSections(sections: FormSection[], formId: string, parent
   })
 }
 
+// A detail tab's `id` is only documented unique within whichever single
+// array it lives in (top-level detailTabs, or one 'group'/'details' tab's
+// own nested tabs/childTabs) — not globally across the whole nested tree,
+// since two unrelated groups could each legally contain a child id
+// "comments". The full ancestor id-path is the key, not the bare leaf id,
+// for the identical collision reason localizeElement's fieldKeyPrefix
+// already joins a full ancestor `path` for a nested Line Items grid's own
+// columns rather than just the leaf FormElement.key.
+function detailTabKeyPrefix(formId: string, idPath: string[]): string {
+  return `form.${formId}.detail_tab.${idPath.join('.')}`
+}
+
+// A tab's nested children live inside its own opaque, type-owned `config`
+// (parsed only by that type's own DetailTabDefinition.parseConfig) — but
+// the two nesting shapes that exist today ('group'.config.tabs and the
+// built-in 'details'.config.childTabs) both hold a plain DetailTabConfig[],
+// so this recurses by duck-typing those two property names directly rather
+// than importing the runtime detail-tabs registry into this lower-level,
+// registry-agnostic file.
+function localizeDetailTabs(
+  tabs: DetailTabConfig[] | undefined,
+  formId: string,
+  parentPath: string[],
+  tc: Resolver,
+): DetailTabConfig[] | undefined {
+  if (!tabs?.length) return tabs
+  return tabs.map((t) => {
+    const path = [...parentPath, t.id]
+    const next: DetailTabConfig = t.label ? { ...t, label: tc(`${detailTabKeyPrefix(formId, path)}.label`, t.label) } : t
+    const config = next.config as { tabs?: DetailTabConfig[]; childTabs?: DetailTabConfig[] } | undefined
+    if (Array.isArray(config?.tabs)) {
+      return { ...next, config: { ...config, tabs: localizeDetailTabs(config.tabs, formId, path, tc) } }
+    }
+    if (Array.isArray(config?.childTabs)) {
+      return { ...next, config: { ...config, childTabs: localizeDetailTabs(config.childTabs, formId, path, tc) } }
+    }
+    return next
+  })
+}
+
+// Unlike DetailTabConfig.id, a CustomActionConfig.id is a nanoid generated
+// once at creation and never re-derived from array position — safe to use
+// bare, no ancestor path needed (custom actions don't nest).
+function actionKeyPrefix(formId: string, actionId: string): string {
+  return `form.${formId}.action.${actionId}`
+}
+
+function localizeCustomActions(actions: CustomActionConfig[] | undefined, formId: string, tc: Resolver): CustomActionConfig[] | undefined {
+  if (!actions?.length) return actions
+  return actions.map((a) => (a.label ? { ...a, label: tc(`${actionKeyPrefix(formId, a.id)}.label`, a.label) } : a))
+}
+
 /** Apply this app's per-field translation overrides (design-app Localization
  *  tab) to a schema already produced by resolveFormSchema(). `formId` scopes
  *  the generated keys so the same field key on two different forms never
  *  collides. Call this at every RUNTIME render site, never at design/editing
- *  time — see this file's own doc comment. */
+ *  time — see this file's own doc comment.
+ *
+ *  Also covers the record-detail page's own settings-level content — detail
+ *  tab labels (FormSettings.detailTabs, recursing into 'group'/'details'
+ *  nesting) and custom action labels (FormSettings.customActions) — so every
+ *  existing call site picks these up for free, the same way adding section/
+ *  field coverage here needed no changes at any render site. A detail tab's
+ *  REGISTRY-DEFAULT label (shown when no instance override is set) is a
+ *  separate, fixed platform string keyed by tab type, not per-app content —
+ *  DetailTabList.tsx localizes that half directly via t(), since resolving
+ *  it needs the runtime detail-tabs registry this schema-only file doesn't
+ *  import. */
 export function localizeFormSchema(schema: FormSchema, formId: string, tc: Resolver): FormSchema {
-  return { ...schema, sections: localizeSections(schema.sections, formId, [], tc) }
+  const sections = localizeSections(schema.sections, formId, [], tc)
+  if (!schema.settings) return { ...schema, sections }
+  return {
+    ...schema,
+    sections,
+    settings: {
+      ...schema.settings,
+      detailTabs: localizeDetailTabs(schema.settings.detailTabs, formId, [], tc),
+      customActions: localizeCustomActions(schema.settings.customActions, formId, tc),
+    },
+  }
 }
 
 // The form's own NAME isn't part of FormSchema at all (FormSchema is just

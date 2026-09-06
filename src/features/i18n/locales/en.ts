@@ -59,6 +59,29 @@ export const en = {
   'tags.tab.add': 'Add',
   'tags.tab.no_permission': 'You do not have permission to tag this record.',
   'tags.tab.remove': 'Remove tag',
+  // Fixed platform default shown as a detail tab's name when its admin has
+  // not typed a custom label override (DetailTabConfig.label unset) — one
+  // entry per registered detail-tab type (detail-tabs/registry.ts). NOT
+  // shown in the Form Builder's own tab-catalog UI (design-time chrome
+  // stays English-only by convention); only DetailTabList.tsx's runtime
+  // render reads these.
+  'detail_tab.default_label.details': 'Details',
+  'detail_tab.default_label.audit': 'Audit Log',
+  'detail_tab.default_label.linked': 'Linked Records',
+  'detail_tab.default_label.attachments': 'Attachments',
+  'detail_tab.default_label.tags': 'Tags',
+  'detail_tab.default_label.comment': 'Comments',
+  'detail_tab.default_label.related_form': 'Related Form',
+  'detail_tab.default_label.group': 'Tab Group',
+  'detail_tab.default_label.custom': 'Custom',
+  'detail_tab.default_label.field_ref': 'Field',
+  'detail_tab.default_label.connections': 'Connections',
+  // Shared by AddMenuRuntime.tsx and RuntimeFormCreatePage.tsx (the
+  // formId-direct, menu-less counterpart of the same create flow) — fixed
+  // chrome, not per-app content. success_message doubles as the tc()
+  // fallback when a menu's own AddMenuConfig.success_message is unset.
+  'forms.create.success_message': 'Record created successfully.',
+  'forms.create.error_message': 'Something went wrong while saving. Please try again.',
   // Report builder's on-screen preview (ReportPreviewDialog). It shows the
   // real generated file, so "not viewable" is about the BROWSER lacking a
   // renderer for that format, never about the report failing to generate —

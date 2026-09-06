@@ -49,7 +49,7 @@ export function AddMenuConfigPanel({ menu, onChange }: AddMenuConfigPanelProps) 
           <Input
             value={config.success_message ?? ''}
             onChange={(e) => patch({ success_message: e.target.value })}
-            placeholder="Record created successfully"
+            placeholder="Record created successfully."
           />
         </div>
       )}

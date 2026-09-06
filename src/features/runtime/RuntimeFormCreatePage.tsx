@@ -44,7 +44,7 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId }: Run
 
   const { data: form } = useFormDef(formId)
   const createRecord = useCreateRecord(formId)
-  const { tc } = useI18n()
+  const { t, tc } = useI18n()
 
   // The form's own after-submit steps. Undefined-tolerant on both counts: the
   // definition may still be loading, and most forms configure none at all.
@@ -148,13 +148,13 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId }: Run
                 {result === 'error' && (
                   <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                     <AlertCircle size={16} />
-                    Something went wrong while saving. Please try again.
+                    {t('forms.create.error_message')}
                   </div>
                 )}
                 {result === 'success' && (
                   <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
                     <CheckCircle2 size={16} />
-                    Record created successfully.
+                    {t('forms.create.success_message')}
                   </div>
                 )}
                 <FormRenderer

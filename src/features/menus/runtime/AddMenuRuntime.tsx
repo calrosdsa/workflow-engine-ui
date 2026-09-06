@@ -35,7 +35,7 @@ export function AddMenuRuntime({ menu, onNavigate }: AddMenuRuntimeProps) {
   // Resolved above the early returns below, because the hook that reads it
   // cannot be called conditionally. Both are undefined-tolerant while the
   // form is still loading.
-  const { tc } = useI18n()
+  const { t, tc } = useI18n()
   const schema = useMemo(() => (form ? localizeFormSchema(resolveFormSchema(form), form.id, tc) : undefined), [form, tc])
   const runAfterSubmit = useAfterSubmitWorkflow(form?.id, schema?.settings?.afterSubmitWorkflow)
 
@@ -76,13 +76,18 @@ export function AddMenuRuntime({ menu, onNavigate }: AddMenuRuntimeProps) {
       {result === 'success' && config.success_behavior === 'message' && (
         <div className="flex items-center gap-2 rounded-md border p-3 text-sm" style={{ borderColor: 'hsl(var(--success) / 0.3)', backgroundColor: 'hsl(var(--success) / 0.1)', color: 'hsl(var(--success))' }}>
           <CheckCircle2 size={16} />
-          {config.success_message || 'Record created successfully.'}
+          {/* Two layers: config.success_message (when the admin authored one)
+             or the fixed platform default (already localized via t()) is
+             ITSELF the tc() fallback — so a menu with no custom message
+             still gets a per-app override hook, keyed the same way a menu's
+             own name already is. */}
+          {tc(`menu.${menu.id}.success_message`, config.success_message || t('forms.create.success_message'))}
         </div>
       )}
       {result === 'error' && (
         <div className="flex items-center gap-2 rounded-md border p-3 text-sm" style={{ borderColor: 'hsl(var(--destructive) / 0.3)', backgroundColor: 'hsl(var(--destructive) / 0.1)', color: 'hsl(var(--destructive))' }}>
           <AlertCircle size={16} />
-          Something went wrong while saving. Please try again.
+          {t('forms.create.error_message')}
         </div>
       )}
 

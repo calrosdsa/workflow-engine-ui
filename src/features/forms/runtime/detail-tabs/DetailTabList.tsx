@@ -10,6 +10,7 @@
 import { useState, type ComponentType } from 'react'
 import { cn } from '@/lib/utils'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { useI18n } from '@/features/i18n/I18nProvider'
 import { getDetailTab } from './registry'
 import { useCurrentViewer, isTabVisible } from './useTabVisible'
 import { useExpressionRuntimeState, schemaToVariableDecls } from '../expression-context'
@@ -61,6 +62,7 @@ export function DetailTabList({
   rendererOverride,
   orientation = 'horizontal',
 }: DetailTabListProps) {
+  const { t: translate } = useI18n()
   const viewer = useCurrentViewer()
   const configuredTabs = tabConfigs.filter((t) => !t.hidden && isTabVisible(t.visibility, viewer))
   const variables = schema ? schemaToVariableDecls(schema) : []
@@ -116,9 +118,15 @@ export function DetailTabList({
         <TabsList>
           {visibleTabs.map((t) => {
             const def = getDetailTab(t.type)
+            // t.label (when set) already comes back tc()-localized from
+            // localizeFormSchema — only the registry's own fixed default
+            // (def.label, a platform string keyed by tab type, not per-app
+            // content) needs a separate t() call here, since resolving it
+            // needs this registry, which the lower-level schema-only
+            // localize-schema.ts deliberately doesn't import.
             return (
               <TabsTrigger key={t.id} value={t.id}>
-                {t.label || def?.label || t.type}
+                {t.label || (def ? translate(`detail_tab.default_label.${t.type}`) : undefined) || t.type}
               </TabsTrigger>
             )
           })}
