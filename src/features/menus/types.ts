@@ -13,7 +13,7 @@ import type { FilterGroup, SortRule } from '@/features/workflows/types'
 import type { PageSchema } from '@/features/page-builder/schema'
 import type { DashboardSchema } from '@/features/dashboard/schema'
 
-export type MenuType = 'search' | 'add' | 'parent' | 'custom' | 'dashboard' | 'html'
+export type MenuType = 'search' | 'add' | 'parent' | 'custom' | 'dashboard' | 'html' | 'module'
 
 export interface SearchMenuConfig {
   form_id: string
@@ -34,6 +34,14 @@ export interface AddMenuConfig {
 export interface ParentMenuConfig {
   collapsed_by_default?: boolean
 }
+
+/** Drives a Module menu — a Workspace-style launcher tile shown on the app's
+ *  home page (features/runtime/RuntimeHomePage.tsx). Structurally identical
+ *  to ParentMenuConfig today (v1 ships with no module-specific fields) — a
+ *  distinct alias rather than reusing ParentMenuConfig's name directly, so a
+ *  future module-only field doesn't have to retroactively split the two
+ *  apart. */
+export type ModuleMenuConfig = ParentMenuConfig
 
 /** Drives a Custom Menu — either a structured, presentational page (built
  *  via features/page-builder) or a single embedded external webpage. `mode`
@@ -109,7 +117,7 @@ export interface HtmlMenuConfig {
   allowed_hosts: string[]
 }
 
-export type MenuConfig = SearchMenuConfig | AddMenuConfig | ParentMenuConfig | CustomMenuConfig | DashboardMenuConfig | HtmlMenuConfig
+export type MenuConfig = SearchMenuConfig | AddMenuConfig | ParentMenuConfig | CustomMenuConfig | DashboardMenuConfig | HtmlMenuConfig | ModuleMenuConfig
 
 /** How the "Permission" section of the menu editor gates visibility:
  *  'all' shows the menu to anyone who can view the app; 'role' restricts it

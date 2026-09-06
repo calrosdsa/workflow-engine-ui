@@ -11,7 +11,7 @@
 // RuntimeSidebar.tsx, buildMenuTree) — none of them switch on menu_type
 // themselves, they all delegate to this registry.
 import type { ComponentType } from 'react'
-import { Search, PlusSquare, FolderTree, LayoutTemplate, LayoutDashboard, Code2, type LucideIcon } from 'lucide-react'
+import { Search, PlusSquare, FolderTree, LayoutTemplate, LayoutDashboard, Code2, LayoutGrid, type LucideIcon } from 'lucide-react'
 import type { ConfigSchema } from '@/lib/config-schema'
 import type { Menu, MenuType } from './types'
 import { SearchMenuConfigPanel } from './config-panels/SearchMenuConfigPanel'
@@ -149,6 +149,23 @@ export const MENU_TYPE_REGISTRY: Record<MenuType, MenuTypeRegistryEntry> = {
       description: 'A grouping node in the navigation tree. Renders its child menus rather than content of its own.',
       properties: {
         collapsed_by_default: { type: 'boolean', description: 'Whether the group starts collapsed in the sidebar.' },
+      },
+    },
+    configPanel: ParentMenuConfigPanel,
+    runtimeRenderer: ParentMenuRuntime,
+    createDefaultConfig: () => ({}),
+  },
+  module: {
+    type: 'module',
+    label: 'Module',
+    icon: LayoutGrid,
+    description: 'A Workspace launcher tile shown on the app’s home page. Can only be nested at the top level or under another Module — never under a Group or any other menu type. Any other menu type can be nested under a Module to give it its own sidebar contents.',
+    category: 'Navigation',
+    configSchema: {
+      type: 'object',
+      description: 'A grouping/launcher node, structurally identical to a Group menu’s config. Renders as a home-page tile at the top level, or as a scoped-sidebar row when nested under another Module.',
+      properties: {
+        collapsed_by_default: { type: 'boolean', description: 'Whether this module starts collapsed when it appears as a row inside another module’s scoped sidebar.' },
       },
     },
     configPanel: ParentMenuConfigPanel,

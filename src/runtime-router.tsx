@@ -17,6 +17,8 @@ import { Toaster } from '@/components/ui/sonner'
 import { UiWorkflowDialogHost } from '@/features/ui-workflows/UiWorkflowDialogHost'
 import { UiWorkflowFormHost } from '@/features/ui-workflows/UiWorkflowFormHost'
 import { RuntimeAppShell } from '@/features/runtime/RuntimeAppShell'
+import { RuntimeHomePage } from '@/features/runtime/RuntimeHomePage'
+import { isModulesModeApp, buildRuntimeNavTree } from '@/features/runtime/nav'
 import { ChatLauncher } from '@/features/runtime/ChatLauncher'
 import { RuntimeRecordPage } from '@/features/runtime/RuntimeRecordPage'
 import { RuntimeFormRecordPage } from '@/features/runtime/RuntimeFormRecordPage'
@@ -269,6 +271,24 @@ const runtimeLoginRoute = createRoute({
 function RuntimeIndexRedirect() {
   const snapshot = useRuntimeSnapshotContext()
   const { clientId, appId } = runtimeAppRoute.useParams()
+
+  // Home overrides a configured default_menu_slug once the app has at least
+  // one root-level 'module' menu VISIBLE to this viewer (see
+  // features/runtime/nav.ts's isModulesModeApp) — a deliberate product
+  // decision, not an oversight for anyone who set that General Settings
+  // field before adding their first module. Gated on the PERMISSION-
+  // FILTERED tile count, not the raw structural flag, so a viewer who can't
+  // see any root module keeps today's exact redirect behavior instead of
+  // landing on an empty grid.
+  const session = useAuthStore((s) => s.session)
+  const membership = session?.memberships?.find((m) => m.client_id === clientId && m.app_id === appId)
+  const permissions = membership?.permissions ?? []
+  const roleId = membership?.role_id
+  const homeTiles = isModulesModeApp(snapshot.menus) ? buildRuntimeNavTree(snapshot.menus, roleId, permissions) : []
+  if (homeTiles.length > 0) {
+    return <RuntimeHomePage snapshot={snapshot} clientId={clientId} appId={appId} homeTiles={homeTiles} />
+  }
+
   const defaultSlug = (snapshot.app.settings.default_menu_slug as string | undefined)
     ?? [...snapshot.menus].sort((a, b) => a.sort_order - b.sort_order)[0]?.slug
 

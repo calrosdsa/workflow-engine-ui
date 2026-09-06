@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildRuntimeNavTree } from './nav'
+import { buildRuntimeNavTree, isModulesModeApp, resolveSidebarNav } from './nav'
 import type { MenuSnapshotItem } from './types'
 
 function menu(overrides: Partial<MenuSnapshotItem> = {}): MenuSnapshotItem {
@@ -36,5 +36,59 @@ describe('buildRuntimeNavTree hidden_from_nav filtering', () => {
     const roleGated = menu({ id: 'm1', permission_mode: 'role', required_role_ids: ['admin-role'] })
     const tree = buildRuntimeNavTree([roleGated], 'other-role', [])
     expect(tree).toEqual([])
+  })
+})
+
+describe('isModulesModeApp', () => {
+  it('is true for a root-level module menu', () => {
+    const root = menu({ id: 'm1', menu_type: 'module', parent_id: null })
+    expect(isModulesModeApp([root])).toBe(true)
+  })
+
+  it('is false when a module menu exists only nested under something else', () => {
+    const group = menu({ id: 'g1', menu_type: 'parent', parent_id: null })
+    const nestedModule = menu({ id: 'm1', menu_type: 'module', parent_id: 'g1' })
+    expect(isModulesModeApp([group, nestedModule])).toBe(false)
+  })
+
+  it('is false for an app with no module menus at all', () => {
+    expect(isModulesModeApp([menu()])).toBe(false)
+  })
+})
+
+describe('resolveSidebarNav', () => {
+  const canViewAll = ['forms:form-1:view']
+
+  it('is byte-identical to buildRuntimeNavTree for an app with no root-level modules', () => {
+    const menus = [menu({ id: 'm1' }), menu({ id: 'm2', parent_id: 'm1', menu_type: 'parent', slug: 'group' })]
+    const plain = buildRuntimeNavTree(menus, undefined, canViewAll)
+    const { navTree, scopedRoot } = resolveSidebarNav(menus, 'm1', undefined, canViewAll)
+    expect(navTree).toEqual(plain)
+    expect(scopedRoot).toBeNull()
+  })
+
+  it('scopes to the top-level module ancestor’s own children when the current menu is a grandchild', () => {
+    const root = menu({ id: 'mod1', menu_type: 'module', slug: 'assets', name: 'Assets', parent_id: null })
+    const child = menu({ id: 'search1', menu_type: 'search', parent_id: 'mod1', slug: 'asset-list' })
+    const { navTree, scopedRoot } = resolveSidebarNav([root, child], 'search1', undefined, canViewAll)
+    expect(navTree.map((n) => n.id)).toEqual(['search1'])
+    expect(scopedRoot).toEqual({ id: 'mod1', name: 'Assets', icon: undefined, menu_type: 'module' })
+  })
+
+  it('scopes a non-module root tile the same way once the app has any root module', () => {
+    const otherModule = menu({ id: 'mod1', menu_type: 'module', slug: 'assets', parent_id: null })
+    const legacyRoot = menu({ id: 'legacy1', menu_type: 'search', slug: 'legacy', name: 'Legacy', parent_id: null })
+    const legacyChild = menu({ id: 'legacy2', menu_type: 'parent', slug: 'legacy-group', parent_id: 'legacy1' })
+    const { navTree, scopedRoot } = resolveSidebarNav([otherModule, legacyRoot, legacyChild], 'legacy2', undefined, canViewAll)
+    expect(navTree.map((n) => n.id)).toEqual(['legacy2'])
+    expect(scopedRoot).toEqual({ id: 'legacy1', name: 'Legacy', icon: undefined, menu_type: 'search' })
+  })
+
+  it('falls back to the full tree when the resolved root ancestor is permission-rejected', () => {
+    const roleGatedRoot = menu({ id: 'mod1', menu_type: 'module', parent_id: null, permission_mode: 'role', required_role_ids: ['admin'] })
+    const child = menu({ id: 'search1', menu_type: 'search', parent_id: 'mod1' })
+    const { navTree, scopedRoot } = resolveSidebarNav([roleGatedRoot, child], 'search1', 'other-role', canViewAll)
+    expect(navTree).toEqual(buildRuntimeNavTree([roleGatedRoot, child], 'other-role', canViewAll))
+    expect(scopedRoot).toBeNull()
   })
 })

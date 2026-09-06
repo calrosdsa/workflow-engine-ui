@@ -15,4 +15,8 @@ export const en = {
   'profile.log_out': 'Log out',
   'profile.language': 'Language',
   'profile.theme': 'Theme',
+  'menus.module.invalid_nest_toast': 'A Module can only be nested under another Module, or moved to the top level.',
+  'menus.module.requires_module_parent': 'Only available at the top level or under another Module.',
+  'runtime.home.drilldown_back': 'Back',
+  'runtime.sidebar.back_to_home': 'Back to Home',
 } satisfies Record<string, string>

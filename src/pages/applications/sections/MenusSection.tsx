@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Plus, ChevronRight, ChevronLeft, ChevronDown, ArrowUp, ArrowDown, GripVertical, Trash2, Loader2, AlertCircle, EyeOff, Eye } from 'lucide-react'
 import {
   DndContext, DragOverlay, PointerSensor, KeyboardSensor,
@@ -24,6 +25,7 @@ import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
 import { usePermissionsCatalog } from '@/features/permissions/hooks'
 import { useRoles } from '@/features/roles/hooks'
 import { useForm as useFormDef } from '@/features/forms/hooks'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { cn } from '@/lib/utils'
 import type { Menu, MenuType, MenuTreeNode, PermissionMode } from '@/features/menus/types'
 import type { SearchMenuConfig, AddMenuConfig } from '@/features/menus/types'
@@ -99,6 +101,7 @@ export function MenusSection({ appId }: MenusSectionProps) {
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         parentId={pickerParentId}
+        parentMenuType={pickerParentId ? (menus ?? []).find((m) => m.id === pickerParentId)?.menu_type ?? null : null}
         onCreated={(id) => { setPickerOpen(false); setSelectedId(id) }}
       />
     </div>
@@ -156,6 +159,17 @@ function isNodeOrDescendant(root: MenuTreeNode, targetId: string): boolean {
   return root.children.some((c) => isNodeOrDescendant(c, targetId))
 }
 
+/** A 'module' menu may only sit at the top level or under another 'module'
+ *  menu (product constraint) — never under a 'parent'/Group or any other
+ *  type. Non-module types have no such restriction and may nest anywhere,
+ *  including under a module (that's how a module gets its own sidebar
+ *  contents). Client-side mirror of api/menus/handler.go's
+ *  validateModuleParent, so an invalid drag never even reaches the server. */
+export function isValidModuleParent(newParentId: string | null, allMenus: Menu[]): boolean {
+  if (newParentId === null) return true
+  return allMenus.find((m) => m.id === newParentId)?.menu_type === 'module'
+}
+
 function findNode(tree: MenuTreeNode[], id: string): MenuTreeNode | null {
   for (const n of tree) {
     if (n.id === id) return n
@@ -176,6 +190,7 @@ export function MenuTree({ tree, hiddenMenus, allMenus, selectedId, onSelect, on
   const reorderMutation = useReorderMenus()
   const moveMutation = useMoveMenu()
   const hideMutation = useSetHiddenFromNav()
+  const t = useTranslation()
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [activeId, setActiveId] = useState<string | null>(null)
 
@@ -277,12 +292,20 @@ export function MenuTree({ tree, hiddenMenus, allMenus, selectedId, onSelect, on
     // — would create a cycle.
     if (isNodeOrDescendant(activeNode, overNode.id)) return
 
-    // Dropped ON a Parent-type row → nest INTO it as its child, appended
-    // last. Matches the existing "Add child menu" button's own constraint
-    // (only 'parent' menus are navigation containers), so drag can't create
-    // a parent/child relationship the rest of the UI wouldn't otherwise
-    // allow.
-    if (overNode.menu_type === 'parent' && overNode.id !== activeNode.parent_id) {
+    // Dropped ON a Parent-type or Module-type row → nest INTO it as its
+    // child, appended last. Matches the existing "Add child menu" button's
+    // own constraint (only 'parent'/'module' menus are navigation
+    // containers), so drag can't create a parent/child relationship the
+    // rest of the UI wouldn't otherwise allow. A 'module' being dragged is
+    // further restricted to only nest under another 'module' (product
+    // constraint, mirrored server-side in api/menus/handler.go) — rejected
+    // here with an explicit reason rather than silently falling through to
+    // the sibling-reorder branch below.
+    if ((overNode.menu_type === 'parent' || overNode.menu_type === 'module') && overNode.id !== activeNode.parent_id) {
+      if (activeNode.menu_type === 'module' && overNode.menu_type !== 'module') {
+        toast.error(t('menus.module.invalid_nest_toast'))
+        return
+      }
       reparentAndAppend(activeNode, overNode.id)
       return
     }
@@ -307,6 +330,12 @@ export function MenuTree({ tree, hiddenMenus, allMenus, selectedId, onSelect, on
 
     // Cross-group: re-parent first, then insert into the target group at
     // overNode's position once the re-parent lands (see reparentAndInsert).
+    // A module being moved next to a sibling in an invalid group must be
+    // rejected the same way the direct-nest case above is.
+    if (activeNode.menu_type === 'module' && !isValidModuleParent(targetParentId, allMenus)) {
+      toast.error(t('menus.module.invalid_nest_toast'))
+      return
+    }
     reparentAndInsert(activeNode, targetParentId, targetSiblings, overNode.id)
   }
 
@@ -537,7 +566,7 @@ function MenuRow({ node, depth, index, siblingCount, selected, hasChildren, isCo
   onMove: (dir: -1 | 1) => void
   onAddChild: () => void
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver, active } = useSortable({ id: node.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver, active } = useSortable({ id: node.id, data: { menuType: node.menu_type } })
 
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -545,10 +574,15 @@ function MenuRow({ node, depth, index, siblingCount, selected, hasChildren, isCo
   }
 
   // Highlight as a nest-target only while something is being dragged over a
-  // Parent-type row that isn't already its dragged-over parent — mirrors
-  // handleDragEnd's own "drop ON a parent row nests into it" rule, so the
-  // hover state never promises an interaction that won't actually happen.
-  const isNestTarget = isOver && node.menu_type === 'parent' && active?.id !== node.id
+  // Parent- or Module-type row that isn't already its dragged-over parent,
+  // AND the drop would actually be accepted — mirrors handleDragEnd's own
+  // nest rule (including the module-can-only-nest-under-module restriction),
+  // so the hover state never promises an interaction that won't actually
+  // happen.
+  const draggedType = active?.data.current?.menuType as MenuType | undefined
+  const canContainChildren = node.menu_type === 'parent' || node.menu_type === 'module'
+  const wouldRejectModule = draggedType === 'module' && node.menu_type !== 'module'
+  const isNestTarget = isOver && canContainChildren && !wouldRejectModule && active?.id !== node.id
 
   return (
     <div
@@ -593,7 +627,7 @@ function MenuRow({ node, depth, index, siblingCount, selected, hasChildren, isCo
         <button title="Move down" aria-label="Move down" disabled={index === siblingCount - 1} onClick={() => onMove(1)} className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-30">
           <ArrowDown size={11} />
         </button>
-        {node.menu_type === 'parent' && (
+        {(node.menu_type === 'parent' || node.menu_type === 'module') && (
           <button title="Add child menu" aria-label="Add child menu" onClick={onAddChild} className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]">
             <Plus size={11} />
           </button>
@@ -607,16 +641,24 @@ function MenuRow({ node, depth, index, siblingCount, selected, hasChildren, isCo
 // Add-menu type picker
 // ---------------------------------------------------------------------------
 
-function MenuTypePickerDialog({ open, onClose, parentId, onCreated }: {
+function MenuTypePickerDialog({ open, onClose, parentId, parentMenuType, onCreated }: {
   open: boolean
   onClose: () => void
   parentId: string | null
+  /** The parent menu's own type, or null when creating at the top level —
+   *  needed (not just parentId) to know whether 'module' is a legal choice
+   *  here: a module may only be created at the top level or under another
+   *  module (product constraint, mirrored server-side). */
+  parentMenuType: MenuType | null
   onCreated: (id: string) => void
 }) {
   const createMutation = useCreateMenu()
+  const t = useTranslation()
   const [error, setError] = useState<string | null>(null)
+  const isModuleAllowedHere = parentMenuType === null || parentMenuType === 'module'
 
   const pick = async (type: MenuType) => {
+    if (type === 'module' && !isModuleAllowedHere) return // belt-and-suspenders; the button below is already disabled
     setError(null)
     const entry = MENU_TYPE_REGISTRY[type]
     try {
@@ -651,11 +693,13 @@ function MenuTypePickerDialog({ open, onClose, parentId, onCreated }: {
               (workflow-engine/COMPATIBILITY.md rule 3). */}
           {Object.values(MENU_TYPE_REGISTRY).filter((entry) => !entry.deprecated).map((entry) => {
             const Icon = entry.icon
+            const moduleDisabledHere = entry.type === 'module' && !isModuleAllowedHere
+            const disabled = createMutation.isPending || moduleDisabledHere
             return (
               <button
                 key={entry.type}
                 onClick={() => pick(entry.type)}
-                disabled={createMutation.isPending}
+                disabled={disabled}
                 className="flex items-center gap-3 rounded-lg border border-[hsl(var(--border))] p-3 text-left transition-colors hover:border-[hsl(var(--primary))]/40 hover:bg-[hsl(var(--primary))]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-50"
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]">
@@ -664,6 +708,9 @@ function MenuTypePickerDialog({ open, onClose, parentId, onCreated }: {
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-[hsl(var(--foreground))]">{entry.label}</p>
                   <p className="truncate text-xs text-[hsl(var(--muted-foreground))]">{entry.description}</p>
+                  {moduleDisabledHere && (
+                    <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('menus.module.requires_module_parent')}</p>
+                  )}
                 </div>
               </button>
             )

@@ -1,26 +1,53 @@
 import { useState } from 'react'
-import { ChevronDown, HelpCircle } from 'lucide-react'
+import { ChevronDown, HelpCircle, ArrowLeft } from 'lucide-react'
 import { getMenuType } from '@/features/menus/menu-registry'
 import { MenuIcon } from '@/features/menus/MenuIcon'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { RuntimeLink } from './RuntimeLink'
 import { cn } from '@/lib/utils'
 import type { MenuTreeNode } from '@/features/menus/types'
+import type { ScopedRoot } from './nav'
 
 interface RuntimeSidebarProps {
   appName: string
   navTree: MenuTreeNode[]
+  /** Set once the app is in modules mode and a root ancestor was resolved
+   *  for the current menu — renders a "back to home" header above navTree,
+   *  and in that case navTree is scopedRoot's own children only, never the
+   *  whole app's tree (see resolveSidebarNav in nav.ts). Absent/null for an
+   *  app with no root-level module menus, which keeps today's single
+   *  always-present full-tree sidebar with no header row, unconditionally. */
+  scopedRoot?: ScopedRoot | null
   clientId: string
   appId: string
   activeMenuId: string
   onNavigate?: () => void
 }
 
-export function RuntimeSidebar({ appName, navTree, clientId, appId, activeMenuId, onNavigate }: RuntimeSidebarProps) {
+export function RuntimeSidebar({ appName, navTree, scopedRoot, clientId, appId, activeMenuId, onNavigate }: RuntimeSidebarProps) {
+  const t = useTranslation()
   return (
     <aside className="flex h-screen w-60 flex-col border-r" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--card))' }}>
       <div className="flex h-14 shrink-0 items-center border-b px-4" style={{ borderColor: 'hsl(var(--border))' }}>
         <span className="truncate text-sm font-semibold" style={{ color: 'hsl(var(--card-foreground))' }}>{appName}</span>
       </div>
+      {scopedRoot && (
+        // Always targets home, never scopedRoot's own landing route — the
+        // literal, minimal meaning of "back to home." Clicking it a second
+        // time to "come back" goes through the home grid again rather than
+        // competing with this row for a second navigation target.
+        <RuntimeLink
+          to={`/${clientId}/${appId}`}
+          onClick={onNavigate}
+          aria-label={t('runtime.sidebar.back_to_home')}
+          className="flex h-11 shrink-0 items-center gap-2 border-b px-4 text-[13px] font-medium transition-colors hover:bg-[hsl(var(--accent))]"
+          style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--card-foreground))' }}
+        >
+          <ArrowLeft size={13} className="shrink-0" />
+          <MenuIcon icon={scopedRoot.icon} fallback={getMenuType(scopedRoot.menu_type)?.icon ?? HelpCircle} size={14} />
+          <span className="truncate">{scopedRoot.name}</span>
+        </RuntimeLink>
+      )}
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
         {navTree.map((node) => (
           <NavItem key={node.id} node={node} clientId={clientId} appId={appId} activeMenuId={activeMenuId} onNavigate={onNavigate} depth={0} />
@@ -52,7 +79,7 @@ function NavItem({ node, clientId, appId, activeMenuId, onNavigate, depth }: {
   // falls back to a neutral glyph rather than throwing. See FR-D1-008.
   const entry = getMenuType(node.menu_type)
   const hasChildren = node.children.length > 0
-  const collapsedDefault = node.menu_type === 'parent' && (node.config as { collapsed_by_default?: boolean }).collapsed_by_default
+  const collapsedDefault = (node.menu_type === 'parent' || node.menu_type === 'module') && (node.config as { collapsed_by_default?: boolean }).collapsed_by_default
   const [open, setOpen] = useState(!collapsedDefault)
   const isActive = node.id === activeMenuId
 

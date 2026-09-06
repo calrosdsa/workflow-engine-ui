@@ -1,6 +1,6 @@
 import { canViewMenu } from '@/features/auth/permissions'
 import { buildMenuTree, findAncestors } from '@/features/menus/tree'
-import type { Menu, MenuTreeNode } from '@/features/menus/types'
+import type { Menu, MenuTreeNode, MenuType } from '@/features/menus/types'
 import type { MenuSnapshotItem } from './types'
 
 /** The published snapshot's menu items are structurally identical to the
@@ -48,4 +48,72 @@ function filterNavTree(nodes: MenuTreeNode[], roleId: string | undefined, permis
  *  — filtering ancestors would produce a broken/incomplete trail). */
 export function runtimeAncestors(menus: MenuSnapshotItem[], menuId: string) {
   return findAncestors(menus.map(toMenu), menuId)
+}
+
+/** True once an app has at least one root-level (`parent_id` null) menu of
+ *  menu_type 'module' — the single trigger for BOTH the home/launcher
+ *  landing route (RuntimeIndexRedirect) and the sidebar's scoped-subtree
+ *  mode (resolveSidebarNav below), so the two behaviors can never disagree
+ *  about whether "this app is in modules mode." Structural/unfiltered by
+ *  design: whether the APP is configured this way must not depend on which
+ *  viewer is asking — only the per-viewer rendering decisions do. */
+export function isModulesModeApp(menus: MenuSnapshotItem[]): boolean {
+  return menus.some((m) => m.menu_type === 'module' && m.parent_id === null)
+}
+
+export interface ScopedRoot {
+  id: string
+  name: string
+  icon?: string
+  menu_type: MenuType
+}
+
+function findTreeNode(nodes: MenuTreeNode[], id: string): MenuTreeNode | undefined {
+  for (const node of nodes) {
+    if (node.id === id) return node
+    const found = findTreeNode(node.children, id)
+    if (found) return found
+  }
+  return undefined
+}
+
+/** Single source of truth for what the sidebar shows: the full filtered
+ *  tree for an app with no root-level module menus (today's unconditional
+ *  behavior, byte-for-byte unchanged), or — once the app has at least one —
+ *  only the branch rooted at whichever top-level tile the current menu
+ *  descends from (that root's own children), plus the root itself so the
+ *  caller can render a "back to home" header naming it. Applies to ANY
+ *  root-level tile once the app is in modules mode, not only module-typed
+ *  ones — a legacy root-level menu alongside new modules gets scoped
+ *  exactly the same way, so there is exactly one sidebar behavior per app,
+ *  never two coexisting ones. */
+export function resolveSidebarNav(
+  menus: MenuSnapshotItem[],
+  currentMenuId: string,
+  roleId: string | undefined,
+  permissions: string[],
+): { navTree: MenuTreeNode[]; scopedRoot: ScopedRoot | null } {
+  const fullTree = buildRuntimeNavTree(menus, roleId, permissions)
+  if (!isModulesModeApp(menus)) return { navTree: fullTree, scopedRoot: null }
+
+  // Root-first ancestor chain, excluding the current menu itself — its first
+  // entry (if any) is the top-level ancestor; an empty chain means the
+  // current menu IS already a root.
+  const ancestors = runtimeAncestors(menus, currentMenuId)
+  const rootId = ancestors[0]?.id ?? currentMenuId
+  const rootNode = findTreeNode(fullTree, rootId)
+
+  // rootNode can be absent if canViewMenu rejected the root ancestor itself
+  // (filterNavTree drops a rejected node AND its whole subtree) while the
+  // viewer still independently reached currentMenuId (e.g. a direct link) —
+  // an existing, pre-this-feature ambiguity in the permission model, not
+  // something this feature introduces. Falling back to the full tree here
+  // is the same graceful-degradation stance MenuIcon/UnavailableMenu take
+  // elsewhere: never worse than doing nothing, never a crash.
+  if (!rootNode) return { navTree: fullTree, scopedRoot: null }
+
+  return {
+    navTree: rootNode.children,
+    scopedRoot: { id: rootNode.id, name: rootNode.name, icon: rootNode.icon, menu_type: rootNode.menu_type },
+  }
 }

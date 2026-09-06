@@ -10,4 +10,8 @@ export const es = {
   'profile.log_out': 'Cerrar sesión',
   'profile.language': 'Idioma',
   'profile.theme': 'Tema',
+  'menus.module.invalid_nest_toast': 'Un Módulo solo puede anidarse bajo otro Módulo, o moverse al nivel superior.',
+  'menus.module.requires_module_parent': 'Solo disponible en el nivel superior o bajo otro Módulo.',
+  'runtime.home.drilldown_back': 'Atrás',
+  'runtime.sidebar.back_to_home': 'Volver al inicio',
 } satisfies Record<string, string>
