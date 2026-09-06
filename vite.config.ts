@@ -124,6 +124,26 @@ export default defineConfig({
         rewrite: (p) => p.replace(/^\/api/, ''),
       },
     },
+    // Dev-server-only responsiveness, no effect on the production build.
+    // Vite serves source as unbundled ES modules, so the first navigation
+    // to a route each dev session pays for transforming its import graph
+    // on demand. Pre-transforming these two heaviest, most-visited feature
+    // trees at server startup (off the request path) shrinks that on-demand
+    // fetch/transform window. It does NOT close the full gap to production
+    // (measured ~600-850ms here vs ~200ms for the equivalent already-bundled
+    // production chunk, see router.tsx's lazyRouteComponent commit) — most
+    // of the remainder is React's dev-mode build itself (unminified,
+    // StrictMode double-invoke, extra runtime checks), which is inherent to
+    // `npm run dev` and isn't something to trade away for local speed.
+    // Add another glob here if a different page's first visit feels slow.
+    warmup: {
+      clientFiles: [
+        './src/pages/FormsPage.tsx',
+        './src/pages/forms/FormBuilderPage.tsx',
+        './src/features/forms/**/*.tsx',
+        './src/features/form-builder/**/*.tsx',
+      ],
+    },
   },
   build: {
     // Two entry points: index.html (the authenticated admin builder tool)
