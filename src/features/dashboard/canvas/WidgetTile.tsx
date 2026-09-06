@@ -1,5 +1,5 @@
 import { AlertTriangle, Copy, Settings2, Trash2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, onKeyboardActivate } from '@/lib/utils'
 import { getWidget } from '../widget-registry'
 import { useIsVisible } from './useIsVisible'
 import { resolveLayoutKeyAction, type LayoutKeyAction } from './keyboardLayout'
@@ -52,15 +52,27 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
   // nothing and keeps the hook order stable regardless of registry state.
   const [tileRef, isVisible] = useIsVisible<HTMLDivElement>()
 
-  // Keyboard move/resize — only acts once the tile is selected AND has
-  // focus, so arrow keys don't hijack normal page scrolling/navigation the
-  // rest of the time. preventDefault only on a key this feature actually
-  // binds (resolveLayoutKeyAction returns undefined otherwise), so every
-  // other key (Tab, Enter, text-field arrows inside a widget's own config
-  // UI, etc.) passes through completely untouched. Only RESOLVES the key
-  // into an action here — applying it against the widget's current layout
-  // happens in the store (see onKeyboardLayoutAction's doc comment above).
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  // Enter/Space selects the tile, via the same onKeyboardActivate() used
+  // by every other selectable-card shape in this repo (e.g. detail-page-
+  // builder/canvas/TabCard.tsx) — its own e.target === e.currentTarget
+  // guard stops a keydown bubbling up from the drag handle or the
+  // Configure/Duplicate/Delete buttons below from ALSO re-triggering
+  // onSelect, the same reason their onClick needs e.stopPropagation() on
+  // the mouse side. Checking e.defaultPrevented afterward is how this
+  // composes with the arrow-key handling below: onKeyboardActivate only
+  // calls preventDefault() when it actually matched, so every other key
+  // (including Tab and text-field arrows inside a widget's own config UI)
+  // still falls through untouched.
+  //
+  // Arrow-key move/resize below only acts once the tile is already
+  // selected AND has focus, so arrow keys don't hijack normal page
+  // scrolling the rest of the time. It only RESOLVES the key into an
+  // action here — applying it against the widget's current layout happens
+  // in the store (see onKeyboardLayoutAction's doc comment above).
+  const activateOnSelect = onKeyboardActivate<HTMLDivElement>(onSelect)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    activateOnSelect(e)
+    if (e.defaultPrevented) return
     if (!selected) return
     const action = resolveLayoutKeyAction(e.key, e.shiftKey)
     if (!action) return

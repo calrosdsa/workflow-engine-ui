@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities'
 import {
   GripVertical, ChevronDown, ChevronRight, Copy, Trash2, Columns3, MoreVertical,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, onKeyboardActivate } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
@@ -44,9 +44,22 @@ export const SectionCard = memo(function SectionCard({ section }: { section: Pag
     <div
       ref={setNodeRef}
       style={style}
+      // role="group" (not "button") because the card contains its own real
+      // interactive descendants (Input, layout picker, add-column, delete —
+      // see below) — matches the established in-repo convention for this
+      // exact shape, dashboard/canvas/WidgetTile.tsx. onKeyboardActivate's
+      // own target-check keeps Enter/Space bubbling up from those
+      // descendants from ALSO re-triggering selectSection, the same reason
+      // onClick below (and the two stopPropagation shims further down)
+      // exist on the mouse side.
+      role="group"
+      aria-label={`${section.title || 'Untitled'} section${selected ? ' — selected' : ''}`}
+      tabIndex={0}
       onClick={(e) => { e.stopPropagation(); selectSection(section.id) }}
+      onKeyDown={onKeyboardActivate(() => selectSection(section.id))}
       className={cn(
         'rounded-xl border bg-white shadow-sm transition-shadow',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-1',
         selected ? 'border-indigo-300 ring-2 ring-indigo-300/25' : 'border-slate-200',
         isDragging && 'opacity-60 shadow-lg',
       )}
@@ -78,6 +91,12 @@ export const SectionCard = memo(function SectionCard({ section }: { section: Pag
           className="h-7 max-w-xs border-transparent bg-transparent px-1 text-sm font-semibold text-slate-800 hover:border-slate-200 focus:border-indigo-300"
         />
 
+        {/* Not itself interactive — exists only to keep a click on one of
+            these real controls (SelectMenu, the buttons below) from bubbling
+            to the card's own onClick and selecting/deselecting the section
+            as a side effect. The controls inside are the actual interactive
+            surface and are already independently keyboard-operable. */}
+        {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
         <div className="ml-auto flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
           {/* Layout picker */}
           <SelectMenu value={section.layout} onValueChange={(v) => setLayout(section.id, v as ColumnLayout)}>

@@ -5,7 +5,7 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Eye, EyeOff, Trash2, Lock, Users2, GitBranch } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, onKeyboardActivate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { getDetailTab } from '@/features/forms/runtime/detail-tabs/registry'
 import type { DetailTabConfig } from '@/features/form-builder/schema'
@@ -32,13 +32,27 @@ export function TabCard({ tab, zoneId, selected, canHide, onSelect, onToggleHidd
 
   const style = { transform: CSS.Translate.toString(transform), transition }
 
+  const displayLabel = tab.label || def?.label || tab.type
+
   return (
     <div
       ref={setNodeRef}
       style={style}
+      // role="group" (not "button") because the card contains its own real
+      // interactive descendants (the drag handle + hide/remove buttons
+      // below) — matches the established in-repo convention for this exact
+      // shape, dashboard/canvas/WidgetTile.tsx. onKeyboardActivate's own
+      // target-check keeps Enter/Space bubbling up from those descendants
+      // from ALSO re-triggering onSelect, the same reason onClick below
+      // needs e.stopPropagation() on the mouse side.
+      role="group"
+      aria-label={`${displayLabel} tab${selected ? ' — selected' : ''}`}
+      tabIndex={0}
       onClick={(e) => { e.stopPropagation(); onSelect() }}
+      onKeyDown={onKeyboardActivate(onSelect)}
       className={cn(
         'group relative rounded-lg border bg-[hsl(var(--card))] transition-shadow',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
         selected ? 'border-[hsl(var(--primary))] ring-2 ring-[hsl(var(--primary))]/25 shadow-sm' : 'border-[hsl(var(--border))] hover:shadow-sm',
         tab.hidden && 'bg-[hsl(var(--muted))]/40',
         isDragging && 'z-10 opacity-60 shadow-lg',
@@ -87,7 +101,7 @@ export function TabCard({ tab, zoneId, selected, canHide, onSelect, onToggleHidd
         {def && <def.icon size={14} className="shrink-0 text-[hsl(var(--muted-foreground))]" />}
 
         <span className={cn('min-w-0 flex-1 truncate text-[13px] font-medium', tab.hidden && 'text-[hsl(var(--muted-foreground))]')}>
-          {tab.label || def?.label || tab.type}
+          {displayLabel}
         </span>
 
         <div className="flex shrink-0 items-center gap-1">

@@ -2,7 +2,7 @@ import { memo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Copy, Trash2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, onKeyboardActivate } from '@/lib/utils'
 import { usePageBuilderStore } from '../store'
 import { PAGE_COMPONENT_REGISTRY } from '../component-registry'
 import { ComponentPreview } from '../ComponentPreview'
@@ -45,9 +45,21 @@ export const ComponentCard = memo(function ComponentCard({ component, sectionId,
     <div
       ref={setNodeRef}
       style={style}
+      // role="group" (not "button") because the card contains its own real
+      // interactive descendants (drag handle, Duplicate, Delete below) —
+      // matches the established in-repo convention for this exact shape,
+      // dashboard/canvas/WidgetTile.tsx. onKeyboardActivate's own
+      // target-check keeps Enter/Space bubbling up from those descendants
+      // from ALSO re-triggering selectComponent, the same reason onClick
+      // below needs e.stopPropagation() on the mouse side.
+      role="group"
+      aria-label={`${reg.label} component${selected ? ' — selected' : ''}`}
+      tabIndex={0}
       onClick={(e) => { e.stopPropagation(); selectComponent(component.id) }}
+      onKeyDown={onKeyboardActivate(() => selectComponent(component.id))}
       className={cn(
         'group relative rounded-lg border bg-white transition-shadow',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-1',
         selected ? 'border-indigo-400 ring-2 ring-indigo-400/25 shadow-sm' : 'border-slate-200 hover:border-slate-300 hover:shadow-sm',
         isDragging && 'opacity-50 shadow-lg',
       )}

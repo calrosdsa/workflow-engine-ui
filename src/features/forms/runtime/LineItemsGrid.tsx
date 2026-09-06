@@ -29,7 +29,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '@/components/ui/drawer'
 import { DatePicker, DateTimePicker } from '@/components/ui/date-time-picker'
 import { TimePicker } from '@/components/ui/time-picker'
-import { cn } from '@/lib/utils'
+import { cn, onKeyboardActivate } from '@/lib/utils'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useForm as useFormDef, useUpdateRecord } from '@/features/forms/hooks'
 import { usePermission } from '@/features/auth/permissions'
@@ -965,15 +965,37 @@ function CardRow({ row, columns, canReorder, canDelete, canDuplicate, canSelect,
     <div
       ref={setNodeRef}
       style={style}
+      // role="group" (not "button") because the card contains its own real
+      // interactive descendants (drag handle, checkbox, Edit/Duplicate/
+      // Delete below) — matches the established in-repo convention for this
+      // exact shape, dashboard/canvas/WidgetTile.tsx. onKeyboardActivate's
+      // own target-check keeps Enter/Space bubbling up from those
+      // descendants from ALSO re-triggering onEdit, the same reason the two
+      // stopPropagation shims below exist on the mouse side. All three are
+      // conditional on !isInline, matching onClick's own existing
+      // isInline-ternary — inline rows have no card-level open-to-edit
+      // action at all (each field edits in place instead). role="group" is
+      // left unconditional (harmless, and accurate either way — this is a
+      // group of related fields regardless of whether the group itself is
+      // also clickable) because oxlint's no-static-element-interactions
+      // only recognizes a literal role="..." by default, not a role={cond
+      // ? 'group' : undefined} expression (allowExpressionValues is off).
+      role="group"
+      aria-label={isInline ? undefined : 'Line item'}
+      tabIndex={isInline ? undefined : 0}
       className={cn(
         'group/row rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3 shadow-sm transition-all hover:border-[hsl(var(--primary))]/40 hover:shadow-md',
-        !isInline && 'cursor-pointer',
+        !isInline && 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
         isDragging && 'opacity-60 shadow-lg',
         isSelected && 'border-[hsl(var(--primary))]/50 bg-[hsl(var(--primary))]/[0.06]',
       )}
       onClick={isInline ? undefined : onEdit}
+      onKeyDown={isInline ? undefined : onKeyboardActivate(onEdit)}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
+        {/* Not itself interactive — shields the drag handle/checkbox below
+            from bubbling up to the card's own onEdit onClick. */}
+        {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
         <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
           {canReorder && (
             <button
@@ -989,6 +1011,9 @@ function CardRow({ row, columns, canReorder, canDelete, canDuplicate, canSelect,
           )}
           {canSelect && <Checkbox checked={isSelected} onCheckedChange={onToggleSelected} aria-label="Select card" />}
         </div>
+        {/* Not itself interactive — shields Edit/Duplicate/Delete below from
+            bubbling up to the card's own onEdit onClick. */}
+        {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
         <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100" onClick={(e) => e.stopPropagation()}>
           <button type="button" onClick={onEdit} aria-label="Edit row" title="Edit row" className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]">
             <Pencil size={12} />
@@ -1007,6 +1032,11 @@ function CardRow({ row, columns, canReorder, canDelete, canDuplicate, canSelect,
       </div>
       <dl className={cn('grid gap-x-3 gap-y-1.5 text-[12px]', isInline ? 'grid-cols-1' : 'grid-cols-2')}>
         {columns.map((c) => (
+          // Not itself interactive — only active (isInline && not a nested
+          // line_items column) to stop an inline field's own click from
+          // bubbling past this dl to whatever ancestor row-click handling
+          // sits above CardRow when it's rendered inline.
+          // oxlint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events
           <div key={c.id} className="min-w-0" onClick={isInline && c.component !== 'line_items' ? (e) => e.stopPropagation() : undefined}>
             <dt className="truncate text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">{c.label}</dt>
             <dd className={cn(!isInline && 'truncate', 'text-[hsl(var(--foreground))]')}>
