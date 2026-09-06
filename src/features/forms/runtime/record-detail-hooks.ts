@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { formsApi } from '@/features/forms/api'
 import { PREVIEW_RECORD_ID } from './preview-sentinel'
+import type { ConnectionCountTarget } from '@/features/forms/types'
 
 /** True for the Detail Page Builder preview's sentinel record id — every
  *  hook below gates `enabled` on this IN ADDITION TO its existing
@@ -37,6 +38,21 @@ export function useLinkedRecords(formId: string, recordId: string | null, page: 
     queryKey: ['forms', formId, 'records', recordId, 'linked', page, pageSize],
     queryFn: () => formsApi.getLinkedRecords(formId, recordId!, { page, page_size: pageSize }),
     enabled: !!recordId && !isPreviewRecord(recordId),
+  })
+}
+
+/** Exported so QuickCreateDialog (connections/QuickCreateDialog.tsx) can
+ *  invalidate exactly this query after creating a linked record —
+ *  useCreateRecord's own invalidation targets the TARGET form's record
+ *  list, a different cache key than this OWNING record's counts. */
+export const connectionCountsKey = (formId: string, recordId: string | null) =>
+  ['forms', formId, 'records', recordId, 'connections-count']
+
+export function useConnectionCounts(formId: string, recordId: string | null, targets: ConnectionCountTarget[]) {
+  return useQuery({
+    queryKey: [...connectionCountsKey(formId, recordId), targets],
+    queryFn: () => formsApi.getConnectionCounts(formId, recordId!, targets),
+    enabled: !!recordId && targets.length > 0 && !isPreviewRecord(recordId),
   })
 }
 

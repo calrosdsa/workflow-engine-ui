@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Menu as MenuIcon, X, PencilRuler, Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { runtimeRouter, useRuntimeDraftPreview, exitDraftPreview } from '@/runtime-router'
+import { runtimeRouter, exitDraftPreview } from '@/runtime-router'
+import { useRuntimeDraftPreview } from './snapshot-context'
 import { useAuthStore } from '@/stores/auth'
 import { canViewMenu, hasPermission } from '@/features/auth/permissions'
 import { resolveSidebarNav, runtimeAncestors, toMenu } from './nav'
@@ -14,12 +15,17 @@ import { ProfileMenu } from './ProfileMenu'
 import { getMenuType } from '@/features/menus/menu-registry'
 import { UnavailableMenu } from './UnavailableMenu'
 import type { AppSnapshot, MenuSnapshotItem } from './types'
+import type { FilterGroup } from '@/features/workflows/types'
 
 interface RuntimeAppShellProps {
   snapshot: AppSnapshot
   clientId: string
   appId: string
   currentMenu: MenuSnapshotItem
+  /** See menu-registry.ts's MenuRuntimeRendererProps.externalFilter doc
+   *  comment — a connections tile's filtered-redirect navigation, threaded
+   *  straight through to whichever menu renderer is active. */
+  externalFilter?: FilterGroup
 }
 
 // The runtime's top-level layout — themed, navigable chrome around whichever
@@ -29,7 +35,7 @@ interface RuntimeAppShellProps {
 // rather than the builder's fixed light theme, and uses the selective-
 // gating auth model (see runtime-router.tsx) rather than a hard
 // redirect-if-no-session.
-export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: RuntimeAppShellProps) {
+export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu, externalFilter }: RuntimeAppShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const session = useAuthStore((s) => s.session)
   const membership = session?.memberships?.find(
@@ -183,6 +189,7 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu }: Runt
                   appId={appId}
                   menus={snapshot.menus.map(toMenu)}
                   onNavigate={(slug) => runtimeRouter.navigate({ to: `/${clientId}/${appId}/${slug}` })}
+                  externalFilter={externalFilter}
                 />
               ) : (
                 <UnavailableMenu type={currentMenu.menu_type} />

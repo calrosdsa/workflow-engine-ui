@@ -315,6 +315,19 @@ export interface LinkedRecordsResponse {
   groups: LinkedRecordGroup[]
 }
 
+export interface ConnectionCountTarget {
+  target_form_id: string
+  target_field_name: string
+}
+
+export interface ConnectionCount extends ConnectionCountTarget {
+  count: number
+}
+
+export interface ConnectionCountsResponse {
+  counts: ConnectionCount[]
+}
+
 // FR-C1-013 sharing endpoints — see api/forms/sharing.go. Mirrors
 // features/knowledge/types.ts's identical KB sharing shapes (FR-C9-002).
 export type FormVisibility = 'private' | 'read_only' | 'full_access'

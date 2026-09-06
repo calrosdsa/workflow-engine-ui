@@ -14,6 +14,7 @@ import type { ComponentType } from 'react'
 import { Search, PlusSquare, FolderTree, LayoutTemplate, LayoutDashboard, Code2, LayoutGrid, type LucideIcon } from 'lucide-react'
 import type { ConfigSchema } from '@/lib/config-schema'
 import type { Menu, MenuType } from './types'
+import type { FilterGroup } from '@/features/workflows/types'
 import { SearchMenuConfigPanel } from './config-panels/SearchMenuConfigPanel'
 import { AddMenuConfigPanel } from './config-panels/AddMenuConfigPanel'
 import { ParentMenuConfigPanel } from './config-panels/ParentMenuConfigPanel'
@@ -62,6 +63,15 @@ export interface MenuRuntimeRendererProps {
    *  navigation (e.g. a Parent menu's child-picker cards, or Add menu's
    *  "redirect after save"). Not required to be used. */
   onNavigate?: (slug: string) => void
+  /** An extra filter condition to AND onto this menu's own filter, sourced
+   *  from a connections tile's ?linkField=/?linkValue= navigation (see
+   *  runtime-router.tsx's runtimeMenuRoute) — a record-detail tile
+   *  redirecting to "this form's list, but only the records linked to the
+   *  record I came from." SearchMenuRuntime is the only renderer that reads
+   *  this today; every other menu type ignores it, the same "optional,
+   *  type-specific, safe to ignore" convention onEmptyResolved/groupDepth
+   *  already use on DetailTabRendererProps. */
+  externalFilter?: FilterGroup
 }
 
 export interface MenuTypeRegistryEntry {

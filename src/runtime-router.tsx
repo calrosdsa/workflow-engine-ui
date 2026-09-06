@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import {
   createRouter,
   createRootRoute,
@@ -26,8 +26,10 @@ import { RuntimeFormRecordPage } from '@/features/runtime/RuntimeFormRecordPage'
 import { RuntimeFormCreatePage } from '@/features/runtime/RuntimeFormCreatePage'
 import { RuntimeLoginPage } from '@/features/runtime/RuntimeLoginPage'
 import { NotFoundPage } from '@/features/runtime/NotFoundPage'
+import { RuntimeSnapshotContext, useRuntimeSnapshotContext, RuntimeDraftPreviewContext } from '@/features/runtime/snapshot-context'
 import type { AppSnapshot } from '@/features/runtime/types'
 import type { SearchMenuConfig } from '@/features/menus/types'
+import type { FilterGroup } from '@/features/workflows/types'
 
 // A SEPARATE route tree from the builder's router.tsx — not addChildren'd
 // onto its rootRoute. The runtime is publicly reachable by end users of a
@@ -62,23 +64,9 @@ import type { SearchMenuConfig } from '@/features/menus/types'
 // but so DESCENDANT routes (runtimeMenuRoute, runtimeIndexRoute) can read
 // the PARENT route's already-loaded data without a redundant second fetch;
 // TanStack Router doesn't provide a "read an ancestor route's loader data"
-// hook, only "read THIS route's own loader data".
-const RuntimeSnapshotContext = createContext<AppSnapshot | null>(null)
-
-function useRuntimeSnapshotContext(): AppSnapshot {
-  const ctx = useContext(RuntimeSnapshotContext)
-  if (!ctx) throw new Error('useRuntimeSnapshotContext must be used within the runtime app route')
-  return ctx
-}
-
-// Whether this tab is currently previewing DRAFT (unpublished) design —
-// exposed via context alongside the snapshot itself so RuntimeAppShell can
-// show a persistent "Previewing draft" banner with an exit action.
-const RuntimeDraftPreviewContext = createContext(false)
-
-export function useRuntimeDraftPreview(): boolean {
-  return useContext(RuntimeDraftPreviewContext)
-}
+// hook, only "read THIS route's own loader data". Both contexts themselves
+// (and useRuntimeSnapshotContext/useRuntimeDraftPreview) now live in
+// features/runtime/snapshot-context.ts — this file only PROVIDES them.
 
 // Draft-preview mode is tracked per (clientId, appId) in sessionStorage,
 // NOT in the URL's query string — RuntimeLink (every in-app nav link:
@@ -344,13 +332,24 @@ function RuntimeMenuRoute() {
   const snapshot = useRuntimeSnapshotContext()
   const { clientId, appId } = runtimeAppRoute.useParams()
   const { menuSlug } = runtimeMenuRoute.useParams()
+  const { linkField, linkValue } = runtimeMenuRoute.useSearch()
 
   const currentMenu = snapshot.menus.find((m) => m.slug === menuSlug)
   if (!currentMenu) {
     return <NotFoundPage />
   }
 
-  return <RuntimeAppShell snapshot={snapshot} clientId={clientId} appId={appId} currentMenu={currentMenu} />
+  // A connections tile's "redirect to this menu, filtered" navigation (see
+  // features/forms/runtime/detail-tabs/connections/Renderer.tsx) — one
+  // equality condition, AND-composed onto the menu's own filter by whichever
+  // renderer understands externalFilter (SearchMenuRuntime today; see
+  // menu-registry.ts's own doc comment on this prop for why every other
+  // menu type safely ignores it).
+  const externalFilter: FilterGroup | undefined = linkField && linkValue
+    ? { combinator: 'and', conditions: [{ id: `external-${linkField}`, field: linkField, op: 'eq', value_mode: 'static', value: linkValue }], groups: [] }
+    : undefined
+
+  return <RuntimeAppShell snapshot={snapshot} clientId={clientId} appId={appId} currentMenu={currentMenu} externalFilter={externalFilter} />
 }
 
 // /login is declared BEFORE /$menuSlug (more-specific-before-less-specific,
@@ -359,6 +358,10 @@ function RuntimeMenuRoute() {
 const runtimeMenuRoute = createRoute({
   getParentRoute: () => runtimeAppRoute,
   path: '/$menuSlug',
+  validateSearch: (search: Record<string, unknown>): { linkField?: string; linkValue?: string } => ({
+    linkField: typeof search.linkField === 'string' ? search.linkField : undefined,
+    linkValue: typeof search.linkValue === 'string' ? search.linkValue : undefined,
+  }),
   component: RuntimeMenuRoute,
 })
 

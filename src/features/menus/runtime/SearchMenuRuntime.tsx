@@ -48,7 +48,7 @@ type LivePatch = { columns?: string[]; filter?: FilterGroup; sort?: SortRule[]; 
 // and (FR-D2-014) the saved-view switcher — which view is active decides
 // what filter/sort/columns/layout RecordsTable renders with, in place of
 // this menu's own static default_filter/default_sort/columns.
-export function SearchMenuRuntime({ menu, menus, clientId, appId, onNavigate }: MenuRuntimeRendererProps) {
+export function SearchMenuRuntime({ menu, menus, clientId, appId, onNavigate, externalFilter }: MenuRuntimeRendererProps) {
   const config = menu.config as SearchMenuConfig
   const { data: savedViews } = useSavedViews(menu.id)
   const updateSavedView = useUpdateSavedView(menu.id)
@@ -111,6 +111,15 @@ export function SearchMenuRuntime({ menu, menus, clientId, appId, onNavigate }: 
   const currentConfig: SavedViewConfig = liveActiveView
     ? liveActiveView.config
     : { filter: config.default_filter ?? { combinator: 'and', conditions: [], groups: [] }, sort: config.default_sort ?? [], columns: config.columns, layout: 'list' }
+
+  // externalFilter (a connections tile's ?linkField=/?linkValue= navigation,
+  // see menu-registry.ts's own doc comment on this prop) is a NAVIGATION-time
+  // overlay, never part of the saved view itself — composed only for what
+  // RecordsTable actually queries with, kept out of currentConfig/mergedLive
+  // so it never taints the unsaved-changes diff against the stored view.
+  const effectiveFilter: FilterGroup = externalFilter
+    ? { combinator: 'and', conditions: [], groups: [currentConfig.filter, externalFilter] }
+    : currentConfig.filter
 
   // Real diff check, not just "has pendingPatch fired at all" — RecordsTable
   // fires onLiveConfigChange on every keystroke-settled filter edit and
@@ -182,11 +191,15 @@ export function SearchMenuRuntime({ menu, menus, clientId, appId, onNavigate }: 
         // view also remounts, resetting pendingPatch's downstream effect
         // (RecordsTable's own local state) back to the just-saved config —
         // switching to a DIFFERENT view already changes `id` on its own,
-        // but saving the same view doesn't.
-        key={(liveActiveView ? `${liveActiveView.id}:${liveActiveView.updated_at}` : 'ad-hoc') + `:${discardKey}`}
+        // but saving the same view doesn't. externalFilter is folded in too:
+        // navigating between two connections-tile links to this SAME menu
+        // (or plain menu -> filtered link, or one linkValue -> another) is
+        // the same route match with only the search params changing, which
+        // TanStack Router does not remount for on its own.
+        key={(liveActiveView ? `${liveActiveView.id}:${liveActiveView.updated_at}` : 'ad-hoc') + `:${discardKey}:${JSON.stringify(externalFilter ?? null)}`}
         formId={config.form_id}
         columns={currentConfig.columns}
-        defaultFilter={currentConfig.filter}
+        defaultFilter={effectiveFilter}
         defaultSort={currentConfig.sort}
         pageSize={config.page_size}
         layout={currentConfig.layout}

@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import type { FormDefinition, CreateFormPayload, UpdateFormPayload, FormRecord, AuditLogResponse, LinkedRecordsResponse, CommentEntry, CommentsResponse, FormVisibility, FormSharingResponse, FormSharingUsageResponse, LinkableForm } from './types'
+import type { FormDefinition, CreateFormPayload, UpdateFormPayload, FormRecord, AuditLogResponse, LinkedRecordsResponse, ConnectionCountTarget, ConnectionCountsResponse, CommentEntry, CommentsResponse, FormVisibility, FormSharingResponse, FormSharingUsageResponse, LinkableForm } from './types'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
 
 export interface SearchRecordsRequest {
@@ -158,6 +158,8 @@ export const formsApi = {
     api.get(`forms/${formId}/records/${recordId}/audit`, { searchParams: params }).json<AuditLogResponse>(),
   getLinkedRecords: (formId: string, recordId: string, params: { page: number; page_size: number }) =>
     api.get(`forms/${formId}/records/${recordId}/linked`, { searchParams: params }).json<LinkedRecordsResponse>(),
+  getConnectionCounts: (formId: string, recordId: string, targets: ConnectionCountTarget[]) =>
+    api.post(`forms/${formId}/records/${recordId}/connections-count`, { json: { targets } }).json<ConnectionCountsResponse>(),
   // Dispatches a workflow whose Trigger node is Mode: on_demand_data_driven
   // (FR-B3-007) against this specific record — the trigger_workflow custom
   // action's dispatch call (FR-D2-017). form_id/record_id are URL path
