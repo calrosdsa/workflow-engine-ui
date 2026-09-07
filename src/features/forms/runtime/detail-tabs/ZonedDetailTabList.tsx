@@ -69,19 +69,30 @@ export function ZonedDetailTabList({ layout = 'single', tabConfigs, pageContext 
     return <DetailTabList tabConfigs={visibleTabConfigs} {...rest} />
   }
 
+  // No height/scroll bounding at any level here — every zone (including the
+  // activity strip) sizes to its own content and the whole thing flows as
+  // ONE page. There is exactly one scroll region for the whole record
+  // detail experience, owned by whichever host renders this: a full page's
+  // own <main overflow-y-auto> (RuntimeRecordPage/RuntimeFormRecordPage), or
+  // RecordDetailPanel's own wrapper when pageContext="drawer" (a Drawer
+  // overlay IS a fixed-height box with no scroll container of its own).
+  // Comments/Audit Log previously got their own capped-height, independently
+  // -scrolling box pinned below the fold — a second scrollbar mid-page,
+  // rather than part of the same page you'd already been scrolling.
+  //
   // @container (not a `md:` viewport breakpoint) because this same panel
   // renders inside RecordsTable's ~672px drawer as well as a full page: at
   // viewport width a `md:flex-row` would put a 320px sidebar beside ~350px
   // of content in that drawer. Sizing off the CONTAINER instead lets the
   // drawer stack the same way a phone does, with no host-specific prop.
   return (
-    <div className={cn('@container flex flex-col', rest.nested ? '' : 'min-h-0 flex-1')}>
-      <div className="flex min-h-0 flex-1 flex-col @3xl:flex-row">
+    <div className="@container flex flex-col">
+      <div className="flex flex-col @3xl:flex-row">
         {rowZones.map(({ zone, tabs }, idx) => (
           <div
             key={zone.id}
             className={cn(
-              'flex min-h-0 flex-col',
+              'flex flex-col',
               zone.width === 'flex'
                 ? 'order-first flex-1 min-w-0 @3xl:order-none'
                 : 'w-full shrink-0 @3xl:w-80',
@@ -93,15 +104,8 @@ export function ZonedDetailTabList({ layout = 'single', tabConfigs, pageContext 
           </div>
         ))}
       </div>
-      {/* Bounded, with the DetailTabList's own overflow-y-auto body doing the
-         scrolling inside it — an unbounded activity strip would let a long
-         comment thread push the record's own fields off the page. */}
       {bottomZones.map(({ zone, tabs }) => (
-        <div
-          key={zone.id}
-          className="flex min-h-0 max-h-[45%] shrink-0 flex-col border-t"
-          style={{ borderColor: 'hsl(var(--border))' }}
-        >
+        <div key={zone.id} className="flex flex-col border-t" style={{ borderColor: 'hsl(var(--border))' }}>
           <DetailTabList tabConfigs={tabs} {...rest} />
         </div>
       ))}

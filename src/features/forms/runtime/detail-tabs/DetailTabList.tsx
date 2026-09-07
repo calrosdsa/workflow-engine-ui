@@ -141,7 +141,7 @@ export function DetailTabList({
 
   if (variant === 'stacked') {
     return (
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
+      <div className="flex flex-col gap-5 p-4">
         {/* Same "every renderableTab mounts, emptiness only hides chrome"
            contract the tabs branch documents below. */}
         {renderableTabs.map((t) => (
@@ -171,8 +171,8 @@ export function DetailTabList({
       defaultValue={visibleTabs[0]?.id}
       orientation={nested ? undefined : orientation}
       className={cn(
-        nested ? 'flex flex-col' : 'flex min-h-0 flex-1',
-        !nested && (orientation === 'vertical' ? 'flex-row' : 'flex-col'),
+        'flex',
+        nested || orientation !== 'vertical' ? 'flex-col' : 'flex-row',
       )}
     >
       <div
@@ -187,7 +187,7 @@ export function DetailTabList({
           ))}
         </TabsList>
       </div>
-      <div className={nested ? 'min-h-0' : 'min-h-0 flex-1 overflow-y-auto p-6'}>
+      <div className={nested ? undefined : 'p-6'}>
         {/* Every renderableTab mounts its Renderer (not just visibleTabs) so
            a hideWhenEmpty related_form tab's own existence-check query keeps
            running even while its trigger/content chrome is hidden — the

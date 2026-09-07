@@ -102,7 +102,12 @@ export function DetailPagePreview({ formId, fields, schema }: {
   qc.setQueryData(['forms', formId, 'records', PREVIEW_RECORD_ID, 'comments', 1, 25], { entries: [], total: 0, page: 1, page_size: 25 })
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    // This preview lives inside the Detail Page Builder's own fixed-height
+    // canvas panel — a bounded box needing its own scroll region, the same
+    // reasoning as RecordDetailPanel's pageContext="drawer" wrapper (see
+    // its own doc comment), now that ZonedDetailTabList/DetailTabList no
+    // longer scroll each zone independently.
+    <div className="flex h-full min-h-0 flex-col overflow-y-auto">
       <ZonedDetailTabList
         formId={formId}
         recordId={PREVIEW_RECORD_ID}

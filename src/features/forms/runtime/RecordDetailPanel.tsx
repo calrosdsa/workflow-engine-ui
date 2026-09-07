@@ -66,7 +66,18 @@ export function RecordDetailPanel({ formId, recordId, fields, schema, onNavigate
   const configuredTabs = resolveDetailTabs(schema?.settings?.detailTabs)
 
   return (
-    <div className="flex h-full flex-col">
+    // 'page': no height/scroll constraint here at all — Details, the
+    // sidebar, and the Comments/Audit Log strip below it all flow as ONE
+    // continuous page, scrolled by the HOST page's own <main
+    // overflow-y-auto> (RuntimeRecordPage/RuntimeFormRecordPage), not a
+    // separate box pinned within this component. 'drawer': the Drawer
+    // overlay (RecordsTable's quick-view, LineItemsGrid's child-row editor)
+    // IS a fixed-height box with no scroll container of its own
+    // (DrawerContent) — this wrapper supplies the one scroll region a
+    // bounded overlay needs, so the whole drawer body shares a single
+    // scrollbar instead of each zone (and Comments/Audit Log specifically)
+    // scrolling independently inside it.
+    <div className={pageContext === 'drawer' ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : undefined}>
       <ZonedDetailTabList
         formId={formId}
         recordId={recordId}
