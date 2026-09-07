@@ -16,9 +16,19 @@ import { DETAIL_PAGE_LAYOUTS, DEFAULT_DETAIL_PAGE_ZONE, type DetailPageLayoutId 
 
 export interface ZonedDetailTabListProps extends DetailTabListProps {
   layout?: DetailPageLayoutId
+  /** 'drawer' when this renders inside a Drawer overlay (RecordsTable's
+   *  quick-view, LineItemsGrid's child-row editor) rather than a full page
+   *  — the narrow sidebar zone (Attachments/Tags) is dropped ENTIRELY
+   *  rather than squeezed to fit, since a capped-width drawer has no good
+   *  place to put it. Defaults to 'page', which renders every zone.
+   *  Independent of the @container sizing below: that handles a genuine
+   *  full page on a narrow viewport (phone width), a real host that still
+   *  wants the sidebar, just stacked — this handles a drawer, which never
+   *  wants it regardless of width. */
+  pageContext?: 'page' | 'drawer'
 }
 
-export function ZonedDetailTabList({ layout = 'single', tabConfigs, ...rest }: ZonedDetailTabListProps) {
+export function ZonedDetailTabList({ layout = 'single', tabConfigs, pageContext = 'page', ...rest }: ZonedDetailTabListProps) {
   const zones = DETAIL_PAGE_LAYOUTS[layout]?.zones ?? DETAIL_PAGE_LAYOUTS.single.zones
   const zoneIds = new Set(zones.map((z) => z.id))
 
@@ -33,12 +43,21 @@ export function ZonedDetailTabList({ layout = 'single', tabConfigs, ...rest }: Z
   const effectiveZone = (t: (typeof tabConfigs)[number]) =>
     t.zone && zoneIds.has(t.zone) ? t.zone : DEFAULT_DETAIL_PAGE_ZONE
 
+  // In a drawer, a narrow-zone tab is dropped outright, not relocated to
+  // 'main' the way a stale/unrecognized zone id is — falling back to main
+  // would just move Attachments/Tags into the tab bar instead of hiding
+  // them, which isn't what "no room for the sidebar here" means.
+  const visibleTabConfigs = pageContext === 'drawer'
+    ? tabConfigs.filter((t) => zones.find((z) => z.id === effectiveZone(t))?.width !== 'narrow')
+    : tabConfigs
+
   // A zone with zero tabs renders nothing (not an empty box), so a form
-  // whose sidebar or activity zone is entirely hidden degrades to exactly
-  // the single-column output it had before those zones existed.
+  // whose sidebar or activity zone is entirely hidden (or, in a drawer,
+  // filtered out above) degrades to exactly the single-column output it
+  // had before those zones existed.
   const zoneTabs = zones.map((zone) => ({
     zone,
-    tabs: tabConfigs.filter((t) => effectiveZone(t) === zone.id),
+    tabs: visibleTabConfigs.filter((t) => effectiveZone(t) === zone.id),
   })).filter((z) => z.tabs.length > 0)
 
   const rowZones = zoneTabs.filter((z) => z.zone.width !== 'full')
@@ -47,7 +66,7 @@ export function ZonedDetailTabList({ layout = 'single', tabConfigs, ...rest }: Z
   if (zoneTabs.length <= 1) {
     // Exactly the pre-feature shape: one DetailTabList, no extra wrapper
     // markup, no border/width styling a single-column form has no use for.
-    return <DetailTabList tabConfigs={tabConfigs} {...rest} />
+    return <DetailTabList tabConfigs={visibleTabConfigs} {...rest} />
   }
 
   // @container (not a `md:` viewport breakpoint) because this same panel

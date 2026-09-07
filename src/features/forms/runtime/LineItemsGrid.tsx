@@ -1223,6 +1223,7 @@ function RowDetailDrawer({ formId, recordId, fields, layout, onClose }: {
             recordId={recordId}
             fields={fields}
             schema={schema}
+            pageContext="drawer"
           />
         </Suspense>
       </DrawerContent>

@@ -143,4 +143,43 @@ describe('ZonedDetailTabList', () => {
     expect(root.children[1].querySelector('[data-ids="comment"]')).toBeTruthy()
     expect(root.children[1].className).toContain('border-t')
   })
+
+  describe('pageContext="drawer"', () => {
+    it('drops the narrow sidebar zone entirely rather than relocating or squeezing it', () => {
+      const tabConfigs = [tab('details'), tab('status', 'sidebar'), tab('comment', 'activity')]
+      const { container } = render(
+        <ZonedDetailTabList {...baseProps} tabConfigs={tabConfigs} layout="main-right-sidebar" pageContext="drawer" />,
+      )
+      const lists = container.querySelectorAll('[data-testid="tab-list"]')
+      const ids = Array.from(lists).flatMap((l) => (l.getAttribute('data-ids') || '').split(',')).filter(Boolean)
+      expect(ids).toEqual(['details', 'comment'])
+      expect(ids).not.toContain('status')
+    })
+
+    it('still renders the full-width activity zone in a drawer', () => {
+      const tabConfigs = [tab('details'), tab('status', 'sidebar'), tab('comment', 'activity')]
+      const { container } = render(
+        <ZonedDetailTabList {...baseProps} tabConfigs={tabConfigs} layout="main-right-sidebar" pageContext="drawer" />,
+      )
+      expect(container.querySelector('[data-ids="comment"]')).toBeTruthy()
+    })
+
+    it('collapses to the pre-feature single-DetailTabList shape when the sidebar was the only other zone', () => {
+      const tabConfigs = [tab('details'), tab('status', 'sidebar')]
+      const { container } = render(
+        <ZonedDetailTabList {...baseProps} tabConfigs={tabConfigs} layout="main-right-sidebar" pageContext="drawer" />,
+      )
+      const lists = container.querySelectorAll('[data-testid="tab-list"]')
+      expect(lists.length).toBe(1)
+      expect(lists[0].getAttribute('data-ids')).toBe('details')
+      expect(container.firstElementChild).toBe(lists[0])
+    })
+
+    it('defaults to "page" (every zone renders) when pageContext is omitted', () => {
+      const tabConfigs = [tab('details'), tab('status', 'sidebar')]
+      const { container } = render(<ZonedDetailTabList {...baseProps} tabConfigs={tabConfigs} layout="main-right-sidebar" />)
+      const lists = container.querySelectorAll('[data-testid="tab-list"]')
+      expect(lists.length).toBe(2)
+    })
+  })
 })

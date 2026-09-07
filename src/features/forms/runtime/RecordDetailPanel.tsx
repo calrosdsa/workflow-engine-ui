@@ -53,9 +53,15 @@ interface RecordDetailPanelProps {
    *  linked record — the caller decides how to resolve that into a real
    *  navigation (e.g. finding a Search menu that targets that form). */
   onNavigateToRecord?: (formId: string, recordId: string) => void
+  /** 'drawer' for a caller rendering this inside a Drawer overlay
+   *  (RecordsTable's quick-view, LineItemsGrid's child-row editor) instead
+   *  of a full page — see ZonedDetailTabList's identical prop for what
+   *  this changes (the sidebar zone is dropped entirely). Defaults to
+   *  'page', matching every caller before this prop existed. */
+  pageContext?: 'page' | 'drawer'
 }
 
-export function RecordDetailPanel({ formId, recordId, fields, schema, onNavigateToRecord }: RecordDetailPanelProps) {
+export function RecordDetailPanel({ formId, recordId, fields, schema, onNavigateToRecord, pageContext = 'page' }: RecordDetailPanelProps) {
   const { data: record } = useRecordDetail(formId, recordId)
   const configuredTabs = resolveDetailTabs(schema?.settings?.detailTabs)
 
@@ -71,6 +77,7 @@ export function RecordDetailPanel({ formId, recordId, fields, schema, onNavigate
         layout={schema?.settings?.detailLayout ?? 'single'}
         orientation={schema?.settings?.tabOrientation ?? 'horizontal'}
         onNavigateToRecord={onNavigateToRecord}
+        pageContext={pageContext}
       />
     </div>
   )

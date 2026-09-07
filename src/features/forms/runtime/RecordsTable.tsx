@@ -589,6 +589,7 @@ export function RecordsTable({
               recordId={selectedRecord.id as string}
               fields={form.fields}
               schema={formSchema}
+              pageContext="drawer"
             />
           )}
         </DrawerContent>
