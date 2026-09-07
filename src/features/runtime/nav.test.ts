@@ -84,6 +84,31 @@ describe('resolveSidebarNav', () => {
     expect(scopedRoot).toEqual({ id: 'legacy1', name: 'Legacy', icon: undefined, menu_type: 'search' })
   })
 
+  it('scopes to a Module nested under another Module when viewing that nested module itself, not the top-level parent', () => {
+    const topModule = menu({ id: 'mod1', menu_type: 'module', slug: 'accounting', name: 'Accounting & Finance', parent_id: null })
+    const flatSibling = menu({ id: 'invoices', menu_type: 'search', slug: 'invoices', parent_id: 'mod1' })
+    const setup = menu({ id: 'setup', menu_type: 'module', slug: 'setup', name: 'Setup', parent_id: 'mod1' })
+    const setupChild = menu({ id: 'fiscal-years', menu_type: 'search', slug: 'fiscal-years', parent_id: 'setup' })
+    const payments = menu({ id: 'payments', menu_type: 'module', slug: 'payments', name: 'Payments', parent_id: 'mod1' })
+    const paymentsChild = menu({ id: 'journal-entries', menu_type: 'search', slug: 'journal-entries', parent_id: 'payments' })
+    const menus = [topModule, flatSibling, setup, setupChild, payments, paymentsChild]
+
+    const { navTree, scopedRoot } = resolveSidebarNav(menus, 'setup', undefined, canViewAll)
+    expect(navTree.map((n) => n.id)).toEqual(['fiscal-years'])
+    expect(scopedRoot).toEqual({ id: 'setup', name: 'Setup', icon: undefined, menu_type: 'module' })
+  })
+
+  it('scopes to the nearest module ancestor for a grandchild of a nested module, not the outer top-level module', () => {
+    const topModule = menu({ id: 'mod1', menu_type: 'module', slug: 'accounting', name: 'Accounting & Finance', parent_id: null })
+    const setup = menu({ id: 'setup', menu_type: 'module', slug: 'setup', name: 'Setup', parent_id: 'mod1' })
+    const setupChild = menu({ id: 'fiscal-years', menu_type: 'search', slug: 'fiscal-years', parent_id: 'setup' })
+    const menus = [topModule, setup, setupChild]
+
+    const { navTree, scopedRoot } = resolveSidebarNav(menus, 'fiscal-years', undefined, canViewAll)
+    expect(navTree.map((n) => n.id)).toEqual(['fiscal-years'])
+    expect(scopedRoot).toEqual({ id: 'setup', name: 'Setup', icon: undefined, menu_type: 'module' })
+  })
+
   it('falls back to the full tree when the resolved root ancestor is permission-rejected', () => {
     const roleGatedRoot = menu({ id: 'mod1', menu_type: 'module', parent_id: null, permission_mode: 'role', required_role_ids: ['admin'] })
     const child = menu({ id: 'search1', menu_type: 'search', parent_id: 'mod1' })

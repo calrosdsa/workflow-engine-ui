@@ -80,13 +80,17 @@ function findTreeNode(nodes: MenuTreeNode[], id: string): MenuTreeNode | undefin
 /** Single source of truth for what the sidebar shows: the full filtered
  *  tree for an app with no root-level module menus (today's unconditional
  *  behavior, byte-for-byte unchanged), or — once the app has at least one —
- *  only the branch rooted at whichever top-level tile the current menu
- *  descends from (that root's own children), plus the root itself so the
- *  caller can render a "back to home" header naming it. Applies to ANY
- *  root-level tile once the app is in modules mode, not only module-typed
- *  ones — a legacy root-level menu alongside new modules gets scoped
- *  exactly the same way, so there is exactly one sidebar behavior per app,
- *  never two coexisting ones. */
+ *  only the branch rooted at the nearest enclosing module tile (the current
+ *  menu itself, if it's a module; otherwise its closest module ancestor),
+ *  plus that root itself so the caller can render a "back to home" header
+ *  naming it. A Module nested under another Module therefore gets its own
+ *  scoped sidebar the same way a top-level one does — matching the
+ *  'module' menu_type's documented behavior that nesting a menu under a
+ *  Module "gives it its own sidebar contents" — rather than always jumping
+ *  out to the outermost top-level tile. A menu with no module anywhere in
+ *  its ancestor chain (a legacy root-level menu alongside new modules) falls
+ *  back to its own top-level root, so there is exactly one sidebar behavior
+ *  per app, never two coexisting ones. */
 export function resolveSidebarNav(
   menus: MenuSnapshotItem[],
   currentMenuId: string,
@@ -98,9 +102,13 @@ export function resolveSidebarNav(
 
   // Root-first ancestor chain, excluding the current menu itself — its first
   // entry (if any) is the top-level ancestor; an empty chain means the
-  // current menu IS already a root.
+  // current menu IS already a root. Search it nearest-first for the closest
+  // module boundary; the current menu itself takes priority over any
+  // ancestor so a module page scopes to itself, not its parent module.
   const ancestors = runtimeAncestors(menus, currentMenuId)
-  const rootId = ancestors[0]?.id ?? currentMenuId
+  const currentMenu = menus.find((m) => m.id === currentMenuId)
+  const nearestModuleAncestor = [...ancestors].reverse().find((m) => m.menu_type === 'module')
+  const rootId = (currentMenu?.menu_type === 'module' ? currentMenu.id : nearestModuleAncestor?.id) ?? ancestors[0]?.id ?? currentMenuId
   const rootNode = findTreeNode(fullTree, rootId)
 
   // rootNode can be absent if canViewMenu rejected the root ancestor itself
