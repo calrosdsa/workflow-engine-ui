@@ -69,6 +69,15 @@ const CHROME_ZONES: Record<string, string> = {
   audit: 'activity',
 }
 
+/** Canonical relative order for chrome types that share a zone — Attachments
+ *  before Tags, Comments before Audit Log. `resolveDetailTabs` rebuilds
+ *  every chrome entry in exactly this sequence rather than trusting each
+ *  one's position in a form's saved array: Comments postdates Audit Log as
+ *  a built-in, so a form whose array already had `audit` near the front
+ *  (every form saved before Comments existed) would otherwise render
+ *  "Audit Log, Comments" — array position, not this list, not intent. */
+const CHROME_TYPES_IN_ORDER = ['attachments', 'tags', 'comment', 'audit']
+
 /** True for a chrome tab type (see CHROME_ZONES). The Detail Page editing
  *  surfaces (form-builder/config/DetailPageConfigSection.tsx,
  *  detail-page-builder/canvas/TabCard.tsx via ZoneDropZone.tsx) use this to
@@ -86,18 +95,25 @@ export function isAlwaysPresentDetailTab(type: string): boolean {
  *  since the Form Builder's own "at least one tab" guard prevents saving an
  *  empty array, but a form saved before that guard existed, or one whose
  *  array was cleared by other means, should still show SOMETHING rather
- *  than a blank detail page. Then applies CHROME_ZONES: pinning the zone of
- *  any chrome type already in the array, and appending the ones that
- *  aren't. See that constant's own doc comment for why both halves. */
+ *  than a blank detail page.
+ *
+ *  Every chrome type is then pulled out of that array (present or not) and
+ *  rebuilt in CHROME_TYPES_IN_ORDER's fixed sequence with its zone pinned —
+ *  not "pin zone in place, append what's missing," which left each one's
+ *  relative order at the mercy of wherever it happened to sit (or not sit)
+ *  in a form's saved array. An existing entry keeps everything about it
+ *  (id, label override, visibility, renderIf, hidden) except zone; a
+ *  missing one is created fresh, same shape defaultDetailTabs() uses. Every
+ *  non-chrome entry keeps its own original relative order untouched —
+ *  reordering is scoped to chrome types only. */
 export function resolveDetailTabs(configured: DetailTabConfig[] | undefined): DetailTabConfig[] {
   const base = configured && configured.length > 0 ? configured : defaultDetailTabs()
-  const pinned = base.map((t) => {
-    const zone = CHROME_ZONES[t.type]
-    return zone && t.zone !== zone ? { ...t, zone } : t
+  const byType = new Map(base.map((t) => [t.type, t]))
+  const nonChrome = base.filter((t) => !(t.type in CHROME_ZONES))
+  const chrome = CHROME_TYPES_IN_ORDER.map((type): DetailTabConfig => {
+    const zone = CHROME_ZONES[type]
+    const existing = byType.get(type)
+    return existing ? { ...existing, zone } : { id: type, type, config: {}, zone }
   })
-  const present = new Set(pinned.map((t) => t.type))
-  const appended = Object.entries(CHROME_ZONES)
-    .filter(([type]) => !present.has(type))
-    .map(([type, zone]): DetailTabConfig => ({ id: type, type, config: {}, zone }))
-  return appended.length > 0 ? [...pinned, ...appended] : pinned
+  return [...nonChrome, ...chrome]
 }
