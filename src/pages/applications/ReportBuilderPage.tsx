@@ -272,6 +272,8 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
         />
         <WorkbookRegionsPanel
           getSelection={() => workbookSurfaceRef.current?.getSelection()}
+          readNumberFormat={() => workbookSurfaceRef.current?.selectedNumberFormat()}
+          applyNumberFormat={(format) => workbookSurfaceRef.current?.applyNumberFormat(format)}
           onBeforeChange={synchronizeWorkbookBeforeDefinitionChange}
         />
       </div>

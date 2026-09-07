@@ -9,7 +9,8 @@ import { allReportBlocks, getReportBlock } from '../report-block-registry'
 import { useReportStore, findBlock } from '../store'
 import { DataSourcesSection } from './DataSourcesSection'
 import { ArgumentsSection } from './ArgumentsSection'
-import type { BlockLayout, ReportBlockRegion } from '../types'
+import type { BlockLayout, NumberFormat, ReportBlockRegion } from '../types'
+import { NumberFormatSection } from './NumberFormatSection'
 
 /** Block types that read a data source, and so are placed by the sheet-native
  *  "Insert data" gesture (SN-01) rather than by a panel button. Everything
@@ -20,6 +21,12 @@ const FALLBACK_SHEET = { id: 'report-layout', name: 'Report layout' }
 
 interface WorkbookRegionsPanelProps {
   getSelection?: () => ReportBlockRegion | undefined
+  /** Reads and writes the number format on the sheet's current selection.
+   *  Both are owned by the workbook surface rather than this panel: the live
+   *  grid is deliberately not rebuilt from the definition on a cell change,
+   *  so a store update alone would leave the canvas stale. */
+  readNumberFormat?: () => NumberFormat | undefined
+  applyNumberFormat?: (format: NumberFormat | undefined) => void
   /** Saves the live workbook before a semantic-region mutation can cause the
    * editor adapter to refresh from report state. */
   onBeforeChange?: () => void
@@ -28,7 +35,7 @@ interface WorkbookRegionsPanelProps {
 // The Workbook is the report's sole authoring surface. This panel owns the
 // semantic layer beside the grid: creating data regions, configuring their
 // source/output, styling them, and binding them to selected worksheet cells.
-export function WorkbookRegionsPanel({ getSelection, onBeforeChange }: WorkbookRegionsPanelProps) {
+export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumberFormat, onBeforeChange }: WorkbookRegionsPanelProps) {
   const definition = useReportStore((state) => state.definition)
   const selectedBlockId = useReportStore((state) => state.selectedBlockId)
   const addBlock = useReportStore((state) => state.addBlock)
@@ -125,6 +132,13 @@ export function WorkbookRegionsPanel({ getSelection, onBeforeChange }: WorkbookR
             To place data, select cells in the sheet and use <strong>Insert data</strong> above the grid.
           </p>
         </section>
+
+        {readNumberFormat && applyNumberFormat && (
+          <section className="border-b border-[hsl(var(--border))] p-3" aria-labelledby="number-format-heading">
+            <h3 id="number-format-heading" className="sr-only">Number format</h3>
+            <NumberFormatSection read={readNumberFormat} apply={applyNumberFormat} />
+          </section>
+        )}
 
         <section className="border-b border-[hsl(var(--border))] p-2" aria-labelledby="regions-heading">
           <h3 id="regions-heading" className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">

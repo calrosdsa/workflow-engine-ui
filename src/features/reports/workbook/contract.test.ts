@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { fromUniverWorkbook, toUniverWorkbook } from './contract'
-import type { ReportWorkbook } from '../types'
+import { fromUniverWorkbook, numberFormatIndex, toUniverWorkbook } from './contract'
+import type { NumberFormat, ReportWorkbook } from '../types'
 
 describe('report workbook contract', () => {
   it('turns a Univer workbook into portable report cells, formulas, styles, and merges', () => {
@@ -204,5 +204,56 @@ describe('report workbook contract', () => {
     const snapshot = toUniverWorkbook('Board pack', workbook)
 
     expect(snapshot.sheets?.overview).not.toHaveProperty('columnData')
+  })
+})
+
+// A number format applied in the editor used to be DISCARDED on save.
+// Univer's own numfmt controls were live — the toolbar's "General" dropdown
+// plus percent, currency and decimal buttons — and fromUniverStyle never
+// read style.n, so an author could format a column, watch it render, save,
+// and find it gone. These pin the round trip that closes it.
+describe('number formats', () => {
+  const bolivianos: NumberFormat = {
+    style: 'currency',
+    currency_symbol: 'Bs ',
+    decimals: 2,
+    thousands_separator: '.',
+    decimal_separator: ',',
+  }
+
+  const withFormat = (): ReportWorkbook => ({
+    sheets: [{
+      id: 'overview',
+      name: 'Overview',
+      row_count: 4,
+      column_count: 4,
+      cells: [{ row: 0, col: 0, value: 1250000, style: { number_format: bolivianos } }],
+    }],
+  })
+
+  it('survives a full round trip through Univer', () => {
+    const univer = toUniverWorkbook('R', withFormat())
+    const back = fromUniverWorkbook(
+      univer as Parameters<typeof fromUniverWorkbook>[0],
+      numberFormatIndex(withFormat()),
+    )
+    expect(back.sheets[0].cells?.[0].style?.number_format).toEqual(bolivianos)
+  })
+
+  it('reaches Univer as a real pattern so the grid renders it', () => {
+    const univer = toUniverWorkbook('R', withFormat())
+    const style = univer.sheets?.overview?.cellData?.[0]?.[0]?.s
+    expect(typeof style === 'object' ? style?.n?.pattern : undefined).toBe('"Bs "#,##0.00')
+  })
+
+  // Without the index there is no descriptor to recover — the pattern alone
+  // cannot produce one, which is exactly why the index has to be threaded
+  // through from the definition rather than read out of Univer.
+  it('is dropped rather than guessed at when the pattern is unknown', () => {
+    const univer = toUniverWorkbook('R', withFormat())
+    const back = fromUniverWorkbook(univer as Parameters<typeof fromUniverWorkbook>[0])
+    expect(back.sheets[0].cells?.[0].style?.number_format).toBeUndefined()
+    // The cell itself and its value must still survive.
+    expect(back.sheets[0].cells?.[0].value).toBe(1250000)
   })
 })

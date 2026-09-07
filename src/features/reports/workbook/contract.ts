@@ -6,6 +6,7 @@ import type {
 } from '@univerjs/presets'
 import type {
   ColumnWidth,
+  NumberFormat,
   ReportWorkbook,
   ReportWorkbookSheet,
   WorkbookCell,
@@ -13,6 +14,7 @@ import type {
   WorkbookCellValue,
 } from '../types'
 import { isReportRegionGuide } from './guides'
+import { descriptorForPattern, excelPattern, patternIndex } from './number-format'
 
 type WorkbookSnapshot = Pick<IWorkbookData, 'id' | 'name' | 'sheetOrder' | 'sheets' | 'styles'>
 
@@ -26,12 +28,31 @@ const WRAP = 3
 // contract. This is intentionally a whitelist: collaboration metadata,
 // plugin resources and editor implementation details never enter a report
 // definition, while ordinary cell values, formulas, merges and styles do.
-export function fromUniverWorkbook(snapshot: WorkbookSnapshot): ReportWorkbook {
+/**
+ * numberFormatIndex builds the pattern lookup a save needs, from the
+ * definition being edited. Univer holds only the derived Excel pattern, so
+ * without this every number format an author set would be dropped on the
+ * round trip — which is precisely what happened before this existed.
+ */
+export function numberFormatIndex(workbook: ReportWorkbook | undefined): Map<string, NumberFormat> {
+  const formats: NumberFormat[] = []
+  workbook?.sheets.forEach((sheet) => {
+    sheet.cells?.forEach((cell) => {
+      if (cell.style?.number_format) formats.push(cell.style.number_format)
+    })
+  })
+  return patternIndex(formats)
+}
+
+export function fromUniverWorkbook(
+  snapshot: WorkbookSnapshot,
+  formats: Map<string, NumberFormat> = new Map(),
+): ReportWorkbook {
   const sheetIDs = snapshot.sheetOrder?.filter((id) => snapshot.sheets[id] !== undefined)
     ?? Object.keys(snapshot.sheets)
 
   return {
-    sheets: sheetIDs.map((sheetID) => fromUniverSheet(sheetID, snapshot.sheets[sheetID] ?? {}, snapshot.styles)),
+    sheets: sheetIDs.map((sheetID) => fromUniverSheet(sheetID, snapshot.sheets[sheetID] ?? {}, snapshot.styles, formats)),
   }
 }
 
@@ -98,6 +119,7 @@ function fromUniverSheet(
   fallbackID: string,
   sheet: Partial<IWorksheetData>,
   styles: IWorkbookData['styles'],
+  formats: Map<string, NumberFormat>,
 ): ReportWorkbookSheet {
   const cells: WorkbookCell[] = []
   const cellData = sheet.cellData ?? {}
@@ -107,7 +129,7 @@ function fromUniverSheet(
       const cell = rawCell as ICellData
       if (isReportRegionGuide(cell)) return
       const value = isWorkbookCellValue(cell.v) ? cell.v : undefined
-      const style = fromUniverStyle(resolveStyle(cell.s, styles))
+      const style = fromUniverStyle(resolveStyle(cell.s, styles), formats)
       if (value === undefined && !cell.f && !style) return
 
       cells.push({
@@ -169,8 +191,18 @@ function resolveStyle(style: ICellData['s'], styles: IWorkbookData['styles']): I
   return style
 }
 
-function fromUniverStyle(style?: IStyleData): WorkbookCellStyle | undefined {
+function fromUniverStyle(
+  style: IStyleData | undefined,
+  formats: Map<string, NumberFormat>,
+): WorkbookCellStyle | undefined {
   if (!style) return undefined
+  // Univer stores an Excel pattern; the report stores a descriptor. This
+  // recovers the descriptor by lookup, never by parsing — see
+  // number-format.ts for why parsing is off the table. A pattern with no
+  // entry means it did not come from this editor's own panel, and there is
+  // no descriptor that could faithfully represent it, so it is left off
+  // rather than guessed at.
+  const numberFormat = descriptorForPattern(style.n?.pattern, formats)
   const align = style.ht === HORIZONTAL_ALIGNMENTS.left
     ? 'left'
     : style.ht === HORIZONTAL_ALIGNMENTS.center
@@ -198,6 +230,7 @@ function fromUniverStyle(style?: IStyleData): WorkbookCellStyle | undefined {
     ...(style.bg?.rgb ? { fill_color: style.bg.rgb } : {}),
     ...(style.pd ? { padding: { top: style.pd.t, right: style.pd.r, bottom: style.pd.b, left: style.pd.l } } : {}),
     ...(border ? { border: { width: 1, color: border.cl.rgb ?? undefined } } : {}),
+    ...(numberFormat ? { number_format: numberFormat } : {}),
   }
   return Object.keys(result).length > 0 ? result : undefined
 }
@@ -220,5 +253,8 @@ function toUniverStyle(style: WorkbookCellStyle): IStyleData {
     ...(style.fill_color ? { bg: { rgb: style.fill_color } } : {}),
     ...(style.padding ? { pd: { t: style.padding.top, r: style.padding.right, b: style.padding.bottom, l: style.padding.left } } : {}),
     ...(border ? { bd: { t: border, r: border, b: border, l: border } } : {}),
+    // Display only. The descriptor stays the source of truth; this is what
+    // makes the grid show "Bs 1,234.56" instead of a bare 1234.56.
+    ...(style.number_format ? { n: { pattern: excelPattern(style.number_format) } } : {}),
   }
 }

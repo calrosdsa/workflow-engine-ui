@@ -17,9 +17,10 @@ import { UniverSheetsTablePreset } from '@univerjs/preset-sheets-table'
 import sheetsTableEnUS from '@univerjs/preset-sheets-table/locales/en-US'
 import '@univerjs/preset-sheets-table/lib/index.css'
 import { useForms } from '@/features/forms/hooks'
-import type { ReportBlockRegion, ReportDefinition, ReportWorkbook } from '../types'
+import type { NumberFormat, ReportBlockRegion, ReportDefinition, ReportWorkbook } from '../types'
 import { createReportWorkbookBlueprint, type ReportWorkbookBlueprint } from './blueprint'
-import { fromUniverWorkbook, toUniverWorkbook } from './contract'
+import { fromUniverWorkbook, numberFormatIndex, toUniverWorkbook } from './contract'
+import { excelPattern, patternIndex } from './number-format'
 import { withReportRegionGuides } from './guides'
 import { InsertDataMenu } from './InsertDataMenu'
 import { FormulaSuggestions } from './FormulaSuggestions'
@@ -36,6 +37,29 @@ import {
   sourceCompletionColumns,
   type FormLookup,
 } from './region-projection'
+
+// Univer's own number-format controls are hidden, and this is the decision
+// the whole feature turns on rather than a cosmetic tidy-up.
+//
+// They were live: the toolbar's "General" dropdown, the percent and currency
+// buttons, and the two decimal steppers all applied a format that rendered
+// on the canvas and was then DISCARDED on save, because Univer stores an
+// Excel pattern and a report stores a semantic descriptor. Leaving them
+// alongside the report's own Number format panel would mean two authoring
+// surfaces writing one field through two vocabularies, disagreeing silently
+// because both render identically on the canvas.
+//
+// They are also strictly less capable for what this feature is for: Univer's
+// dropdown cannot express a currency symbol, Bolivian separators, or
+// accounting-style negatives. Its date, time, scientific and duration
+// entries have never persisted either — they only ever looked like they did.
+const SUPPRESSED_NUMFMT_MENU = {
+  'sheet.operation.open.numfmt.panel': { hidden: true },
+  'sheet.command.numfmt.set.percent': { hidden: true },
+  'sheet.command.numfmt.set.currency': { hidden: true },
+  'sheet.command.numfmt.add.decimal.command': { hidden: true },
+  'sheet.command.numfmt.subtract.decimal.command': { hidden: true },
+}
 
 const WORKBOOK_ID = 'report-builder-workbook'
 const SHEET_ID = 'report-layout'
@@ -54,6 +78,15 @@ export interface UniverWorkbookSurfaceProps {
 export interface WorkbookSurfaceHandle {
   save: () => ReportWorkbook | undefined
   getSelection: () => ReportBlockRegion | undefined
+  /** Applies (or with undefined, clears) a number format on the current
+   *  selection. Owned by the surface rather than the panel because the live
+   *  grid is deliberately not rebuilt from the definition on a cell change
+   *  — see the workbook memo's dependency list — so a store update alone
+   *  would leave the canvas showing the old value. */
+  applyNumberFormat: (format: NumberFormat | undefined) => void
+  /** The format on the selection's anchor cell, so the panel can show what
+   *  is currently set rather than always opening blank. */
+  selectedNumberFormat: () => NumberFormat | undefined
 }
 
 interface TableHostSheet {
@@ -64,9 +97,14 @@ interface TableHostSheet {
   ) => Promise<boolean> | boolean
 }
 
+interface NumberFormattableRange {
+  getRange: () => { startRow: number; endRow: number; startColumn: number; endColumn: number }
+  setNumberFormat?: (pattern: string) => unknown
+}
+
 interface EditableSheet {
   getSheetId: () => string
-  getActiveRange: () => { getRange: () => { startRow: number; endRow: number; startColumn: number; endColumn: number } } | null
+  getActiveRange: () => NumberFormattableRange | null
   getRange?: (row: number, column: number) => {
     getCellRect?: () => DOMRect
     // Narrowed to the shape this file writes — a formula cell. The real
@@ -96,6 +134,11 @@ export const UniverWorkbookSurface = forwardRef<WorkbookSurfaceHandle, UniverWor
     anchor: { left: number; top: number; bottom: number }
     apply: (suggestion: ReferenceSuggestion) => void
   } | null>(null)
+  // Descriptors applied during THIS editing session. Univer only carries
+  // the derived pattern, so without keeping the descriptors a format set and
+  // then saved in the same sitting could not be recovered — the definition
+  // does not have it yet, and the pattern cannot be parsed back.
+  const sessionFormatsRef = useRef<NumberFormat[]>([])
   const definitionRef = useRef(definition)
   definitionRef.current = definition
 
@@ -154,10 +197,48 @@ export const UniverWorkbookSurface = forwardRef<WorkbookSurfaceHandle, UniverWor
     [regionSignature, formSignature],
   )
 
+  // The definition's own formats plus this session's, so a format set and
+  // saved without a reload still resolves.
+  const mergedFormatIndex = () => patternIndex([
+    ...numberFormatIndex(definitionRef.current.workbook).values(),
+    ...sessionFormatsRef.current,
+  ])
+
   useImperativeHandle(ref, () => ({
     save: () => activeWorkbookRef.current
-      ? fromUniverWorkbook(activeWorkbookRef.current.save())
+      // The index comes from the definition being edited plus anything set
+      // since it loaded, not from Univer: Univer holds only the derived
+      // Excel pattern, and a descriptor cannot be recovered from one.
+      // Without this every number format an author set is silently dropped
+      // on save, which is what used to happen.
+      ? fromUniverWorkbook(
+        activeWorkbookRef.current.save(),
+        mergedFormatIndex(),
+      )
       : definition.workbook,
+    applyNumberFormat: (format) => {
+      const range = activeWorkbookRef.current?.getActiveSheet?.()?.getActiveRange()
+      if (!range?.setNumberFormat) return
+      onBeforeChange?.()
+      if (format) sessionFormatsRef.current.push(format)
+      // Clearing sets Univer's own "General", which carries no pattern — so
+      // the descriptor lookup finds nothing on save and the cell comes back
+      // with no number_format at all, which is the intent.
+      range.setNumberFormat(format ? excelPattern(format) : 'General')
+      onEdited?.()
+    },
+    selectedNumberFormat: () => {
+      const workbook = activeWorkbookRef.current
+      const sheet = workbook?.getActiveSheet?.()
+      const range = sheet?.getActiveRange()?.getRange()
+      if (!workbook || !sheet || !range) return undefined
+      const snapshot = workbook.save()
+      const sheetData = snapshot.sheets?.[sheet.getSheetId()]
+      const cell = sheetData?.cellData?.[range.startRow]?.[range.startColumn]
+      const style = typeof cell?.s === 'string' ? snapshot.styles?.[cell.s] : cell?.s
+      const pattern = (style as { n?: { pattern?: string } } | undefined)?.n?.pattern
+      return pattern ? mergedFormatIndex().get(pattern) : undefined
+    },
     getSelection: () => {
       const sheet = activeWorkbookRef.current?.getActiveSheet?.()
       const range = sheet?.getActiveRange()?.getRange()
@@ -186,6 +267,7 @@ export const UniverWorkbookSurface = forwardRef<WorkbookSurfaceHandle, UniverWor
         UniverSheetsCorePreset({
           container: containerRef.current,
           footer: { sheetBar: true, statisticBar: false },
+          menu: SUPPRESSED_NUMFMT_MENU,
         }),
         UniverSheetsTablePreset(),
       ],

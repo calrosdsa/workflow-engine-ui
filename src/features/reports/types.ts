@@ -113,11 +113,36 @@ export interface ReportBlockRegion {
 
 export type WorkbookCellValue = string | number | boolean
 
+/**
+ * NumberFormat mirrors the backend descriptor (internal/forms/field's
+ * NumberFormat). It states INTENT rather than an Excel format code, because
+ * only XLSX can render a code — PDF, DOCX, Markdown, CSV and XLS receive
+ * text the server rendered from these same fields.
+ *
+ * thousands_separator and decimal_separator apply to those five formats
+ * only. A stored Excel code is canonical, so XLSX renders group and decimal
+ * characters from the VIEWER's locale and cannot be told otherwise.
+ */
+export interface NumberFormat {
+  style?: 'number' | 'currency' | 'percent'
+  /** 0-10, default 2. */
+  decimals?: number
+  /** Default ","; an explicit empty string turns grouping off. */
+  thousands_separator?: string
+  /** Default ".". */
+  decimal_separator?: string
+  /** Emitted verbatim and adjacent to the number — "$" gives $1,234.50, "Bs " gives Bs 1.234,56. */
+  currency_symbol?: string
+  currency_position?: 'prefix' | 'suffix'
+  negative_style?: 'minus' | 'parentheses'
+}
+
 export interface WorkbookCellStyle extends BlockStyle {
   font_family?: string
   font_size?: number
   vertical_align?: 'top' | 'middle' | 'bottom'
   wrap?: boolean
+  number_format?: NumberFormat
 }
 
 export interface WorkbookCell {
