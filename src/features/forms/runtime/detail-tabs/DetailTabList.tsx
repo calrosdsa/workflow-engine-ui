@@ -10,6 +10,7 @@
 import { useState, type ComponentType } from 'react'
 import { cn } from '@/lib/utils'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 import { useI18n } from '@/features/i18n/I18nProvider'
 import { getDetailTab } from './registry'
 import { useCurrentViewer, isTabVisible } from './useTabVisible'
@@ -141,21 +142,23 @@ export function DetailTabList({
 
   if (variant === 'stacked') {
     return (
-      <div className="flex flex-col gap-5 p-4">
+      // type="multiple": each section (Attachments, Tags, ...) collapses
+      // independently — opening one has no reason to close another in a
+      // sidebar this short. defaultValue opens every section on first
+      // render, matching this variant's pre-collapsible behavior exactly;
+      // Radix only reads it once (uncontrolled), so nothing re-forces a
+      // section open again after a viewer collapses it, for the lifetime
+      // of this mount.
+      <Accordion type="multiple" defaultValue={renderableTabs.map((t) => t.id)} className="p-4">
         {/* Same "every renderableTab mounts, emptiness only hides chrome"
            contract the tabs branch documents below. */}
         {renderableTabs.map((t) => (
-          <section key={t.id} style={emptyTabIds.has(t.id) ? { display: 'none' } : undefined}>
-            <h3
-              className="mb-2 text-[11px] font-semibold uppercase tracking-wider"
-              style={{ color: 'hsl(var(--muted-foreground))' }}
-            >
-              {labelFor(t)}
-            </h3>
-            {renderBody(t)}
-          </section>
+          <AccordionItem key={t.id} value={t.id} style={emptyTabIds.has(t.id) ? { display: 'none' } : undefined}>
+            <AccordionTrigger>{labelFor(t)}</AccordionTrigger>
+            <AccordionContent>{renderBody(t)}</AccordionContent>
+          </AccordionItem>
         ))}
-      </div>
+      </Accordion>
     )
   }
 
