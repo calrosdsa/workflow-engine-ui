@@ -17,6 +17,7 @@ class ResizeObserverStub {
 ;(globalThis as { ResizeObserver?: unknown }).ResizeObserver ??= ResizeObserverStub
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import { LineItemsGrid } from './LineItemsGrid'
 import { formsApi } from '@/features/forms/api'
 import type { FormElement, LineItemSection } from '@/features/form-builder/schema'
@@ -52,14 +53,21 @@ const sections: LineItemSection[] = [
 
 function renderGrid(el: { childFormId?: string; sourceMode?: 'generated' | 'existing' }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  // I18nProvider: LineItemsGridInner calls useI18n() for its adopted-row
+  // form-content localization (tc) — added by an unrelated i18n rollout
+  // (b30abcb) after this test was written, with no test update at the
+  // time. Real provider, no props needed: this test asserts on reference-
+  // options query targeting, not on any translated text.
   return render(
     <QueryClientProvider client={qc}>
-      <LineItemsGrid
-        el={{ ...el, lineItemColumns: sections, lineItemConfig: { rowEditMode: 'inline' } }}
-        field={{ value: [{ id: 'row-1', supplier: '' }], onChange: () => {} }}
-        parentFormId="parent-form"
-        disabled={false}
-      />
+      <I18nProvider>
+        <LineItemsGrid
+          el={{ ...el, lineItemColumns: sections, lineItemConfig: { rowEditMode: 'inline' } }}
+          field={{ value: [{ id: 'row-1', supplier: '' }], onChange: () => {} }}
+          parentFormId="parent-form"
+          disabled={false}
+        />
+      </I18nProvider>
     </QueryClientProvider>,
   )
 }

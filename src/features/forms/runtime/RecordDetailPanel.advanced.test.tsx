@@ -12,6 +12,7 @@
 import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest'
 import { render, cleanup, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import { RecordDetailPanel } from './RecordDetailPanel'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
 import { useAuthStore } from '@/stores/auth'
@@ -32,10 +33,27 @@ const record: FormRecord = {
   discount_reason: 'Loyalty program',
   amount: 250,
 }
+// A schema with no settings.detailTabs resolves through defaultDetailTabs()
+// (registry.ts), which now backfills Attachments/Tags/Comments/Audit Log
+// onto every record detail page regardless of what this test itself cares
+// about (Details-tab field rules) — so their data hooks need the same
+// empty-but-defined mocking useAuditLog/useLinkedRecords already needed,
+// or the ones this test doesn't otherwise touch throw on an unmocked call.
 vi.mock('./record-detail-hooks', () => ({
   useRecordDetail: () => ({ data: record, isLoading: false }),
   useAuditLog: () => ({ data: [], isLoading: false }),
   useLinkedRecords: () => ({ data: [], isLoading: false }),
+  useAttachments: () => ({ data: [], isLoading: false }),
+  useUploadAttachment: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteAttachment: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useTags: () => ({ data: { entries: [] }, isLoading: false }),
+  useAddTag: () => ({ mutate: vi.fn(), isPending: false }),
+  useRemoveTag: () => ({ mutate: vi.fn(), isPending: false }),
+  useTagSuggestions: () => ({ data: { tags: [] } }),
+  useComments: () => ({ data: { entries: [], total: 0 }, isLoading: false }),
+  useCreateComment: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateComment: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeleteComment: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 vi.mock('@/features/forms/hooks', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -74,13 +92,17 @@ function schemaWithRules(fieldKey: string, settings: AdvancedSetting[]): FormSch
 }
 
 function renderPanel(schema: FormSchema) {
-  // Real provider, no network: the data hooks this test cares about are
+  // Real providers, no network: the data hooks this test cares about are
   // mocked above; the remaining ones (useTeamUsers) just need a client and
-  // are content to stay loading with retries off.
+  // are content to stay loading with retries off. I18nProvider is real
+  // (not mocked) because DetailTabList's tab labels resolve through it —
+  // the base English dictionary is all any assertion here needs.
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, enabled: false } } })
   return render(
     <QueryClientProvider client={client}>
-      <RecordDetailPanel formId="f-1" recordId="r-1" fields={fields} schema={schema} />
+      <I18nProvider>
+        <RecordDetailPanel formId="f-1" recordId="r-1" fields={fields} schema={schema} />
+      </I18nProvider>
     </QueryClientProvider>,
   )
 }
