@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useForms, useForm } from '@/features/forms/hooks'
 import type { ReportBlockConfigPanelProps } from '../../report-block-contract'
+import { ColumnNumberFormat } from '../ColumnNumberFormat'
 import type { GroupBlockConfig, AggFn, GroupSeries, GroupByDimension } from './schema'
 
 const AGG_FNS: AggFn[] = ['count', 'sum', 'avg', 'min', 'max']
@@ -80,7 +81,7 @@ export function GroupBlockConfigPanel({ config, onChange }: ReportBlockConfigPan
         <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Measures</Label>
         <div className="flex flex-col gap-2">
           {config.series.map((s, i) => (
-            <div key={i} className="flex items-center gap-1.5 rounded-md border border-[hsl(var(--border))] p-1.5">
+            <div key={i} className="flex flex-wrap items-center gap-1.5 rounded-md border border-[hsl(var(--border))] p-1.5">
               <SelectMenu value={s.fn} onValueChange={(fn) => updateSeries(i, { fn: fn as AggFn })}>
                 <SelectTrigger className="h-7 w-20 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -105,6 +106,15 @@ export function GroupBlockConfigPanel({ config, onChange }: ReportBlockConfigPan
                 <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeSeries(i)}>
                   <X size={12} />
                 </Button>
+              )}
+              {/* A count is a tally of rows, so a currency or percent format
+                  on it would be meaningless — offered only for the measures
+                  that produce a real quantity. */}
+              {s.fn !== 'count' && (
+                <ColumnNumberFormat
+                  value={s.number_format}
+                  onChange={(number_format) => updateSeries(i, { number_format })}
+                />
               )}
             </div>
           ))}

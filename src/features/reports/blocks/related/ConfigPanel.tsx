@@ -6,6 +6,9 @@ import { useForms, useForm } from '@/features/forms/hooks'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
 import { generatedLineItemsChildren } from '@/features/form-builder/lineItemsSync'
 import type { ReportBlockConfigPanelProps } from '../../report-block-contract'
+import type { NumberFormat } from '../../types'
+import { ColumnNumberFormat } from '../ColumnNumberFormat'
+import type { ColumnConfig } from '../table/schema'
 import type { RelatedBlockConfig } from './schema'
 
 // Config surface for the "related" block type (FR-J1-002 section 1): a parent-form
@@ -37,6 +40,21 @@ export function RelatedBlockConfigPanel({ config, onChange }: ReportBlockConfigP
 
   const selectedKeys = new Set((config.columns ?? []).map((c) => c.key))
   const usingDefaultColumns = !config.columns || config.columns.length === 0
+
+  // Materialised before any per-column edit for the same reason as the table
+  // block's: an empty list means "every field", so editing one column while
+  // the list is empty would otherwise read as deselecting all the others.
+  const materialisedColumns = (): ColumnConfig[] =>
+    usingDefaultColumns && childForm
+      ? childForm.fields.map((f) => ({ key: f.name, label: f.label }))
+      : (config.columns ?? [])
+
+  const setColumnFormat = (key: string, number_format: NumberFormat | undefined) => {
+    onChange({
+      ...config,
+      columns: materialisedColumns().map((c) => (c.key === key ? { ...c, number_format } : c)),
+    })
+  }
 
   const toggleColumn = (key: string, checked: boolean) => {
     const base = usingDefaultColumns && childForm ? childForm.fields.map((f) => ({ key: f.name, label: f.label })) : (config.columns ?? [])
@@ -92,15 +110,25 @@ export function RelatedBlockConfigPanel({ config, onChange }: ReportBlockConfigP
             Child columns <span className="font-normal">(none checked = every field)</span>
           </Label>
           <div className="flex flex-col gap-1 rounded-md border border-[hsl(var(--border))] p-2">
-            {childForm.fields.filter((f) => f.type !== 'parent_link').map((f) => (
-              <label key={f.name} className="flex items-center gap-2 text-xs">
-                <Checkbox
-                  checked={usingDefaultColumns ? true : selectedKeys.has(f.name)}
-                  onCheckedChange={(checked) => toggleColumn(f.name, checked === true)}
-                />
-                {f.label}
-              </label>
-            ))}
+            {childForm.fields.filter((f) => f.type !== 'parent_link').map((f) => {
+              const shown = usingDefaultColumns ? true : selectedKeys.has(f.name)
+              return (
+                <div key={f.name} className="flex flex-wrap items-center gap-2 text-xs">
+                  <label className="flex flex-1 items-center gap-2">
+                    <Checkbox
+                      checked={shown}
+                      onCheckedChange={(checked) => toggleColumn(f.name, checked === true)}
+                    />
+                    {f.label}
+                  </label>
+                  <ColumnNumberFormat
+                    disabled={!shown}
+                    value={(config.columns ?? []).find((c) => c.key === f.name)?.number_format}
+                    onChange={(format) => setColumnFormat(f.name, format)}
+                  />
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

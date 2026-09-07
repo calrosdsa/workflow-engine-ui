@@ -1,4 +1,4 @@
-import type { BlockStyle } from '../../types'
+import type { BlockStyle, NumberFormat } from '../../types'
 
 // Mirrors internal/reports.TableBlockConfig (Go, block_table.go) exactly —
 // snake_case field names matching the wire schema (FR-J1-002 §1).
@@ -6,6 +6,11 @@ export interface ColumnConfig {
   key: string
   label?: string
   expression?: string
+  /** Renders this column's numeric values as money, a percentage or a
+   *  fixed-decimal number. Applies only to values that arrive as numbers —
+   *  a text column is left alone, so an invoice number stored as "0123"
+   *  survives a currency format on its column. */
+  number_format?: NumberFormat
 }
 
 export interface TableStyles {

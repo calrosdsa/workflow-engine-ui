@@ -6,8 +6,9 @@ import { useForms, useForm } from '@/features/forms/hooks'
 import { useReportStore } from '../../store'
 import type { ReportBlockConfigPanelProps } from '../../report-block-contract'
 import { StyleEditor } from '../../StyleEditor'
-import type { BlockStyle } from '../../types'
-import type { TableBlockConfig, TableStyles } from './schema'
+import type { BlockStyle, NumberFormat } from '../../types'
+import { ColumnNumberFormat } from '../ColumnNumberFormat'
+import type { ColumnConfig, TableBlockConfig, TableStyles } from './schema'
 
 // Config surface for the "table" block type (FR-J1-002 §1): a form picker
 // plus a column checklist (defaulting to every field when Columns is empty,
@@ -35,11 +36,24 @@ export function TableBlockConfigPanel({ config, onChange }: ReportBlockConfigPan
     onChange({ ...config, style: next.header || next.body ? next : undefined })
   }
 
+  // An empty columns list means "every field", so the list has to be
+  // materialised before any per-column edit — otherwise setting a format on
+  // one column would be the same gesture as deselecting all the others.
+  const materialisedColumns = (): ColumnConfig[] =>
+    usingDefaultColumns && form
+      ? form.fields.map((f) => ({ key: f.name, label: f.label }))
+      : (config.columns ?? [])
+
   const toggleColumn = (key: string, checked: boolean) => {
-    const base = usingDefaultColumns && form ? form.fields.map((f) => ({ key: f.name, label: f.label })) : (config.columns ?? [])
+    const base = materialisedColumns()
     const next = checked
       ? [...base.filter((c) => c.key !== key), { key }]
       : base.filter((c) => c.key !== key)
+    onChange({ ...config, columns: next })
+  }
+
+  const setColumnFormat = (key: string, number_format: NumberFormat | undefined) => {
+    const next = materialisedColumns().map((c) => (c.key === key ? { ...c, number_format } : c))
     onChange({ ...config, columns: next })
   }
 
@@ -100,15 +114,25 @@ export function TableBlockConfigPanel({ config, onChange }: ReportBlockConfigPan
             Columns <span className="font-normal">(none checked = every field)</span>
           </Label>
           <div className="flex flex-col gap-1 rounded-md border border-[hsl(var(--border))] p-2">
-            {form.fields.map((f) => (
-              <label key={f.name} className="flex items-center gap-2 text-xs">
-                <Checkbox
-                  checked={usingDefaultColumns ? true : selectedKeys.has(f.name)}
-                  onCheckedChange={(checked) => toggleColumn(f.name, checked === true)}
-                />
-                {f.label}
-              </label>
-            ))}
+            {form.fields.map((f) => {
+              const shown = usingDefaultColumns ? true : selectedKeys.has(f.name)
+              return (
+                <div key={f.name} className="flex flex-wrap items-center gap-2 text-xs">
+                  <label className="flex flex-1 items-center gap-2">
+                    <Checkbox
+                      checked={shown}
+                      onCheckedChange={(checked) => toggleColumn(f.name, checked === true)}
+                    />
+                    {f.label}
+                  </label>
+                  <ColumnNumberFormat
+                    disabled={!shown}
+                    value={(config.columns ?? []).find((c) => c.key === f.name)?.number_format}
+                    onChange={(format) => setColumnFormat(f.name, format)}
+                  />
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

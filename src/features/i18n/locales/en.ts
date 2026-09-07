@@ -124,6 +124,8 @@ export const en = {
   'reports.number_format.decimal': 'Decimal',
   'reports.number_format.negatives': 'Negatives',
   'reports.number_format.preview': 'Preview',
+  'reports.number_format.column_none': 'Plain',
+  'reports.number_format.done': 'Done',
   'reports.number_format.locale_note':
     "These separators apply to PDF, Word, Markdown and CSV. A spreadsheet always draws its own from the reader's regional settings, so the grid here and a downloaded Excel file may show {{sample}} instead.",
 } satisfies Record<string, string>

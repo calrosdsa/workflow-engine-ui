@@ -1,3 +1,5 @@
+import type { NumberFormat } from '../../types'
+
 // Mirrors internal/reports.GroupBlockConfig (Go, block_group.go) exactly —
 // snake_case field names matching the wire schema (FR-J1-002 §1). AggFn
 // mirrors internal/forms/store.AggregateFn's own value set.
@@ -12,6 +14,11 @@ export interface GroupSeries {
   fn: AggFn
   field?: string
   label?: string
+  /** Renders this measure as money, a percentage or a fixed-decimal number.
+   *  A summed amount is the case this exists for. The block's group-key
+   *  column is text and is never formatted, even when the key looks like a
+   *  year. */
+  number_format?: NumberFormat
 }
 
 export interface GroupBlockConfig {
