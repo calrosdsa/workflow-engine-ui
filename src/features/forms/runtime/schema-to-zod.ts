@@ -135,6 +135,20 @@ export function fieldSchema(el: FormElement, relaxRequired = false): z.ZodTypeAn
           // invalid regex authored in the builder — skip rather than crash the renderer
         }
       }
+      // 'email' shares this generic string branch (fieldType 'email' has no
+      // switch case of its own) but still needs its own format check — without
+      // this, an 'email' field validated identically to plain 'text', and the
+      // browser's own native type="email" popup (unstyled, unlocalized, and
+      // silent to react-hook-form) was the only thing rejecting a malformed
+      // address. Empty string is deliberately treated as valid HERE — an
+      // empty required field must fail with "X is required." below, not with
+      // a confusing "must be a valid email" (z.string().email() would flag
+      // both on one blank required field; this refine only fires for a
+      // non-empty, actually-malformed value).
+      if (reg.fieldType === 'email') {
+        const emailMessage = el.validation.customMessage ?? `${el.label} must be a valid email address.`
+        str = str.refine((v) => v === '' || z.string().email().safeParse(v).success, emailMessage)
+      }
       base = str
       break
     }

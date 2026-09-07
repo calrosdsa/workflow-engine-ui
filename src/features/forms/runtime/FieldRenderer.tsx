@@ -70,7 +70,7 @@ export function FieldRenderer({ element: el, control, formId, runtimeState, erro
       {runtimeState.required && (
         // The asterisk is decorative — `required` on the control is what
         // actually conveys this, so don't make a screen reader say "asterisk".
-        <span aria-hidden="true" className="ml-0.5 text-red-500">*</span>
+        <span aria-hidden="true" className="ml-0.5" style={{ color: 'hsl(var(--destructive))' }}>*</span>
       )}
     </>
   )
@@ -78,9 +78,9 @@ export function FieldRenderer({ element: el, control, formId, runtimeState, erro
   return (
     <div>
       {asGroup ? (
-        <span id={labelId} className="mb-1 block text-xs font-medium text-gray-600">{labelContent}</span>
+        <span id={labelId} className="mb-1 block text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>{labelContent}</span>
       ) : (
-        <label id={labelId} htmlFor={controlId} className="mb-1 block text-xs font-medium text-gray-600">
+        <label id={labelId} htmlFor={controlId} className="mb-1 block text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
           {labelContent}
         </label>
       )}
@@ -102,10 +102,10 @@ export function FieldRenderer({ element: el, control, formId, runtimeState, erro
           />
         )}
       />
-      {el.helpText && <p id={helpId} className="mt-1 text-[11px] text-gray-400">{el.helpText}</p>}
+      {el.helpText && <p id={helpId} className="mt-1 text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>{el.helpText}</p>}
       {/* role="alert" so a validation failure is announced when it appears,
        *  not only when the field is next focused. */}
-      {error && <p id={errorId} role="alert" className="mt-1 text-[11px] text-red-600">{error}</p>}
+      {error && <p id={errorId} role="alert" className="mt-1 text-[11px]" style={{ color: 'hsl(var(--destructive))' }}>{error}</p>}
     </div>
   )
 }
@@ -236,7 +236,7 @@ export function FieldInput({ el, field, formId, control, disabled, id, labelledB
           aria-required={required || undefined}
         >
           {(el.options ?? []).map((o) => (
-            <label key={o.value} className="flex items-center gap-2 text-sm text-slate-700">
+            <label key={o.value} className="flex items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}>
               <RadioGroupItem value={o.value} />
               {o.label}
             </label>
@@ -263,9 +263,9 @@ export function FieldInput({ el, field, formId, control, disabled, id, labelledB
         field.onChange(values.includes(v) ? values.filter((x) => x !== v) : [...values, v])
       }
       return (
-        <div className="space-y-1 rounded-md border border-gray-200 p-2" {...groupA11y}>
+        <div className="space-y-1 rounded-md border p-2" style={{ borderColor: 'hsl(var(--border))' }} {...groupA11y}>
           {(el.options ?? []).map((o) => (
-            <label key={o.value} className="flex items-center gap-2 text-sm text-slate-700">
+            <label key={o.value} className="flex items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}>
               <Checkbox checked={values.includes(o.value)} onCheckedChange={() => toggle(o.value)} disabled={disabled} />
               {o.label}
             </label>
@@ -358,12 +358,12 @@ function PresentationalElement({ element: el }: { element: FormElement }) {
   switch (el.component) {
     case 'heading': {
       const Tag = (`h${el.level ?? 2}`) as 'h1' | 'h2' | 'h3'
-      return <Tag className="font-semibold text-slate-800">{el.content}</Tag>
+      return <Tag className="font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{el.content}</Tag>
     }
     case 'paragraph':
-      return <p className="text-sm text-slate-600">{el.content}</p>
+      return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{el.content}</p>
     case 'divider':
-      return <hr className="border-gray-200" />
+      return <hr style={{ borderColor: 'hsl(var(--border))' }} />
     case 'spacer':
       return <div style={{ height: el.height ?? 16 }} />
     default:

@@ -1,11 +1,15 @@
-import { useMemo, useState } from 'react'
-import { Menu as MenuIcon, X, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { useBlocker } from '@tanstack/react-router'
+import { Menu as MenuIcon, X, ArrowLeft, AlertCircle } from 'lucide-react'
+import { toast } from 'sonner'
 import { runtimeRouter } from '@/runtime-router'
 import { useAuthStore } from '@/stores/auth'
 import { usePermission } from '@/features/auth/permissions'
 import { resolveSidebarNav } from './nav'
 import { RuntimeSidebar } from './RuntimeSidebar'
 import { PermissionDeniedPage } from './PermissionDeniedPage'
+import { NotificationBell } from './notifications/NotificationBell'
+import { ProfileMenu } from './ProfileMenu'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
 import { useForm as useFormDef, useCreateRecord } from '@/features/forms/hooks'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
@@ -33,10 +37,29 @@ interface RuntimeFormCreatePageProps {
 // since there's no menu here to borrow chrome/permissions from — same
 // thinner-chrome tradeoff RuntimeFormRecordPage already makes (no breadcrumb
 // trail, no sidebar active-item highlight, "Back" is browser history rather
-// than a specific list).
+// than a specific list). That tradeoff is specifically about menu-derived
+// chrome, though — it doesn't extend to ProfileMenu/NotificationBell, which
+// have nothing to do with menu ownership and are still rendered here (see
+// below): ProfileMenu's theme toggle is the only place in the whole runtime
+// app to switch light/dark/system mode, so a page that omitted it would be
+// an escape-hatch dead end for anyone who lands here in a theme that doesn't
+// suit them.
 export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId, fromMenuId }: RuntimeFormCreatePageProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [result, setResult] = useState<'success' | 'error' | null>(null)
+  const [result, setResult] = useState<'error' | null>(null)
+  const [isDirty, setIsDirty] = useState(false)
+  // Flips true right before the post-save redirect below — without it, that
+  // programmatic navigate() would immediately trip the same "unsaved
+  // changes" prompt the blocker exists to protect against, on a form that
+  // was, in fact, just saved.
+  const submittedRef = useRef(false)
+  useBlocker({
+    shouldBlockFn: () => {
+      if (submittedRef.current || !isDirty) return false
+      return !window.confirm('You have unsaved changes. Leave this page and discard them?')
+    },
+    enableBeforeUnload: () => !submittedRef.current && isDirty,
+  })
   const session = useAuthStore((s) => s.session)
   const membership = session?.memberships?.find(
     (m) => m.client_id === clientId && m.app_id === appId,
@@ -60,7 +83,15 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId, fromM
     setResult(null)
     try {
       const record = await createRecord.mutateAsync(values)
-      setResult('success')
+      // See the useBlocker call above: this must flip before the navigate()
+      // below runs, or the unsaved-changes prompt fires on our own redirect.
+      submittedRef.current = true
+      // A toast, not page state: this handler always navigates away on
+      // success (see below), which would unmount an inline banner before a
+      // user could ever see it. Sonner's host is mounted once above the
+      // route outlet (see components/ui/sonner.tsx), so it survives the
+      // redirect and the confirmation actually gets seen.
+      toast.success(t('forms.create.success_message'))
 
       // Runs AFTER the write and cannot undo it — the record exists by now.
       // Awaited before this page's own redirect so a workflow that navigates
@@ -144,13 +175,21 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId, fromM
             <span className="truncate text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
               {form?.name ? `New ${localizeFormName(form.id, form.name, tc)}` : 'New Record'}
             </span>
-            <button
-              onClick={() => runtimeRouter.history.back()}
-              className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
-              style={{ color: 'hsl(var(--muted-foreground))' }}
-            >
-              <ArrowLeft size={12} />Back
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              {session && (
+                <>
+                  <NotificationBell clientId={clientId} appId={appId} />
+                  <ProfileMenu session={session} showThemeToggle />
+                </>
+              )}
+              <button
+                onClick={() => runtimeRouter.history.back()}
+                className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+                style={{ color: 'hsl(var(--muted-foreground))' }}
+              >
+                <ArrowLeft size={12} />Back
+              </button>
+            </div>
           </div>
 
           <main className="min-h-0 flex-1 overflow-y-auto">
@@ -159,15 +198,9 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId, fromM
             ) : !form ? null : (
               <div className="mx-auto max-w-xl space-y-4 p-6">
                 {result === 'error' && (
-                  <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  <div className="flex items-center gap-2 rounded-md border border-[hsl(var(--destructive))]/30 bg-[hsl(var(--destructive))]/10 p-3 text-sm text-[hsl(var(--destructive))]">
                     <AlertCircle size={16} />
                     {t('forms.create.error_message')}
-                  </div>
-                )}
-                {result === 'success' && (
-                  <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-                    <CheckCircle2 size={16} />
-                    {t('forms.create.success_message')}
                   </div>
                 )}
                 <FormRenderer
@@ -177,6 +210,7 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId, fromM
                   onSubmit={handleSubmit}
                   submitting={createRecord.isPending}
                   submitLabel="Save"
+                  onDirtyChange={setIsDirty}
                 />
               </div>
             )}

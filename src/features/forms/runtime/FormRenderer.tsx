@@ -104,6 +104,10 @@ export interface FormRendererProps {
   onSubmit: (values: Record<string, unknown>) => void | Promise<void>
   submitting?: boolean
   submitLabel?: string
+  /** Fires whenever react-hook-form's own dirty flag changes — a caller with
+   *  nothing else tracking unsaved state (e.g. a page with no autosave) can
+   *  use this to warn before letting the user navigate away and lose it. */
+  onDirtyChange?: (isDirty: boolean) => void
 }
 
 // The end-user-facing counterpart to the admin's form-builder canvas —
@@ -112,7 +116,7 @@ export interface FormRendererProps {
 // validation/visibility/required/readOnly rules the builder lets an admin
 // configure. This is the piece Add Menu depends on; no runtime form-fill
 // renderer existed anywhere in the codebase before this.
-export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitting, submitLabel }: FormRendererProps) {
+export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitting, submitLabel, onDirtyChange }: FormRendererProps) {
   const variables = schemaToVariableDecls(schema)
 
   // Fields an Advanced Setting hides from THIS viewer, fed back into the
@@ -140,10 +144,14 @@ export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitti
   // reads both.
   const [workflowFieldStates, setWorkflowFieldStates] = useState<Record<string, FieldStatePatch>>({})
 
-  const { control, handleSubmit, setValue, formState: { errors } } = useForm({
+  const { control, handleSubmit, setValue, formState: { errors, isDirty } } = useForm({
     resolver: zodResolver(zodSchema),
     defaultValues: { ...emptyDefaults(schema), ...nullsToEmptyStrings(schema, defaultValues ?? {}) },
   })
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty)
+  }, [isDirty, onDirtyChange])
 
   const liveValues = useWatch({ control }) as Record<string, unknown>
 
