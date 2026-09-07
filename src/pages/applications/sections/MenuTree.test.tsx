@@ -14,6 +14,7 @@
 // exercises the actual pointer sensors.
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, cleanup } from '@testing-library/react'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import { MenuTree } from './MenusSection'
 import type { Menu, MenuTreeNode } from '@/features/menus/types'
 
@@ -91,14 +92,16 @@ describe('MenuTree Hidden-tray drag interaction', () => {
     patchCalls.length = 0
 
     render(
-      <MenuTree
-        tree={[node(visible)]}
-        hiddenMenus={[]}
-        allMenus={[visible]}
-        selectedId={null}
-        onSelect={() => {}}
-        onAddChild={() => {}}
-      />,
+      <I18nProvider>
+        <MenuTree
+          tree={[node(visible)]}
+          hiddenMenus={[]}
+          allMenus={[visible]}
+          selectedId={null}
+          onSelect={() => {}}
+          onAddChild={() => {}}
+        />
+      </I18nProvider>,
     )
 
     expect(capturedOnDragEnd).not.toBeNull()
@@ -119,14 +122,16 @@ describe('MenuTree Hidden-tray drag interaction', () => {
     reorderCalls.length = 0
 
     render(
-      <MenuTree
-        tree={[node(rootSibling)]}
-        hiddenMenus={[hidden]}
-        allMenus={[rootSibling, hidden]}
-        selectedId={null}
-        onSelect={() => {}}
-        onAddChild={() => {}}
-      />,
+      <I18nProvider>
+        <MenuTree
+          tree={[node(rootSibling)]}
+          hiddenMenus={[hidden]}
+          allMenus={[rootSibling, hidden]}
+          selectedId={null}
+          onSelect={() => {}}
+          onAddChild={() => {}}
+        />
+      </I18nProvider>,
     )
 
     capturedOnDragEnd!({
@@ -146,14 +151,16 @@ describe('MenuTree Hidden-tray drag interaction', () => {
     reorderCalls.length = 0
 
     render(
-      <MenuTree
-        tree={[node(visible)]}
-        hiddenMenus={[hidden]}
-        allMenus={[visible, hidden]}
-        selectedId={null}
-        onSelect={() => {}}
-        onAddChild={() => {}}
-      />,
+      <I18nProvider>
+        <MenuTree
+          tree={[node(visible)]}
+          hiddenMenus={[hidden]}
+          allMenus={[visible, hidden]}
+          selectedId={null}
+          onSelect={() => {}}
+          onAddChild={() => {}}
+        />
+      </I18nProvider>,
     )
 
     capturedOnDragEnd!({
@@ -170,14 +177,16 @@ describe('MenuTree Hidden-tray drag interaction', () => {
     reorderCalls.length = 0
 
     render(
-      <MenuTree
-        tree={[]}
-        hiddenMenus={[hidden]}
-        allMenus={[hidden]}
-        selectedId={null}
-        onSelect={() => {}}
-        onAddChild={() => {}}
-      />,
+      <I18nProvider>
+        <MenuTree
+          tree={[]}
+          hiddenMenus={[hidden]}
+          allMenus={[hidden]}
+          selectedId={null}
+          onSelect={() => {}}
+          onAddChild={() => {}}
+        />
+      </I18nProvider>,
     )
 
     capturedOnDragEnd!({
@@ -194,14 +203,16 @@ describe('MenuTree Hidden-tray drag interaction', () => {
     patchCalls.length = 0
 
     render(
-      <MenuTree
-        tree={[node(visible)]}
-        hiddenMenus={[]}
-        allMenus={[visible]}
-        selectedId={null}
-        onSelect={() => {}}
-        onAddChild={() => {}}
-      />,
+      <I18nProvider>
+        <MenuTree
+          tree={[node(visible)]}
+          hiddenMenus={[]}
+          allMenus={[visible]}
+          selectedId={null}
+          onSelect={() => {}}
+          onAddChild={() => {}}
+        />
+      </I18nProvider>,
     )
 
     capturedOnDragEnd!({ active: { id: 'm1' }, over: { id: 'm1' } })
