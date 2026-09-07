@@ -74,7 +74,7 @@ export function CardLayout({ records, fields, columns, roleField, enumLabels, on
                         ? <FileCellDisplay value={r[f.name]} />
                         : f.type === 'reference'
                         ? <ReferenceValueLabel formId={f.reference_table} recordId={r[f.name]} displayField={f.display_field} />
-                        : formatFieldValue(r[f.name], f.type)}
+                        : formatFieldValue(r[f.name], f.type, f.number_format)}
                     </span>
                   </div>
                 ))}

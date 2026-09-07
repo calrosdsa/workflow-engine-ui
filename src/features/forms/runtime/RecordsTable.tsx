@@ -322,6 +322,12 @@ export function RecordsTable({
     // date fields were not. See formatFieldValue for the timezone trap that
     // makes `new Date(v).toLocaleDateString()` the wrong fix here.
     const isTemporal = field?.type === 'date' || field?.type === 'datetime' || field?.type === 'time'
+    // 'decimal'/'integer' fell through to DataTable's own generic formatCell,
+    // which has no grouping and ignores number_format entirely — same bug
+    // class as isFile/isTemporal above, just for numbers. field?.type is
+    // undefined for a system column (id/created_at/updated_at, none of which
+    // are numeric), so this never misfires on those.
+    const isNumeric = field?.type === 'decimal' || field?.type === 'integer'
     return {
       key,
       label: labelByKey.get(key) ?? field?.label ?? key,
@@ -336,8 +342,8 @@ export function RecordsTable({
         ? (row: FormRecord) => resolveEnumLabel(enumLabels, key, row[key])
         : isFile
         ? (row: FormRecord) => <FileCellDisplay value={row[key]} />
-        : isTemporal
-        ? (row: FormRecord) => formatFieldValue(row[key], field.type)
+        : isTemporal || isNumeric
+        ? (row: FormRecord) => formatFieldValue(row[key], field.type, field.number_format)
         : undefined,
     }
   })

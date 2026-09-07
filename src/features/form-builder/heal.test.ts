@@ -287,6 +287,49 @@ describe('healSchema', () => {
     expect(unhydratedEl.isRecordTitle).toBeUndefined()
   })
 
+  it('reconciles number_format onto an EXISTING number element, both directions, round-tripping through projectToFields', () => {
+    const el = createElement('number')
+    el.key = 'amount'
+    const amountField: FieldDef = { name: 'amount', label: 'Amount', type: 'decimal', number_format: { style: 'currency', currency_symbol: '$' } }
+
+    const hydrated = healSchema(schemaWith([el]), { fields: [amountField] })
+    const hydratedEl = hydrated.sections[0].columns[0].elements[0]
+    expect(hydratedEl.numberFormat).toEqual({ style: 'currency', currency_symbol: '$' })
+    expect(projectToFields(hydrated).fields[0].number_format).toEqual({ style: 'currency', currency_symbol: '$' })
+
+    // Re-healing an already-consistent form is a no-op — same reference —
+    // matching every other reconciled property's idempotence contract.
+    expect(healSchema(hydrated, { fields: [amountField] })).toBe(hydrated)
+
+    const stale = createElement('number')
+    stale.key = 'amount'
+    stale.numberFormat = { style: 'currency', currency_symbol: '$' }
+    const unhydrated = healSchema(schemaWith([stale]), { fields: [{ name: 'amount', label: 'Amount', type: 'decimal' }] }) // backend cleared it
+    expect(unhydrated.sections[0].columns[0].elements[0].numberFormat).toBeUndefined()
+  })
+
+  it('drops a stale number_format when a number element is retyped to a non-numeric component', () => {
+    // Same "component type changed out from under a flag" guard as
+    // searchable/isRecordTitle's supportsX re-check — a number_format left
+    // over from when this element was a 'number' component must not survive
+    // onto (say) a 'text' component the author retyped it to.
+    const el = createElement('text')
+    el.key = 'amount'
+    el.numberFormat = { style: 'currency', currency_symbol: '$' }
+    const healed = healSchema(schemaWith([el]), { fields: [{ name: 'amount', label: 'Amount', type: 'string' }] })
+    expect(healed.sections[0].columns[0].elements[0].numberFormat).toBeUndefined()
+  })
+
+  it('carries number_format when synthesizing a brand-new element for an API-created numeric field', () => {
+    const healed = healSchema(emptySchema(), {
+      fields: [{ name: 'price', label: 'Price', type: 'decimal', number_format: { decimals: 0 } }],
+    })
+    const el = healed.sections[0].columns[0].elements[0]
+    expect(el.component).toBe('number')
+    expect(el.numberFormat).toEqual({ decimals: 0 })
+    expect(projectToFields(healed).fields[0].number_format).toEqual({ decimals: 0 })
+  })
+
   it('reconciles enum_values onto an EXISTING enum element — adds, drops, and preserves survivor labels', () => {
     const el = createElement('select')
     el.key = 'status'

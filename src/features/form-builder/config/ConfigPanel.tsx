@@ -41,6 +41,7 @@ import { AdvancedSettingsSection } from './AdvancedSettingsSection'
 import { ReferenceFilterSection } from './ReferenceFilterSection'
 import type { LineItemsConfig } from '../schema'
 import type { VariableDecl } from '@/features/workflows/types'
+import type { NumberFormat, NumberFormatStyle, NumberFormatCurrencyPosition, NumberFormatNegativeStyle } from '@/features/forms/types'
 
 // ---------------------------------------------------------------------------
 // Small layout helpers
@@ -86,6 +87,115 @@ function AllowedMimeTypesField({ value, onCommit }: { value: string[] | undefine
         className="h-8 font-mono text-[11px]"
       />
     </Field>
+  )
+}
+
+// How a 'number' field's value reads on display surfaces (RecordsTable, the
+// Detail Page, card/kanban layouts) — see FieldDef.number_format's doc
+// comment. `undefined`/an all-default object both render as a plain grouped
+// number with 2 decimals; this panel doesn't try to collapse the latter back
+// to the former, since the two are equivalent to every reader of the value.
+function NumberFormatSection({ value, onChange }: {
+  value: NumberFormat | undefined
+  onChange: (v: NumberFormat | undefined) => void
+}) {
+  const fmt = value ?? {}
+  const set = (patch: Partial<NumberFormat>) => onChange({ ...fmt, ...patch })
+  const isCurrency = fmt.style === 'currency'
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+
+  return (
+    <div className="space-y-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Number Format</p>
+      <Field label="Style" hint="How this field's value reads wherever a record is displayed.">
+        <SelectMenu value={fmt.style ?? 'number'} onValueChange={(style) => set({ style: style as NumberFormatStyle })}>
+          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="number">Plain Number</SelectItem>
+            <SelectItem value="currency">Currency</SelectItem>
+            <SelectItem value="percent">Percent</SelectItem>
+          </SelectContent>
+        </SelectMenu>
+      </Field>
+      {isCurrency && (
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Symbol" hint="Shown exactly as typed.">
+            <Input
+              value={fmt.currency_symbol ?? ''}
+              onChange={(e) => set({ currency_symbol: e.target.value })}
+              placeholder="$"
+              className="h-8 text-sm"
+            />
+          </Field>
+          <Field label="Position">
+            <SelectMenu
+              value={fmt.currency_position ?? 'prefix'}
+              onValueChange={(currency_position) => set({ currency_position: currency_position as NumberFormatCurrencyPosition })}
+            >
+              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="prefix">Before ($1)</SelectItem>
+                <SelectItem value="suffix">After (1$)</SelectItem>
+              </SelectContent>
+            </SelectMenu>
+          </Field>
+        </div>
+      )}
+      <Field label="Decimals" hint="0–10 places. Leave blank for 2.">
+        <Input
+          type="number"
+          min={0}
+          max={10}
+          value={fmt.decimals ?? ''}
+          onChange={(e) => set({ decimals: e.target.value === '' ? undefined : Number(e.target.value) })}
+          placeholder="2"
+          className="h-8 text-sm"
+        />
+      </Field>
+      <button
+        type="button"
+        onClick={() => setAdvancedOpen((o) => !o)}
+        className="text-[11px] font-medium text-[hsl(var(--muted-foreground))] underline-offset-2 hover:underline"
+      >
+        {advancedOpen ? 'Hide' : 'Show'} separator &amp; negative-value options
+      </button>
+      {advancedOpen && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Thousands Separator" hint='Default ",". Blank turns grouping off.'>
+              <Input
+                value={fmt.thousands_separator ?? ''}
+                onChange={(e) => set({ thousands_separator: e.target.value })}
+                placeholder=","
+                maxLength={1}
+                className="h-8 text-sm"
+              />
+            </Field>
+            <Field label="Decimal Separator" hint='Default "."'>
+              <Input
+                value={fmt.decimal_separator ?? ''}
+                onChange={(e) => set({ decimal_separator: e.target.value })}
+                placeholder="."
+                maxLength={1}
+                className="h-8 text-sm"
+              />
+            </Field>
+          </div>
+          <Field label="Negative Values">
+            <SelectMenu
+              value={fmt.negative_style ?? 'minus'}
+              onValueChange={(negative_style) => set({ negative_style: negative_style as NumberFormatNegativeStyle })}
+            >
+              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="minus">-1,234.56</SelectItem>
+                <SelectItem value="parentheses">(1,234.56)</SelectItem>
+              </SelectContent>
+            </SelectMenu>
+          </Field>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -757,6 +867,12 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                         className="h-8 text-sm"
                       />
                     </Field>
+                  )}
+                  {isNumeric && (
+                    <NumberFormatSection
+                      value={element.numberFormat}
+                      onChange={(numberFormat) => onChange({ numberFormat })}
+                    />
                   )}
                 </>
               )}

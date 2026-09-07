@@ -58,6 +58,40 @@ export interface FieldReadOnlyRule {
   when?: FilterGroup
 }
 
+// How a numeric value reads wherever a record is displayed (RecordsTable,
+// the Detail Page, card/kanban layouts) — mirrors field.NumberFormat
+// (internal/forms/field/number_format.go) exactly, the same descriptor
+// shape internal/reports' block/cell number_format uses. Every field is
+// optional; the zero value / undefined formats as a plain grouped number
+// with two decimals — see format-value.ts's formatNumber for the renderer,
+// which follows the backend's Format() rendering order (grouping, then
+// decimals, then style suffix/prefix, then negative marker) so a record's
+// on-screen value and a report's exported cell never disagree.
+export type NumberFormatStyle = 'number' | 'currency' | 'percent'
+export type NumberFormatNegativeStyle = 'minus' | 'parentheses'
+export type NumberFormatCurrencyPosition = 'prefix' | 'suffix'
+
+export interface NumberFormat {
+  style?: NumberFormatStyle
+  /** 0–10 decimal places. Undefined means 2 — the same default the backend
+   *  formatter applies. 0 is a real, distinct setting (no decimals), not
+   *  "unset" — don't coalesce it with undefined. */
+  decimals?: number
+  /** Groups the integer part every three digits. Undefined means ",". An
+   *  explicit "" turns grouping off (a year, an account number). */
+  thousands_separator?: string
+  /** Defaults to "." when unset. */
+  decimal_separator?: string
+  /** Emitted verbatim, adjacent to the number — no space inserted. Only
+   *  meaningful when style === 'currency'. */
+  currency_symbol?: string
+  /** Defaults to 'prefix'. */
+  currency_position?: NumberFormatCurrencyPosition
+  /** Defaults to 'minus'. 'parentheses' renders "(1,234.56)" with no sign,
+   *  the accounting convention. */
+  negative_style?: NumberFormatNegativeStyle
+}
+
 export type FieldType =
   | 'string' | 'text' | 'integer' | 'decimal' | 'boolean'
   | 'date' | 'time' | 'datetime' | 'email' | 'phone'
@@ -155,6 +189,11 @@ export interface FieldDef {
    *  exact match (e.g. "image/jpeg"). Empty/absent means any type is
    *  accepted. Same server-side enforcement as max_file_size_bytes. */
   allowed_mime_types?: string[]
+  /** How this field's value reads on display surfaces — money, a
+   *  percentage, or a plain grouped number. See NumberFormat's own doc
+   *  comment; a report column's own number_format is authored
+   *  independently and does not inherit from this. */
+  number_format?: NumberFormat
 }
 
 // Every record — of every form — carries these three columns without being

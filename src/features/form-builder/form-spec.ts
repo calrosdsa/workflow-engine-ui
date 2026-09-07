@@ -42,10 +42,11 @@ import {
   type ComponentType, type FormSchema, type FormSection, type FormElement,
   type ColumnLayout, type SelectOption, COLUMN_LAYOUTS, emptyFormSettings,
 } from './schema'
-import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable } from './component-registry'
+import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable, supportsNumberFormat } from './component-registry'
 import { createSection, createElement, slugifyKey, RESERVED_FIELD_KEYS } from './factory'
 import { parseLayout } from './parse-layout'
 import type { BuilderFormState } from './serialize'
+import type { NumberFormat } from '@/features/forms/types'
 
 // ---------------------------------------------------------------------------
 // The compact shape
@@ -75,6 +76,10 @@ export interface FormSpecField {
   options?: (string | SelectOption)[]
   /** Include this field in the form's full-text search column. */
   searchable?: boolean
+  /** 'number' type only: how this field's value reads on display surfaces
+   *  (money, a percentage, a plain grouped number). Omit for a plain grouped
+   *  number with 2 decimals. */
+  number_format?: NumberFormat
   /** Use this field (possibly with others) as the record's display title. */
   recordTitle?: boolean
   is_record_title?: boolean
@@ -406,6 +411,9 @@ export function specFieldToElement(
   if (raw.index === true) el.index = true
   if ((raw.recordTitle === true || raw.is_record_title === true) && supportsRecordTitle(component)) el.isRecordTitle = true
   if (raw.searchable === true && supportsSearchable(component)) el.searchable = true
+  if (raw.number_format && typeof raw.number_format === 'object' && supportsNumberFormat(component)) {
+    el.numberFormat = raw.number_format as NumberFormat
+  }
 
   // Validation
   if (typeof raw.min === 'number') el.validation.min = raw.min
@@ -573,6 +581,7 @@ function elementToSpecField(el: FormElement): FormSpecField {
   if (el.index) out.index = true
   if (el.isRecordTitle) out.recordTitle = true
   if (el.searchable) out.searchable = true
+  if (el.numberFormat) out.number_format = el.numberFormat
   if (el.description) out.description = el.description
   if (el.placeholder) out.placeholder = el.placeholder
   if (el.defaultValue !== undefined && el.defaultValue !== '') out.default = el.defaultValue

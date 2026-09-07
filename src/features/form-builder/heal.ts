@@ -45,12 +45,12 @@ import {
 import { createSection } from './factory'
 import { specFieldToElement, type FormSpecField } from './form-spec'
 import { projectedBaseName, staticDefaultValue } from './projection'
-import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable } from './component-registry'
+import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable, supportsNumberFormat } from './component-registry'
 import { hydrateReferenceFilter, sameReferenceFilter } from './reference-filter'
 import { hydrateAccessScope, sameAccessScope } from './access-scope'
 import { elementHideRules, sameFieldHideRules, reconcileHideRuleActions } from './field-hide'
 import { elementReadOnlyRules, sameFieldReadOnlyRules, reconcileReadOnlyRuleActions } from './field-readonly'
-import type { FieldDef, AccessScopeRule } from '@/features/forms/types'
+import type { FieldDef, AccessScopeRule, NumberFormat } from '@/features/forms/types'
 
 /** The slice of a backend form definition healing needs. Structural, so
  *  callers holding a full FormDefinition or just {layout, fields} both fit. */
@@ -90,6 +90,15 @@ function sameStringArray(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i])
 }
 
+// Same shallow-JSON-equality approach as sameReferenceFilter (reference-
+// filter.ts) — NumberFormat is a flat, few-key object always constructed
+// wholesale (by the config panel's own controls, or echoed back verbatim
+// from the backend), never hand-assembled key-by-key, so stringify order
+// never drifts between the two sides being compared here.
+function sameNumberFormat(a: NumberFormat | undefined, b: NumberFormat | undefined): boolean {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
+}
+
 function fieldToSpec(f: FieldDef): FormSpecField {
   return {
     key: f.name,
@@ -106,6 +115,7 @@ function fieldToSpec(f: FieldDef): FormSpecField {
     options: f.enum_values?.map((v) => ({ label: v, value: v })),
     searchable: f.searchable === true,
     is_record_title: f.is_record_title === true,
+    number_format: f.number_format,
     formRef: f.reference_table,
     // index/default are plain backend-set column properties, routinely set
     // via the API/MCP directly (create_form/update_form) with no layout
@@ -238,6 +248,17 @@ export function healSchema(parsed: FormSchema, def: HealableForm): FormSchema {
           const wantTitle = f.is_record_title === true && supportsRecordTitle(el.component)
           if (Boolean(healedEl.isRecordTitle) !== wantTitle) {
             healedEl = { ...healedEl, isRecordTitle: wantTitle || undefined }
+            elChanged = true
+          }
+        }
+        // number_format gets the identical "backend is the truth" treatment
+        // — an API/MCP-authored (or -removed) format on a field the builder
+        // already has an element for would otherwise be silently reverted by
+        // the layout's stale copy on the next unrelated save.
+        {
+          const wantFormat = supportsNumberFormat(el.component) ? f.number_format : undefined
+          if (!sameNumberFormat(healedEl.numberFormat, wantFormat)) {
+            healedEl = { ...healedEl, numberFormat: wantFormat }
             elChanged = true
           }
         }

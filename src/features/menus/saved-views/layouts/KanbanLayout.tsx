@@ -529,7 +529,7 @@ function KanbanCard({ record, fields, bodyFields, roleField, enumLabels, onClick
                   ? <FileCellDisplay value={record[f.name]} />
                   : f.type === 'reference'
                   ? <ReferenceValueLabel formId={f.reference_table} recordId={record[f.name]} displayField={f.display_field} />
-                  : formatFieldValue(record[f.name], f.type)}
+                  : formatFieldValue(record[f.name], f.type, f.number_format)}
               </span>
             </div>
           ))}

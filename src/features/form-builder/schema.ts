@@ -23,7 +23,7 @@ import type { ConfigSchema } from '@/lib/config-schema'
 import type { UiWorkflow } from '@/features/ui-workflows/types'
 import type { FieldChangeWorkflowConfig } from '@/features/ui-workflows/useFieldChangeWorkflow'
 import type { FilterGroup } from '@/features/workflows/types'
-import type { AccessScopeRule } from '@/features/forms/types'
+import type { AccessScopeRule, NumberFormat } from '@/features/forms/types'
 
 export type ComponentType =
   // Text inputs
@@ -629,6 +629,12 @@ export interface FormElement {
   // FieldDef.searchable (see projection.ts).
   searchable?: boolean
 
+  // 'number' component only (supportsNumberFormat): how this field's value
+  // reads wherever a record is displayed — money, a percentage, or a plain
+  // grouped number. Projects to FieldDef.number_format (see projection.ts);
+  // see NumberFormat's own doc comment for the shared descriptor shape.
+  numberFormat?: NumberFormat
+
   // Choice components
   options?: SelectOption[]
 
@@ -909,6 +915,19 @@ export const FORM_ELEMENT_ENVELOPE_SCHEMA: ConfigSchema = {
     defaultValue: { description: 'Static default value.' },
     isRecordTitle: { type: 'boolean', description: 'Part of the record’s human-readable title (scalar components only).' },
     searchable: { type: 'boolean', description: 'Included in full-text search (text-like components only).' },
+    numberFormat: {
+      type: 'object',
+      description: "'number' component only. How this field's value reads on display surfaces — omit for a plain grouped number with 2 decimals.",
+      properties: {
+        style: { type: 'string', enum: ['number', 'currency', 'percent'], description: "Default 'number'." },
+        decimals: { type: 'integer', description: '0–10 decimal places. Omit for 2 — 0 is a real setting, not "unset".' },
+        thousands_separator: { type: 'string', description: 'Default ",". Empty string turns grouping off.' },
+        decimal_separator: { type: 'string', description: 'Default ".". Must differ from thousands_separator.' },
+        currency_symbol: { type: 'string', description: "Emitted verbatim, adjacent to the number. Only meaningful when style is 'currency'." },
+        currency_position: { type: 'string', enum: ['prefix', 'suffix'], description: "Default 'prefix'." },
+        negative_style: { type: 'string', enum: ['minus', 'parentheses'], description: "Default 'minus'. 'parentheses' renders \"(1,234.56)\" with no sign." },
+      },
+    },
     options: {
       type: 'array',
       description: 'Choice components (select/radio/multiselect/autocomplete).',

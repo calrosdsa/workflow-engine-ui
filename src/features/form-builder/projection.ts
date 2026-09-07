@@ -6,7 +6,7 @@
 // working while the builder owns a much richer schema in the `layout` column.
 
 import type { FormSchema, FormElement } from './schema'
-import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable } from './component-registry'
+import { COMPONENT_REGISTRY, supportsUnique, supportsRecordTitle, supportsSearchable, supportsNumberFormat } from './component-registry'
 import { slugifyKey, RESERVED_FIELD_KEYS } from './factory'
 import { canonicalReferenceFilter } from './reference-filter'
 import { elementHideRules } from './field-hide'
@@ -187,6 +187,13 @@ function elementToField(el: FormElement, usedNames: Set<string>): FieldDef | nul
   // for the same reason as is_record_title above.
   if (el.searchable && supportsSearchable(el.component)) {
     field.searchable = true
+  }
+
+  // How this field's value reads on display surfaces (see FieldDef.
+  // number_format's doc comment). Re-checked against supportsNumberFormat
+  // for the same reason as is_record_title/searchable above.
+  if (el.numberFormat && supportsNumberFormat(el.component)) {
+    field.number_format = el.numberFormat
   }
 
   // File/Image Upload's size/type rule (FR-C1-012) — unlike minLength/

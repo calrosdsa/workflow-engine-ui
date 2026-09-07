@@ -62,6 +62,9 @@ export function FieldValueDisplay({ el, record, formId }: {
   // value is an RFC3339 string and rendered raw here for the same reason it
   // was in RecordsTable — the generic formatter has no field type to key off.
   // el.component carries the same 'date'/'time'/'datetime' names FieldType
-  // uses, so it can be passed straight through.
-  return <div style={{ color: 'hsl(var(--foreground))' }}>{formatFieldValue(record[el.key], el.component)}</div>
+  // uses, so it can be passed straight through. el.numberFormat is the
+  // builder-schema counterpart of FieldDef.number_format (the other three
+  // call sites pass the FieldDef's own copy) — this is the one surface with
+  // only the FormElement in hand, not the backend field.
+  return <div style={{ color: 'hsl(var(--foreground))' }}>{formatFieldValue(record[el.key], el.component, el.numberFormat)}</div>
 }

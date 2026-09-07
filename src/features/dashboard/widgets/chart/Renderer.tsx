@@ -6,6 +6,9 @@ import { Loader2, AlertCircle, BarChart3 } from 'lucide-react'
 import type { WidgetRendererProps } from '../../widget-contract'
 import type { ChartWidgetConfig } from './schema'
 import { useChartData } from './useChartData'
+import { useForm } from '@/features/forms/hooks'
+import { formatNumber } from '@/features/forms/runtime/format-value'
+import type { NumberFormat } from '@/features/forms/types'
 
 // Categorical palette fallback (docs/dashboard-system-plan.md section 5.3) —
 // no shared chart-color tokens exist yet in index.css, so this is a small,
@@ -27,6 +30,16 @@ function seriesLabel(config: ChartWidgetConfig, index: number): string {
 
 export function ChartRenderer({ config }: WidgetRendererProps<ChartWidgetConfig>) {
   const { data, isLoading, isError } = useChartData(config)
+  // A stat tile's single series names a source field (every aggregate but
+  // 'count' does) whose own number_format — money, a percentage, a plain
+  // grouped number — is the same setting that field's own records use (see
+  // FieldDef.number_format's doc comment). Fetched unconditionally (hooks
+  // can't be conditional) but only ENABLED for a stat tile with a formId, so
+  // every other chart type never issues this request; useForm's queryKey is
+  // keyed by formId alone, so multiple stat tiles on the same form share one
+  // cache entry rather than each re-fetching it.
+  const isStat = config.chartType === 'stat'
+  const { data: sourceForm } = useForm(isStat ? (config.formId ?? '') : '')
 
   const needsGroupBy = config.chartType !== 'stat'
   if (!config.formId || (needsGroupBy && !config.groupBy?.field)) {
@@ -62,8 +75,10 @@ export function ChartRenderer({ config }: WidgetRendererProps<ChartWidgetConfig>
     return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No data yet.</div>
   }
 
-  if (config.chartType === 'stat') {
-    return <StatTile config={config} value={groups[0]?.values[0] ?? 0} />
+  if (isStat) {
+    const sourceFieldName = config.series[0]?.field
+    const numberFormat = sourceForm?.fields.find((f) => f.name === sourceFieldName)?.number_format
+    return <StatTile config={config} value={groups[0]?.values[0] ?? 0} numberFormat={numberFormat} />
   }
 
   // Recharts consumes plain objects keyed by name — "key" for the x-axis /
@@ -116,8 +131,8 @@ export function ChartRenderer({ config }: WidgetRendererProps<ChartWidgetConfig>
   )
 }
 
-function StatTile({ config, value }: { config: ChartWidgetConfig; value: number }) {
-  const formatted = Number.isInteger(value) ? value.toLocaleString() : value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+function StatTile({ config, value, numberFormat }: { config: ChartWidgetConfig; value: number; numberFormat?: NumberFormat }) {
+  const formatted = formatNumber(value, numberFormat)
   return (
     <div className="flex h-full flex-col items-center justify-center gap-1 p-3 text-center">
       <span className="text-3xl font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{formatted}</span>

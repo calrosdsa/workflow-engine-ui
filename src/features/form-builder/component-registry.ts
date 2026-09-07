@@ -135,3 +135,20 @@ export function supportsSearchable(type: ComponentType): boolean {
   const ft = COMPONENT_REGISTRY[type].fieldType
   return !!ft && SEARCHABLE_CAPABLE_FIELD_TYPES.has(ft)
 }
+
+// Backend field types a display number format is meaningful for. Only
+// 'decimal' is reachable through a component today (the 'number' component's
+// fieldType) — 'integer' is listed anyway since it's a real numeric FieldType
+// on the backend, the same forward-looking shape UNIQUE_CAPABLE_FIELD_TYPES
+// already uses.
+const NUMBER_FORMAT_CAPABLE_FIELD_TYPES: ReadonlySet<FieldType> = new Set<FieldType>([
+  'integer', 'decimal',
+])
+
+/** True when a component maps to a numeric column that can carry a display
+ *  number format (money, percent, plain grouped number). Drives the "Number
+ *  Format" section in the config panel — see FieldDef.number_format. */
+export function supportsNumberFormat(type: ComponentType): boolean {
+  const ft = COMPONENT_REGISTRY[type].fieldType
+  return !!ft && NUMBER_FORMAT_CAPABLE_FIELD_TYPES.has(ft)
+}
