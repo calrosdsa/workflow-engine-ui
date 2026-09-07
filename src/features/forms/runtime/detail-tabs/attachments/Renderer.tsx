@@ -10,6 +10,7 @@
 // it behind a nested route.
 import { useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Paperclip, Upload, FileIcon, Trash2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -72,7 +73,6 @@ function AttachmentRow({ entry, canDelete, onDelete }: { entry: AttachmentEntry;
 export function AttachmentsTabRenderer({ formId, recordId }: DetailTabRendererProps<AttachmentsTabConfig>) {
   const t = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
-  const [error, setError] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const canEdit = usePermission(`forms:${formId}:edit`)
 
@@ -81,11 +81,24 @@ export function AttachmentsTabRenderer({ formId, recordId }: DetailTabRendererPr
   const remove = useDeleteAttachment(formId, recordId)
   const entries = data ?? []
 
+  // A file upload is a real network transfer, not an instant save — worth
+  // the persistent toast.loading(...)->toast.success/error(..., {id})
+  // in-place-update pattern this codebase already uses for other
+  // genuinely-async actions (export-report/trigger-workflow's MenuItem),
+  // rather than the plain inline spinner alone. The inline button state
+  // (isPending below) stays too — the two reinforce each other at
+  // different positions on screen, matching that same precedent.
   const handleFiles = (files: FileList | null) => {
     const file = files?.[0]
     if (!file) return
-    setError(null)
-    upload.mutate(file, { onError: () => setError(t('attachments.tab.upload_error')) })
+    const toastId = toast.loading(t('attachments.tab.upload_loading', { filename: file.name }))
+    upload.mutate(file, {
+      onSuccess: () => toast.success(t('attachments.tab.upload_success', { filename: file.name }), { id: toastId }),
+      onError: (e) => toast.error(t('attachments.tab.upload_error'), {
+        id: toastId,
+        description: e instanceof Error ? e.message : undefined,
+      }),
+    })
   }
 
   return (
@@ -105,8 +118,6 @@ export function AttachmentsTabRenderer({ formId, recordId }: DetailTabRendererPr
         </Button>
         <input ref={inputRef} type="file" className="hidden" disabled={!canEdit} onChange={(e) => handleFiles(e.target.files)} />
       </div>
-
-      {error && <p className="text-[11px] text-red-600">{error}</p>}
 
       {isLoading ? (
         <div className="space-y-2">
@@ -137,8 +148,20 @@ export function AttachmentsTabRenderer({ formId, recordId }: DetailTabRendererPr
         loading={remove.isPending}
         onConfirm={async () => {
           if (!deleteTarget) return
-          await remove.mutateAsync(deleteTarget)
-          setDeleteTarget(null)
+          const filename = entries.find((e) => e.id === deleteTarget)?.filename
+          try {
+            await remove.mutateAsync(deleteTarget)
+            setDeleteTarget(null)
+            toast.success(t('attachments.tab.delete_success', { filename: filename ?? '' }))
+          } catch (e) {
+            // Left open on failure (unlike the success path) — the target
+            // still exists, so the confirm dialog staying up with its own
+            // loading state cleared is the honest state, not a silent close
+            // that leaves the user unsure whether it actually deleted.
+            toast.error(t('attachments.tab.delete_error'), {
+              description: e instanceof Error ? e.message : undefined,
+            })
+          }
         }}
         container={document.getElementById('runtime-root')}
       />

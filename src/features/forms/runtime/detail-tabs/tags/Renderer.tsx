@@ -4,6 +4,7 @@
 // dropdown component — this input has no other affordance worth the extra
 // weight (single value, Enter-to-add, no multi-select).
 import { useId, useState } from 'react'
+import { toast } from 'sonner'
 import { Tag as TagIcon, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,10 +29,20 @@ export function TagsTabRenderer({ formId, recordId }: DetailTabRendererProps<Tag
   const entries = data?.entries ?? []
   const existing = new Set(entries.map((e) => e.tag.toLowerCase()))
 
+  // No toast.loading here, unlike Attachments' upload — a tag add is one
+  // small POST with no meaningful wait, matching this codebase's own
+  // convention of reserving toast.loading for actions with real, uncertain
+  // duration (file transfers, report generation, workflow runs). Success/
+  // error still get a toast: the chip appearing is visible confirmation for
+  // the COMMON case, but a failure (permission, network) needs its own
+  // signal, not silence.
   const submit = () => {
     const tag = draft.trim()
     if (!tag || existing.has(tag.toLowerCase())) return
-    addTag.mutate(tag)
+    addTag.mutate(tag, {
+      onSuccess: () => toast.success(t('tags.tab.add_success', { tag })),
+      onError: (e) => toast.error(t('tags.tab.add_error'), { description: e instanceof Error ? e.message : undefined }),
+    })
     setDraft('')
   }
 
@@ -79,7 +90,10 @@ export function TagsTabRenderer({ formId, recordId }: DetailTabRendererProps<Tag
               {canEdit && (
                 <button
                   type="button"
-                  onClick={() => removeTag.mutate(entry.id)}
+                  onClick={() => removeTag.mutate(entry.id, {
+                    onSuccess: () => toast.success(t('tags.tab.remove_success', { tag: entry.tag })),
+                    onError: (e) => toast.error(t('tags.tab.remove_error'), { description: e instanceof Error ? e.message : undefined }),
+                  })}
                   title={t('tags.tab.remove')}
                   className="rounded-full hover:text-red-600"
                 >

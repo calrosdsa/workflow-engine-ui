@@ -54,11 +54,19 @@ export const en = {
   'attachments.tab.delete_description': 'This action can\'t be undone.',
   'attachments.tab.delete_confirm': 'Delete',
   'attachments.tab.upload_error': 'Upload failed. Please try again.',
+  'attachments.tab.upload_loading': 'Uploading "{{filename}}"…',
+  'attachments.tab.upload_success': '"{{filename}}" uploaded',
+  'attachments.tab.delete_success': '"{{filename}}" deleted',
+  'attachments.tab.delete_error': 'Delete failed. Please try again.',
   'tags.tab.empty': 'No tags yet.',
   'tags.tab.placeholder': 'Add a tag…',
   'tags.tab.add': 'Add',
   'tags.tab.no_permission': 'You do not have permission to tag this record.',
   'tags.tab.remove': 'Remove tag',
+  'tags.tab.add_success': '"{{tag}}" added',
+  'tags.tab.add_error': 'Could not add tag. Please try again.',
+  'tags.tab.remove_success': '"{{tag}}" removed',
+  'tags.tab.remove_error': 'Could not remove tag. Please try again.',
   // Fixed platform default shown as a detail tab's name when its admin has
   // not typed a custom label override (DetailTabConfig.label unset) — one
   // entry per registered detail-tab type (detail-tabs/registry.ts). NOT
