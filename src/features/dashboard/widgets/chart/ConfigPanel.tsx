@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useForm } from '@/features/forms/hooks'
 import type { WidgetConfigPanelProps } from '../../widget-contract'
-import type { ChartWidgetConfig, ChartType, ChartSeries } from './schema'
+import { DATE_FIELD_TYPES, type ChartWidgetConfig, type ChartType, type ChartSeries } from './schema'
 import type { AggregateFn, DateBucket } from '@/features/forms/api'
 import type { FieldDef, FieldType } from '@/features/forms/types'
 import { ChartRenderer } from './Renderer'
@@ -20,7 +20,6 @@ import { ChartRenderer } from './Renderer'
 // workflow-engine's own numericTypes/bucketableTypes gate in aggregate.go so
 // the UI never lets a user configure something the backend would reject.
 const NUMERIC_TYPES: FieldType[] = ['integer', 'decimal']
-const DATE_TYPES: FieldType[] = ['date', 'datetime']
 
 const CHART_TYPE_OPTIONS: Array<{ value: ChartType; label: string; icon: typeof BarChart3 }> = [
   { value: 'bar', label: 'Bar', icon: BarChart3 },
@@ -84,7 +83,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
             value={config.groupBy?.field ?? ''}
             onChange={(f) => patch({ groupBy: f ? { field: f } : undefined })}
           />
-          {config.groupBy?.field && DATE_TYPES.includes(fields.find((f) => f.name === config.groupBy?.field)?.type as FieldType) && (
+          {config.groupBy?.field && DATE_FIELD_TYPES.includes(fields.find((f) => f.name === config.groupBy?.field)?.type as FieldType) && (
             <BucketSelect
               value={config.groupBy.bucket}
               onChange={(bucket) => patch({ groupBy: { ...config.groupBy!, bucket } })}

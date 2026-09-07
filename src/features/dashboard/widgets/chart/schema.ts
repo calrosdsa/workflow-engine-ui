@@ -1,8 +1,16 @@
 import type { ConfigSchema } from '@/lib/config-schema'
 import type { FilterGroup } from '@/features/workflows/types'
 import type { AggregateFn, DateBucket } from '@/features/forms/api'
+import type { FieldType } from '@/features/forms/types'
 
 export type ChartType = 'bar' | 'line' | 'area' | 'pie' | 'stat'
+
+/** Fields eligible for `groupBy.bucket` — mirrors workflow-engine's own
+ *  bucketableTypes gate in aggregate.go. Shared by ConfigPanel (which shows
+ *  the bucket picker for these) and the runtime toolbar (which shows the
+ *  same-gated time-range/bucket controls), so the two can never disagree
+ *  about which fields are bucketable. */
+export const DATE_FIELD_TYPES: FieldType[] = ['date', 'datetime']
 
 export interface ChartDimension {
   field: string

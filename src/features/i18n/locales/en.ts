@@ -128,4 +128,35 @@ export const en = {
   'reports.number_format.done': 'Done',
   'reports.number_format.locale_note':
     "These separators apply to PDF, Word, Markdown and CSV. A spreadsheet always draws its own from the reader's regional settings, so the grid here and a downloaded Excel file may show {{sample}} instead.",
+
+  // Dashboard chart widget's runtime-only viewer controls (RuntimeToolbar.tsx
+  // / ChartMenu.tsx) — time range, bucket, ad-hoc filter, and the "..." menu.
+  // Never shown in the Dashboard Builder's own config-panel preview.
+  'runtime.dashboard_chart.synced_just_now': 'Synced just now',
+  'runtime.dashboard_chart.synced_minutes_ago': 'Synced {{n}}m ago',
+  'runtime.dashboard_chart.synced_hours_ago': 'Synced {{n}}h ago',
+  'runtime.dashboard_chart.synced_days_ago': 'Synced {{n}}d ago',
+  'runtime.dashboard_chart.apply': 'Apply',
+  'runtime.dashboard_chart.cancel': 'Cancel',
+  'runtime.dashboard_chart.range.label': 'Time range',
+  'runtime.dashboard_chart.range.last_week': 'Last Week',
+  'runtime.dashboard_chart.range.last_month': 'Last Month',
+  'runtime.dashboard_chart.range.last_quarter': 'Last Quarter',
+  'runtime.dashboard_chart.range.last_year': 'Last Year',
+  'runtime.dashboard_chart.range.custom': 'Custom range',
+  'runtime.dashboard_chart.range.to': 'to',
+  'runtime.dashboard_chart.range.clear': 'Clear time range',
+  'runtime.dashboard_chart.bucket.label': 'Group by: {{value}}',
+  'runtime.dashboard_chart.bucket.none': 'Exact value',
+  'runtime.dashboard_chart.bucket.day': 'Day',
+  'runtime.dashboard_chart.bucket.week': 'Week',
+  'runtime.dashboard_chart.bucket.month': 'Month',
+  'runtime.dashboard_chart.bucket.quarter': 'Quarter',
+  'runtime.dashboard_chart.bucket.year': 'Year',
+  'runtime.dashboard_chart.filter.label': 'Filter',
+  'runtime.dashboard_chart.menu.label': 'Chart options',
+  'runtime.dashboard_chart.menu.refresh': 'Refresh',
+  'runtime.dashboard_chart.menu.reset': 'Reset',
+  'runtime.dashboard_chart.menu.export': 'Export CSV',
+  'runtime.dashboard_chart.menu.view_records': 'View records',
 } satisfies Record<string, string>

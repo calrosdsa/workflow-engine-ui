@@ -328,11 +328,37 @@ const runtimeIndexRoute = createRoute({
   component: RuntimeIndexRedirect,
 })
 
+// A dashboard chart widget's "View records" deep link (features/dashboard/
+// widgets/chart/ChartMenu.tsx) carries its full effective FilterGroup this
+// way — generalizing what used to be only the connections tile's single
+// linkField/linkValue equality pair below into an arbitrary FilterGroup.
+// Never throws on malformed input, same defensive posture as every other
+// config parser in this codebase (e.g. chart/schema.ts's parseChartConfig)
+// — a garbage or hand-edited `ef` value just falls back to no external
+// filter rather than crashing the route.
+function parseExternalFilterParam(raw: string | undefined): FilterGroup | undefined {
+  if (!raw) return undefined
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (
+      parsed && typeof parsed === 'object'
+      && typeof (parsed as FilterGroup).combinator === 'string'
+      && Array.isArray((parsed as FilterGroup).conditions)
+      && Array.isArray((parsed as FilterGroup).groups)
+    ) {
+      return parsed as FilterGroup
+    }
+  } catch {
+    // Malformed JSON — fall through to undefined, same as a failed shape check.
+  }
+  return undefined
+}
+
 function RuntimeMenuRoute() {
   const snapshot = useRuntimeSnapshotContext()
   const { clientId, appId } = runtimeAppRoute.useParams()
   const { menuSlug } = runtimeMenuRoute.useParams()
-  const { linkField, linkValue } = runtimeMenuRoute.useSearch()
+  const { linkField, linkValue, ef } = runtimeMenuRoute.useSearch()
 
   const currentMenu = snapshot.menus.find((m) => m.slug === menuSlug)
   if (!currentMenu) {
@@ -344,10 +370,11 @@ function RuntimeMenuRoute() {
   // equality condition, AND-composed onto the menu's own filter by whichever
   // renderer understands externalFilter (SearchMenuRuntime today; see
   // menu-registry.ts's own doc comment on this prop for why every other
-  // menu type safely ignores it).
-  const externalFilter: FilterGroup | undefined = linkField && linkValue
+  // menu type safely ignores it). The `ef` param (chart widget deep links)
+  // takes priority when present and valid.
+  const externalFilter: FilterGroup | undefined = parseExternalFilterParam(ef) ?? (linkField && linkValue
     ? { combinator: 'and', conditions: [{ id: `external-${linkField}`, field: linkField, op: 'eq', value_mode: 'static', value: linkValue }], groups: [] }
-    : undefined
+    : undefined)
 
   return <RuntimeAppShell snapshot={snapshot} clientId={clientId} appId={appId} currentMenu={currentMenu} externalFilter={externalFilter} />
 }
@@ -358,9 +385,10 @@ function RuntimeMenuRoute() {
 const runtimeMenuRoute = createRoute({
   getParentRoute: () => runtimeAppRoute,
   path: '/$menuSlug',
-  validateSearch: (search: Record<string, unknown>): { linkField?: string; linkValue?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { linkField?: string; linkValue?: string; ef?: string } => ({
     linkField: typeof search.linkField === 'string' ? search.linkField : undefined,
     linkValue: typeof search.linkValue === 'string' ? search.linkValue : undefined,
+    ef: typeof search.ef === 'string' ? search.ef : undefined,
   }),
   component: RuntimeMenuRoute,
 })
