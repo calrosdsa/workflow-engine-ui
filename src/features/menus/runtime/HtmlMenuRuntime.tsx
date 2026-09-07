@@ -7,13 +7,21 @@ import type { HtmlMenuConfig, HtmlDataSource, HtmlWriteTarget } from '../types'
 /** Reads the resolved theme custom properties at `el`'s position in the
  *  tree, to be mirrored into the frame.
  *
- *  Read from `el`, NOT document.documentElement. The runtime scopes its
- *  ThemeProvider to #runtime-root (runtime-router.tsx) rather than :root, so
- *  reading from documentElement returns index.css's base defaults — the
- *  builder's palette — instead of the app's configured theme. Custom
- *  properties inherit, so resolving them against an element inside the
- *  themed subtree picks up whichever provider actually applies, with no
- *  knowledge of where that provider mounted. */
+ *  Read from `el`, NOT document.documentElement — even though the
+ *  runtime's ThemeProvider now also mirrors the full token set onto
+ *  documentElement (its `syncDocument` prop, see that file), that mirror
+ *  is specific to the one ThemeProvider instance that opts into it.
+ *  Reading from inside the actually-themed subtree instead works
+ *  regardless of which provider applies — including ThemeSection's
+ *  live-preview pane, whose ThemeProvider deliberately does NOT sync to
+ *  documentElement. Before syncDocument mirrored the full set (not just
+ *  color-scheme/background/foreground), reading documentElement here
+ *  returned index.css's static :root defaults — the BUILDER shell's
+ *  palette — instead of the app's configured theme; live-reproduced at the
+ *  time as a teal frame against an indigo app. Custom properties inherit,
+ *  so resolving them against an element inside the themed subtree picks up
+ *  whichever provider actually applies, with no knowledge of where that
+ *  provider mounted. */
 function readThemeTokens(el: Element | null): Record<string, string> {
   if (typeof window === 'undefined' || !el) return {}
   const computed = getComputedStyle(el)

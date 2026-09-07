@@ -25,18 +25,38 @@ interface ThemeProviderProps {
    *  page. Pass a specific element (e.g. a preview-pane wrapper) to scope
    *  theming to a subtree instead, without affecting the rest of the page. */
   scopeElement?: HTMLElement | null
-  /** Also mirror color-scheme/background/foreground onto document.body and
-   *  document.documentElement — for the runtime app specifically, where
-   *  scopeElement is an in-page div but index.css's `body { background:
-   *  hsl(var(--background)) }` rule resolves --background from body's OWN
-   *  ancestor chain (:root), never from a value set on one of body's
-   *  children. Without this, body stays on whatever :root/.dark static
-   *  block happens to be in scope — invisible as long as some inner
-   *  element happens to cover the full viewport (true today via
-   *  RuntimeAppShell's `h-screen` wrapper) but exposed by e.g. mobile
-   *  rubber-band overscroll. Leave this off (default) for a scoped/
-   *  isolated preview — e.g. ThemeSection's live-preview pane — which must
-   *  NOT leak its draft theme onto the surrounding document. */
+  /** Also mirror the FULL set of theme CSS custom properties (plus
+   *  color-scheme/font) onto document.documentElement, and background/
+   *  foreground onto document.body — for the runtime app specifically,
+   *  where scopeElement is an in-page div (#runtime-root) rather than
+   *  <html> itself. Two independent problems this solves:
+   *  1. index.css's `body { background: hsl(var(--background)) }` rule
+   *     resolves --background from body's OWN ancestor chain (:root),
+   *     never from a value set on one of body's children. Without the
+   *     body.style writes below, body stays on whatever :root/.dark
+   *     static block happens to be in scope — invisible as long as some
+   *     inner element happens to cover the full viewport (true today via
+   *     RuntimeAppShell's `h-screen` wrapper) but exposed by e.g. mobile
+   *     rubber-band overscroll.
+   *  2. <html> otherwise keeps every OTHER token exactly as index.css's
+   *     static :root block hardcodes them — the BUILDER shell's own fixed
+   *     palette (teal --primary etc.), a wholly different design system
+   *     from this tenant's theme, not merely a rounding drift. Custom
+   *     properties inherit, so anything that isn't a DOM descendant of
+   *     scopeElement — a Radix portal that mounts under document.body
+   *     instead of being redirected into #runtime-root via the `container`
+   *     prop most of this codebase's portals take, or simply code that
+   *     calls getComputedStyle(document.documentElement) — resolves
+   *     against <html> and, without mirroring the full set here, silently
+   *     got the wrong design system. HtmlMenuRuntime.tsx's iframe theming
+   *     hit exactly this divergence (teal on <html> vs. the app's real
+   *     indigo) and worked around it locally by reading computed tokens
+   *     from inside the themed subtree instead of documentElement; this
+   *     closes the gap at the source so that workaround stops being
+   *     necessary for anything written after it.
+   *  Leave this off (default) for a scoped/isolated preview — e.g.
+   *  ThemeSection's live-preview pane — which must NOT leak its draft
+   *  theme onto the surrounding document. */
   syncDocument?: boolean
   children: ReactNode
 }
@@ -84,28 +104,9 @@ export function ThemeProvider({ theme, scopeElement, syncDocument, children }: T
     // site passes a concrete element).
     if (scopeElement === null) return
     const el = scopeElement ?? document.documentElement
-    el.classList.toggle('dark', resolvedMode === 'dark')
-    // Native form controls (select dropdowns, checkboxes, date pickers) and
-    // scrollbars paint from the UA's own dark/light chrome based on
-    // color-scheme, inherited independently of every --variable below —
-    // index.css's static blocks each declare their own (:root: dark,
-    // .light: light, .dark:not(.react-flow): dark), so without setting it
-    // here too, a light resolvedMode silently kept whatever color-scheme
-    // was already in scope (dark, from :root) even once every other token
-    // below is correctly light.
-    el.style.setProperty('color-scheme', resolvedMode)
 
     const colors = resolvedMode === 'dark' ? { ...theme.colors, ...theme.darkColors } : theme.colors
-
-    el.style.setProperty('--primary', colors.primary)
-    el.style.setProperty('--primary-foreground', pickForeground(colors.primary))
-    el.style.setProperty('--secondary', colors.secondary)
-    el.style.setProperty('--secondary-foreground', pickForeground(colors.secondary))
-    el.style.setProperty('--accent', colors.accent)
-    el.style.setProperty('--accent-foreground', pickForeground(colors.accent))
-    el.style.setProperty('--background', colors.background)
     const foreground = pickForeground(colors.background)
-    el.style.setProperty('--foreground', foreground)
     // --muted/--muted-foreground/--border/--input have no color picker of
     // their own (ThemeConfig only exposes primary/secondary/accent/
     // background/surface) — every tenant background used to silently fall
@@ -119,27 +120,65 @@ export function ThemeProvider({ theme, scopeElement, syncDocument, children }: T
     // shell's fixed palette. --muted-foreground is contrast-verified since
     // it's real body text; --muted/--border/--input are low-alpha tints
     // (see deriveOverlay's doc comment for the precedent).
-    el.style.setProperty('--muted-foreground', deriveMutedForeground(colors.background, foreground))
-    el.style.setProperty('--muted', deriveOverlay(foreground, 5))
     const borderOverlay = deriveOverlay(foreground, 10)
-    el.style.setProperty('--border', borderOverlay)
-    el.style.setProperty('--input', borderOverlay)
-    el.style.setProperty('--card', colors.surface)
-    el.style.setProperty('--card-foreground', pickForeground(colors.surface))
-    // Popover/dropdown/select-menu content (Popover, DropdownMenu, Command,
-    // SelectContent — see their doc comments) reads --popover the same way
-    // dialogs read --background and cards read --card, so a portaled
-    // dropdown's surface tracks this app's configured theme instead of
-    // silently falling back to index.css's static light/dark default.
-    el.style.setProperty('--popover', colors.surface)
-    el.style.setProperty('--popover-foreground', pickForeground(colors.surface))
-    el.style.setProperty('--radius', theme.radius)
-    el.style.setProperty('--ring', colors.primary)
+
+    // One list, applied to every target this theme needs to reach (the
+    // scope element always, <html> too when syncDocument) — a single
+    // source of truth so a token added here can never drift out of sync
+    // between targets the way color-scheme/background/foreground once did
+    // (a bug in its own right — see syncDocument's doc comment).
+    const vars: [string, string][] = [
+      ['--primary', colors.primary],
+      ['--primary-foreground', pickForeground(colors.primary)],
+      ['--secondary', colors.secondary],
+      ['--secondary-foreground', pickForeground(colors.secondary)],
+      ['--accent', colors.accent],
+      ['--accent-foreground', pickForeground(colors.accent)],
+      ['--background', colors.background],
+      ['--foreground', foreground],
+      ['--muted-foreground', deriveMutedForeground(colors.background, foreground)],
+      ['--muted', deriveOverlay(foreground, 5)],
+      ['--border', borderOverlay],
+      ['--input', borderOverlay],
+      ['--card', colors.surface],
+      ['--card-foreground', pickForeground(colors.surface)],
+      // Popover/dropdown/select-menu content (Popover, DropdownMenu, Command,
+      // SelectContent — see their doc comments) reads --popover the same way
+      // dialogs read --background and cards read --card, so a portaled
+      // dropdown's surface tracks this app's configured theme instead of
+      // silently falling back to index.css's static light/dark default.
+      ['--popover', colors.surface],
+      ['--popover-foreground', pickForeground(colors.surface)],
+      ['--radius', theme.radius],
+      ['--ring', colors.primary],
+    ]
+
+    el.classList.toggle('dark', resolvedMode === 'dark')
+    // Native form controls (select dropdowns, checkboxes, date pickers) and
+    // scrollbars paint from the UA's own dark/light chrome based on
+    // color-scheme, inherited independently of every --variable below —
+    // index.css's static blocks each declare their own (:root: dark,
+    // .light: light, .dark:not(.react-flow): dark), so without setting it
+    // here too, a light resolvedMode silently kept whatever color-scheme
+    // was already in scope (dark, from :root) even once every other token
+    // below is correctly light.
+    el.style.setProperty('color-scheme', resolvedMode)
+    for (const [prop, value] of vars) el.style.setProperty(prop, value)
     if (theme.typography.fontFamily) el.style.setProperty('font-family', theme.typography.fontFamily)
     if (theme.typography.baseSize) el.style.fontSize = theme.typography.baseSize
 
     if (syncDocument) {
-      document.documentElement.style.setProperty('color-scheme', resolvedMode)
+      // Mirrors the SAME tokens onto <html> — document.documentElement IS
+      // :root in CSS terms, so this is what makes anything outside `el`
+      // (a portal under document.body, or a direct getComputedStyle(
+      // document.documentElement) read) resolve this tenant's theme
+      // instead of index.css's static :root block. See the doc comment on
+      // syncDocument above for the full story.
+      const root = document.documentElement
+      root.style.setProperty('color-scheme', resolvedMode)
+      for (const [prop, value] of vars) root.style.setProperty(prop, value)
+      if (theme.typography.fontFamily) root.style.setProperty('font-family', theme.typography.fontFamily)
+      if (theme.typography.baseSize) root.style.fontSize = theme.typography.baseSize
       document.body.style.setProperty('background-color', `hsl(${colors.background})`)
       document.body.style.setProperty('color', `hsl(${foreground})`)
     }
@@ -149,31 +188,18 @@ export function ThemeProvider({ theme, scopeElement, syncDocument, children }: T
       // ThemeProviders (e.g. the live preview pane) must not blank out
       // properties an outer instance is still relying on.
       if (syncDocument) {
-        document.documentElement.style.removeProperty('color-scheme')
+        const root = document.documentElement
+        root.style.removeProperty('color-scheme')
+        for (const [prop] of vars) root.style.removeProperty(prop)
+        root.style.removeProperty('font-family')
+        root.style.fontSize = ''
         document.body.style.removeProperty('background-color')
         document.body.style.removeProperty('color')
       }
       if (scopeElement) {
         el.classList.remove('dark')
         el.style.removeProperty('color-scheme')
-        el.style.removeProperty('--primary')
-        el.style.removeProperty('--primary-foreground')
-        el.style.removeProperty('--secondary')
-        el.style.removeProperty('--secondary-foreground')
-        el.style.removeProperty('--accent')
-        el.style.removeProperty('--accent-foreground')
-        el.style.removeProperty('--background')
-        el.style.removeProperty('--foreground')
-        el.style.removeProperty('--muted-foreground')
-        el.style.removeProperty('--muted')
-        el.style.removeProperty('--border')
-        el.style.removeProperty('--input')
-        el.style.removeProperty('--card')
-        el.style.removeProperty('--card-foreground')
-        el.style.removeProperty('--popover')
-        el.style.removeProperty('--popover-foreground')
-        el.style.removeProperty('--radius')
-        el.style.removeProperty('--ring')
+        for (const [prop] of vars) el.style.removeProperty(prop)
         el.style.removeProperty('font-family')
         el.style.fontSize = ''
       }
