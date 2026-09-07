@@ -14,10 +14,33 @@ import type { FilterGroup, SortRule } from '@/features/workflows/types'
 export { SYSTEM_FIELDS } from '@/features/forms/types'
 
 export type SavedViewVisibility = 'private' | 'public' | 'role'
-export type ViewLayout = 'list' | 'card' | 'calendar' | 'kanban'
+export type ViewLayout = 'list' | 'card' | 'calendar' | 'kanban' | 'tree'
 
 export interface CalendarLayoutConfig {
   dateField: string
+}
+
+export interface TreeLayoutConfig {
+  /** A 'reference' field on the menu's own form whose reference_table is
+   *  that SAME form's id — i.e. genuinely self-referential (Department's
+   *  parent_department, Warehouse's parent_warehouse). A field pointing at
+   *  a different form can't produce a hierarchy over this menu's own
+   *  records, so SaveViewDialog's picker only offers self-referential
+   *  reference fields as candidates in the first place. Children are
+   *  determined solely by this field's edges: a record whose value points
+   *  at a record outside the current filtered/paged result set renders as
+   *  a top-level node rather than being hidden (see TreeLayout's own
+   *  buildForest). */
+  parentField: string
+  /** Optional 'boolean' field controlling only which icon a node renders
+   *  (a folder/group affordance when true, a plain leaf when false) — it
+   *  does NOT gate which nodes may have children; that's determined solely
+   *  by parentField edges, so a "leaf"-flagged node with real children
+   *  still renders expandable. Omitted means the icon falls back to
+   *  whether the node actually has children in the current data, which is
+   *  the only sensible default for a form with no is_group-style field
+   *  (Warehouse, GL Account). */
+  groupField?: string
 }
 
 export interface KanbanLayoutConfig {
@@ -45,7 +68,7 @@ export interface SavedViewConfig {
   sort: SortRule[]
   columns: string[]
   layout: ViewLayout
-  layout_config?: CalendarLayoutConfig | KanbanLayoutConfig
+  layout_config?: CalendarLayoutConfig | KanbanLayoutConfig | TreeLayoutConfig
 }
 
 export interface SavedView {

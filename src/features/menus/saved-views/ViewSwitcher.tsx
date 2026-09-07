@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, LayoutList, LayoutGrid, CalendarDays, Columns3, Plus, Pencil, Trash2, Star } from 'lucide-react'
+import { ChevronDown, LayoutList, LayoutGrid, CalendarDays, Columns3, ListTree, Plus, Pencil, Trash2, Star } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuGroup, DropdownMenuSeparator,
@@ -12,12 +12,16 @@ import type { SavedView, SavedViewConfig, ViewLayout } from './types'
 import type { FieldDef } from '@/features/forms/types'
 
 const LAYOUT_ICON: Record<ViewLayout, typeof LayoutList> = {
-  list: LayoutList, card: LayoutGrid, calendar: CalendarDays, kanban: Columns3,
+  list: LayoutList, card: LayoutGrid, calendar: CalendarDays, kanban: Columns3, tree: ListTree,
 }
 
 interface ViewSwitcherProps {
   appId: string
   menuId: string
+  /** The menu's own underlying form id — passed straight through to
+   *  SaveViewDialog, which needs it to filter Tree's parent-field picker
+   *  down to genuinely self-referential reference fields. */
+  formId: string
   fields: FieldDef[]
   /** field name -> (stored value -> display label) — threaded straight
    *  through to SaveViewDialog's own Kanban column picker; see that prop's
@@ -39,7 +43,7 @@ interface ViewSwitcherProps {
 // private/public split), plus Save/Update/Rename/Delete. Slots into
 // SearchMenuRuntime's toolbar alongside the existing Filter toggle/Create
 // button (RecordsTable.tsx's headerActions region).
-export function ViewSwitcher({ appId, menuId, fields, enumLabels, views, activeView, onSelect, currentConfig }: ViewSwitcherProps) {
+export function ViewSwitcher({ appId, menuId, formId, fields, enumLabels, views, activeView, onSelect, currentConfig }: ViewSwitcherProps) {
   const [dialogMode, setDialogMode] = useState<'closed' | 'create' | 'edit'>('closed')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const create = useCreateSavedView(menuId)
@@ -108,6 +112,7 @@ export function ViewSwitcher({ appId, menuId, fields, enumLabels, views, activeV
           open
           onClose={closeDialog}
           appId={appId}
+          formId={formId}
           fields={fields}
           enumLabels={enumLabels}
           config={currentConfig}

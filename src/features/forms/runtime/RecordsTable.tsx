@@ -27,10 +27,11 @@ import { useI18n } from '@/features/i18n/I18nProvider'
 import { CardLayout } from '@/features/menus/saved-views/layouts/CardLayout'
 import { CalendarLayout } from '@/features/menus/saved-views/layouts/CalendarLayout'
 import { KanbanLayout } from '@/features/menus/saved-views/layouts/KanbanLayout'
+import { TreeLayout } from '@/features/menus/saved-views/layouts/TreeLayout'
 import { SYSTEM_FIELDS } from '@/features/menus/saved-views/types'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
 import type { FormRecord } from '@/features/forms/types'
-import type { ViewLayout, CalendarLayoutConfig, KanbanLayoutConfig } from '@/features/menus/saved-views/types'
+import type { ViewLayout, CalendarLayoutConfig, KanbanLayoutConfig, TreeLayoutConfig } from '@/features/menus/saved-views/types'
 
 export interface RecordsTableProps {
   formId: string
@@ -76,7 +77,7 @@ export interface RecordsTableProps {
    *  reuse the identical searchRecords query and record-detail drawer —
    *  only the results' presentation differs. */
   layout?: ViewLayout
-  layoutConfig?: CalendarLayoutConfig | KanbanLayoutConfig
+  layoutConfig?: CalendarLayoutConfig | KanbanLayoutConfig | TreeLayoutConfig
   /** Lets the viewer drag-reorder the List layout's columns AND (once
    *  Kanban's own onColumnOrderChange fires) the Kanban board's columns —
    *  omitted (no drag handles on either layout, unchanged behavior) unless
@@ -97,7 +98,7 @@ export interface RecordsTableProps {
    *  live change the same way). Omitted for callers that don't track a
    *  saved view at all (the dashboard table widget), which simply never
    *  offers a way to persist a live change back anywhere. */
-  onLiveConfigChange?: (patch: { columns?: string[]; filter?: FilterGroup; sort?: SortRule[]; layoutConfig?: CalendarLayoutConfig | KanbanLayoutConfig }) => void
+  onLiveConfigChange?: (patch: { columns?: string[]; filter?: FilterGroup; sort?: SortRule[]; layoutConfig?: CalendarLayoutConfig | KanbanLayoutConfig | TreeLayoutConfig }) => void
 }
 
 // Extracted from features/menus/runtime/SearchMenuRuntime.tsx (Phase 4 of
@@ -290,7 +291,15 @@ export function RecordsTable({
   // non-enum type, or removed entirely, falls back to List the same way a
   // deleted field already does, rather than rendering a broken board.
   const kanbanFieldMissing = layout === 'kanban' && (!layoutConfig || !form.fields.some((f) => f.name === (layoutConfig as KanbanLayoutConfig).groupField && f.type === 'enum'))
-  const effectiveLayout: ViewLayout = layout === 'calendar' && calendarFieldMissing ? 'list' : layout === 'kanban' && kanbanFieldMissing ? 'list' : layout
+  // Tree's parentField must still be a 'reference' field on THIS form
+  // pointing back at THIS form's own id (genuinely self-referential) — a
+  // field that changed type, was deleted, or now points elsewhere falls
+  // back to List the same way a stale dateField/groupField already does.
+  const treeFieldMissing = layout === 'tree' && (() => {
+    const parentFieldDef = form.fields.find((f) => f.name === (layoutConfig as TreeLayoutConfig)?.parentField)
+    return !layoutConfig || !parentFieldDef || parentFieldDef.type !== 'reference' || parentFieldDef.reference_table !== formId
+  })()
+  const effectiveLayout: ViewLayout = layout === 'calendar' && calendarFieldMissing ? 'list' : layout === 'kanban' && kanbanFieldMissing ? 'list' : layout === 'tree' && treeFieldMissing ? 'list' : layout
 
   const visibleColumns = columns && columns.length > 0 ? columns : form.fields.map((f) => f.name)
   const dataTableColumns = visibleColumns.map((key) => {
@@ -485,6 +494,11 @@ export function RecordsTable({
           This view's Kanban field no longer exists — showing as a list.
         </p>
       )}
+      {treeFieldMissing && layoutConfig && (
+        <p className="mb-3 rounded-md border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/15 px-3 py-2 text-xs text-[hsl(var(--warning))]">
+          This view's Tree field no longer exists — showing as a list.
+        </p>
+      )}
 
       <div ref={scrollRef} className="overflow-x-auto overflow-y-hidden rounded-lg border" style={{ borderColor: 'hsl(var(--border))' }}>
         {effectiveLayout === 'card' && (
@@ -512,6 +526,15 @@ export function RecordsTable({
             // (KanbanColumnsPicker); only the live-board drag affordance is
             // off. Re-enable by restoring the columnDragEnabled-gated
             // callback this replaced if/when live column drag comes back.
+          />
+        )}
+        {effectiveLayout === 'tree' && (
+          <TreeLayout
+            records={results?.records ?? []}
+            fields={form.fields}
+            config={layoutConfig as TreeLayoutConfig}
+            onOpenRecord={openRecord}
+            loading={isLoading}
           />
         )}
         {effectiveLayout === 'list' && (

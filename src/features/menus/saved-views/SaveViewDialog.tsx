@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LayoutList, LayoutGrid, CalendarDays, Columns3 } from 'lucide-react'
+import { LayoutList, LayoutGrid, CalendarDays, Columns3, ListTree } from 'lucide-react'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,7 +20,7 @@ import type { FilterGroup, SortRule } from '@/features/workflows/types'
 import { SYSTEM_FIELDS } from './types'
 import type {
   SavedView, SavedViewConfig, SavedViewVisibility, ViewLayout,
-  CalendarLayoutConfig, KanbanLayoutConfig,
+  CalendarLayoutConfig, KanbanLayoutConfig, TreeLayoutConfig,
 } from './types'
 
 const LAYOUTS: { value: ViewLayout; label: string; icon: typeof LayoutList }[] = [
@@ -28,6 +28,7 @@ const LAYOUTS: { value: ViewLayout; label: string; icon: typeof LayoutList }[] =
   { value: 'card', label: 'Card', icon: LayoutGrid },
   { value: 'calendar', label: 'Calendar', icon: CalendarDays },
   { value: 'kanban', label: 'Kanban', icon: Columns3 },
+  { value: 'tree', label: 'Tree', icon: ListTree },
 ]
 
 // Re-attach UI-only `id` keys to a filter tree that may have come from the
@@ -55,6 +56,11 @@ interface SaveViewDialogProps {
   open: boolean
   onClose: () => void
   appId: string
+  /** The menu's own underlying form id — used only to filter Tree's parent-
+   *  field picker down to genuinely self-referential reference fields (see
+   *  TreeLayoutConfig's own doc comment for why a field pointing at a
+   *  DIFFERENT form can't produce a hierarchy over this menu's records). */
+  formId: string
   fields: FieldDef[]
   /** field name -> (stored value -> display label), for the group field's
    *  Kanban column picker — same map RecordsTable already builds for List/
@@ -85,7 +91,7 @@ interface SaveViewDialogProps {
 // NOT the App Builder shell's light-only gray-scale classes (e.g.
 // RoleFormDrawer.tsx) — this drawer renders inside the runtime app, which is
 // themeable (light/dark), unlike the builder shell.
-export function SaveViewDialog({ open, onClose, appId, fields, enumLabels, config, editing, onSave, saving }: SaveViewDialogProps) {
+export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabels, config, editing, onSave, saving }: SaveViewDialogProps) {
   const seed = editing?.config ?? config
   const [name, setName] = useState(editing?.name ?? '')
   const [visibility, setVisibility] = useState<SavedViewVisibility>(editing?.visibility ?? 'private')
@@ -104,6 +110,12 @@ export function SaveViewDialog({ open, onClose, appId, fields, enumLabels, confi
   )
   const [kanbanVisibleColumns, setKanbanVisibleColumns] = useState<string[]>(
     (seed.layout === 'kanban' ? (seed.layout_config as KanbanLayoutConfig)?.visibleColumns : undefined) ?? [],
+  )
+  const [parentField, setParentField] = useState<string>(
+    (seed.layout === 'tree' ? (seed.layout_config as TreeLayoutConfig)?.parentField : undefined) ?? '',
+  )
+  const [treeGroupField, setTreeGroupField] = useState<string>(
+    (seed.layout === 'tree' ? (seed.layout_config as TreeLayoutConfig)?.groupField : undefined) ?? '',
   )
   const { data: roles } = useRoles(appId)
 
@@ -124,8 +136,15 @@ export function SaveViewDialog({ open, onClose, appId, fields, enumLabels, confi
     value: v,
     label: enumLabels.get(groupField)?.get(v) ?? v,
   }))
+  // Tree's parent field must be self-referential — a reference field whose
+  // reference_table is THIS form's own id — since only that can produce a
+  // hierarchy over this menu's own records (see TreeLayoutConfig). The
+  // group/folder field is unrestricted beyond its type: any boolean field,
+  // purely for the icon (see that config key's own doc comment).
+  const treeParentFields = fields.filter((f) => f.type === 'reference' && f.reference_table === formId)
+  const treeGroupFields = fields.filter((f) => f.type === 'boolean')
 
-  const layoutNeedsField = layout === 'calendar' ? !dateField : layout === 'kanban' ? !groupField : false
+  const layoutNeedsField = layout === 'calendar' ? !dateField : layout === 'kanban' ? !groupField : layout === 'tree' ? !parentField : false
   const canSubmit = name.trim().length > 0 && name.length <= 100 && (visibility !== 'role' || roleIds.length > 0) && !layoutNeedsField
 
   const toggleRole = (id: string) => {
@@ -137,6 +156,7 @@ export function SaveViewDialog({ open, onClose, appId, fields, enumLabels, confi
     const layout_config: SavedViewConfig['layout_config'] =
       layout === 'calendar' ? ({ dateField } satisfies CalendarLayoutConfig)
       : layout === 'kanban' ? ({ groupField, visibleColumns: kanbanVisibleColumns } satisfies KanbanLayoutConfig)
+      : layout === 'tree' ? ({ parentField, groupField: treeGroupField || undefined } satisfies TreeLayoutConfig)
       : undefined
     onSave({
       name: name.trim(), visibility, visible_role_ids: visibility === 'role' ? roleIds : [], is_default: isDefault,
@@ -164,9 +184,9 @@ export function SaveViewDialog({ open, onClose, appId, fields, enumLabels, confi
 
           <div>
             <FieldLabel>Layout</FieldLabel>
-            <div className="grid grid-cols-4 gap-1.5">
+            <div className="grid grid-cols-5 gap-1.5">
               {LAYOUTS.map((l) => {
-                const disabled = (l.value === 'calendar' && dateFields.length === 0) || (l.value === 'kanban' && groupFields.length === 0)
+                const disabled = (l.value === 'calendar' && dateFields.length === 0) || (l.value === 'kanban' && groupFields.length === 0) || (l.value === 'tree' && treeParentFields.length === 0)
                 const selected = !disabled && layout === l.value
                 return (
                   <button
@@ -190,8 +210,9 @@ export function SaveViewDialog({ open, onClose, appId, fields, enumLabels, confi
                       // to first establish it.
                       if (l.value === 'calendar' && !dateField && dateFields[0]) setDateField(dateFields[0].name)
                       if (l.value === 'kanban' && !groupField && groupFields[0]) setGroupField(groupFields[0].name)
+                      if (l.value === 'tree' && !parentField && treeParentFields[0]) setParentField(treeParentFields[0].name)
                     }}
-                    title={disabled ? `No ${l.value === 'calendar' ? 'date/datetime' : 'Select'} field on this form` : undefined}
+                    title={disabled ? `No ${l.value === 'calendar' ? 'date/datetime' : l.value === 'tree' ? 'self-referencing Reference' : 'Select'} field on this form` : undefined}
                     className={cn(
                       'flex flex-col items-center gap-1 rounded-md border px-2 py-2 text-xs transition-colors',
                       disabled && 'cursor-not-allowed opacity-40',
@@ -214,6 +235,24 @@ export function SaveViewDialog({ open, onClose, appId, fields, enumLabels, confi
           {layout === 'calendar' && (
             <div className="rounded-md border p-2" style={{ borderColor: 'hsl(var(--border))' }}>
               <FieldPicker label="Date field" fields={dateFields} value={dateField} onChange={(v) => setDateField(v ?? '')} required />
+            </div>
+          )}
+
+          {layout === 'tree' && (
+            <div className="space-y-3 rounded-md border p-2" style={{ borderColor: 'hsl(var(--border))' }}>
+              <FieldPicker
+                label="Parent field"
+                fields={treeParentFields}
+                value={parentField}
+                onChange={(v) => setParentField(v ?? '')}
+                required
+              />
+              <FieldPicker
+                label="Group/folder field (optional)"
+                fields={treeGroupFields}
+                value={treeGroupField}
+                onChange={(v) => setTreeGroupField(v ?? '')}
+              />
             </div>
           )}
 

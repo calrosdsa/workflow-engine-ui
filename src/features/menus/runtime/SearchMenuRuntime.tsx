@@ -16,7 +16,7 @@ import type { MenuRuntimeRendererProps } from '../menu-registry'
 import type { SearchMenuConfig, AddMenuConfig } from '../types'
 import type { FormRecord } from '@/features/forms/types'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
-import type { SavedView, SavedViewConfig, CalendarLayoutConfig, KanbanLayoutConfig } from '@/features/menus/saved-views/types'
+import type { SavedView, SavedViewConfig, CalendarLayoutConfig, KanbanLayoutConfig, TreeLayoutConfig } from '@/features/menus/saved-views/types'
 
 // Strips the UI-only `id` keys FilterBuilder/SortRuleList generate (list-
 // rendering keys, never sent to or stored by the backend — see
@@ -37,7 +37,7 @@ function stripSortIds(s: SortRule[]): unknown {
  *  banner — a subset of SavedViewConfig, since name/visibility/is_default
  *  aren't editable from the live table (only through the Edit View drawer,
  *  which has its own explicit Save button and needs no banner). */
-type LivePatch = { columns?: string[]; filter?: FilterGroup; sort?: SortRule[]; layoutConfig?: CalendarLayoutConfig | KanbanLayoutConfig }
+type LivePatch = { columns?: string[]; filter?: FilterGroup; sort?: SortRule[]; layoutConfig?: CalendarLayoutConfig | KanbanLayoutConfig | TreeLayoutConfig }
 
 // Thin wrapper around features/forms/runtime/RecordsTable.tsx (Phase 4 of
 // docs/dashboard-system-plan.md) — everything that's actually "a live,
@@ -215,6 +215,7 @@ export function SearchMenuRuntime({ menu, menus, clientId, appId, onNavigate, ex
             <ViewSwitcher
               appId={appId}
               menuId={menu.id}
+              formId={config.form_id}
               fields={form?.fields ?? []}
               enumLabels={enumLabels}
               views={savedViews ?? []}
