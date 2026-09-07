@@ -143,6 +143,14 @@ export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabel
   // purely for the icon (see that config key's own doc comment).
   const treeParentFields = fields.filter((f) => f.type === 'reference' && f.reference_table === formId)
   const treeGroupFields = fields.filter((f) => f.type === 'boolean')
+  // A native `disabled` button drops out of the tab order — a keyboard
+  // user can never focus one to read its title attribute, so the reason
+  // needs an always-visible home too (rendered beneath the picker grid).
+  const disabledLayoutReasons = [
+    dateFields.length === 0 && 'Calendar needs a date or datetime field on this form.',
+    groupFields.length === 0 && 'Kanban needs a Select field on this form.',
+    treeParentFields.length === 0 && 'Tree needs a self-referencing Reference field on this form (one whose target is this same form).',
+  ].filter((r): r is string => !!r)
 
   const layoutNeedsField = layout === 'calendar' ? !dateField : layout === 'kanban' ? !groupField : layout === 'tree' ? !parentField : false
   const canSubmit = name.trim().length > 0 && name.length <= 100 && (visibility !== 'role' || roleIds.length > 0) && !layoutNeedsField
@@ -230,16 +238,25 @@ export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabel
                 )
               })}
             </div>
+            {/* Always-visible, not hover-only: a native `disabled` button
+               drops out of the tab order entirely, so a keyboard user can
+               never focus one to discover why via its title attribute — a
+               plain-language summary beneath the grid is the only way
+               every visitor, not just a mouse-hovering one, learns why an
+               option is greyed out. */}
+            {disabledLayoutReasons.length > 0 && (
+              <p className="mt-1.5 text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>{disabledLayoutReasons.join(' ')}</p>
+            )}
           </div>
 
           {layout === 'calendar' && (
-            <div className="rounded-md border p-2" style={{ borderColor: 'hsl(var(--border))' }}>
+            <div className="space-y-3">
               <FieldPicker label="Date field" fields={dateFields} value={dateField} onChange={(v) => setDateField(v ?? '')} required />
             </div>
           )}
 
           {layout === 'tree' && (
-            <div className="space-y-3 rounded-md border p-2" style={{ borderColor: 'hsl(var(--border))' }}>
+            <div className="space-y-3">
               <FieldPicker
                 label="Parent field"
                 fields={treeParentFields}
@@ -247,17 +264,22 @@ export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabel
                 onChange={(v) => setParentField(v ?? '')}
                 required
               />
-              <FieldPicker
-                label="Group/folder field (optional)"
-                fields={treeGroupFields}
-                value={treeGroupField}
-                onChange={(v) => setTreeGroupField(v ?? '')}
-              />
+              <div>
+                <FieldPicker
+                  label="Group/folder field (optional)"
+                  fields={treeGroupFields}
+                  value={treeGroupField}
+                  onChange={(v) => setTreeGroupField(v ?? '')}
+                />
+                <p className="mt-1 text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                  Only changes which icon a node gets (folder vs. leaf). A record can still expand into children whether or not this field is checked.
+                </p>
+              </div>
             </div>
           )}
 
           {layout === 'kanban' && (
-            <div className="space-y-3 rounded-md border p-2" style={{ borderColor: 'hsl(var(--border))' }}>
+            <div className="space-y-3">
               <FieldPicker
                 label="Group by field"
                 fields={groupFields}
@@ -338,7 +360,7 @@ export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabel
           </div>
 
           {visibility === 'role' && (
-            <div className="space-y-1.5 rounded-md border p-2" style={{ borderColor: 'hsl(var(--border))' }}>
+            <div className="space-y-1.5">
               {(roles ?? []).length === 0 && <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No roles found for this app.</p>}
               {(roles ?? []).map((r) => (
                 <label key={r.id} className="flex cursor-pointer items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}>

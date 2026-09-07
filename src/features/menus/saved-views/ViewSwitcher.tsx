@@ -62,14 +62,15 @@ export function ViewSwitcher({ appId, menuId, formId, fields, enumLabels, views,
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="gap-1.5">
-            <ActiveIcon size={14} />
-            {activeView?.name ?? 'Default view'}
-            <ChevronDown size={12} className="opacity-60" />
+            <ActiveIcon size={14} className="shrink-0" />
+            <span className="max-w-[14rem] truncate" title={activeView?.name ?? 'Default view'}>{activeView?.name ?? 'Default view'}</span>
+            <ChevronDown size={12} className="shrink-0 opacity-60" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64" container={document.getElementById('runtime-root')}>
           <DropdownMenuItem onSelect={() => onSelect(undefined)}>
             <LayoutList size={13} />Default view
+            {!activeView && <span className="text-[10px] text-[hsl(var(--muted-foreground))]">(current)</span>}
           </DropdownMenuItem>
 
           {myViews.length > 0 && (
@@ -170,11 +171,17 @@ function ViewRow({ view, active, onSelect, onEdit, onDelete }: {
         {view.is_default && <Star size={11} className="shrink-0 fill-current text-[hsl(var(--warning))]" />}
       </DropdownMenuItem>
       {view.can_manage && (
-        <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100">
-          <button onClick={(e) => { e.stopPropagation(); onEdit() }} className="rounded p-1 hover:bg-[hsl(var(--muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1" title="Edit view">
+        // opacity-0 + a hover trigger alone leaves a keyboard user tabbing
+        // through this dropdown landing on a completely invisible control —
+        // real DOM focus with nothing to look at. group-focus-within
+        // (triggered by either button actually holding focus) and each
+        // button's own focus-visible both force the pair visible the same
+        // way hover already does, so Tab reveals them instead of hiding them.
+        <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">
+          <button onClick={(e) => { e.stopPropagation(); onEdit() }} className="rounded p-1 hover:bg-[hsl(var(--muted))] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1" title="Edit view">
             <Pencil size={11} />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); onDelete() }} className="rounded p-1 text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1" title="Delete view">
+          <button onClick={(e) => { e.stopPropagation(); onDelete() }} className="rounded p-1 text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1" title="Delete view">
             <Trash2 size={11} />
           </button>
         </div>

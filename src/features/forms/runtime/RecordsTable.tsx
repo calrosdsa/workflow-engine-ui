@@ -423,15 +423,22 @@ export function RecordsTable({
       {(title || allowFilter || canSearch || headerActions) && (
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           {title ? <h1 className="text-lg font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{title}</h1> : <div />}
-          <div className="flex items-center gap-2">
+          {/* flex-wrap: at narrow (mobile) widths, Search + Filter +
+             ViewSwitcher + Create together routinely exceed the viewport —
+             wrapping onto a second line beats a horizontal scrollbar or
+             clipped controls. The search input's own w-full/sm:w-48 pairs
+             with this: full-width on whatever line it lands on below sm,
+             a fixed width once there's room to sit inline with everything
+             else. */}
+          <div className="flex flex-wrap items-center gap-2">
             {canSearch && (
-              <div className="relative">
+              <div className="relative w-full sm:w-auto">
                 <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
                 <Input
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Search…"
-                  className="h-8 w-48 pl-7 text-sm"
+                  className="h-8 w-full pl-7 text-sm sm:w-48"
                 />
               </div>
             )}
@@ -530,6 +537,7 @@ export function RecordsTable({
         )}
         {effectiveLayout === 'tree' && (
           <TreeLayout
+            formId={formId}
             records={results?.records ?? []}
             fields={form.fields}
             config={layoutConfig as TreeLayoutConfig}
