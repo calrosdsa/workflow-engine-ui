@@ -3,7 +3,7 @@ import { Menu as MenuIcon, X, ArrowLeft } from 'lucide-react'
 import { runtimeRouter } from '@/runtime-router'
 import { useAuthStore } from '@/stores/auth'
 import { usePermission } from '@/features/auth/permissions'
-import { buildRuntimeNavTree } from './nav'
+import { resolveSidebarNav } from './nav'
 import { RuntimeSidebar } from './RuntimeSidebar'
 import { PermissionDeniedPage } from './PermissionDeniedPage'
 import { RecordDetailPanel, RecordDetailToolbar } from '@/features/forms/runtime/RecordDetailPanel'
@@ -21,6 +21,11 @@ interface RuntimeFormRecordPageProps {
   appId: string
   formId: string
   recordId: string
+  /** The menu this record page was reached from, if any (see
+   *  runtimeFormRecordRoute's validateSearch) — used only to keep the
+   *  sidebar scoped to that menu's module; never to borrow its chrome or
+   *  permissions (see the "thinner chrome" note below, still true). */
+  fromMenuId?: string
 }
 
 // The formId-keyed counterpart to RuntimeRecordPage — reachable for ANY
@@ -32,7 +37,7 @@ interface RuntimeFormRecordPageProps {
 // from, so this intentionally has thinner chrome (no breadcrumb trail, no
 // sidebar active-item highlight, "Back" is browser history rather than a
 // specific list) rather than guessing at either.
-export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recordId }: RuntimeFormRecordPageProps) {
+export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recordId, fromMenuId }: RuntimeFormRecordPageProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const session = useAuthStore((s) => s.session)
   const membership = session?.memberships?.find(
@@ -41,7 +46,7 @@ export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recor
   const permissions = membership?.permissions ?? []
   const roleId = membership?.role_id
 
-  const navTree = buildRuntimeNavTree(snapshot.menus, roleId, permissions)
+  const { navTree, scopedRoot } = resolveSidebarNav(snapshot.menus, fromMenuId ?? '', roleId, permissions)
   const canView = usePermission(`forms:${formId}:view`)
 
   const { data: form } = useFormDef(formId)
@@ -57,7 +62,7 @@ export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recor
     <>
       <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'hsl(var(--background))', color: 'hsl(var(--foreground))' }}>
         <div className="hidden md:block">
-          <RuntimeSidebar appName={snapshot.app.name} navTree={navTree} clientId={clientId} appId={appId} activeMenuId="" />
+          <RuntimeSidebar appName={snapshot.app.name} navTree={navTree} scopedRoot={scopedRoot} clientId={clientId} appId={appId} activeMenuId="" />
         </div>
 
         {mobileNavOpen && (
@@ -80,6 +85,7 @@ export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recor
               <RuntimeSidebar
                 appName={snapshot.app.name}
                 navTree={navTree}
+                scopedRoot={scopedRoot}
                 clientId={clientId}
                 appId={appId}
                 activeMenuId=""

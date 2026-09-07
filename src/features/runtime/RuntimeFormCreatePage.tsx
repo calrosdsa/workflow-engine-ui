@@ -3,7 +3,7 @@ import { Menu as MenuIcon, X, ArrowLeft, CheckCircle2, AlertCircle } from 'lucid
 import { runtimeRouter } from '@/runtime-router'
 import { useAuthStore } from '@/stores/auth'
 import { usePermission } from '@/features/auth/permissions'
-import { buildRuntimeNavTree } from './nav'
+import { resolveSidebarNav } from './nav'
 import { RuntimeSidebar } from './RuntimeSidebar'
 import { PermissionDeniedPage } from './PermissionDeniedPage'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
@@ -19,6 +19,11 @@ interface RuntimeFormCreatePageProps {
   clientId: string
   appId: string
   formId: string
+  /** The Search menu whose "+ Create" button led here, if any (see
+   *  runtimeFormCreateRoute's validateSearch) — used only to keep the
+   *  sidebar scoped to that menu's module; never to borrow its chrome or
+   *  permissions (see the "thinner chrome" note below, still true). */
+  fromMenuId?: string
 }
 
 // The formId-keyed counterpart to AddMenuRuntime — reachable for ANY form,
@@ -29,7 +34,7 @@ interface RuntimeFormCreatePageProps {
 // thinner-chrome tradeoff RuntimeFormRecordPage already makes (no breadcrumb
 // trail, no sidebar active-item highlight, "Back" is browser history rather
 // than a specific list).
-export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId }: RuntimeFormCreatePageProps) {
+export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId, fromMenuId }: RuntimeFormCreatePageProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [result, setResult] = useState<'success' | 'error' | null>(null)
   const session = useAuthStore((s) => s.session)
@@ -39,7 +44,7 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId }: Run
   const permissions = membership?.permissions ?? []
   const roleId = membership?.role_id
 
-  const navTree = buildRuntimeNavTree(snapshot.menus, roleId, permissions)
+  const { navTree, scopedRoot } = resolveSidebarNav(snapshot.menus, fromMenuId ?? '', roleId, permissions)
   const canCreate = usePermission(`forms:${formId}:create`)
 
   const { data: form } = useFormDef(formId)
@@ -69,7 +74,14 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId }: Run
       // target (no menu config to read one from) — the one destination that's
       // always valid for a freshly created record, menu or no menu, is its
       // own formId-keyed detail page (RuntimeFormRecordPage).
-      runtimeRouter.navigate({ to: `/${clientId}/${appId}/forms/${formId}/${record.id as string}` })
+      // Passed as a pre-typed variable, not an inline object literal — see
+      // RuntimeLink.tsx's own `search` variable for why: runtimeRouter.navigate's
+      // param types resolve against the BUILDER app's Register.router (the only
+      // global route registry TS can see), so a literal `{ fromMenu: ... }` here
+      // fails excess-property-checking against that unrelated route's search
+      // shape even though this is really runtimeRouter, not router.
+      const search: Record<string, string> | undefined = fromMenuId ? { fromMenu: fromMenuId } : undefined
+      runtimeRouter.navigate({ to: `/${clientId}/${appId}/forms/${formId}/${record.id as string}`, search })
     } catch {
       setResult('error')
     }
@@ -82,7 +94,7 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId }: Run
     <>
       <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'hsl(var(--background))', color: 'hsl(var(--foreground))' }}>
         <div className="hidden md:block">
-          <RuntimeSidebar appName={snapshot.app.name} navTree={navTree} clientId={clientId} appId={appId} activeMenuId="" />
+          <RuntimeSidebar appName={snapshot.app.name} navTree={navTree} scopedRoot={scopedRoot} clientId={clientId} appId={appId} activeMenuId="" />
         </div>
 
         {mobileNavOpen && (
@@ -105,6 +117,7 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId }: Run
               <RuntimeSidebar
                 appName={snapshot.app.name}
                 navTree={navTree}
+                scopedRoot={scopedRoot}
                 clientId={clientId}
                 appId={appId}
                 activeMenuId=""

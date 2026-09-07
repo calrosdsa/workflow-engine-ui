@@ -426,13 +426,21 @@ function RuntimeFormRecordRoute() {
   const snapshot = useRuntimeSnapshotContext()
   const { clientId, appId } = runtimeAppRoute.useParams()
   const { formId, recordId } = runtimeFormRecordRoute.useParams()
+  const { fromMenu } = runtimeFormRecordRoute.useSearch()
 
-  return <RuntimeFormRecordPage snapshot={snapshot} clientId={clientId} appId={appId} formId={formId} recordId={recordId} />
+  return <RuntimeFormRecordPage snapshot={snapshot} clientId={clientId} appId={appId} formId={formId} recordId={recordId} fromMenuId={fromMenu} />
 }
 
 const runtimeFormRecordRoute = createRoute({
   getParentRoute: () => runtimeAppRoute,
   path: '/forms/$formId/$recordId',
+  // Optional origin menu id, forwarded by whichever caller happens to know
+  // it (e.g. RuntimeFormCreatePage's own post-submit redirect) — see
+  // runtimeFormCreateRoute's validateSearch below for why this can't be
+  // resolved from formId alone.
+  validateSearch: (search: Record<string, unknown>): { fromMenu?: string } => ({
+    fromMenu: typeof search.fromMenu === 'string' ? search.fromMenu : undefined,
+  }),
   component: RuntimeFormRecordRoute,
 })
 
@@ -449,13 +457,24 @@ function RuntimeFormCreateRoute() {
   const snapshot = useRuntimeSnapshotContext()
   const { clientId, appId } = runtimeAppRoute.useParams()
   const { formId } = runtimeFormCreateRoute.useParams()
+  const { fromMenu } = runtimeFormCreateRoute.useSearch()
 
-  return <RuntimeFormCreatePage snapshot={snapshot} clientId={clientId} appId={appId} formId={formId} />
+  return <RuntimeFormCreatePage snapshot={snapshot} clientId={clientId} appId={appId} formId={formId} fromMenuId={fromMenu} />
 }
 
 const runtimeFormCreateRoute = createRoute({
   getParentRoute: () => runtimeAppRoute,
   path: '/forms/$formId/new',
+  // Optional origin menu id (e.g. the Search menu whose "+ Create" button was
+  // clicked) — this route is deliberately reachable for any form regardless
+  // of menu (see the doc comment on runtimeFormRecordRoute above for why it
+  // can't just resolve one from formId), but a caller that DOES know where
+  // the user came from can pass it so RuntimeFormCreatePage's sidebar stays
+  // scoped to that module instead of falling back to the full, all-expanded
+  // tree (see resolveSidebarNav in features/runtime/nav.ts).
+  validateSearch: (search: Record<string, unknown>): { fromMenu?: string } => ({
+    fromMenu: typeof search.fromMenu === 'string' ? search.fromMenu : undefined,
+  }),
   component: RuntimeFormCreateRoute,
 })
 

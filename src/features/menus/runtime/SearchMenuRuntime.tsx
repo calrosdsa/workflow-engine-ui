@@ -229,7 +229,7 @@ export function SearchMenuRuntime({ menu, menus, clientId, appId, onNavigate, ex
                   <Plus size={14} />{createLabel}
                 </Button>
               ) : (
-                <RuntimeLink to={`/${clientId}/${appId}/forms/${config.form_id}/new`}>
+                <RuntimeLink to={`/${clientId}/${appId}/forms/${config.form_id}/new?fromMenu=${encodeURIComponent(menu.id)}`}>
                   <Button size="sm" className="gap-1.5">
                     <Plus size={14} />{createLabel}
                   </Button>

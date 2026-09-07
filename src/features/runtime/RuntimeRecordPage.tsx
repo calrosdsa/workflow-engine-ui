@@ -3,7 +3,7 @@ import { Menu as MenuIcon, X, ArrowLeft } from 'lucide-react'
 import { runtimeRouter } from '@/runtime-router'
 import { useAuthStore } from '@/stores/auth'
 import { canViewMenu } from '@/features/auth/permissions'
-import { buildRuntimeNavTree, runtimeAncestors } from './nav'
+import { resolveSidebarNav, runtimeAncestors } from './nav'
 import { RuntimeSidebar } from './RuntimeSidebar'
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
 import { PermissionDeniedPage } from './PermissionDeniedPage'
@@ -40,7 +40,7 @@ export function RuntimeRecordPage({ snapshot, clientId, appId, currentMenu, form
   const permissions = membership?.permissions ?? []
   const roleId = membership?.role_id
 
-  const navTree = buildRuntimeNavTree(snapshot.menus, roleId, permissions)
+  const { navTree, scopedRoot } = resolveSidebarNav(snapshot.menus, currentMenu.id, roleId, permissions)
   const breadcrumbs = runtimeAncestors(snapshot.menus, currentMenu.id)
   const canView = canViewMenu(currentMenu, roleId, permissions)
 
@@ -57,7 +57,7 @@ export function RuntimeRecordPage({ snapshot, clientId, appId, currentMenu, form
     <>
       <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'hsl(var(--background))', color: 'hsl(var(--foreground))' }}>
         <div className="hidden md:block">
-          <RuntimeSidebar appName={snapshot.app.name} navTree={navTree} clientId={clientId} appId={appId} activeMenuId={currentMenu.id} />
+          <RuntimeSidebar appName={snapshot.app.name} navTree={navTree} scopedRoot={scopedRoot} clientId={clientId} appId={appId} activeMenuId={currentMenu.id} />
         </div>
 
         {mobileNavOpen && (
@@ -80,6 +80,7 @@ export function RuntimeRecordPage({ snapshot, clientId, appId, currentMenu, form
               <RuntimeSidebar
                 appName={snapshot.app.name}
                 navTree={navTree}
+                scopedRoot={scopedRoot}
                 clientId={clientId}
                 appId={appId}
                 activeMenuId={currentMenu.id}
