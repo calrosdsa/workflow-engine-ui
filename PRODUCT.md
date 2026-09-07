@@ -46,7 +46,7 @@ Confirmed feature areas (`src/features/*`):
 - **Applications** — app CRUD, settings, theming, publish/version lifecycle.
 - **Menus** — app navigation-tree builder plus a separate Mobile Layout config for the native runtime's bottom-tab/drawer nav.
 - **App Settings** — credentials and variables management (consumed by workflow nodes).
-- **Permissions / Roles / Users / Invitations** — RBAC administration and team member invites, including per-form field-level masking (`hidden_fields`).
+- **Permissions / Roles / Users / Invitations** — RBAC administration and team member invites; per-field masking is authored on the field itself (`hide_rules`, in the form builder's Advanced Settings), not on the role.
 - **Knowledge (RAG)** — knowledge-base management (documents, ingestion, entity/relation graph, query modes), shared client-wide or scoped to one app.
 - **LLM Providers** — credential configuration for LLM/embedding providers consumed by knowledge bases and workflow AI nodes.
 - **Integrations** — external system connections (embeddable SSO-launched integrations).

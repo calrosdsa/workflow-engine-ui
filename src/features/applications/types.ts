@@ -143,7 +143,6 @@ export interface RoleSnapshotItem {
   id: string
   name: string
   permissions: string[]
-  hidden_fields?: Record<string, string[]>
 }
 
 export interface AgentSnapshotItem {

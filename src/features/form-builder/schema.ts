@@ -817,7 +817,7 @@ export const ADVANCED_SETTING_AUDIENCE_DESCRIPTIONS: Record<AdvancedSettingAudie
 }
 
 export const ADVANCED_SETTING_ACTION_DESCRIPTIONS: Record<AdvancedSettingActionType, string> = {
-  hidden_in_ui: 'Hide the element and its value from this audience everywhere — the form UI and every server read (records, reports, workflow record steps). No Super Admin bypass, unlike a role’s (older) hidden_fields setting. The value itself is still stored; see clear_value to blank it instead.',
+  hidden_in_ui: 'Hide the element and its value from this audience everywhere — the form UI and every server read (records, reports, workflow record steps). No Super Admin bypass. The value itself is still stored; see clear_value to blank it instead.',
   read_only: 'Render the element read-only.',
   show_exception: 'Invert the audience’s restriction — e.g. “hidden for everyone, except this role”.',
   clear_value: 'Clear the element’s value when the conditions match.',
