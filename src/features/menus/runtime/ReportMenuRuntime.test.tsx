@@ -11,17 +11,26 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, fireEvent } from '@testing-library/react'
 import { ReportMenuRuntime } from './ReportMenuRuntime'
-import { useReport, useRuntimeReport } from '@/features/reports/hooks'
+import { useReport, useRuntimeReport, useExportReport } from '@/features/reports/hooks'
 import { emptyReportDefinition } from '@/features/reports/types'
-import type { ReportDefinitionRow, ReportArgument } from '@/features/reports/types'
+import type { ReportDefinitionRow, ReportArgument, ReportSettings } from '@/features/reports/types'
 import type { RuntimeReportResult } from '@/features/reports/api'
 import type { Menu, ReportMenuConfig } from '../types'
 
 afterEach(cleanup)
 
+// Radix Select (the download format picker) leans on browser APIs jsdom
+// doesn't implement — same stub set combobox-aria.test.tsx already
+// established for exactly this Radix-in-jsdom gap.
+Element.prototype.hasPointerCapture = () => false
+Element.prototype.setPointerCapture = () => {}
+Element.prototype.releasePointerCapture = () => {}
+Element.prototype.scrollIntoView = () => {}
+
 vi.mock('@/features/reports/hooks', () => ({
   useReport: vi.fn(),
   useRuntimeReport: vi.fn(),
+  useExportReport: vi.fn(),
 }))
 
 function menu(reportDefinitionId: string): Menu {
@@ -42,11 +51,15 @@ function menu(reportDefinitionId: string): Menu {
   }
 }
 
-function reportRow(over: { arguments?: ReportArgument[] } = {}): ReportDefinitionRow {
+function reportRow(over: { arguments?: ReportArgument[]; settings?: ReportSettings } = {}): ReportDefinitionRow {
   return {
     id: 'rep-1',
     name: 'Sales Report',
-    definition: { ...emptyReportDefinition('Sales Report'), arguments: over.arguments },
+    definition: {
+      ...emptyReportDefinition('Sales Report'),
+      arguments: over.arguments,
+      settings: over.settings ?? {},
+    },
     created_at: '',
     updated_at: '',
   }
@@ -59,6 +72,8 @@ function mockHooks(over: {
   isPending?: boolean
   isError?: boolean
   mutate?: (args?: Record<string, unknown>) => void
+  exportMutate?: (args?: unknown) => void
+  exportPending?: boolean
 }) {
   vi.mocked(useReport).mockReturnValue({
     data: over.row, isLoading: over.loading ?? false,
@@ -67,6 +82,10 @@ function mockHooks(over: {
     data: over.data, isPending: over.isPending ?? false, isError: over.isError ?? false, error: null,
     mutate: over.mutate ?? vi.fn(), mutateAsync: vi.fn(), reset: vi.fn(),
   } as unknown as ReturnType<typeof useRuntimeReport>)
+  vi.mocked(useExportReport).mockReturnValue({
+    isPending: over.exportPending ?? false, isError: false, error: null,
+    mutate: over.exportMutate ?? vi.fn(), mutateAsync: vi.fn(), reset: vi.fn(),
+  } as unknown as ReturnType<typeof useExportReport>)
 }
 
 describe('ReportMenuRuntime — auto-run', () => {
@@ -198,6 +217,60 @@ describe('ReportMenuRuntime — row drill-down', () => {
 
     fireEvent.click(screen.getByText('West').closest('tr')!)
     expect(onNavigate).not.toHaveBeenCalled()
+  })
+})
+
+describe('ReportMenuRuntime — download', () => {
+  it('shows a Download button once the report loads, with no format picker when allowed_formats has 0 or 1 entries', () => {
+    mockHooks({ row: reportRow({ settings: { default_format: 'pdf' } }) })
+    render(<ReportMenuRuntime menu={menu('rep-1')} />)
+    expect(screen.getByRole('button', { name: /download/i })).toBeTruthy()
+    expect(screen.queryByRole('combobox')).toBeNull()
+  })
+
+  it('downloads using settings.default_format alone when allowed_formats has 0 or 1 entries', () => {
+    const exportMutate = vi.fn()
+    mockHooks({
+      row: reportRow({ settings: { default_format: 'csv', allowed_formats: ['csv'] } }),
+      exportMutate,
+    })
+    render(<ReportMenuRuntime menu={menu('rep-1')} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /download/i }))
+    expect(exportMutate).toHaveBeenCalledWith({ format: 'csv', argumentValues: {} }, expect.anything())
+  })
+
+  it('shows a format picker when allowed_formats has more than one entry, and downloads whichever is picked', async () => {
+    const exportMutate = vi.fn()
+    mockHooks({
+      row: reportRow({ settings: { default_format: 'pdf', allowed_formats: ['pdf', 'csv'] } }),
+      exportMutate,
+    })
+    render(<ReportMenuRuntime menu={menu('rep-1')} />)
+
+    fireEvent.click(screen.getByRole('combobox'))
+    fireEvent.click(await screen.findByText('CSV'))
+    fireEvent.click(screen.getByRole('button', { name: /download/i }))
+
+    expect(exportMutate).toHaveBeenCalledWith({ format: 'csv', argumentValues: {} }, expect.anything())
+  })
+
+  it('disables Download while a required argument is unfilled, submitting the on-screen values once filled', () => {
+    const exportMutate = vi.fn()
+    const argumentList: ReportArgument[] = [{ key: 'region', label: 'Region', type: 'text', required: true }]
+    mockHooks({
+      row: reportRow({ arguments: argumentList, settings: { default_format: 'pdf' } }),
+      exportMutate,
+    })
+    render(<ReportMenuRuntime menu={menu('rep-1')} />)
+
+    const downloadButton = screen.getByRole('button', { name: /download/i }) as HTMLButtonElement
+    expect(downloadButton.disabled).toBe(true)
+
+    fireEvent.change(screen.getByLabelText('Region'), { target: { value: 'West' } })
+    expect(downloadButton.disabled).toBe(false)
+    fireEvent.click(downloadButton)
+    expect(exportMutate).toHaveBeenCalledWith({ format: 'pdf', argumentValues: { region: 'West' } }, expect.anything())
   })
 })
 

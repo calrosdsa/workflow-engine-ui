@@ -7,17 +7,21 @@
 // is "same numbers, same columns, same totals, same number_format", not
 // "same pixels" the way Preview's export bytes are.
 import { useEffect, useMemo, useState } from 'react'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, Download, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
-import { useReport } from '@/features/reports/hooks'
-import { useRuntimeReport } from '@/features/reports/hooks'
+import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
+import { extractApiError } from '@/lib/api'
+import { useReport, useRuntimeReport, useExportReport } from '@/features/reports/hooks'
 import { ReportArgumentInput } from '@/features/reports/ReportArgumentsDialog'
 import {
   declaredArguments, initialArgumentValues, missingRequiredArguments, pruneEmptyArguments, needsPrompt,
 } from '@/features/reports/arguments'
+import { FORMAT_LABELS } from '@/features/reports/types'
 import type { RuntimeReportBlock, RuntimeReportRow } from '@/features/reports/api'
+import type { ExportFormat, ReportSettings } from '@/features/reports/types'
 import type { Menu, ReportMenuConfig } from '../types'
 
 interface ReportMenuRuntimeProps {
@@ -81,7 +85,15 @@ export function ReportMenuRuntime({ menu, onNavigate }: ReportMenuRuntimeProps) 
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <h2 className="text-lg font-semibold">{reportRow.name}</h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">{reportRow.name}</h2>
+        <ReportDownloadButton
+          reportId={reportId}
+          settings={reportRow.definition.settings}
+          argumentValues={pruneEmptyArguments(argumentList, values)}
+          disabled={missing.length > 0}
+        />
+      </div>
 
       {argumentList.length > 0 && (
         <div className="flex flex-wrap items-end gap-3 rounded-md border border-[hsl(var(--border))] p-3">
@@ -129,6 +141,84 @@ export function ReportMenuRuntime({ menu, onNavigate }: ReportMenuRuntimeProps) 
       {runtime.data?.blocks.map((block) => (
         <ReportBlockView key={block.id} block={block} onNavigate={onNavigate} />
       ))}
+    </div>
+  )
+}
+
+// The runtime viewer's own Download button — POST /report-definitions/{id}/
+// export (api/reports/handler.go's Export), submitting exactly the argument
+// values currently on screen (the caller-supplied argumentValues prop),
+// never a re-prompt. Placed next to the report title rather than strictly
+// beside the filter bar's own Refresh/Run button, because a report with no
+// declared arguments renders no filter bar at all (it auto-runs on mount) —
+// gating the only download affordance behind having a filter bar would
+// leave every argument-less report undownloadable.
+//
+// Per the plan: a format picker only when the report's own settings narrow
+// allowed_formats to more than one choice; otherwise this downloads
+// whatever settings.default_format says (a report with neither configured
+// errors clearly from the server when clicked, which is a report-authoring
+// problem this viewer doesn't try to pre-validate).
+function ReportDownloadButton({
+  reportId, settings, argumentValues, disabled,
+}: {
+  reportId: string
+  settings: ReportSettings
+  argumentValues: Record<string, unknown>
+  disabled?: boolean
+}) {
+  const exportReport = useExportReport(reportId)
+  const choices = settings.allowed_formats && settings.allowed_formats.length > 1 ? settings.allowed_formats : undefined
+  const [format, setFormat] = useState<ExportFormat>(settings.default_format ?? choices?.[0] ?? 'pdf')
+
+  const handleDownload = () => {
+    const toastId = toast.loading('Preparing download…')
+    exportReport.mutate(
+      { format: choices ? format : settings.default_format, argumentValues },
+      {
+        onSuccess: ({ blob, filename, rowCount }) => {
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = filename
+          link.click()
+          URL.revokeObjectURL(url)
+          toast.success('Download ready', {
+            id: toastId,
+            description: `${filename} · ${rowCount} row${rowCount === 1 ? '' : 's'}`,
+          })
+        },
+        onError: (e) => {
+          toast.error("Couldn't download this report", { id: toastId, description: extractApiError(e) })
+        },
+      },
+    )
+  }
+
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      {choices && (
+        <SelectMenu value={format} onValueChange={(v) => setFormat(v as ExportFormat)}>
+          <SelectTrigger className="h-8 w-[128px] text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {choices.map((f) => (
+              <SelectItem key={f} value={f} className="text-xs">{FORMAT_LABELS[f]}</SelectItem>
+            ))}
+          </SelectContent>
+        </SelectMenu>
+      )}
+      <Button
+        size="sm" variant="outline" className="h-8 gap-1.5"
+        onClick={handleDownload}
+        disabled={disabled || exportReport.isPending}
+      >
+        {exportReport.isPending
+          ? <Loader2 className="h-4 w-4 animate-spin" />
+          : <Download className="h-4 w-4" />}
+        Download
+      </Button>
     </div>
   )
 }

@@ -109,4 +109,25 @@ export const reportsApi = {
   // report author, can call this.
   runtime: (id: string, argumentValues?: Record<string, unknown>) =>
     api.post(`report-definitions/${id}/runtime`, { json: { arguments: argumentValues } }).json<RuntimeReportResult>(),
+
+  // Renders a SAVED report into a downloadable file at the caller's current
+  // argument values (api/reports/handler.go's Export) — the runtime
+  // viewer's own Download button. Same viewer-level authorization as
+  // runtime() above (reports.CallerPassesVisibility, not application:design),
+  // but streams real rendered bytes through the same Engine.Generate path
+  // preview() uses, so the shape of this call mirrors preview() rather than
+  // runtime(): a Blob + filename + row count, not JSON.
+  export: async (
+    id: string,
+    format?: ExportFormat,
+    argumentValues?: Record<string, unknown>,
+  ): Promise<PreviewResult> => {
+    const res = await api.post(`report-definitions/${id}/export`, {
+      json: { arguments: argumentValues, format },
+    })
+    const blob = await res.blob()
+    const filename = filenameFromContentDisposition(res.headers.get('Content-Disposition'), 'report')
+    const rowCount = Number(res.headers.get('X-Report-Row-Count') ?? '0')
+    return { blob, filename, rowCount }
+  },
 }

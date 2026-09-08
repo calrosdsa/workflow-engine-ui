@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reportsApi, type CreateReportPayload } from './api'
+import type { ExportFormat } from './types'
 
 export const reportKeys = {
   all: ['report-definitions'] as const,
@@ -49,5 +50,15 @@ export function useDeleteReport() {
 export function useRuntimeReport(reportId: string) {
   return useMutation({
     mutationFn: (argumentValues?: Record<string, unknown>) => reportsApi.runtime(reportId, argumentValues),
+  })
+}
+
+// Same mutation reasoning as useRuntimeReport above — a trigger-on-click
+// download, not cacheable query state. Backs the runtime viewer's own
+// Download button.
+export function useExportReport(reportId: string) {
+  return useMutation({
+    mutationFn: ({ format, argumentValues }: { format?: ExportFormat; argumentValues?: Record<string, unknown> }) =>
+      reportsApi.export(reportId, format, argumentValues),
   })
 }
