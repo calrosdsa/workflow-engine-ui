@@ -8,8 +8,16 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useForm } from '@/features/forms/hooks'
 import type { WidgetConfigPanelProps } from '../../widget-contract'
-import type { TableWidgetConfig } from './schema'
+import type { TableWidgetConfig, TableFooterAggregate } from './schema'
+import type { AggregateFn } from '@/features/forms/api'
+import type { FieldType } from '@/features/forms/types'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
+
+// Mirrors the chart widget's own numericTypes gate (ConfigPanel.tsx) so
+// this UI never lets an author configure a footer aggregate the backend
+// would reject as non-numeric.
+const NUMERIC_TYPES: FieldType[] = ['integer', 'decimal']
+const FN_LABELS: Record<AggregateFn, string> = { count: 'Count', sum: 'Sum', avg: 'Average', min: 'Min', max: 'Max' }
 
 // Same field set as features/menus/config-panels/SearchMenuConfigPanel.tsx
 // (form picker, column checkboxes, default filter, default sort, page
@@ -115,6 +123,17 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
       </Label>
 
       {form && (
+        <div className="space-y-1.5">
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Footer totals</Label>
+          <FooterAggregatesList
+            aggregates={config.footerAggregates ?? []}
+            numericFields={form.fields.filter((f) => NUMERIC_TYPES.includes(f.type))}
+            onChange={(footerAggregates) => patch({ footerAggregates: footerAggregates.length > 0 ? footerAggregates : undefined })}
+          />
+        </div>
+      )}
+
+      {form && (
         <div className="space-y-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-3">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Record scoping</p>
           <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
@@ -138,6 +157,60 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
             </SelectMenu>
           )}
         </div>
+      )}
+    </div>
+  )
+}
+
+function FooterAggregatesList({ aggregates, numericFields, onChange }: {
+  aggregates: TableFooterAggregate[]
+  numericFields: { name: string; label: string }[]
+  onChange: (aggregates: TableFooterAggregate[]) => void
+}) {
+  const addAggregate = () => {
+    if (numericFields.length === 0) return
+    onChange([...aggregates, { field: numericFields[0].name, fn: 'sum' }])
+  }
+  const updateAggregate = (i: number, patch: Partial<TableFooterAggregate>) =>
+    onChange(aggregates.map((a, idx) => (idx === i ? { ...a, ...patch } : a)))
+  const removeAggregate = (i: number) => onChange(aggregates.filter((_, idx) => idx !== i))
+
+  return (
+    <div className="space-y-1.5">
+      {aggregates.map((a, i) => (
+        <div key={i} className="flex items-center gap-1.5">
+          <SelectMenu value={a.fn} onValueChange={(v) => updateAggregate(i, { fn: v as AggregateFn })}>
+            <SelectTrigger className="h-7 w-24 shrink-0 text-[11px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {(Object.keys(FN_LABELS) as AggregateFn[]).map((fn) => (
+                <SelectItem key={fn} value={fn} className="text-xs">{FN_LABELS[fn]}</SelectItem>
+              ))}
+            </SelectContent>
+          </SelectMenu>
+          <SelectMenu value={a.field} onValueChange={(v) => updateAggregate(i, { field: v })}>
+            <SelectTrigger className="h-7 min-w-0 flex-1 text-[11px]"><SelectValue placeholder="Field…" /></SelectTrigger>
+            <SelectContent>
+              {numericFields.map((f) => (
+                <SelectItem key={f.name} value={f.name} className="text-xs">{f.label || f.name}</SelectItem>
+              ))}
+              {numericFields.length === 0 && <SelectItem value="__none__" disabled className="text-xs">No numeric fields</SelectItem>}
+            </SelectContent>
+          </SelectMenu>
+          <button type="button" onClick={() => removeAggregate(i)} className="shrink-0 rounded px-1.5 py-1 text-[11px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]">
+            ✕
+          </button>
+        </div>
+      ))}
+      {numericFields.length === 0 ? (
+        <p className="text-[11px] text-[hsl(var(--muted-foreground))]">This form has no numeric fields to total.</p>
+      ) : (
+        <button
+          type="button"
+          onClick={addAggregate}
+          className="w-full rounded-md border border-dashed border-[hsl(var(--border))] py-1 text-[11px] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--muted-foreground))]/40"
+        >
+          + Footer total
+        </button>
       )}
     </div>
   )

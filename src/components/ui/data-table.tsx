@@ -46,12 +46,18 @@ export interface DataTableProps {
    *  let a viewer reorder a saved view's columns; onReorder receives the
    *  full new column-key order. */
   onColumnsReorder?: (newColumnKeys: string[]) => void
+  /** Optional summary row rendered in a <tfoot>, below the body — one entry
+   *  per column key; a column absent from the map renders a blank cell.
+   *  Omitted entirely (no <tfoot> at all) for every caller that doesn't
+   *  pass it, so this is a no-op everywhere except the dashboard table
+   *  widget's own opt-in footerAggregates config. */
+  footer?: Record<string, React.ReactNode>
 }
 
 // A plain native <table>, not a Radix primitive — there's no accessible-
 // primitives gap to fill for tabular data (same reasoning select.tsx's
 // native <select> variant already demonstrates elsewhere in this codebase).
-export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortChange, onRowClick, onRowDoubleClick, emptyMessage, loading, onColumnsReorder }: DataTableProps) {
+export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortChange, onRowClick, onRowDoubleClick, emptyMessage, loading, onColumnsReorder, footer }: DataTableProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -132,6 +138,17 @@ export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortC
           </>
         )}
       </tbody>
+      {footer && !loading && (
+        <tfoot>
+          <tr className="border-t font-medium" style={{ borderColor: 'hsl(var(--border))' }}>
+            {columns.map((col) => (
+              <td key={col.key} className={cn('px-3 py-2', col.align === 'right' && 'text-right')}>
+                {footer[col.key] ?? ''}
+              </td>
+            ))}
+          </tr>
+        </tfoot>
+      )}
     </table>
   )
 

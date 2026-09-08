@@ -7,6 +7,7 @@ import { Loader2, AlertCircle, BarChart3 } from 'lucide-react'
 import type { WidgetRendererProps } from '../../widget-contract'
 import { DATE_FIELD_TYPES, type ChartWidgetConfig } from './schema'
 import { useChartData } from './useChartData'
+import { stripBucketSortPrefix } from './bucket-label'
 import { mergeFilters, rangeToConditions } from './runtime-filter'
 import type { DateRange } from './date-range'
 import { RuntimeToolbar } from './RuntimeToolbar'
@@ -120,7 +121,7 @@ export function ChartRenderer({ config, clientId, appId, menus, mode }: WidgetRe
     // own positional val_N aliasing (aggregate.go) so no name-based lookup
     // is needed between the two.
     const rows = groups.map((g) => {
-      const row: Record<string, string | number> = { key: g.key }
+      const row: Record<string, string | number> = { key: stripBucketSortPrefix(g.key) }
       g.values.forEach((v, i) => { row[`val_${i}`] = v })
       return row
     })

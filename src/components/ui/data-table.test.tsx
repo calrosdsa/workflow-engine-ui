@@ -70,3 +70,27 @@ describe('DataTable — row click/double-click/keyboard activation', () => {
     expect(row.className).not.toContain('cursor-pointer')
   })
 })
+
+describe('DataTable — footer row', () => {
+  const twoCols: DataTableColumn[] = [{ key: 'name', label: 'Name' }, { key: 'amount', label: 'Amount' }]
+
+  it('renders no <tfoot> at all when footer is omitted', () => {
+    const { container } = render(<DataTable columns={twoCols} rows={rows} getRowId={(r) => r.id as string} />)
+    expect(container.querySelector('tfoot')).toBeNull()
+  })
+
+  it('renders one footer cell per column, blank for a column absent from the map', () => {
+    render(<DataTable columns={twoCols} rows={rows} getRowId={(r) => r.id as string} footer={{ amount: '$100.00' }} />)
+    const footerRow = screen.getByText('$100.00').closest('tr')!
+    expect(footerRow.parentElement?.tagName).toBe('TFOOT')
+    const cells = footerRow.querySelectorAll('td')
+    expect(cells).toHaveLength(2)
+    expect(cells[0].textContent).toBe('') // "name" absent from footer
+    expect(cells[1].textContent).toBe('$100.00')
+  })
+
+  it('suppresses the footer while loading, alongside the skeleton rows', () => {
+    const { container } = render(<DataTable columns={twoCols} rows={rows} getRowId={(r) => r.id as string} footer={{ amount: '$100.00' }} loading />)
+    expect(container.querySelector('tfoot')).toBeNull()
+  })
+})

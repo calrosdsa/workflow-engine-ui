@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { BarChart3, LineChart as LineChartIcon, AreaChart as AreaChartIcon, PieChart as PieChartIcon, Hash, Plus, Trash2 } from 'lucide-react'
 import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenceSelect'
 import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuilder'
@@ -84,9 +85,25 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
             onChange={(f) => patch({ groupBy: f ? { field: f } : undefined })}
           />
           {config.groupBy?.field && DATE_FIELD_TYPES.includes(fields.find((f) => f.name === config.groupBy?.field)?.type as FieldType) && (
-            <BucketSelect
-              value={config.groupBy.bucket}
-              onChange={(bucket) => patch({ groupBy: { ...config.groupBy!, bucket } })}
+            <>
+              <BucketSelect
+                value={config.groupBy.bucket}
+                onChange={(bucket) => patch({ groupBy: { field: config.groupBy!.field, bucket } })}
+              />
+              <RangesInput
+                key={config.groupBy.field}
+                value={config.groupBy.ranges}
+                placeholder="Age in days, e.g. 30, 60, 90, 120"
+                onChange={(ranges) => patch({ groupBy: { field: config.groupBy!.field, ranges } })}
+              />
+            </>
+          )}
+          {config.groupBy?.field && NUMERIC_TYPES.includes(fields.find((f) => f.name === config.groupBy?.field)?.type as FieldType) && (
+            <RangesInput
+              key={config.groupBy.field}
+              value={config.groupBy.ranges}
+              placeholder="Breakpoints, e.g. 1000, 10000"
+              onChange={(ranges) => patch({ groupBy: { field: config.groupBy!.field, ranges } })}
             />
           )}
         </div>
@@ -245,6 +262,39 @@ function BucketSelect({ value, onChange }: { value?: DateBucket; onChange: (buck
         ))}
       </SelectContent>
     </SelectMenu>
+  )
+}
+
+// RangesInput edits a groupBy dimension's ascending numeric breakpoints as
+// free text ("30, 60, 90, 120"), mirroring ERPNext's own ageing-report
+// bucket editor. Keyed by the dimension's field name at the call site
+// (React remounts it on a field switch, resetting local state) rather than
+// derived from config on every render — an effect re-syncing from
+// config.groupBy.ranges on every keystroke would strip a trailing "," or
+// partial number while the user is still typing it. Commits on blur only:
+// the live preview updates a beat after typing stops, not per keystroke,
+// which is the trade this buffering makes.
+function RangesInput({ value, onChange, placeholder }: {
+  value?: number[]
+  onChange: (ranges: number[] | undefined) => void
+  placeholder: string
+}) {
+  const [text, setText] = useState(value?.join(', ') ?? '')
+  const commit = () => {
+    const ranges = text
+      .split(',')
+      .map((s) => Number(s.trim()))
+      .filter((n) => Number.isFinite(n))
+    onChange(ranges.length > 0 ? ranges : undefined)
+  }
+  return (
+    <Input
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      placeholder={placeholder}
+      className="h-8 text-sm"
+    />
   )
 }
 

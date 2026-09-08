@@ -46,6 +46,21 @@ describe('parseTableConfig', () => {
     expect(parseTableConfig({ formId: 'f1', allowUserFilter: true }).allowUserFilter).toBe(true)
   })
 
+  it('round-trips footerAggregates', () => {
+    const parsed = parseTableConfig({ formId: 'f1', footerAggregates: [{ field: 'amount', fn: 'sum' }, { field: 'qty', fn: 'avg' }] })
+    expect(parsed.footerAggregates).toEqual([{ field: 'amount', fn: 'sum' }, { field: 'qty', fn: 'avg' }])
+  })
+
+  it('drops footerAggregates entries with an unrecognized fn or a missing field, and an empty result becomes undefined', () => {
+    const parsed = parseTableConfig({
+      formId: 'f1',
+      footerAggregates: [{ field: 'amount', fn: 'median' }, { fn: 'sum' }, 'not-an-object', { field: 'amount', fn: 'sum' }],
+    })
+    expect(parsed.footerAggregates).toEqual([{ field: 'amount', fn: 'sum' }])
+    expect(parseTableConfig({ formId: 'f1', footerAggregates: [{ field: 'amount', fn: 'median' }] }).footerAggregates).toBeUndefined()
+    expect(parseTableConfig({ formId: 'f1', footerAggregates: 'not-an-array' }).footerAggregates).toBeUndefined()
+  })
+
   it('createDefaultTableConfig produces an empty-formId config with sane defaults', () => {
     expect(createDefaultTableConfig()).toEqual({
       formId: '', columns: [], pageSize: 10, allowUserFilter: false, rowClick: 'record',

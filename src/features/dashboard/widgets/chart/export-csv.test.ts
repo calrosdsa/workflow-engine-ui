@@ -20,6 +20,12 @@ describe('buildChartCsv', () => {
     expect(buildChartCsv(config, groups)).toBe('status,region,Count\r\nopen,west,3')
   })
 
+  it('strips a range bucket\'s sort-safe prefix from key and key2', () => {
+    const config: ChartWidgetConfig = { ...createDefaultChartConfig(), groupBy: { field: 'due_date', ranges: [30, 60] }, groupBy2: { field: 'amount', ranges: [1000] } }
+    const groups: AggregateGroupResponse[] = [{ key: '00\x1f<= 30', key2: '01\x1f> 1000', values: [3] }]
+    expect(buildChartCsv(config, groups)).toBe('due_date,amount,Count\r\n<= 30,> 1000,3')
+  })
+
   it('quotes cells containing commas, quotes, or newlines', () => {
     const config: ChartWidgetConfig = { ...createDefaultChartConfig(), groupBy: { field: 'status' } }
     const groups: AggregateGroupResponse[] = [{ key: 'a, "quoted"', values: [1] }]

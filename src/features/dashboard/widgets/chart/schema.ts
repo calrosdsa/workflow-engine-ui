@@ -15,6 +15,12 @@ export const DATE_FIELD_TYPES: FieldType[] = ['date', 'datetime']
 export interface ChartDimension {
   field: string
   bucket?: DateBucket
+  /** Ascending breakpoints bucketing the dimension into bands instead of
+   *  (never together with) `bucket` — mirrors workflow-engine's own
+   *  AggregateDimension.Ranges. On a numeric field, bands the field's own
+   *  value; on a date/datetime field, bands its AGE IN DAYS FROM TODAY
+   *  (negative = not yet due), the shape an ageing report needs. */
+  ranges?: number[]
 }
 
 export interface ChartSeries {
@@ -48,7 +54,12 @@ function parseDimension(raw: unknown): ChartDimension | undefined {
   if (!raw || typeof raw !== 'object') return undefined
   const r = raw as Partial<ChartDimension>
   if (typeof r.field !== 'string' || !r.field) return undefined
-  return { field: r.field, bucket: r.bucket && VALID_BUCKETS.includes(r.bucket) ? r.bucket : undefined }
+  const ranges = Array.isArray(r.ranges) ? r.ranges.filter((n): n is number => typeof n === 'number' && Number.isFinite(n)) : undefined
+  return {
+    field: r.field,
+    bucket: r.bucket && VALID_BUCKETS.includes(r.bucket) ? r.bucket : undefined,
+    ranges: ranges && ranges.length > 0 ? ranges : undefined,
+  }
 }
 
 function parseSeries(raw: unknown): ChartSeries[] {
@@ -111,6 +122,11 @@ export const CHART_CONFIG_SCHEMA: ConfigSchema = {
       properties: {
         field: { type: 'string', description: 'Field to group rows by.' },
         bucket: { type: 'string', enum: ['day', 'week', 'month', 'quarter', 'year'], description: 'For date/datetime fields: bucket rows into this period.' },
+        ranges: {
+          type: 'array',
+          items: { type: 'number' },
+          description: "Ascending breakpoints bucketing into bands instead of (never together with) 'bucket'. On a numeric field, bands the field's own value. On a date/datetime field, bands its AGE IN DAYS FROM TODAY (negative = not yet due) — e.g. [30, 60, 90] on a due-date field makes an ageing report's classic <=30/31-60/61-90/>90 overdue bands.",
+        },
       },
       description: "Primary dimension. Omit only for chartType 'stat'.",
     },

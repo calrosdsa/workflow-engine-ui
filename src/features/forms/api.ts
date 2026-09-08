@@ -31,6 +31,7 @@ export type DateBucket = 'day' | 'week' | 'month' | 'quarter' | 'year'
 export interface AggregateDimensionRequest {
   field: string
   bucket?: DateBucket
+  ranges?: number[]
 }
 
 export interface AggregateSeriesRequest {

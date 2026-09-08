@@ -55,6 +55,7 @@ export function TableRenderer({ config, recordContext }: WidgetRendererProps<Tab
         pageSize={config.pageSize}
         allowFilter={config.allowUserFilter}
         rowClick={config.rowClick === 'record'}
+        footerAggregates={config.footerAggregates}
       />
     </div>
   )

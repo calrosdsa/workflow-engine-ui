@@ -7,7 +7,7 @@ describe('parseChartConfig', () => {
       formId: 'f1',
       chartType: 'line' as const,
       groupBy: { field: 'created_at', bucket: 'month' as const },
-      groupBy2: { field: 'status' },
+      groupBy2: { field: 'amount', ranges: [1000, 10000] },
       series: [{ fn: 'sum' as const, field: 'amount', label: 'Total', color: '#123456' }],
       filter: { id: 'g1', combinator: 'and' as const, conditions: [], groups: [] },
       sortBy: 'value' as const,
@@ -37,6 +37,18 @@ describe('parseChartConfig', () => {
   it('drops an invalid bucket but keeps the field', () => {
     const parsed = parseChartConfig({ formId: 'f1', groupBy: { field: 'created_at', bucket: 'fortnight' } })
     expect(parsed.groupBy).toEqual({ field: 'created_at', bucket: undefined })
+  })
+
+  it('round-trips ranges', () => {
+    const parsed = parseChartConfig({ formId: 'f1', groupBy: { field: 'amount', ranges: [30, 60, 90] } })
+    expect(parsed.groupBy).toEqual({ field: 'amount', bucket: undefined, ranges: [30, 60, 90] })
+  })
+
+  it('filters non-numeric entries out of ranges, and drops an empty result to undefined', () => {
+    const parsed = parseChartConfig({ formId: 'f1', groupBy: { field: 'amount', ranges: [30, 'sixty', null, 90] } })
+    expect(parsed.groupBy?.ranges).toEqual([30, 90])
+    expect(parseChartConfig({ formId: 'f1', groupBy: { field: 'amount', ranges: ['a', 'b'] } }).groupBy?.ranges).toBeUndefined()
+    expect(parseChartConfig({ formId: 'f1', groupBy: { field: 'amount', ranges: 'not-an-array' } }).groupBy?.ranges).toBeUndefined()
   })
 
   it('filters out series entries with an unrecognized fn', () => {

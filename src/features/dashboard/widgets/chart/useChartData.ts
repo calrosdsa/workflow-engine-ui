@@ -23,8 +23,8 @@ export function buildAggregateRequest(config: ChartWidgetConfig): AggregateRecor
   if (config.chartType !== 'stat' && !config.groupBy?.field) return null
 
   return {
-    group_by: config.groupBy?.field ? { field: config.groupBy.field, bucket: config.groupBy.bucket } : undefined,
-    group_by2: config.groupBy2?.field ? { field: config.groupBy2.field, bucket: config.groupBy2.bucket } : undefined,
+    group_by: config.groupBy?.field ? { field: config.groupBy.field, bucket: config.groupBy.bucket, ranges: config.groupBy.ranges } : undefined,
+    group_by2: config.groupBy2?.field ? { field: config.groupBy2.field, bucket: config.groupBy2.bucket, ranges: config.groupBy2.ranges } : undefined,
     series: config.series.length > 0 ? config.series.map((s) => ({ fn: s.fn, field: s.field })) : undefined,
     filter: config.filter,
     sort_by: config.sortBy,

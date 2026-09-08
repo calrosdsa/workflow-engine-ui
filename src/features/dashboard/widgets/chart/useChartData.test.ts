@@ -41,6 +41,18 @@ describe('buildAggregateRequest', () => {
     })
   })
 
+  it('threads ranges through for both group_by and group_by2', () => {
+    const config = {
+      ...createDefaultChartConfig(),
+      formId: 'f1',
+      groupBy: { field: 'due_date', ranges: [30, 60, 90] },
+      groupBy2: { field: 'amount', ranges: [1000] },
+    }
+    const req = buildAggregateRequest(config)
+    expect(req!.group_by).toEqual({ field: 'due_date', bucket: undefined, ranges: [30, 60, 90] })
+    expect(req!.group_by2).toEqual({ field: 'amount', bucket: undefined, ranges: [1000] })
+  })
+
   it('omits series entirely (not an empty array) when the config has none, letting the backend default apply', () => {
     const config = { ...createDefaultChartConfig(), formId: 'f1', groupBy: { field: 'status' }, series: [] }
     const req = buildAggregateRequest(config)

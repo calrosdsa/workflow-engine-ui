@@ -1,7 +1,13 @@
 import type { ConfigSchema } from '@/lib/config-schema'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
+import type { AggregateFn } from '@/features/forms/api'
 
 export type TableRowClick = 'none' | 'record'
+
+export interface TableFooterAggregate {
+  field: string
+  fn: AggregateFn
+}
 
 export interface TableWidgetConfig {
   formId: string
@@ -24,9 +30,25 @@ export interface TableWidgetConfig {
    *  must be a reference field on `formId` pointing back at the tab's
    *  owning form — same restriction related_form's targetFieldName applies. */
   scopeToRecord?: { fieldName: string }
+  /** One summary-row aggregate per numeric field, opt-in — computed via the
+   *  same /records/aggregate series call the chart widget already uses
+   *  (no group_by), covering every record matching defaultFilter/a live
+   *  viewer filter, not just the current page. A field absent here renders
+   *  a blank footer cell. */
+  footerAggregates?: TableFooterAggregate[]
 }
 
 const VALID_ROW_CLICK: TableRowClick[] = ['none', 'record']
+const VALID_FNS: AggregateFn[] = ['count', 'sum', 'avg', 'min', 'max']
+
+function parseFooterAggregates(raw: unknown): TableFooterAggregate[] | undefined {
+  if (!Array.isArray(raw)) return undefined
+  const parsed = raw
+    .filter((a): a is Record<string, unknown> => !!a && typeof a === 'object')
+    .filter((a) => typeof a.field === 'string' && a.field && typeof a.fn === 'string' && VALID_FNS.includes(a.fn as AggregateFn))
+    .map((a) => ({ field: a.field as string, fn: a.fn as AggregateFn }))
+  return parsed.length > 0 ? parsed : undefined
+}
 
 export function parseTableConfig(raw: unknown): TableWidgetConfig {
   if (raw && typeof raw === 'object') {
@@ -43,6 +65,7 @@ export function parseTableConfig(raw: unknown): TableWidgetConfig {
         scopeToRecord: r.scopeToRecord && typeof r.scopeToRecord.fieldName === 'string'
           ? { fieldName: r.scopeToRecord.fieldName }
           : undefined,
+        footerAggregates: parseFooterAggregates(r.footerAggregates),
       }
     }
   }
@@ -70,6 +93,18 @@ export const TABLE_CONFIG_SCHEMA: ConfigSchema = {
       required: ['fieldName'],
       properties: { fieldName: { type: 'string' } },
       description: "Only meaningful inside a detail-page 'custom' tab: narrows the table to records whose reference field `fieldName` points at the record being viewed. Ignored on a Dashboard menu.",
+    },
+    footerAggregates: {
+      type: 'array',
+      description: 'One summary-row aggregate per numeric field, opt-in. Computed over every matching record (all pages), not just the visible page. A field not listed here renders a blank footer cell.',
+      items: {
+        type: 'object',
+        required: ['field', 'fn'],
+        properties: {
+          field: { type: 'string', description: 'A numeric field on this widget\'s form.' },
+          fn: { type: 'string', enum: ['count', 'sum', 'avg', 'min', 'max'] },
+        },
+      },
     },
   },
 }

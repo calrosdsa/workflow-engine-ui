@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Filter as FilterIcon, Maximize2, Loader2, AlertCircle, Search } from 'lucide-react'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { formsApi } from '@/features/forms/api'
+import type { AggregateFn } from '@/features/forms/api'
 import { cn } from '@/lib/utils'
 import { DataTable } from '@/components/ui/data-table'
 import { Button } from '@/components/ui/button'
@@ -99,6 +100,19 @@ export interface RecordsTableProps {
    *  saved view at all (the dashboard table widget), which simply never
    *  offers a way to persist a live change back anywhere. */
   onLiveConfigChange?: (patch: { columns?: string[]; filter?: FilterGroup; sort?: SortRule[]; layoutConfig?: CalendarLayoutConfig | KanbanLayoutConfig | TreeLayoutConfig }) => void
+  /** Renders a summary row below the List layout's table, one aggregate per
+   *  named field — computed via a SEPARATE, filter-matched /records/
+   *  aggregate call (no group_by), so it covers every matching record
+   *  across every page, not just the one currently shown; a live
+   *  allowFilter change re-runs it exactly like the main query. Formatted
+   *  through the same field.number_format a regular numeric column cell
+   *  already uses, so a summed currency column reads as money in its
+   *  total too. Does NOT additionally account for the free-text search box
+   *  (allowSearch) when both happen to be enabled together — a rare
+   *  combination left unhandled rather than silently wrong. Omitted
+   *  entirely (no extra query, no <tfoot>) for every caller that doesn't
+   *  pass it, and ignored outside the List layout. */
+  footerAggregates?: { field: string; fn: AggregateFn }[]
 }
 
 // Extracted from features/menus/runtime/SearchMenuRuntime.tsx (Phase 4 of
@@ -140,6 +154,7 @@ export function RecordsTable({
   formId, columns: columnsProp, defaultFilter, defaultSort, pageSize: pageSizeProp,
   allowFilter = false, allowSearch = false, rowClick = true, headerActions, onExpandRecord, title,
   layout = 'list', layoutConfig: layoutConfigProp, columnDragEnabled = false, onLiveConfigChange,
+  footerAggregates,
 }: RecordsTableProps) {
   const { data: form, isLoading: isFormLoading, isError: isFormError } = useFormDef(formId)
   // Called unconditionally, above the early returns below (isFormLoading/
@@ -223,6 +238,28 @@ export function RecordsTable({
     queryKey: ['forms', formId, 'search', filter, sort, page, pageSize, canSearch ? query : ''],
     queryFn: () => formsApi.searchRecords(formId, { filter, sort, page, page_size: pageSize, query: (canSearch && query) || undefined }),
     enabled: !!formId && layout !== 'kanban',
+  })
+
+  // Same filter as the main results query, but no group_by, no sort, no
+  // page/pageSize — an aggregate over the WHOLE matching set is exactly one
+  // query regardless of how many pages that set spans, which is the point:
+  // a footer total that only summed the current page would silently
+  // understate a filtered set of more than one page.
+  const { data: footerAgg } = useQuery({
+    queryKey: ['forms', formId, 'aggregate', 'footer', filter, footerAggregates],
+    queryFn: () =>
+      formsApi.aggregateRecords(formId, {
+        series: footerAggregates!.map((f) => ({ fn: f.fn, field: f.field })),
+        filter,
+      }),
+    // Gated on the raw `layout` prop, not `effectiveLayout` below (a
+    // stale-field List fallback) -- that fallback needs `form`, which isn't
+    // loaded yet at this point in the component (every hook here runs
+    // unconditionally, before the early "still loading" returns further
+    // down). Harmless: a query enabled one render early for a Calendar/
+    // Kanban/Tree config that's about to fall back to List just means one
+    // fetch starts slightly sooner, never a wrong result.
+    enabled: !!formId && !!footerAggregates && footerAggregates.length > 0 && layout === 'list',
   })
 
   // selectedRecord is a point-in-time snapshot of the clicked table row, so
@@ -356,6 +393,23 @@ export function RecordsTable({
         : undefined,
     }
   })
+
+  // One aggregate value per footerAggregates entry, formatted through that
+  // same column's own field.number_format so a summed currency column
+  // reads as money in its total exactly like an ordinary numeric cell does
+  // (dataTableColumns above). A field absent from fieldsWithSystem (a typo,
+  // or a field deleted after this widget was configured) is skipped rather
+  // than crashing the tile.
+  const footer: Record<string, React.ReactNode> | undefined =
+    footerAggregates && footerAggregates.length > 0 && footerAgg?.groups[0]
+      ? Object.fromEntries(
+          footerAggregates.map((agg, i) => {
+            const field = fieldsWithSystem.find((f) => f.name === agg.field)
+            const value = footerAgg.groups[0].values[i]
+            return [agg.field, formatFieldValue(value, field?.type, field?.number_format)]
+          }),
+        )
+      : undefined
 
   // Every one of these wraps the underlying setState call with an
   // onLiveConfigChange notification — the single mechanism SearchMenuRuntime
@@ -556,6 +610,7 @@ export function RecordsTable({
             onRowClick={rowClick ? openRecord : undefined}
             onRowDoubleClick={rowClick && onExpandRecord ? onExpandRecord : undefined}
             loading={isLoading}
+            footer={footer}
             emptyMessage={
               isSearchError
                 ? "Couldn't load records — try again."
