@@ -11,7 +11,7 @@
 // RuntimeSidebar.tsx, buildMenuTree) — none of them switch on menu_type
 // themselves, they all delegate to this registry.
 import type { ComponentType } from 'react'
-import { Search, PlusSquare, FolderTree, LayoutTemplate, LayoutDashboard, Code2, LayoutGrid, type LucideIcon } from 'lucide-react'
+import { Search, PlusSquare, FolderTree, LayoutTemplate, LayoutDashboard, Code2, LayoutGrid, FileChartColumn, type LucideIcon } from 'lucide-react'
 import type { ConfigSchema } from '@/lib/config-schema'
 import type { Menu, MenuType } from './types'
 import type { FilterGroup } from '@/features/workflows/types'
@@ -21,12 +21,14 @@ import { ParentMenuConfigPanel } from './config-panels/ParentMenuConfigPanel'
 import { CustomMenuConfigPanel } from './config-panels/CustomMenuConfigPanel'
 import { DashboardMenuConfigPanel } from './config-panels/DashboardMenuConfigPanel'
 import { HtmlMenuConfigPanel } from './config-panels/HtmlMenuConfigPanel'
+import { ReportMenuConfigPanel } from './config-panels/ReportMenuConfigPanel'
 import { SearchMenuRuntime } from './runtime/SearchMenuRuntime'
 import { AddMenuRuntime } from './runtime/AddMenuRuntime'
 import { ParentMenuRuntime } from './runtime/ParentMenuRuntime'
 import { CustomMenuRuntime } from './runtime/CustomMenuRuntime'
 import { DashboardMenuRuntime } from './runtime/DashboardMenuRuntime'
 import { HtmlMenuRuntime } from './runtime/HtmlMenuRuntime'
+import { ReportMenuRuntime } from './runtime/ReportMenuRuntime'
 import { emptyPageSchema } from '@/features/page-builder/schema'
 import { emptyDashboardSchema } from '@/features/dashboard/schema'
 // Side-effecting: registers every built-in widget plugin (widgets/index.ts)
@@ -279,6 +281,24 @@ export const MENU_TYPE_REGISTRY: Record<MenuType, MenuTypeRegistryEntry> = {
     configPanel: HtmlMenuConfigPanel,
     runtimeRenderer: HtmlMenuRuntime,
     createDefaultConfig: () => ({ html: '', data_sources: [], write_targets: [], allowed_hosts: [] }),
+  },
+  report: {
+    type: 'report',
+    label: 'Report',
+    icon: FileChartColumn,
+    description: 'A saved report, live and filterable on screen',
+    category: 'Data',
+    configSchema: {
+      type: 'object',
+      description: 'A saved Report Builder definition rendered live at runtime — sortable-free but real, clickable, filterable by the report’s own declared arguments, as opposed to Report Builder’s own Preview (a byte-faithful downloaded file). The report’s own visibility field, not this menu’s permission config, is the authorization boundary a viewer is checked against.',
+      required: ['report_definition_id'],
+      properties: {
+        report_definition_id: { type: 'string', description: 'Id of the report_definitions row to render.' },
+      },
+    },
+    configPanel: ReportMenuConfigPanel,
+    runtimeRenderer: ReportMenuRuntime,
+    createDefaultConfig: () => ({ report_definition_id: '' }),
   },
 }
 

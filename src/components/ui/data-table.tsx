@@ -33,6 +33,15 @@ export interface DataTableProps {
    *  double-click to navigate to the full record page instead. Omitted
    *  entirely (no behavior change) for every consumer that doesn't pass it. */
   onRowDoubleClick?: (row: Record<string, unknown>) => void
+  /** Narrows which rows actually respond to onRowClick/onRowDoubleClick —
+   *  e.g. a report viewer whose rows are a mix of clickable (carry a source
+   *  record id) and non-clickable (an aggregate row, a total row) ones.
+   *  Omitted entirely: every row with a click handler is activatable, the
+   *  original all-or-nothing behavior every existing caller still gets. The
+   *  click handlers themselves are still wired unconditionally either way —
+   *  this only gates the activatable STYLING (cursor, hover, focus ring,
+   *  keyboard tab stop) so a non-clickable row doesn't look clickable. */
+  isRowClickable?: (row: Record<string, unknown>) => boolean
   emptyMessage?: string
   /** Renders skeleton placeholder rows instead of `rows` — lets every
    *  consumer (search lists, audit/linked-record tabs) share one loading
@@ -57,7 +66,7 @@ export interface DataTableProps {
 // A plain native <table>, not a Radix primitive — there's no accessible-
 // primitives gap to fill for tabular data (same reasoning select.tsx's
 // native <select> variant already demonstrates elsewhere in this codebase).
-export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortChange, onRowClick, onRowDoubleClick, emptyMessage, loading, onColumnsReorder, footer }: DataTableProps) {
+export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortChange, onRowClick, onRowDoubleClick, isRowClickable, emptyMessage, loading, onColumnsReorder, footer }: DataTableProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -112,7 +121,7 @@ export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortC
               </tr>
             )}
             {rows.map((row) => {
-              const activatable = onRowClick || onRowDoubleClick
+              const activatable = (onRowClick || onRowDoubleClick) && (!isRowClickable || isRowClickable(row))
               return (
                 <tr
                   key={getRowId(row)}

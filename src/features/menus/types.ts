@@ -13,7 +13,7 @@ import type { FilterGroup, SortRule } from '@/features/workflows/types'
 import type { PageSchema } from '@/features/page-builder/schema'
 import type { DashboardSchema } from '@/features/dashboard/schema'
 
-export type MenuType = 'search' | 'add' | 'parent' | 'custom' | 'dashboard' | 'html' | 'module'
+export type MenuType = 'search' | 'add' | 'parent' | 'custom' | 'dashboard' | 'html' | 'module' | 'report'
 
 export interface SearchMenuConfig {
   form_id: string
@@ -116,7 +116,18 @@ export interface HtmlMenuConfig {
   allowed_hosts: string[]
 }
 
-export type MenuConfig = SearchMenuConfig | AddMenuConfig | ParentMenuConfig | CustomMenuConfig | DashboardMenuConfig | HtmlMenuConfig | ModuleMenuConfig
+/** Drives a Report menu — a saved report, live and filterable on screen (as
+ *  opposed to the Report Builder's own Preview, which downloads a rendered
+ *  file). Deliberately just the report's id: no per-argument default
+ *  override lives here. The runtime viewer already renders a live argument
+ *  filter bar built from the report's own declared Arguments (each with its
+ *  own `default`), so a second, menu-placement-specific override layer
+ *  would be a real but separable enhancement, not something v1 needs. */
+export interface ReportMenuConfig {
+  report_definition_id: string
+}
+
+export type MenuConfig = SearchMenuConfig | AddMenuConfig | ParentMenuConfig | CustomMenuConfig | DashboardMenuConfig | HtmlMenuConfig | ModuleMenuConfig | ReportMenuConfig
 
 /** How the "Permission" section of the menu editor gates visibility:
  *  'all' shows the menu to anyone who can view the app; 'role' restricts it

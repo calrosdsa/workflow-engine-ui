@@ -40,3 +40,14 @@ export function useDeleteReport() {
     onSuccess:  () => qc.invalidateQueries({ queryKey: reportKeys.all }),
   })
 }
+
+// A mutation, not a query, matching this codebase's own convention for a
+// POST-with-arbitrary-body compute endpoint (see useQueryKnowledgeBase in
+// features/knowledge/hooks.ts) — argument values change per invocation and
+// aren't a natural cache key, and the caller wants explicit trigger-on-click
+// (mutate/mutateAsync) rather than eager fetch-on-render.
+export function useRuntimeReport(reportId: string) {
+  return useMutation({
+    mutationFn: (argumentValues?: Record<string, unknown>) => reportsApi.runtime(reportId, argumentValues),
+  })
+}

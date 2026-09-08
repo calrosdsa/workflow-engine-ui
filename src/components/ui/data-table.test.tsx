@@ -69,6 +69,33 @@ describe('DataTable — row click/double-click/keyboard activation', () => {
     expect(row.getAttribute('tabIndex')).toBeNull()
     expect(row.className).not.toContain('cursor-pointer')
   })
+
+  it('isRowClickable narrows which rows get the activatable styling, without disabling the click handler itself', () => {
+    const onRowClick = vi.fn()
+    const mixedRows = [{ id: '1', name: 'Clickable' }, { id: '2', name: 'Not clickable' }]
+    render(
+      <DataTable
+        columns={columns}
+        rows={mixedRows}
+        getRowId={(r) => r.id as string}
+        onRowClick={onRowClick}
+        isRowClickable={(row) => row.id === '1'}
+      />,
+    )
+
+    const clickableRow = screen.getByText('Clickable').closest('tr')!
+    const nonClickableRow = screen.getByText('Not clickable').closest('tr')!
+    expect(clickableRow.getAttribute('tabIndex')).toBe('0')
+    expect(clickableRow.className).toContain('cursor-pointer')
+    expect(nonClickableRow.getAttribute('tabIndex')).toBeNull()
+    expect(nonClickableRow.className).not.toContain('cursor-pointer')
+
+    // The handler itself is still wired on every row — a caller that wants
+    // the click to truly no-op on a non-clickable row checks the row inside
+    // its own onRowClick, the same way isRowClickable's predicate does.
+    fireEvent.click(nonClickableRow)
+    expect(onRowClick).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('DataTable — footer row', () => {
