@@ -153,6 +153,33 @@ describe('WorkbookRegionsPanel', () => {
     expect(useReportStore.getState().definition.blocks).toHaveLength(1)
     expect(onBeforeChange).toHaveBeenCalledOnce()
   })
+
+  // Table and group both take a source_id, which only InsertDataMenu's own
+  // source-keyed gesture can supply — creating either from here would leave
+  // it with no data. Related has no source_id at all (it names a
+  // parent/child form pair directly), so InsertDataMenu cannot express it
+  // and it keeps a direct insert here, same as text/image.
+  it('offers Related Records in the plain Insert grid, but not Table or Group', () => {
+    useReportStore.getState().loadDefinition({ ...definition, blocks: [] })
+    renderPanel(<WorkbookRegionsPanel />)
+
+    expect(screen.getByRole('button', { name: 'Add Related Records region' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Add Table region' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Add Group region' })).toBeNull()
+  })
+
+  it('creates a Related Records region from the plain Insert grid', () => {
+    useReportStore.getState().loadDefinition({ ...definition, blocks: [] })
+    const onBeforeChange = vi.fn()
+    renderPanel(<WorkbookRegionsPanel onBeforeChange={onBeforeChange} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Related Records region' }))
+
+    const state = useReportStore.getState()
+    expect(state.definition.blocks).toHaveLength(1)
+    expect(state.definition.blocks[0].type).toBe('related')
+    expect(onBeforeChange).toHaveBeenCalledOnce()
+  })
 })
 
 function renderPanel(panel: ReactNode) {

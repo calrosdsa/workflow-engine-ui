@@ -12,10 +12,16 @@ import { ArgumentsSection } from './ArgumentsSection'
 import type { BlockLayout, NumberFormat, ReportBlockRegion } from '../types'
 import { NumberFormatSection } from './NumberFormatSection'
 
-/** Block types that read a data source, and so are placed by the sheet-native
- *  "Insert data" gesture (SN-01) rather than by a panel button. Everything
- *  else (text, image) has no source to pick and keeps a direct insert. */
-const DATA_BLOCK_TYPES = new Set(['table', 'group', 'related'])
+/** Block types that read a report DATA SOURCE, and so are placed by the
+ *  sheet-native "Insert data" gesture (SN-01) rather than by a panel button
+ *  — table/group have a source_id to pick, so InsertDataMenu's own
+ *  source-keyed list is where they belong. "related" is NOT a data-source
+ *  block despite reading data: RelatedBlockConfig has no source_id at all
+ *  (it names a parent/child form pair directly, block_related.go), so
+ *  InsertDataMenu's "place THIS source here" gesture cannot express it —
+ *  it keeps a direct insert here instead, the same as text/image, and its
+ *  own ConfigPanel is where its parent/child forms get picked afterwards. */
+const DATA_SOURCE_BLOCK_TYPES = new Set(['table', 'group'])
 
 const FALLBACK_SHEET = { id: 'report-layout', name: 'Report layout' }
 
@@ -108,7 +114,7 @@ export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumb
             Insert
           </h3>
           <div className="grid grid-cols-2 gap-1.5">
-            {allReportBlocks().filter((b) => !DATA_BLOCK_TYPES.has(b.type)).map((blockDefinition) => {
+            {allReportBlocks().filter((b) => !DATA_SOURCE_BLOCK_TYPES.has(b.type)).map((blockDefinition) => {
               const Icon = blockDefinition.icon
               return (
                 <Button
@@ -136,7 +142,7 @@ export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumb
         {readNumberFormat && applyNumberFormat && (
           <section className="border-b border-[hsl(var(--border))] p-3" aria-labelledby="number-format-heading">
             <h3 id="number-format-heading" className="sr-only">Number format</h3>
-            <NumberFormatSection read={readNumberFormat} apply={applyNumberFormat} />
+            <NumberFormatSection read={readNumberFormat} apply={applyNumberFormat} getSelection={getSelection} />
           </section>
         )}
 

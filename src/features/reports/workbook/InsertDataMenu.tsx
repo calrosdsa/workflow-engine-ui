@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useForms } from '@/features/forms/hooks'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { createDataSource } from '../data-sources'
 import { useReportStore } from '../store'
 import type { ReportBlockRegion } from '../types'
@@ -22,13 +23,23 @@ interface InsertDataMenuProps {
   onBeforeChange?: () => void
 }
 
+// A data source can back either shape this menu can place: its rows as-is
+// (table) or summed/counted per group (group/subtotal). Related is not
+// offered here — RelatedBlockConfig has no source_id at all (it names a
+// parent/child form pair directly), so this menu's "place THIS source
+// here" gesture cannot express it; it gets its own entry in the rail's
+// plain Insert grid instead (WorkbookRegionsPanel.tsx).
+type InsertableType = 'table' | 'group'
+
 export function InsertDataMenu({ getSelection, onBeforeChange }: InsertDataMenuProps) {
+  const t = useTranslation()
   const definition = useReportStore((state) => state.definition)
   const addBlock = useReportStore((state) => state.addBlock)
   const addDataSource = useReportStore((state) => state.addDataSource)
   const updateBlockConfig = useReportStore((state) => state.updateBlockConfig)
   const { data: formList } = useForms()
   const [open, setOpen] = useState(false)
+  const [type, setType] = useState<InsertableType>('table')
 
   const sources = definition.data_sources ?? []
 
@@ -44,7 +55,13 @@ export function InsertDataMenu({ getSelection, onBeforeChange }: InsertDataMenuP
     // SN-03: the anchor and span come straight from the selection. The panel's
     // coordinate inputs and "Place at selected cells" remain as the secondary
     // path for adjusting it afterwards.
-    const id = addBlock('table', selection)
+    //
+    // updateBlockConfig REPLACES the block's config wholesale rather than
+    // merging (store.ts) — writing only {source_id} here relies on
+    // parse{Table,Group}BlockConfig's own defensive healing to fill in
+    // every other field with its normal default the next time this config
+    // is read, the same as createDefaultConfig would have produced.
+    const id = addBlock(type, selection)
     updateBlockConfig(id, { source_id: sourceID })
     setOpen(false)
   }
@@ -79,6 +96,25 @@ export function InsertDataMenu({ getSelection, onBeforeChange }: InsertDataMenuP
       <DropdownMenuContent align="start" className="w-64">
         <div className="px-2 py-1.5 text-[11px] leading-4 text-[hsl(var(--muted-foreground))]">
           Places the chosen data at the cells you have selected.
+        </div>
+        {/* Plain buttons, not DropdownMenuItem — Radix closes the menu on
+         *  an Item's own select, which a toggle the author needs to see
+         *  the effect of before picking a source must not do. */}
+        <div className="flex gap-1 px-2 pb-1.5">
+          {(['table', 'group'] as const).map((insertableType) => (
+            <button
+              key={insertableType}
+              type="button"
+              onClick={() => setType(insertableType)}
+              className={`flex-1 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+                type === insertableType
+                  ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
+                  : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
+              }`}
+            >
+              {t(insertableType === 'table' ? 'reports.insert_data.type_table' : 'reports.insert_data.type_group')}
+            </button>
+          ))}
         </div>
         <DropdownMenuSeparator />
         {sources.length === 0 ? (

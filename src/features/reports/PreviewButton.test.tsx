@@ -58,7 +58,42 @@ function withOneBlock(base: ReportDefinition): ReportDefinition {
   }
 }
 
+function withWorkbookFormulaOnly(base: ReportDefinition): ReportDefinition {
+  return {
+    ...base,
+    version: 2,
+    workbook: {
+      sheets: [{
+        id: 's1', name: 'Sheet', row_count: 2, column_count: 2,
+        cells: [{ row: 0, col: 0, formula: '=1+1' }],
+      }],
+    },
+  }
+}
+
 describe('PreviewButton — flushing the canvas before reading the store', () => {
+  // THIRD occurrence of this exact bug (run-report.ts's own doc comment
+  // records the first, found live 2026-09-06: hasRenderableContent checked
+  // blocks.length alone and rejected a static-cells-only report as empty).
+  // The second occurrence was fixed by widening hasRenderableContent itself
+  // to also check definition.workbook — which held for a SAVED report, but
+  // not an unsaved one, because the store's workbook stays undefined until
+  // the flush this whole file exists to pin actually runs. A report with
+  // only a formula cell, never saved, must open Preview on the FIRST click,
+  // not only after some other action has already synced the canvas once.
+  it('opens Preview on the first click for a fresh, never-saved report with only a workbook formula cell (regression, 2026-09-06 x3)', () => {
+    useReportStore.getState().loadDefinition(emptyReportDefinition('R'))
+    const onBeforeChange = () => {
+      useReportStore.getState().loadDefinition(withWorkbookFormulaOnly(emptyReportDefinition('R')))
+    }
+    renderButton(onBeforeChange)
+
+    fireEvent.click(screen.getByRole('button', { name: /preview/i }))
+
+    expect(toastError).not.toHaveBeenCalled()
+    expect(screen.getByRole('dialog')).toBeTruthy()
+  })
+
   it('calls onBeforeChange exactly once per click', () => {
     useReportStore.getState().loadDefinition(withOneBlock(emptyReportDefinition('R')))
     const onBeforeChange = vi.fn()

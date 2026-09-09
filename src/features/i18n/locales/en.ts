@@ -126,12 +126,18 @@ export const en = {
   'reports.number_format.preview': 'Preview',
   'reports.number_format.column_none': 'Plain',
   'reports.number_format.done': 'Done',
+  'reports.number_format.select_cells_first': 'Select the cells to format first.',
   'reports.number_format.locale_note':
     "These separators apply to PDF, Word, Markdown and CSV. A spreadsheet always draws its own from the reader's regional settings, so the grid here and a downloaded Excel file may show {{sample}} instead.",
 
   // Report menu runtime viewer's client-side pager (ReportMenuRuntime.tsx) —
   // row_count_one/row_count_other above are reused for the row-count label.
   'reports.runtime.page_size_option': '{{count}} / page',
+
+  // InsertDataMenu's table-vs-group type toggle — which shape the sheet-
+  // native "Insert data" gesture places for the chosen source.
+  'reports.insert_data.type_table': 'Table',
+  'reports.insert_data.type_group': 'Subtotals',
 
   // Dashboard chart widget's runtime-only viewer controls (RuntimeToolbar.tsx
   // / ChartMenu.tsx) — time range, bucket, ad-hoc filter, and the "..." menu.
