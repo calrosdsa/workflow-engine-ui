@@ -175,6 +175,17 @@ export interface ColumnWidth {
   width: number
 }
 
+// FreezePane mirrors Univer's own IFreeze shape field-for-field (see
+// contract.ts) so the editor's frozen-row/frozen-column state round-trips
+// without translation. Only XLSX renders it (FormatCapabilities.freeze) —
+// every other export format has no scrollable viewport to freeze against.
+export interface FreezePane {
+  x_split: number
+  y_split: number
+  start_row: number
+  start_column: number
+}
+
 export interface ReportWorkbookSheet {
   id: string
   name: string
@@ -183,6 +194,7 @@ export interface ReportWorkbookSheet {
   cells?: WorkbookCell[]
   merges?: WorkbookMerge[]
   column_widths?: ColumnWidth[]
+  freeze?: FreezePane
 }
 
 // Version 2 adds a portable spreadsheet template while retaining `blocks`

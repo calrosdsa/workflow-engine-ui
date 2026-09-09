@@ -207,6 +207,103 @@ describe('report workbook contract', () => {
   })
 })
 
+// Frozen panes used to be dropped on both sides of the round trip:
+// fromUniverSheet never read sheet.freeze at all, and toUniverWorkbook
+// hardcoded {xSplit:0,ySplit:0,startRow:0,startColumn:0} for every sheet —
+// so an author freezing a header row via Univer's own native freeze
+// drag-handle/menu command (proven to already work without any custom UI,
+// same as the column-drag-resize path above) would watch it vanish on the
+// next reload.
+describe('frozen panes', () => {
+  it('persists a real freeze split as freeze on save', () => {
+    const workbook = fromUniverWorkbook({
+      id: 'report-builder-workbook',
+      name: 'Board pack',
+      sheetOrder: ['overview'],
+      styles: {},
+      sheets: {
+        overview: {
+          id: 'overview',
+          name: 'Overview',
+          rowCount: 20,
+          columnCount: 8,
+          cellData: {},
+          freeze: { xSplit: 0, ySplit: 1, startRow: 1, startColumn: 0 },
+        },
+      },
+    })
+
+    expect(workbook.sheets[0].freeze).toEqual({ x_split: 0, y_split: 1, start_row: 1, start_column: 0 })
+  })
+
+  it('does not persist an all-zero freeze — Univer always carries one, even unfrozen', () => {
+    const workbook = fromUniverWorkbook({
+      id: 'report-builder-workbook',
+      name: 'Board pack',
+      sheetOrder: ['overview'],
+      styles: {},
+      sheets: {
+        overview: {
+          id: 'overview',
+          name: 'Overview',
+          rowCount: 20,
+          columnCount: 8,
+          cellData: {},
+          freeze: { xSplit: 0, ySplit: 0, startRow: 0, startColumn: 0 },
+        },
+      },
+    })
+
+    expect(workbook.sheets[0].freeze).toBeUndefined()
+  })
+
+  it('rehydrates a saved freeze into Univer, not the hardcoded unfrozen default', () => {
+    const workbook: ReportWorkbook = {
+      sheets: [{
+        id: 'overview',
+        name: 'Overview',
+        row_count: 20,
+        column_count: 8,
+        freeze: { x_split: 2, y_split: 1, start_row: 1, start_column: 2 },
+      }],
+    }
+
+    const snapshot = toUniverWorkbook('Board pack', workbook)
+
+    expect(snapshot.sheets?.overview).toEqual(expect.objectContaining({
+      freeze: { xSplit: 2, ySplit: 1, startRow: 1, startColumn: 2 },
+    }))
+  })
+
+  it('defaults to unfrozen when a sheet has no saved freeze', () => {
+    const workbook: ReportWorkbook = {
+      sheets: [{ id: 'overview', name: 'Overview', row_count: 20, column_count: 8 }],
+    }
+
+    const snapshot = toUniverWorkbook('Board pack', workbook)
+
+    expect(snapshot.sheets?.overview).toEqual(expect.objectContaining({
+      freeze: { xSplit: 0, ySplit: 0, startRow: 0, startColumn: 0 },
+    }))
+  })
+
+  it('survives a full round trip through Univer', () => {
+    const workbook: ReportWorkbook = {
+      sheets: [{
+        id: 'overview',
+        name: 'Overview',
+        row_count: 20,
+        column_count: 8,
+        freeze: { x_split: 0, y_split: 2, start_row: 2, start_column: 0 },
+      }],
+    }
+
+    const back = fromUniverWorkbook(toUniverWorkbook('R', workbook) as Parameters<typeof fromUniverWorkbook>[0])
+
+    expect(back.sheets[0].freeze).toEqual({ x_split: 0, y_split: 2, start_row: 2, start_column: 0 })
+  })
+})
+
 // A border's WIDTH used to be discarded on both sides of the round trip:
 // fromUniverStyle hardcoded `width: 1` no matter which of Univer's 14 border
 // styles the author actually picked, and toUniverStyle hardcoded `s: 1`

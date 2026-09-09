@@ -6,6 +6,7 @@ import type {
 } from '@univerjs/presets'
 import type {
   ColumnWidth,
+  FreezePane,
   NumberFormat,
   ReportWorkbook,
   ReportWorkbookSheet,
@@ -123,7 +124,9 @@ export function toUniverWorkbook(name: string, workbook: ReportWorkbook): Partia
       // entry for it).
       defaultColumnWidth: 112,
       defaultRowHeight: 28,
-      freeze: { xSplit: 0, ySplit: 0, startRow: 0, startColumn: 0 },
+      freeze: sheet.freeze
+        ? { xSplit: sheet.freeze.x_split, ySplit: sheet.freeze.y_split, startRow: sheet.freeze.start_row, startColumn: sheet.freeze.start_column }
+        : { xSplit: 0, ySplit: 0, startRow: 0, startColumn: 0 },
       cellData,
       mergeData: sheet.merges?.map((merge) => ({
         startRow: merge.start_row,
@@ -174,6 +177,13 @@ function fromUniverSheet(
 
   cells.sort((a, b) => a.row - b.row || a.col - b.col)
 
+  // Univer always carries a freeze object, {xSplit:0,ySplit:0,...} included
+  // — only a real split is a customization worth persisting, matching the
+  // "no entry = editor default" convention column_widths already uses.
+  const freeze: FreezePane | undefined = sheet.freeze && (sheet.freeze.xSplit > 0 || sheet.freeze.ySplit > 0)
+    ? { x_split: sheet.freeze.xSplit, y_split: sheet.freeze.ySplit, start_row: sheet.freeze.startRow, start_column: sheet.freeze.startColumn }
+    : undefined
+
   const columnCount = sheet.columnCount ?? 12
   const columnWidths: ColumnWidth[] = Object.entries(sheet.columnData ?? {})
     .map(([colKey, col]) => ({ col: Number(colKey), width: col?.w }))
@@ -206,6 +216,7 @@ function fromUniverSheet(
         }
       : {}),
     ...(columnWidths.length > 0 ? { column_widths: columnWidths } : {}),
+    ...(freeze ? { freeze } : {}),
   }
 }
 
