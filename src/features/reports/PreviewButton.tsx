@@ -21,7 +21,20 @@ import { ReportPreviewDialog } from './ReportPreviewDialog'
 import { hasRenderableContent } from './run-report'
 import { useReportStore } from './store'
 
-export function PreviewButton() {
+export interface PreviewButtonProps {
+  /** Flushes the live Univer canvas into report state before Preview reads
+   *  it — the SAME synchronizeWorkbookBeforeDefinitionChange every sibling
+   *  editor surface (ReportSettingsPanel, UniverWorkbookSurface,
+   *  WorkbookRegionsPanel) already receives under this name, wired here for
+   *  the same reason: a raw cell edit sets workbookNeedsSyncRef but does not
+   *  itself update the store, so without this Preview could render
+   *  everything EXCEPT whatever was just typed into the grid — the one
+   *  render path that is supposed to be byte-truthful, fed stale input.
+   *  Preview is a read, not a mutation, but the hazard is identical. */
+  onBeforeChange?: () => void
+}
+
+export function PreviewButton({ onBeforeChange }: PreviewButtonProps) {
   const definition = useReportStore((s) => s.definition)
   const [promptOpen, setPromptOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
@@ -35,7 +48,19 @@ export function PreviewButton() {
   }
 
   const handlePreview = () => {
-    if (!hasRenderableContent(definition)) {
+    // Flush BEFORE gating on content/arguments, and re-read the store
+    // imperatively rather than trusting the `definition`/`argumentList`
+    // already closed over from this render — those were computed before
+    // the flush and Zustand's own update from onBeforeChange() has not
+    // reached this synchronous function call yet, only the NEXT render
+    // (mirrors ReportBuilderPage.handleSave's own post-mutation
+    // useReportStore.getState() read, same reason). JSX below (the argument
+    // dialog, ReportPreviewDialog) still reads the reactive `definition` —
+    // that's fine, since the store update and setPromptOpen/setPreviewOpen
+    // below land in the same React batch and it re-renders correct.
+    onBeforeChange?.()
+    const current = useReportStore.getState().definition
+    if (!hasRenderableContent(current)) {
       toast.error('Add a block before previewing', { description: 'An empty report has nothing to render.' })
       return
     }
@@ -43,7 +68,7 @@ export function PreviewButton() {
     // report declares a required argument it has to ask too rather than
     // render an unfiltered file (FR-D2-019 RUN-09). An argument with a
     // default needs no prompt — Preview stays one click whenever it can.
-    if (needsPrompt(argumentList)) {
+    if (needsPrompt(declaredArguments(current))) {
       setPromptOpen(true)
       return
     }

@@ -244,7 +244,7 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
 
         <div className="h-5 w-px bg-[hsl(var(--border))]" />
 
-        <PreviewButton />
+        <PreviewButton onBeforeChange={synchronizeWorkbookBeforeDefinitionChange} />
 
         <ReportSettingsPanel onBeforeChange={synchronizeWorkbookBeforeDefinitionChange} />
 
