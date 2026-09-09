@@ -100,92 +100,15 @@ export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumb
       </div>
 
       <ScrollArea className="flex-1">
-        {/* DP-06: the five-block insert grid is gone. Placing data is now a
-            sheet gesture (select a range, insert a source) — see InsertDataBar
-            above the grid. The block *types* remain in the schema and registry;
-            only the panel-driven insertion affordance was removed. Non-data
-            regions (text, image) keep a direct insert here, since there is no
-            data source to choose for them. */}
-        <DataSourcesSection onBeforeChange={onBeforeChange} />
-        <ArgumentsSection onBeforeChange={onBeforeChange} />
-
-        <section className="border-b border-[hsl(var(--border))] p-3" aria-labelledby="insert-static-heading">
-          <h3 id="insert-static-heading" className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-            Insert
-          </h3>
-          <div className="grid grid-cols-2 gap-1.5">
-            {allReportBlocks().filter((b) => !DATA_SOURCE_BLOCK_TYPES.has(b.type)).map((blockDefinition) => {
-              const Icon = blockDefinition.icon
-              return (
-                <Button
-                  key={blockDefinition.type}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-auto min-h-9 justify-start gap-2 px-2 py-1.5 text-xs"
-                  aria-label={`Add ${blockDefinition.label} region`}
-                  title={blockDefinition.description}
-                  onClick={() => addRegion(blockDefinition.type)}
-                >
-                  <Plus size={12} className="shrink-0 text-[hsl(var(--primary))]" />
-                  <Icon size={13} className="shrink-0" />
-                  <span className="truncate">{blockDefinition.label}</span>
-                </Button>
-              )
-            })}
-          </div>
-          <p className="mt-2 text-[10px] leading-4 text-[hsl(var(--muted-foreground))]">
-            To place data, select cells in the sheet and use <strong>Insert data</strong> above the grid.
-          </p>
-        </section>
-
-        {readNumberFormat && applyNumberFormat && (
-          <section className="border-b border-[hsl(var(--border))] p-3" aria-labelledby="number-format-heading">
-            <h3 id="number-format-heading" className="sr-only">Number format</h3>
-            <NumberFormatSection read={readNumberFormat} apply={applyNumberFormat} getSelection={getSelection} />
-          </section>
-        )}
-
-        <section className="border-b border-[hsl(var(--border))] p-2" aria-labelledby="regions-heading">
-          <h3 id="regions-heading" className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-            Regions
-          </h3>
-          {definition.blocks.length === 0 ? (
-            <p className="px-2 py-3 text-xs text-[hsl(var(--muted-foreground))]">
-              Select worksheet cells and add your first region.
-            </p>
-          ) : (
-            <div className="space-y-1">
-              {definition.blocks.map((block) => {
-                const blockDefinition = getReportBlock(block.type)
-                const selected = selectedBlockId === block.id
-                return (
-                  <button
-                    key={block.id}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => selectBlock(block.id)}
-                    className={cn(
-                      'flex w-full items-center gap-2 rounded-md px-2 py-2 text-left transition-colors',
-                      selected
-                        ? 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]'
-                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]',
-                    )}
-                  >
-                    <GripVertical size={13} className="shrink-0 opacity-50" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-xs font-medium">{blockDefinition?.label ?? block.type} · {block.id}</span>
-                      <span className="block text-[10px] opacity-70">{sheetName(sheets, block.sheet_id)} · R{block.layout.row + 1} C{block.layout.col + 1}</span>
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </section>
-
+        {/* A selected region is what the author is actively working on, so
+            its own settings render FIRST — reachable with zero scrolling —
+            rather than after Data sources/Inputs/Insert/Number format/
+            Regions, which are setup/browsing sections rather than the task
+            at hand once something is selected. Those sections keep their
+            existing order below, unchanged, for when nothing is selected
+            yet or the author wants to manage them directly. */}
         {selectedBlock && (
-          <section className="space-y-4 p-4" aria-label="Selected region settings">
+          <section className="space-y-4 border-b border-[hsl(var(--border))] p-4" aria-label="Selected region settings">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="truncate text-xs font-semibold text-[hsl(var(--foreground))]">{selectedDefinition?.label ?? selectedBlock.type}</p>
@@ -286,6 +209,90 @@ export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumb
             </details>
           </section>
         )}
+
+        {/* DP-06: the five-block insert grid is gone. Placing data is now a
+            sheet gesture (select a range, insert a source) — see InsertDataBar
+            above the grid. The block *types* remain in the schema and registry;
+            only the panel-driven insertion affordance was removed. Non-data
+            regions (text, image) keep a direct insert here, since there is no
+            data source to choose for them. */}
+        <DataSourcesSection onBeforeChange={onBeforeChange} />
+        <ArgumentsSection onBeforeChange={onBeforeChange} />
+
+        <section className="border-b border-[hsl(var(--border))] p-3" aria-labelledby="insert-static-heading">
+          <h3 id="insert-static-heading" className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
+            Insert
+          </h3>
+          <div className="grid grid-cols-2 gap-1.5">
+            {allReportBlocks().filter((b) => !DATA_SOURCE_BLOCK_TYPES.has(b.type)).map((blockDefinition) => {
+              const Icon = blockDefinition.icon
+              return (
+                <Button
+                  key={blockDefinition.type}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-auto min-h-9 justify-start gap-2 px-2 py-1.5 text-xs"
+                  aria-label={`Add ${blockDefinition.label} region`}
+                  title={blockDefinition.description}
+                  onClick={() => addRegion(blockDefinition.type)}
+                >
+                  <Plus size={12} className="shrink-0 text-[hsl(var(--primary))]" />
+                  <Icon size={13} className="shrink-0" />
+                  <span className="truncate">{blockDefinition.label}</span>
+                </Button>
+              )
+            })}
+          </div>
+          <p className="mt-2 text-[10px] leading-4 text-[hsl(var(--muted-foreground))]">
+            To place data, select cells in the sheet and use <strong>Insert data</strong> above the grid.
+          </p>
+        </section>
+
+        {readNumberFormat && applyNumberFormat && (
+          <section className="border-b border-[hsl(var(--border))] p-3" aria-labelledby="number-format-heading">
+            <h3 id="number-format-heading" className="sr-only">Number format</h3>
+            <NumberFormatSection read={readNumberFormat} apply={applyNumberFormat} getSelection={getSelection} />
+          </section>
+        )}
+
+        <section className="border-b border-[hsl(var(--border))] p-2" aria-labelledby="regions-heading">
+          <h3 id="regions-heading" className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
+            Regions
+          </h3>
+          {definition.blocks.length === 0 ? (
+            <p className="px-2 py-3 text-xs text-[hsl(var(--muted-foreground))]">
+              Select worksheet cells and add your first region.
+            </p>
+          ) : (
+            <div className="space-y-1">
+              {definition.blocks.map((block) => {
+                const blockDefinition = getReportBlock(block.type)
+                const selected = selectedBlockId === block.id
+                return (
+                  <button
+                    key={block.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => selectBlock(block.id)}
+                    className={cn(
+                      'flex w-full items-center gap-2 rounded-md px-2 py-2 text-left transition-colors',
+                      selected
+                        ? 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]'
+                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]',
+                    )}
+                  >
+                    <GripVertical size={13} className="shrink-0 opacity-50" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-medium">{blockDefinition?.label ?? block.type} · {block.id}</span>
+                      <span className="block text-[10px] opacity-70">{sheetName(sheets, block.sheet_id)} · R{block.layout.row + 1} C{block.layout.col + 1}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </section>
       </ScrollArea>
     </aside>
   )

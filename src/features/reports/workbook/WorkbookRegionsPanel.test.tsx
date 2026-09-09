@@ -168,6 +168,22 @@ describe('WorkbookRegionsPanel', () => {
     expect(screen.queryByRole('button', { name: 'Add Group region' })).toBeNull()
   })
 
+  // A selected region's own settings are what an author is actively working
+  // on, so they must be reachable without scrolling past the setup/browsing
+  // sections (Data sources, Inputs, Insert, Regions) above them — jsdom has
+  // no real layout, so DOM order is the assertable proxy: in a top-to-bottom
+  // scrollable panel, appearing earlier in the DOM means strictly less
+  // scrolling to reach.
+  it('renders the selected region\'s own settings before Data sources, not after', () => {
+    renderPanel(<WorkbookRegionsPanel />)
+
+    fireEvent.click(screen.getByRole('button', { name: /table · pipeline/i }))
+
+    const detail = screen.getByLabelText('Selected region settings')
+    const dataSourcesHeading = screen.getByText('Data sources')
+    expect(detail.compareDocumentPosition(dataSourcesHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('creates a Related Records region from the plain Insert grid', () => {
     useReportStore.getState().loadDefinition({ ...definition, blocks: [] })
     const onBeforeChange = vi.fn()
