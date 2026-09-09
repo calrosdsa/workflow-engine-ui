@@ -207,6 +207,149 @@ describe('report workbook contract', () => {
   })
 })
 
+// Row heights used to be dropped on both sides of the round trip:
+// fromUniverSheet never read sheet.rowData at all, and toUniverWorkbook
+// hardcoded defaultRowHeight: 28 with no per-row override for every sheet —
+// so an author dragging a row taller via Univer's own native row-resize
+// handle (the same proven drag path column-width resize already uses)
+// watched it vanish on the next reload.
+describe('row heights', () => {
+  it('persists a real row resize as row_heights on save', () => {
+    const workbook = fromUniverWorkbook({
+      id: 'report-builder-workbook',
+      name: 'Board pack',
+      sheetOrder: ['overview'],
+      styles: {},
+      sheets: {
+        overview: {
+          id: 'overview',
+          name: 'Overview',
+          rowCount: 20,
+          columnCount: 8,
+          cellData: {},
+          rowData: { 0: { h: 48 } },
+        },
+      },
+    })
+
+    expect(workbook.sheets[0].row_heights).toEqual([{ row: 0, height: 48 }])
+  })
+
+  // The discriminating case advisor() flagged: IRowData also carries `ia`
+  // (self-adaptive) and `ah` (the auto-computed height Univer derives for a
+  // row nobody touched) alongside `h`. Only `h` is a real author resize —
+  // reading `ah` too would pin every content-bearing row's auto-computed
+  // height into the saved definition, bloating it and locking in a value
+  // the author never chose.
+  it('does not persist an auto-sized row that carries ah/ia but no explicit h', () => {
+    const workbook = fromUniverWorkbook({
+      id: 'report-builder-workbook',
+      name: 'Board pack',
+      sheetOrder: ['overview'],
+      styles: {},
+      sheets: {
+        overview: {
+          id: 'overview',
+          name: 'Overview',
+          rowCount: 20,
+          columnCount: 8,
+          cellData: {},
+          rowData: { 0: { ia: 1, ah: 40 } },
+        },
+      },
+    })
+
+    expect(workbook.sheets[0].row_heights).toBeUndefined()
+  })
+
+  it('does not persist a hidden row that carries hd but no explicit h', () => {
+    const workbook = fromUniverWorkbook({
+      id: 'report-builder-workbook',
+      name: 'Board pack',
+      sheetOrder: ['overview'],
+      styles: {},
+      sheets: {
+        overview: {
+          id: 'overview',
+          name: 'Overview',
+          rowCount: 20,
+          columnCount: 8,
+          cellData: {},
+          rowData: { 3: { hd: 1 } },
+        },
+      },
+    })
+
+    expect(workbook.sheets[0].row_heights).toBeUndefined()
+  })
+
+  it('drops a rowData entry outside the sheet\'s own row_count', () => {
+    const workbook = fromUniverWorkbook({
+      id: 'report-builder-workbook',
+      name: 'Board pack',
+      sheetOrder: ['overview'],
+      styles: {},
+      sheets: {
+        overview: {
+          id: 'overview',
+          name: 'Overview',
+          rowCount: 4,
+          columnCount: 8,
+          cellData: {},
+          rowData: { 9: { h: 50 } },
+        },
+      },
+    })
+
+    expect(workbook.sheets[0].row_heights).toBeUndefined()
+  })
+
+  it('rehydrates row_heights into Univer rowData, leaving an unspecified row at the editor default', () => {
+    const workbook: ReportWorkbook = {
+      sheets: [{
+        id: 'overview',
+        name: 'Overview',
+        row_count: 20,
+        column_count: 4,
+        row_heights: [{ row: 2, height: 60 }],
+      }],
+    }
+
+    const snapshot = toUniverWorkbook('Board pack', workbook)
+
+    expect(snapshot.sheets?.overview).toEqual(expect.objectContaining({
+      defaultRowHeight: 28,
+      rowData: { 2: { h: 60 } },
+    }))
+  })
+
+  it('omits rowData entirely when no sheet has an explicit row height', () => {
+    const workbook: ReportWorkbook = {
+      sheets: [{ id: 'overview', name: 'Overview', row_count: 20, column_count: 4 }],
+    }
+
+    const snapshot = toUniverWorkbook('Board pack', workbook)
+
+    expect(snapshot.sheets?.overview).not.toHaveProperty('rowData')
+  })
+
+  it('survives a full round trip through Univer', () => {
+    const workbook: ReportWorkbook = {
+      sheets: [{
+        id: 'overview',
+        name: 'Overview',
+        row_count: 20,
+        column_count: 4,
+        row_heights: [{ row: 1, height: 44 }],
+      }],
+    }
+
+    const back = fromUniverWorkbook(toUniverWorkbook('R', workbook) as Parameters<typeof fromUniverWorkbook>[0])
+
+    expect(back.sheets[0].row_heights).toEqual([{ row: 1, height: 44 }])
+  })
+})
+
 // Frozen panes used to be dropped on both sides of the round trip:
 // fromUniverSheet never read sheet.freeze at all, and toUniverWorkbook
 // hardcoded {xSplit:0,ySplit:0,startRow:0,startColumn:0} for every sheet —

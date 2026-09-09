@@ -175,6 +175,14 @@ export interface ColumnWidth {
   width: number
 }
 
+// RowHeight is one sheet row's author-set height, in the same pixel unit
+// Univer's own row resize uses (IRowData.h) — see contract.ts's
+// fromUniverSheet/toUniverWorkbook for the round-trip with the editor.
+export interface RowHeight {
+  row: number
+  height: number
+}
+
 // FreezePane mirrors Univer's own IFreeze shape field-for-field (see
 // contract.ts) so the editor's frozen-row/frozen-column state round-trips
 // without translation. Only XLSX renders it (FormatCapabilities.freeze) —
@@ -194,6 +202,7 @@ export interface ReportWorkbookSheet {
   cells?: WorkbookCell[]
   merges?: WorkbookMerge[]
   column_widths?: ColumnWidth[]
+  row_heights?: RowHeight[]
   freeze?: FreezePane
 }
 

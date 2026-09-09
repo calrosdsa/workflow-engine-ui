@@ -10,6 +10,7 @@ import type {
   NumberFormat,
   ReportWorkbook,
   ReportWorkbookSheet,
+  RowHeight,
   WorkbookCell,
   WorkbookCellStyle,
   WorkbookCellValue,
@@ -112,6 +113,11 @@ export function toUniverWorkbook(name: string, workbook: ReportWorkbook): Partia
       columnData[cw.col] = { w: cw.width }
     })
 
+    const rowData: Record<number, { h: number }> = {}
+    sheet.row_heights?.forEach((rh) => {
+      rowData[rh.row] = { h: rh.height }
+    })
+
     sheets[sheet.id] = {
       id: sheet.id,
       name: sheet.name,
@@ -135,6 +141,7 @@ export function toUniverWorkbook(name: string, workbook: ReportWorkbook): Partia
         endColumn: merge.end_col,
       })) ?? [],
       ...(Object.keys(columnData).length > 0 ? { columnData } : {}),
+      ...(Object.keys(rowData).length > 0 ? { rowData } : {}),
       showGridlines: BOOLEAN_TRUE,
       rowHeader: { width: 46 },
       columnHeader: { height: 30 },
@@ -197,10 +204,21 @@ function fromUniverSheet(
     .filter((cw): cw is ColumnWidth => typeof cw.width === 'number' && cw.width > 0 && cw.col >= 0 && cw.col < columnCount)
     .sort((a, b) => a.col - b.col)
 
+  const rowCount = sheet.rowCount ?? 36
+  // Only `h` (an explicit resize) counts. IRowData also carries `ia`/`ah`
+  // (auto-height sizing) and `hd` (hidden) — deliberately ignored, mirroring
+  // columnData's own `hd`-without-`w` exclusion above, so an auto-sized row
+  // Univer computed on its own never gets mistaken for an author's real
+  // resize and pinned into the saved definition.
+  const rowHeights: RowHeight[] = Object.entries(sheet.rowData ?? {})
+    .map(([rowKey, row]) => ({ row: Number(rowKey), height: row?.h }))
+    .filter((rh): rh is RowHeight => typeof rh.height === 'number' && rh.height > 0 && rh.row >= 0 && rh.row < rowCount)
+    .sort((a, b) => a.row - b.row)
+
   return {
     id: sheet.id ?? fallbackID,
     name: sheet.name ?? fallbackID,
-    row_count: sheet.rowCount ?? 36,
+    row_count: rowCount,
     column_count: columnCount,
     ...(cells.length > 0 ? { cells } : {}),
     ...(sheet.mergeData && sheet.mergeData.length > 0
@@ -216,6 +234,7 @@ function fromUniverSheet(
         }
       : {}),
     ...(columnWidths.length > 0 ? { column_widths: columnWidths } : {}),
+    ...(rowHeights.length > 0 ? { row_heights: rowHeights } : {}),
     ...(freeze ? { freeze } : {}),
   }
 }
