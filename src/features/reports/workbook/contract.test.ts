@@ -445,6 +445,57 @@ describe('frozen panes', () => {
 
     expect(back.sheets[0].freeze).toEqual({ x_split: 0, y_split: 2, start_row: 2, start_column: 0 })
   })
+
+  // A real, reachable editor gesture: freezing every column of a narrow
+  // sheet (drag the freeze handle to the far edge, or run "Freeze Columns"
+  // with every column selected) makes Univer emit xSplit === columnCount.
+  // The backend rejects that outright (freeze.StartColumn can never be both
+  // >= xSplit and < columnCount when xSplit === columnCount) — so this MUST
+  // be clamped before save, or a completely ordinary interaction produces a
+  // definition the author can never save, with no way to tell why.
+  it('clamps a freeze that would consume every column, leaving one scrollable', () => {
+    const workbook = fromUniverWorkbook({
+      id: 'report-builder-workbook',
+      name: 'Board pack',
+      sheetOrder: ['overview'],
+      styles: {},
+      sheets: {
+        overview: {
+          id: 'overview',
+          name: 'Overview',
+          rowCount: 20,
+          columnCount: 3,
+          cellData: {},
+          // Every column frozen; Univer set startColumn === xSplit, its own
+          // usual behavior when no extra scroll happened.
+          freeze: { xSplit: 3, ySplit: 0, startRow: 0, startColumn: 3 },
+        },
+      },
+    })
+
+    expect(workbook.sheets[0].freeze).toEqual({ x_split: 2, y_split: 0, start_row: 0, start_column: 2 })
+  })
+
+  it('clamps a freeze that would consume every row, leaving one scrollable', () => {
+    const workbook = fromUniverWorkbook({
+      id: 'report-builder-workbook',
+      name: 'Board pack',
+      sheetOrder: ['overview'],
+      styles: {},
+      sheets: {
+        overview: {
+          id: 'overview',
+          name: 'Overview',
+          rowCount: 2,
+          columnCount: 8,
+          cellData: {},
+          freeze: { xSplit: 0, ySplit: 2, startRow: 2, startColumn: 0 },
+        },
+      },
+    })
+
+    expect(workbook.sheets[0].freeze).toEqual({ x_split: 0, y_split: 1, start_row: 1, start_column: 0 })
+  })
 })
 
 // A border's WIDTH used to be discarded on both sides of the round trip:

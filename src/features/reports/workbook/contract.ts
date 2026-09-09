@@ -184,14 +184,34 @@ function fromUniverSheet(
 
   cells.sort((a, b) => a.row - b.row || a.col - b.col)
 
+  const columnCount = sheet.columnCount ?? 12
+  const rowCount = sheet.rowCount ?? 36
+
   // Univer always carries a freeze object, {xSplit:0,ySplit:0,...} included
   // — only a real split is a customization worth persisting, matching the
   // "no entry = editor default" convention column_widths already uses.
+  // xSplit/ySplit are clamped to leave at least one column/row in the
+  // scrollable pane: a narrow sheet's freeze-column drag handle (or a
+  // "freeze columns" command run over every column) can genuinely reach
+  // xSplit === columnCount, which the backend rejects outright — there is
+  // no valid TopLeftCell inside the report's own declared grid once the
+  // whole sheet is "frozen", so this is a real editor gesture that must not
+  // reach an unrecoverable save-time validation error. startRow/startColumn
+  // are clamped the same way, in lockstep, so they never point below the
+  // (possibly now-clamped) split.
   const freeze: FreezePane | undefined = sheet.freeze && (sheet.freeze.xSplit > 0 || sheet.freeze.ySplit > 0)
-    ? { x_split: sheet.freeze.xSplit, y_split: sheet.freeze.ySplit, start_row: sheet.freeze.startRow, start_column: sheet.freeze.startColumn }
+    ? (() => {
+        const xSplit = Math.min(sheet.freeze!.xSplit, Math.max(columnCount - 1, 0))
+        const ySplit = Math.min(sheet.freeze!.ySplit, Math.max(rowCount - 1, 0))
+        return {
+          x_split: xSplit,
+          y_split: ySplit,
+          start_row: Math.min(Math.max(sheet.freeze!.startRow, ySplit), Math.max(rowCount - 1, 0)),
+          start_column: Math.min(Math.max(sheet.freeze!.startColumn, xSplit), Math.max(columnCount - 1, 0)),
+        }
+      })()
     : undefined
 
-  const columnCount = sheet.columnCount ?? 12
   const columnWidths: ColumnWidth[] = Object.entries(sheet.columnData ?? {})
     .map(([colKey, col]) => ({ col: Number(colKey), width: col?.w }))
     // A column the author never dragged has no entry at all (Univer only
@@ -204,7 +224,6 @@ function fromUniverSheet(
     .filter((cw): cw is ColumnWidth => typeof cw.width === 'number' && cw.width > 0 && cw.col >= 0 && cw.col < columnCount)
     .sort((a, b) => a.col - b.col)
 
-  const rowCount = sheet.rowCount ?? 36
   // Only `h` (an explicit resize) counts. IRowData also carries `ia`/`ah`
   // (auto-height sizing) and `hd` (hidden) — deliberately ignored, mirroring
   // columnData's own `hd`-without-`w` exclusion above, so an auto-sized row
