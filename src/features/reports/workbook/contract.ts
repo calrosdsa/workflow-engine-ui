@@ -24,6 +24,37 @@ const HORIZONTAL_ALIGNMENTS = { left: 1, center: 2, right: 3 } as const
 const VERTICAL_ALIGNMENTS = { top: 1, middle: 2, bottom: 3 } as const
 const WRAP = 3
 
+// Univer's own BorderStyleTypes enum (0 NONE .. 13 THICK) groups its 14
+// styles into three visual weights — thin (THIN/HAIR/DOTTED/DASHED/
+// DASH_DOT/DASH_DOT_DOT/DOUBLE = 1-7), medium (MEDIUM/MEDIUM_DASHED/
+// MEDIUM_DASH_DOT/MEDIUM_DASH_DOT_DOT/SLANT_DASH_DOT = 8-12), thick
+// (THICK = 13) — it has no independent pixel-width field at all. The
+// report's own WorkbookCellStyle.border.width (internal/reports/style.go)
+// is a real px value every writer (PDF/DOCX/XLSX/HTML) renders as an
+// actual line thickness, so `s` is never interchangeable with `width`: `s`
+// can't hold a pixel count and `width` can't hold a dash pattern. These
+// bucket one into the other by weight, which is the only dimension both
+// sides share — the dash/double pattern itself is lost either direction,
+// same as it already was.
+const BORDER_STYLE_NONE = 0
+const BORDER_STYLE_THIN = 1
+const BORDER_STYLE_MEDIUM = 8
+const BORDER_STYLE_THICK = 13
+
+function univerBorderStyleToWidthPx(s: number): number {
+  if (s <= BORDER_STYLE_NONE) return 0
+  if (s < BORDER_STYLE_MEDIUM) return 1
+  if (s < BORDER_STYLE_THICK) return 2
+  return 3
+}
+
+function widthPxToUniverBorderStyle(width: number): number {
+  if (width <= 0) return BORDER_STYLE_NONE
+  if (width === 1) return BORDER_STYLE_THIN
+  if (width === 2) return BORDER_STYLE_MEDIUM
+  return BORDER_STYLE_THICK
+}
+
 // Converts the editor's current workbook into the app-owned v2 report
 // contract. This is intentionally a whitelist: collaboration metadata,
 // plugin resources and editor implementation details never enter a report
@@ -218,6 +249,7 @@ function fromUniverStyle(
         ? 'bottom'
         : undefined
   const border = style.bd && (style.bd.t ?? style.bd.r ?? style.bd.b ?? style.bd.l)
+  const borderWidthPx = border ? univerBorderStyleToWidthPx(border.s) : 0
   const result: WorkbookCellStyle = {
     ...(style.ff ? { font_family: style.ff } : {}),
     ...(style.fs ? { font_size: style.fs } : {}),
@@ -229,7 +261,7 @@ function fromUniverStyle(
     ...(style.cl?.rgb ? { text_color: style.cl.rgb } : {}),
     ...(style.bg?.rgb ? { fill_color: style.bg.rgb } : {}),
     ...(style.pd ? { padding: { top: style.pd.t, right: style.pd.r, bottom: style.pd.b, left: style.pd.l } } : {}),
-    ...(border ? { border: { width: 1, color: border.cl.rgb ?? undefined } } : {}),
+    ...(border && borderWidthPx > 0 ? { border: { width: borderWidthPx, color: border.cl.rgb ?? undefined } } : {}),
     ...(numberFormat ? { number_format: numberFormat } : {}),
   }
   return Object.keys(result).length > 0 ? result : undefined
@@ -238,7 +270,7 @@ function fromUniverStyle(
 function toUniverStyle(style: WorkbookCellStyle): IStyleData {
   const verticalAlign = style.vertical_align ? VERTICAL_ALIGNMENTS[style.vertical_align] : undefined
   const border = style.border && style.border.width && style.border.width > 0
-    ? { s: 1, cl: { rgb: style.border.color || '#000000' } }
+    ? { s: widthPxToUniverBorderStyle(style.border.width), cl: { rgb: style.border.color || '#000000' } }
     : undefined
 
   return {
