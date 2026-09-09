@@ -39,6 +39,7 @@ const FORMAT_LABELS: Record<ReportExportFormat, string> = {
   pdf: 'PDF',
   docx: 'Word (.docx)',
   markdown: 'Markdown',
+  html: 'HTML',
 }
 
 function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMode) => void }) {

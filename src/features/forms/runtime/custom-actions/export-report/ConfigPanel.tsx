@@ -8,19 +8,10 @@
 import { Label } from '@/components/ui/label'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useReports } from '@/features/reports/hooks'
-import type { ExportFormat } from '@/features/reports/types'
+import { ALL_FORMATS, FORMAT_LABELS, type ExportFormat } from '@/features/reports/types'
 import type { CustomActionConfigPanelProps } from '../contract'
 import { effectiveArgumentMode, supportsCurrentRecord, type ArgumentMode, type ExportReportActionConfig } from './schema'
 import { declaredArguments } from '@/features/reports/arguments'
-
-const FORMAT_LABELS: Record<ExportFormat, string> = {
-  csv: 'CSV',
-  xlsx: 'Excel (.xlsx)',
-  xls: 'Excel 97-2003 (.xls)',
-  pdf: 'PDF',
-  docx: 'Word (.docx)',
-  markdown: 'Markdown',
-}
 
 export function ExportReportConfigPanel({ config, onChange, formId }: CustomActionConfigPanelProps<ExportReportActionConfig>) {
   const { data: reports } = useReports()
@@ -65,7 +56,7 @@ export function ExportReportConfigPanel({ config, onChange, formId }: CustomActi
         >
           <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Use report default…" /></SelectTrigger>
           <SelectContent>
-            {(Object.keys(FORMAT_LABELS) as ExportFormat[]).map((f) => (
+            {ALL_FORMATS.map((f) => (
               <SelectItem key={f} value={f} className="text-xs">{FORMAT_LABELS[f]}</SelectItem>
             ))}
           </SelectContent>

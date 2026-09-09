@@ -7,7 +7,7 @@
 
 import type { FilterGroup } from '@/features/workflows/types'
 
-export type ExportFormat = 'csv' | 'xlsx' | 'xls' | 'pdf' | 'docx' | 'markdown'
+export type ExportFormat = 'csv' | 'xlsx' | 'xls' | 'pdf' | 'docx' | 'markdown' | 'html'
 
 /** Display label per export format. Lives here beside ExportFormat rather
  *  than in whichever component happened to need it first, so the settings
@@ -19,6 +19,7 @@ export const FORMAT_LABELS: Record<ExportFormat, string> = {
   pdf: 'PDF',
   docx: 'Word (.docx)',
   markdown: 'Markdown',
+  html: 'HTML',
 }
 
 export const ALL_FORMATS = Object.keys(FORMAT_LABELS) as ExportFormat[]
@@ -33,7 +34,12 @@ export const ALL_FORMATS = Object.keys(FORMAT_LABELS) as ExportFormat[]
  *  - 'none' — a binary office format with no renderer in this app. There is
  *             deliberately no client-side xlsx/docx renderer: showing a
  *             re-rendered approximation is exactly how a preview starts
- *             disagreeing with the file it claims to preview.
+ *             disagreeing with the file it claims to preview. HTML is
+ *             ALSO 'none' despite being real, previewable text: rendering
+ *             the raw markup as 'text' would dump tags on screen instead of
+ *             a page, and rendering it live would need a sandboxed iframe
+ *             this app doesn't have yet — a real HTML preview pane is its
+ *             own separate piece of work, not a one-line addition here.
  */
 export const FORMAT_PREVIEW_KIND: Record<ExportFormat, 'pdf' | 'text' | 'none'> = {
   pdf: 'pdf',
@@ -42,6 +48,7 @@ export const FORMAT_PREVIEW_KIND: Record<ExportFormat, 'pdf' | 'text' | 'none'> 
   xlsx: 'none',
   xls: 'none',
   docx: 'none',
+  html: 'none',
 }
 
 export type VisibilityMode = 'public' | 'specific_roles' | 'specific_people'

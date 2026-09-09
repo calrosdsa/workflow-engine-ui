@@ -642,7 +642,7 @@ export interface KnowledgeIngestConfig {
 // KnowledgeRetrievalConfig's own static/expression split for Parameters.
 // ---------------------------------------------------------------------------
 
-export type ReportExportFormat = 'csv' | 'xlsx' | 'xls' | 'pdf' | 'docx' | 'markdown'
+export type ReportExportFormat = 'csv' | 'xlsx' | 'xls' | 'pdf' | 'docx' | 'markdown' | 'html'
 
 export interface ReportGenerateConfig {
   report_definition_id: string
