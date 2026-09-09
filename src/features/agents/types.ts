@@ -39,7 +39,8 @@ export interface UpdateAgentPayload {
   name: string
   description: string
   instructions: string
-  skills: Skill[]
+  model_id?: string
+  skills?: Skill[]
   enabled: boolean
-  session_ttl_days: number | null
+  session_ttl_days?: number | null
 }

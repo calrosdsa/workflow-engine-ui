@@ -107,7 +107,7 @@ function AgentRow({ agent, canWrite, onEdit, onDelete }: { agent: Agent; canWrit
 
   const toggleEnabled = (enabled: boolean) => {
     updateMutation.mutate(
-      { name: agent.name, description: agent.description, instructions: agent.instructions, enabled },
+      { name: agent.name, description: agent.description, instructions: agent.instructions, model_id: agent.model_id, enabled, session_ttl_days: agent.session_ttl_days },
       {
         onError: (e) => {
           toast.error('Could not update agent', { description: e instanceof Error ? e.message : undefined })
@@ -203,7 +203,13 @@ function CreateAgentDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
           <div>
             <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Model</Label>
-            <ModelPicker value={modelId} onChange={setModelId} capability="llm" accentClassName="text-[hsl(var(--primary))]" />
+            <ModelPicker
+              value={modelId}
+              onChange={setModelId}
+              capability="llm"
+              isOptionAllowed={(model) => model.provider_type === 'openai' || model.provider_type === 'gemini'}
+              accentClassName="text-[hsl(var(--primary))]"
+            />
           </div>
         </div>
 

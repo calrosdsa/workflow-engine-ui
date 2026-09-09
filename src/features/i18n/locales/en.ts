@@ -8,6 +8,7 @@
 // see workflow-engine-ui/CLAUDE.md. Keys are dot-namespaced by the area that
 // owns them (profile.*, common.*, ...).
 export const en = {
+  'agents.model_change_hint': 'Changing the model applies when you save this Agent.',
   'common.light': 'Light',
   'common.dark': 'Dark',
   'common.system': 'System',

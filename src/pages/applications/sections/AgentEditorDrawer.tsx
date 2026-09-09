@@ -1,7 +1,7 @@
 // The Agent editor (FR-C8-003) — modeled on RoleFormDrawer.tsx's
 // list+click-to-edit-in-drawer pattern, the closest existing precedent in
 // this codebase. Owns the Agent's own simple fields (name/description/
-// instructions/provider/enabled) plus, as its first subsection, the new MCP
+// instructions/model/enabled) plus, as its first subsection, the new MCP
 // Tools registration this Spec ID actually exists to add — this drawer
 // itself didn't exist before FR-C8-003's implementation; AgentsSection.tsx
 // was list-only, with no click-to-edit target at all. Skills (FR-C8-002) and
@@ -9,17 +9,18 @@
 // too.
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { useAllProviderModels } from '@/features/model-providers/hooks'
+import { ModelPicker } from '@/features/model-providers/ModelPicker'
 import { useUpdateAgent } from '@/features/agents/hooks'
 import { MCPToolsSubsection } from '@/features/agent-mcp/MCPToolsSubsection'
 import { WorkflowToolsSubsection } from '@/features/agent-mcp/WorkflowToolsSubsection'
 import { SkillsSubsection } from '@/features/agents/SkillsSubsection'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { Agent } from '@/features/agents/types'
 
 interface AgentEditorDrawerProps {
@@ -29,9 +30,11 @@ interface AgentEditorDrawerProps {
 }
 
 export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawerProps) {
+  const t = useTranslation()
   const [name, setName] = useState(agent.name)
   const [description, setDescription] = useState(agent.description)
   const [instructions, setInstructions] = useState(agent.instructions)
+  const [modelId, setModelId] = useState(agent.model_id)
   const [enabled, setEnabled] = useState(agent.enabled)
   const [skills, setSkills] = useState(agent.skills)
   // Text, not number, state — an empty string is how the field represents
@@ -42,9 +45,6 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
     agent.session_ttl_days === null ? '' : String(agent.session_ttl_days),
   )
   const updateMutation = useUpdateAgent(agent.id)
-  const { data: allModels } = useAllProviderModels()
-  const model = allModels?.find((m) => m.id === agent.model_id)
-  const modelLabel = model ? `${model.instance_name} · ${model.model}` : undefined
 
   const trimmedTTLInput = sessionTTLDaysInput.trim()
   const ttlIsValid = trimmedTTLInput === '' || (/^\d+$/.test(trimmedTTLInput) && Number(trimmedTTLInput) > 0)
@@ -56,6 +56,7 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
         name: name.trim(),
         description,
         instructions,
+        model_id: modelId,
         skills,
         enabled,
         session_ttl_days: trimmedTTLInput === '' ? null : Number(trimmedTTLInput),
@@ -101,16 +102,17 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
 
             <div>
               <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Model</Label>
-              {/* Not updatable through this pass' PUT /agents payload
-                  (agents.UpdateAgentParams has no model_id field) — shown
-                  read-only here rather than offering a picker that would
-                  silently fail to save a change. */}
-              <div className="flex h-8 items-center gap-1.5 rounded-md border border-[hsl(var(--input))] bg-[hsl(var(--muted))]/40 px-2.5 text-[12px] text-[hsl(var(--foreground))]">
-                <Sparkles size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
-                <span className="truncate">{modelLabel ?? agent.model_id}</span>
+              <div className={!canWrite ? 'pointer-events-none opacity-50' : undefined}>
+                <ModelPicker
+                  value={modelId}
+                  onChange={(id) => { if (id) setModelId(id) }}
+                  capability="llm"
+                  isOptionAllowed={(model) => model.provider_type === 'openai' || model.provider_type === 'gemini'}
+                  accentClassName="text-[hsl(var(--primary))]"
+                />
               </div>
               <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
-                Model changes aren't supported yet — create a new Agent to use a different model.
+                {t('agents.model_change_hint')}
               </p>
             </div>
 
