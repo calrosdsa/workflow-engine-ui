@@ -129,6 +129,10 @@ export const en = {
   'reports.number_format.locale_note':
     "These separators apply to PDF, Word, Markdown and CSV. A spreadsheet always draws its own from the reader's regional settings, so the grid here and a downloaded Excel file may show {{sample}} instead.",
 
+  // Report menu runtime viewer's client-side pager (ReportMenuRuntime.tsx) —
+  // row_count_one/row_count_other above are reused for the row-count label.
+  'reports.runtime.page_size_option': '{{count}} / page',
+
   // Dashboard chart widget's runtime-only viewer controls (RuntimeToolbar.tsx
   // / ChartMenu.tsx) — time range, bucket, ad-hoc filter, and the "..." menu.
   // Never shown in the Dashboard Builder's own config-panel preview.
