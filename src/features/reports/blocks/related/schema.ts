@@ -1,4 +1,4 @@
-import type { ColumnConfig } from '../table/schema'
+import type { ColumnConfig, ReportFilter } from '../table/schema'
 
 // Mirrors internal/reports.RelatedBlockConfig (Go, block_related.go)
 // exactly — snake_case field names matching the wire schema (FR-J1-002 §1).
@@ -11,6 +11,8 @@ export interface RelatedBlockConfig {
   parent_form_id: string
   child_form_id: string
   columns?: ColumnConfig[]
+  /** Not editable here — carried so the panel cannot destroy it. */
+  filter?: ReportFilter
   limit?: number
 }
 
@@ -28,5 +30,7 @@ export function parseRelatedBlockConfig(raw: unknown): RelatedBlockConfig {
     child_form_id: typeof r.child_form_id === 'string' ? r.child_form_id : empty.child_form_id,
     columns: Array.isArray(r.columns) ? (r.columns as ColumnConfig[]) : empty.columns,
     limit: typeof r.limit === 'number' ? r.limit : undefined,
+    // CARRIED, NOT PARSED — see parseTableBlockConfig's note.
+    filter: r.filter,
   }
 }

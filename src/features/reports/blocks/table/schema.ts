@@ -18,6 +18,27 @@ export interface TableStyles {
   body?: BlockStyle
 }
 
+/**
+ * ReportFilter is a block's filter tree, carried through this editor WITHOUT
+ * being interpreted. The Go side is a recursive graph.FilterGroup; nothing in
+ * the report editor reads or edits it, so mirroring that recursion in
+ * TypeScript would be cost with no reader. Typed as unknown rather than
+ * `any` so an accidental attempt to read it fails at compile time instead of
+ * silently succeeding.
+ */
+export type ReportFilter = unknown
+
+/** Mirrors internal/reports.ColumnTotal (Go, block_table.go). */
+export interface ColumnTotal {
+  /** A ColumnConfig.Key on this same block. */
+  column: string
+  /** Empty means this cell is a literal label (see `label`) rather than a
+   *  computed value — the usual case for the row's leftmost column. */
+  fn?: 'count' | 'sum' | 'avg' | 'min' | 'max'
+  /** Shown verbatim when `fn` is empty; ignored when `fn` is set. */
+  label?: string
+}
+
 export interface TableBlockConfig {
   /** A named report data source (FR-J1-005). When set it supplies the form,
    *  filter, sort, and limit, and `form_id` below is ignored. */
@@ -28,6 +49,11 @@ export interface TableBlockConfig {
   columns?: ColumnConfig[]
   limit?: number
   style?: TableStyles
+  /** Not editable here — carried so the panel cannot destroy it. See the
+   *  round-trip note on parseTableBlockConfig. */
+  filter?: ReportFilter
+  /** The block's summary row. Not editable here yet — carried through. */
+  totals?: ColumnTotal[]
 }
 
 export function emptyTableBlockConfig(): TableBlockConfig {
@@ -46,6 +72,25 @@ export function parseTableBlockConfig(raw: unknown): TableBlockConfig {
     columns: Array.isArray(r.columns) ? (r.columns as ColumnConfig[]) : empty.columns,
     limit: typeof r.limit === 'number' ? r.limit : undefined,
     style: parseTableStyles(r.style),
+    // CARRIED, NOT PARSED. This function's result is not merely displayed —
+    // WorkbookRegionsPanel feeds it straight into the ConfigPanel, whose
+    // every onChange spreads it and writes it back through
+    // updateBlockConfig, which REPLACES block.config wholesale. So any field
+    // this function fails to mention is destroyed the moment a user touches
+    // any control on the block — including controls for unrelated settings.
+    //
+    // filter and totals are authored through MCP/the API and have no editor
+    // control yet, which is exactly why they were being lost: nothing in the
+    // panel would ever put them back.
+    //
+    // They are copied through rather than spread deliberately. The whole
+    // object cannot be spread because ValidateBlockConfigs decodes with
+    // DisallowUnknownFields and runs on create, update AND preview — so a
+    // stale or unknown key that survives here stops being silently healed
+    // away and starts hard-failing the save with a 400. Naming each field
+    // keeps the never-throws healing contract intact.
+    filter: r.filter,
+    totals: Array.isArray(r.totals) ? (r.totals as ColumnTotal[]) : undefined,
   }
 }
 
