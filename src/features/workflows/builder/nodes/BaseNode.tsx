@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Handle, Position, type NodeProps, useStore } from '@xyflow/react'
-import { Plus, GripVertical, ArrowLeftRight, Trash2, GitBranchPlus, Copy, Check, AlertTriangle, AlertCircle, CheckCircle2, XCircle, MinusCircle, Loader2, MessageCircle, Bug, Plug } from 'lucide-react'
+import { Plus, GripVertical, ArrowLeftRight, Trash2, GitBranchPlus, Copy, Check, AlertTriangle, AlertCircle, CheckCircle2, XCircle, MinusCircle, Loader2, MessageCircle, Bug } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NODE_REGISTRY } from '../node-registry'
-import { useConnectorRegistry } from '../connector-hooks'
+import { useNodeTaxonomy, findPackageNode } from '../node-taxonomy'
+import { iconFor } from '../icon-hints'
 import { useBuilderStore, DUPLICABLE_NODE_TYPES, type FlowNode, type DropPosition } from '../store'
 import { computeExecutionOrder } from '../executionOrder'
 import { nodeSetupIssue } from '../node-validation'
@@ -50,36 +51,33 @@ function overlayStatusLabel(status: NodeExecutionStatus): string {
 
 export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   // Two-step lookup, same pattern as NodeConfigPanel.tsx's — NODE_REGISTRY
-  // only has the 21 built-in NodeType keys, so a connector-typed node
-  // (e.g. "whatsapp_send") resolves to undefined there at RUNTIME, even
-  // though FlowNode['data']['type'] is statically typed as NodeType (a
-  // connector type only ever reaches this field via store.ts's addNode/
-  // addConnectedNode/insertNodeOnEdge, whose signatures were widened to
-  // NodeType | (string & {}) specifically to allow this — see store.ts's
-  // own comment on why). Without the cast below, TS believes
-  // NODE_REGISTRY[data.type] can never be undefined and would flag
-  // builtInReg?. as needless — the cast is what makes the compiler agree
-  // with what's actually true at runtime. Previously this file read
-  // NODE_REGISTRY[data.type].icon unconditionally, which crashed with
-  // "Cannot read properties of undefined" the first time a real connector
-  // node reached this component — this two-step lookup is that fix.
-  // NodeBody's own switch already has a safe `default: return null` for
-  // body content, so only the header (icon/gradient/label) needed it. A
-  // type in NEITHER registry (a deregistered connector — see the connector
-  // plan's deregistration risk note) gets a neutral fallback too, rather
-  // than crashing a third time on some future edge case.
+  // only has the built-in NodeType keys, so a package-typed node (e.g.
+  // "whatsapp_send") resolves to undefined there at RUNTIME, even though
+  // FlowNode['data']['type'] is statically typed as NodeType (a package type
+  // only ever reaches this field via store.ts's addNode/addConnectedNode/
+  // insertNodeOnEdge, whose signatures were widened to NodeType | (string &
+  // {}) specifically to allow this — see store.ts's own comment on why).
+  // Without the cast below, TS believes NODE_REGISTRY[data.type] can never
+  // be undefined and would flag builtInReg?. as needless — the cast is what
+  // makes the compiler agree with what's actually true at runtime.
+  // Previously this file read NODE_REGISTRY[data.type].icon unconditionally,
+  // which crashed with "Cannot read properties of undefined" the first time
+  // a real package node reached this component — this two-step lookup is
+  // that fix. NodeBody's own switch already has a safe `default: return
+  // null` for body content, so only the header (icon/gradient/label) needed
+  // it. A type in NEITHER registry (a deregistered package node) gets a
+  // neutral fallback too (iconFor's own Plug default), rather than crashing
+  // a third time on some future edge case.
   const builtInReg = NODE_REGISTRY[data.type as keyof typeof NODE_REGISTRY]
-  const { data: connectorEntries } = useConnectorRegistry()
-  const connectorEntry = !builtInReg
-    ? (connectorEntries ?? []).find((c) => c.type === data.type)
-    : undefined
-  const Icon      = builtInReg?.icon ?? Plug
+  const { data: taxonomy } = useNodeTaxonomy()
+  const packageEntry = !builtInReg ? findPackageNode(taxonomy, data.type) : undefined
+  const Icon      = iconFor(data.type, packageEntry?.icon_hint)
   const gradient  = builtInReg?.gradient ?? 'bg-gradient-to-br from-slate-600 to-slate-700'
-  const headerLabel = builtInReg?.label ?? connectorEntry?.label ?? data.type
+  const headerLabel = builtInReg?.label ?? packageEntry?.display_name ?? data.type
   const hasInputs  = data.inputs?.length  > 0
   const hasOutputs = data.outputs?.length > 0
 
-  // Show + button below this node only if it's a leaf (no outgoing edges) and not exit
+  // Show + button beside this node only if it's a leaf (no outgoing edges) and not exit
   const outgoingEdges   = useStore((s) => s.edges.filter((e) => e.source === id))
   const hasOutgoingEdge = outgoingEdges.length > 0
 
@@ -120,7 +118,6 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const setActiveDropTarget = useBuilderStore((s) => s.setActiveDropTarget)
   const reorderNode         = useBuilderStore((s) => s.reorderNode)
   const applyDagreLayout    = useBuilderStore((s) => s.applyDagreLayout)
-  const addConnectedNode    = useBuilderStore((s) => s.addConnectedNode)
   const deleteBranch        = useBuilderStore((s) => s.deleteBranch)
   const swapLastTwoBranches = useBuilderStore((s) => s.swapLastTwoBranches)
   const deleteNode          = useBuilderStore((s) => s.deleteNode)
@@ -143,6 +140,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   // means "no overlay active"; a node key absent from node_statuses means
   // "overlay active, but this node was never reached" (dimmed, no badge).
   const overlayExecution = useExecutionOverlayStore((s) => s.data)
+  const showCompletedSteps = useBuilderStore((s) => s.showCompletedSteps)
   const overlayActive    = overlayExecution != null
   const nodeStatus: NodeExecutionStatus | undefined = overlayExecution?.node_statuses?.[id]
   const nodeError                                   = overlayExecution?.node_errors?.[id]
@@ -151,6 +149,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const debugSnapshot                               = overlayExecution?.debug_snapshots?.[id]
   const nodeWarning                                 = overlayExecution?.node_warnings?.[id]
   const reached          = overlayActive && nodeStatus !== undefined
+  const showStatusBadge  = reached && nodeStatus !== undefined && (showCompletedSteps || nodeStatus !== 'COMPLETED')
   const dimUnreached     = overlayActive && !reached
   const [overlayNoteOpen, setOverlayNoteOpen] = useState(false)
   const [debugPopoverOpen, setDebugPopoverOpen] = useState(false)
@@ -199,7 +198,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
     reorderNode(srcId, id, position)
     setDraggingNode(null)
     setActiveDropTarget(null)
-    setTimeout(() => applyDagreLayout('TB'), 0)
+    setTimeout(() => applyDagreLayout('LR'), 0)
   }
 
   const handleAddClick = (e: React.MouseEvent, handle: string) => {
@@ -219,7 +218,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   return (
     <div
       className={cn(
-        'group relative w-[200px] rounded-2xl border bg-[hsl(var(--card))] transition-all duration-150',
+        'group relative w-[200px] rounded-2xl border bg-[hsl(var(--card))] transition-[border-color,box-shadow,opacity,transform] duration-150',
         selected
           ? 'border-[hsl(var(--primary))]/60 ring-2 ring-[hsl(var(--primary))]/30 shadow-lg shadow-[hsl(var(--primary))]/10'
           : 'border-[hsl(var(--border))] shadow-sm hover:border-[hsl(var(--muted-foreground))]/40 hover:shadow-md',
@@ -240,15 +239,15 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
         </>
       )}
 
-      {/* Input handles — top edge */}
+      {/* Input handles — left edge */}
       {hasInputs && data.inputs.map((port, i) => (
         <Handle
           key={port.id}
           id={port.id}
           type="target"
-          position={Position.Top}
+          position={Position.Left}
           className="!h-2.5 !w-2.5 !border-2 !border-[hsl(var(--card))] !bg-[hsl(var(--muted-foreground))] transition-colors"
-          style={{ left: `${((i + 1) / (data.inputs.length + 1)) * 100}%` }}
+          style={{ top: `${((i + 1) / (data.inputs.length + 1)) * 100}%` }}
         />
       ))}
 
@@ -280,7 +279,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           a corner distinct from the execution-order badge (top-left) and the
           setup-issue badge (top-right). Only rendered for a node the
           selected execution actually reached. */}
-      {reached && nodeStatus && (
+      {showStatusBadge && nodeStatus && (
         <div
           className={cn(
             'absolute -bottom-2 -right-2 z-10 flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold shadow-md ring-2 ring-[hsl(var(--card))]',
@@ -484,7 +483,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
       {(canDelete || canDuplicate) && !draggingNodeId && (
         <div
           className={cn(
-            'absolute -top-8 right-0 z-20 flex items-center gap-0.5 rounded-full bg-[hsl(var(--card))] p-0.5 shadow-lg shadow-black/10 ring-1 ring-[hsl(var(--border))] transition-all duration-150 nodrag nopan',
+            'absolute -top-8 right-0 z-20 flex items-center gap-0.5 rounded-full bg-[hsl(var(--card))] p-0.5 shadow-lg shadow-black/10 ring-1 ring-[hsl(var(--border))] transition-[opacity,transform] duration-150 nodrag nopan',
             selected
               ? 'opacity-100 scale-100 pointer-events-auto'
               : 'opacity-0 scale-90 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto',
@@ -497,7 +496,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               onClick={(e) => {
                 e.stopPropagation()
                 duplicateNode(id)
-                setTimeout(() => applyDagreLayout('TB'), 0)
+                setTimeout(() => applyDagreLayout('LR'), 0)
               }}
               title="Duplicate node"
             >
@@ -511,7 +510,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               onClick={(e) => {
                 e.stopPropagation()
                 deleteNode(id)
-                setTimeout(() => applyDagreLayout('TB'), 0)
+                setTimeout(() => applyDagreLayout('LR'), 0)
               }}
               title={data.type === 'iterator' || data.type === 'loop_end'
                 ? 'Delete loop (keeps body steps)'
@@ -559,9 +558,9 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
         <NodeBody data={data} />
       </div>
 
-      {/* Output handles — bottom edge */}
+      {/* Output handles — right edge */}
       {hasOutputs && data.outputs.map((port, i) => {
-        const left = `${((i + 1) / (data.outputs.length + 1)) * 100}%`
+        const top = `${((i + 1) / (data.outputs.length + 1)) * 100}%`
         const isTrue  = port.id === 'true'
         const isFalse = port.id === 'false'
         return (
@@ -569,20 +568,20 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
             <Handle
               id={port.id}
               type="source"
-              position={Position.Bottom}
+              position={Position.Right}
               className={cn(
                 '!h-2.5 !w-2.5 !border-2 !border-white transition-colors',
                 isTrue ? '!bg-emerald-500' : isFalse ? '!bg-rose-500' : '!bg-blue-500',
               )}
-              style={{ left }}
+              style={{ top }}
             />
             {data.outputs.length > 1 && (
               <span
                 className={cn(
-                  'absolute bottom-[-1.15rem] text-[9px] font-semibold pointer-events-none select-none',
+                  'absolute -right-12 -translate-y-1/2 text-[9px] font-semibold pointer-events-none select-none',
                   isTrue ? 'text-emerald-600' : isFalse ? 'text-rose-600' : 'text-slate-400',
                 )}
-                style={{ left, transform: 'translateX(-50%)' }}
+                style={{ top }}
               >
                 {port.label}
               </span>
@@ -591,12 +590,12 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
         )
       })}
 
-      {/* + button below leaf nodes (no outgoing edge, not dragging) */}
+      {/* + button beside leaf nodes (no outgoing edge, not dragging) */}
       {showAddButton && !draggingNodeId && (
-        <div className="absolute left-1/2 -translate-x-1/2 -bottom-9 flex flex-col items-center pointer-events-none">
-          <div className="h-3.5 w-px bg-[hsl(var(--border))]" />
+        <div className="absolute -right-9 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+          <div className="h-px w-3.5 bg-[hsl(var(--border))]" />
           <button
-            className="pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-md shadow-[hsl(var(--primary))]/30 ring-4 ring-[hsl(var(--card))] hover:brightness-110 hover:scale-110 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--card))] nodrag nopan"
+            className="pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-md shadow-[hsl(var(--primary))]/30 ring-4 ring-[hsl(var(--card))] transition-transform hover:brightness-110 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--card))] nodrag nopan"
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => handleAddClick(e, data.outputs[0]?.id ?? 'out')}
             title="Add next node"
@@ -619,7 +618,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           <div className="h-3.5 w-px bg-[hsl(var(--border))]" />
           <div
             className={cn(
-              'pointer-events-auto flex items-center gap-0.5 rounded-full bg-[hsl(var(--card))] p-1 shadow-lg shadow-black/10 ring-1 ring-[hsl(var(--border))] transition-all duration-150 nodrag nopan',
+              'pointer-events-auto flex items-center gap-0.5 rounded-full bg-[hsl(var(--card))] p-1 shadow-lg shadow-black/10 ring-1 ring-[hsl(var(--border))] transition-[opacity,transform] duration-150 nodrag nopan',
               branchToolbarOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none',
             )}
           >
@@ -629,7 +628,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               onClick={(e) => {
                 e.stopPropagation()
                 swapLastTwoBranches(id)
-                setTimeout(() => applyDagreLayout('TB'), 0)
+                setTimeout(() => applyDagreLayout('LR'), 0)
               }}
               title="Reorder branches"
             >
@@ -641,14 +640,14 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               onClick={(e) => {
                 e.stopPropagation()
                 deleteBranch(id, branchChildIds[branchChildIds.length - 1])
-                setTimeout(() => applyDagreLayout('TB'), 0)
+                setTimeout(() => applyDagreLayout('LR'), 0)
               }}
               title="Delete last branch"
             >
               <Trash2 size={12} strokeWidth={2.5} />
             </button>
             <button
-              className="flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm transition-all hover:brightness-110 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+              className="flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm transition-transform hover:brightness-110 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => handleAddClick(e, data.outputs[0]?.id ?? 'out')}
               title="Add node in a new branch"
@@ -674,6 +673,10 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
       const labels: Record<TriggerConfig['mode'], string> = {
         on_demand: 'On demand', scheduled: 'Scheduled',
         before: 'Before write', after: 'After write', after_async: 'After write (async)',
+        on_demand_data_driven: 'On demand (with a record)',
+        webhook: 'Webhook',
+        executed_by_workflow: 'Executed by workflow',
+        on_error: 'On error',
       }
       return (
         <div className="space-y-1 text-[10px]">

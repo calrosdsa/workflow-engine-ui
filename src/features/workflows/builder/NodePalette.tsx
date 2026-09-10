@@ -1,19 +1,17 @@
 import { useMemo } from 'react'
-import { Plug, FileCode2 } from 'lucide-react'
 import { useBuilderStore } from './store'
 import { PALETTE_NODES, NODE_REGISTRY, fallbackCategory } from './node-registry'
-import { useConnectorRegistry } from './connector-hooks'
 import { useNodeTaxonomy, groupByCategory, type PaletteEntry } from './node-taxonomy'
+import { iconFor } from './icon-hints'
 import { cn, onKeyboardActivate } from '@/lib/utils'
 import type { NodeType } from '../types'
 
 export function NodePalette() {
   const { addNode } = useBuilderStore()
-  const { data: connectorEntries } = useConnectorRegistry()
   const { data: taxonomy } = useNodeTaxonomy()
 
   // `type` here is the union of built-in NodeType members and any
-  // runtime-discovered connector or template type string —
+  // runtime-discovered package node type string —
   // useBuilderStore.addNode's own signature is widened to accept both (see
   // store.ts); a non-built-in type is never a real NodeType, so this stays a
   // plain string.
@@ -25,12 +23,12 @@ export function NodePalette() {
   // One list, grouped by what a node DOES rather than by where it came from.
   //
   // This replaced a flat built-in list with every connector appended below a
-  // divider. That layout was protecting a real property — a connector's
+  // divider. That layout was protecting a real property — a package node's
   // presence could never shift where a built-in sat — but it answered the
   // wrong question: someone looking for "send a message to Slack" scans for
   // the thing it does, not for which process implements it. The property is
   // preserved a different way: groupByCategory sorts core nodes first within
-  // each group, so a connector can still never displace a built-in.
+  // each group, so a package node can still never displace a built-in.
   const groups = useMemo(() => {
     const servedCategory = new Map((taxonomy?.nodes ?? []).map((n) => [n.type, n.category]))
     const entries: PaletteEntry[] = [
@@ -41,16 +39,19 @@ export function NodePalette() {
         label: NODE_REGISTRY[type].label,
         description: NODE_REGISTRY[type].description,
       })),
-      ...(connectorEntries ?? []).map((c): PaletteEntry => ({
-        type: c.type,
-        kind: c.kind,
-        category: servedCategory.get(c.type) ?? c.category,
-        label: c.label,
-        description: c.description,
-      })),
+      ...(taxonomy?.nodes ?? [])
+        .filter((n) => n.kind === 'package')
+        .map((n): PaletteEntry => ({
+          type: n.type,
+          kind: 'package',
+          category: n.category,
+          label: n.display_name || n.type,
+          description: n.summary ?? '',
+          iconHint: n.icon_hint,
+        })),
     ]
     return groupByCategory(entries, taxonomy?.categories ?? [])
-  }, [connectorEntries, taxonomy])
+  }, [taxonomy])
 
   return (
     <div className="absolute left-3 top-3 z-10 flex max-h-[calc(100%-1.5rem)] w-44 flex-col gap-1 overflow-y-auto rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))]/80 p-2 shadow-lg shadow-black/10 backdrop-blur-md">
@@ -63,10 +64,7 @@ export function NodePalette() {
           </p>
           {group.entries.map((entry) => {
             const reg = entry.kind === 'core' ? NODE_REGISTRY[entry.type as NodeType] : undefined
-            // Templates and connectors are visually distinct from each other
-            // for the same reason they are in the picker: one's behaviour is
-            // data this deployment holds, the other's is a process it talks to.
-            const Icon = reg?.icon ?? (entry.kind === 'template' ? FileCode2 : Plug)
+            const Icon = iconFor(entry.type, entry.iconHint)
             return (
               <div
                 key={entry.type}

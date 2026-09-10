@@ -1,27 +1,20 @@
 // @vitest-environment jsdom
-// The palette, rendered against payloads captured from the RUNNING backend.
+// The palette, rendered against a payload captured from the RUNNING backend.
 //
-// The fixtures in __fixtures__/ are verbatim responses from a live server
-// (GET /meta/node-taxonomy and GET /connectors), not hand-written shapes.
-// That matters: a hand-written fixture tests this file's own assumptions
-// about the wire format, which is exactly the drift that let the frontend
-// maintain a category vocabulary the backend had never heard of. If the
-// server's shape moves, re-capture them and this test tells you what broke.
+// The fixture in __fixtures__/ is a verbatim response from a live server
+// (GET /meta/node-taxonomy), not a hand-written shape. That matters: a
+// hand-written fixture tests this file's own assumptions about the wire
+// format, which is exactly the drift that let the frontend maintain a
+// category vocabulary the backend had never heard of. If the server's shape
+// moves, re-capture it and this test tells you what broke.
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, within, cleanup, fireEvent } from '@testing-library/react'
 import { NodePickerModal } from './NodePickerModal'
 import taxonomy from './__fixtures__/live-node-taxonomy.json'
-import connectors from './__fixtures__/live-connectors.json'
-import { toRegistryEntry, type ConnectorManifest } from './connector-registry'
 
-// The two hooks are the component's only I/O. Stubbed with the live payloads
+// The one hook is this component's only I/O. Stubbed with the live payload
 // rather than with a query client, so the test is about rendering, not about
 // react-query.
-vi.mock('./connector-hooks', () => ({
-  useConnectorRegistry: () => ({
-    data: (connectors as unknown as ConnectorManifest[]).map(toRegistryEntry),
-  }),
-}))
 vi.mock('./node-taxonomy', async () => {
   const actual = await vi.importActual<typeof import('./node-taxonomy')>('./node-taxonomy')
   return { ...actual, useNodeTaxonomy: () => ({ data: taxonomy }) }
@@ -70,16 +63,17 @@ describe('the node picker, against the live catalog', () => {
     expect(screen.queryByRole('button', { name: 'Connectors' })).toBeNull()
   })
 
-  it('puts a declarative template in the same group as the built-in it resembles', () => {
+  it('puts a package node in the same group as the built-in it resembles', () => {
     open()
     // The whole point of the two-axis model, end to end: slack_post_message
-    // is a template, and it belongs next to http_request under Integration.
+    // is a package node, and it belongs next to http_request under
+    // Integration.
     fireEvent.click(screen.getByRole('button', { name: 'Integration' }))
     const slack = screen.getByText('Slack — Post Message').closest('button')!
-    expect(within(slack).getByText('template')).toBeTruthy()
+    expect(within(slack).getByText('package')).toBeTruthy()
   })
 
-  it('lists built-ins ahead of templates within a shared group', () => {
+  it('lists built-ins ahead of package nodes within a shared group', () => {
     open()
     fireEvent.click(screen.getByRole('button', { name: 'Integration' }))
     const labels = screen.getAllByRole('button').map((b) => b.textContent ?? '')
@@ -89,7 +83,7 @@ describe('the node picker, against the live catalog', () => {
     expect(slack).toBeGreaterThan(http)
   })
 
-  it('fills the Utility tab, which had no members before templates existed', () => {
+  it('fills the Utility tab, which had no members before packages existed', () => {
     open()
     fireEvent.click(screen.getByRole('button', { name: 'Utility' }))
     expect(screen.getByText('Format Reference Code')).toBeTruthy()
@@ -100,14 +94,14 @@ describe('the node picker, against the live catalog', () => {
     // A core node carries no badge — every node wearing one would be noise.
     const setVar = screen.getByText('Set Variable').closest('button')!
     expect(within(setVar).queryByText('core')).toBeNull()
-    expect(within(setVar).queryByText('template')).toBeNull()
+    expect(within(setVar).queryByText('package')).toBeNull()
   })
 
-  it('finds a template by searching what it does, not what it is called', () => {
+  it('finds a package node by searching what it does, not what it is called', () => {
     open()
-    // Search spans descriptions as well as labels, so a template is
+    // Search spans descriptions as well as labels, so a package node is
     // discoverable by the problem it solves — which matters more for a
-    // template than a built-in, since nobody knows its name yet.
+    // package node than a built-in, since nobody knows its name yet.
     fireEvent.change(screen.getByPlaceholderText('Search nodes…'), { target: { value: 'padded' } })
     expect(screen.getByText('Format Reference Code')).toBeTruthy()
     // And the search really filtered, rather than the match merely being

@@ -24,22 +24,22 @@ describe('groupByCategory', () => {
   })
 
   it('drops categories with no members', () => {
-    // 'utility' is in the vocabulary ahead of the node templates that will
+    // 'utility' is in the vocabulary ahead of the package nodes that will
     // fill it. Rendering a tab per vocabulary entry rather than per occupied
     // category would show an empty tab today.
     const groups = groupByCategory([entry('a', 'data')], cats)
     expect(groups.map((g) => g.id)).toEqual(['data'])
   })
 
-  it('keeps core nodes ahead of connectors and templates in the same group', () => {
+  it('keeps core nodes ahead of package nodes in the same group', () => {
     // This is the property the old separate-Connectors-tab layout was
-    // protecting: grouping by function must not let a connector displace a
-    // built-in from where an author is used to finding it.
+    // protecting: grouping by function must not let a package node displace
+    // a built-in from where an author is used to finding it.
     const groups = groupByCategory(
       [
-        entry('slack_post', 'integration', 'connector'),
+        entry('slack_post', 'integration', 'package'),
         entry('http_request', 'integration', 'core'),
-        entry('stripe_charge', 'integration', 'template'),
+        entry('stripe_charge', 'integration', 'package'),
       ],
       cats,
     )

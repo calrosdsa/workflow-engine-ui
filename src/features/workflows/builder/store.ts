@@ -321,11 +321,11 @@ export interface BuilderState {
   onConnect:            (connection: Connection) => void
   // `type` accepts NodeType | (string & {}) — every built-in NodeType
   // literal still autocompletes/type-checks normally, but a runtime
-  // connector type string (never a real NodeType) is also accepted. The
+  // package node type string (never a real NodeType) is also accepted. The
   // `& {}` intersection is what keeps literal-string autocomplete alive
   // for callers passing a NodeType constant, rather than TypeScript
   // collapsing the union to plain `string` and losing that ergonomics —
-  // see connector-registry.ts's header comment for why NodeType itself
+  // see node-taxonomy.ts's own header comment for why NodeType itself
   // must stay closed rather than being widened at its own declaration.
   addNode:              (type: NodeType | (string & {}), position?: { x: number; y: number }) => void
   addConnectedNode:     (type: NodeType | (string & {}), sourceNodeId: string, sourceHandle?: string) => void

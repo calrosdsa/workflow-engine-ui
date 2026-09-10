@@ -342,12 +342,12 @@ export const NODE_REGISTRY: Record<NodeType, NodeRegistryEntry> = {
 
 // These three accept NodeType | (string & {}) — see store.ts's addNode doc
 // comment for why this shape (rather than plain `string`) keeps built-in
-// callers' literal-type autocomplete intact. A connector type string is
+// callers' literal-type autocomplete intact. A package type string is
 // never a real NodeType, so every switch below keeps exhaustiveness
 // checking on the closed union unaffected — TypeScript still errors if a
 // built-in `case` is missing; only the `default:` branch (already the
 // deliberate "safe generic fallback" per each function's own doc comment)
-// is reached for a connector type.
+// is reached for a package type.
 export function defaultLabel(type: NodeType | (string & {})): string {
   return NODE_REGISTRY[type as NodeType]?.label ?? type
 }
