@@ -519,6 +519,24 @@ export interface TriggerConfig {
   // displays it as part of a full URL, never lets the user edit it directly.
   webhook_token?: string
 
+  // webhook mode only — mirrors internal/webhookprovider's registered
+  // provider names ("generic" default, "meta"). Which external system's
+  // conventions this trigger expects; changes how an inbound POST is
+  // authenticated and split into events, never whether/when it fires.
+  webhook_provider?: string
+
+  // webhook mode only. Restricts which of webhook_provider's event types
+  // dispatch a new execution — empty means every event type the provider
+  // can produce. Ignored for "generic", which has no event-type concept.
+  webhook_events?: string[]
+
+  // webhook mode only. Name of the appsettings credential holding the
+  // shared secret webhook_provider needs to authenticate an inbound POST
+  // (e.g. the Meta App Secret) — a DIFFERENT value from webhook_token
+  // above. Required when the selected provider needs one; ignored for
+  // "generic".
+  webhook_secret_credential?: string
+
   // on_error mode only. Which workflow's FAILED executions this trigger
   // reacts to — empty means "any workflow in this app" (excluding this
   // definition itself).

@@ -14,6 +14,8 @@ import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenc
 import { useForm } from '@/features/forms/hooks'
 import { ensureGroupIds } from './id-helpers'
 import { WorkflowReferenceSelect } from '../config/WorkflowReferenceSelect'
+import { CredentialSelect } from '@/features/app-settings/CredentialSelect'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, TriggerConfig, TriggerMode, TriggerEventType } from '../../types'
 
@@ -29,6 +31,9 @@ export function normaliseTriggerConfig(raw: unknown): TriggerConfig {
     filter:                ensureGroupIds(r.filter) ?? newGroup(),
     source_form_id:        r.source_form_id ?? '',
     webhook_token:         r.webhook_token ?? '',
+    webhook_provider:      r.webhook_provider ?? '',
+    webhook_events:        r.webhook_events ?? [],
+    webhook_secret_credential: r.webhook_secret_credential ?? '',
     source_definition_id:  r.source_definition_id ?? '',
     enabled:               r.enabled ?? true,
     expose_as_tool:        r.expose_as_tool ?? false,
@@ -55,6 +60,45 @@ const EVENT_TYPES: { value: TriggerEventType; label: string }[] = [
   { value: 'update', label: 'Update' },
   { value: 'delete', label: 'Delete' },
   { value: 'create_or_update', label: 'Create or Update' },
+]
+
+// WEBHOOK_PROVIDERS mirrors internal/webhookprovider's registered Providers
+// (registry.go's register() calls) — an internal-only, code-defined set (see
+// that package's own doc comment), so this is a hand-maintained mirror, the
+// same convention TRIGGER_MODES/EVENT_TYPES above already use for their own
+// Go-side source of truth, not a fetch from a served catalog. labelKey/
+// descriptionKey/eventLabelKeys index into src/features/i18n/locales — see
+// workflow-engine-ui/CLAUDE.md's t() rule. needsSecret and each event's
+// value must match that provider's own Describe()/EventType* constants
+// exactly, since api/workflows.validateWebhookProvider rejects any
+// webhook_events entry the selected provider doesn't produce.
+const WEBHOOK_PROVIDERS: {
+  value: string
+  labelKey: string
+  descriptionKey: string
+  instructionsKey: string
+  needsSecret: boolean
+  events: { value: string; labelKey: string }[]
+}[] = [
+  {
+    value: 'generic',
+    labelKey: 'workflows.trigger.webhook.provider_generic_label',
+    descriptionKey: 'workflows.trigger.webhook.provider_generic_description',
+    instructionsKey: 'workflows.trigger.webhook.instructions_generic',
+    needsSecret: false,
+    events: [],
+  },
+  {
+    value: 'meta',
+    labelKey: 'workflows.trigger.webhook.provider_meta_label',
+    descriptionKey: 'workflows.trigger.webhook.provider_meta_description',
+    instructionsKey: 'workflows.trigger.webhook.instructions_meta',
+    needsSecret: true,
+    events: [
+      { value: 'messages', labelKey: 'workflows.trigger.webhook.event_messages' },
+      { value: 'message_status', labelKey: 'workflows.trigger.webhook.event_message_status' },
+    ],
+  },
 ]
 
 export interface TriggerFormProps {
@@ -268,7 +312,7 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
       )}
 
       {/* Webhook mode */}
-      {config.mode === 'webhook' && <WebhookModeFields config={config} />}
+      {config.mode === 'webhook' && <WebhookModeFields config={config} set={set} />}
 
       {/* Executed-by-workflow mode */}
       {config.mode === 'executed_by_workflow' && (
@@ -411,11 +455,18 @@ function ExposeAsToolFields({
   )
 }
 
-// WebhookModeFields shows the generated URL (once saved) and a copy button.
-// The token is server-minted — see api/workflows.Handler.syncWebhook — so
-// there is nothing to fill in here before the first save; this section is
+// WebhookModeFields shows the generated URL (once saved) and a copy button,
+// plus the provider/events/secret configuration that decides how an inbound
+// POST to that URL is authenticated and split into events — see
+// api/workflows.validateWebhookProvider (server-authoritative; this form
+// does not duplicate its validation, only steers the user toward valid
+// combinations) and internal/webhookprovider's own doc comment for the
+// Verify/Authenticate/Extract contract these fields feed. The URL itself is
+// server-minted — see api/workflows.Handler.syncWebhook — so there is
+// nothing to fill in for it before the first save; that section stays
 // read-only by design.
-function WebhookModeFields({ config }: { config: TriggerConfig }) {
+function WebhookModeFields({ config, set }: { config: TriggerConfig; set: (patch: Partial<TriggerConfig>) => void }) {
+  const t = useTranslation()
   const [copied, setCopied] = useState(false)
   const url = config.webhook_token
     ? `${window.location.origin}/api/webhooks/${config.webhook_token}`
@@ -428,34 +479,177 @@ function WebhookModeFields({ config }: { config: TriggerConfig }) {
     setTimeout(() => setCopied(false), 1500)
   }
 
+  const providerValue = config.webhook_provider || 'generic'
+  // No `?? WEBHOOK_PROVIDERS[0]` fallback here on purpose: this field is a
+  // server-authoritative name (any name registered in internal/webhookprovider
+  // validates — see validateWebhookProvider), so a value this hardcoded FE
+  // mirror doesn't yet know about is a real, reachable case the moment a new
+  // provider ships server-side before this array is updated to match — not a
+  // hypothetical. Falling back to the generic entry would silently misrender
+  // the active card, needsSecret gate, and instructions as if the trigger
+  // were generic while providerValue itself still held the real name; `provider`
+  // staying undefined below and being handled explicitly is what keeps that
+  // state honest instead of silently wrong.
+  const provider = WEBHOOK_PROVIDERS.find((p) => p.value === providerValue)
+  const events = config.webhook_events ?? []
+
+  // Switching provider clears webhook_events AND webhook_secret_credential —
+  // the same defensive-clear reasoning setMode above already documents for
+  // mode-specific fields: a meta event name (e.g. "message_status") or a
+  // meta-scoped secret credential left over after switching to a provider
+  // that doesn't use it would either fail server-side validation on the next
+  // save (validateWebhookProvider, for events) or sit invisibly in the saved
+  // config only to silently reappear, looking freshly chosen, if the user
+  // switches back (for the secret) — and every provider's own event
+  // vocabulary is disjoint from every other's. Guarded on an actual change —
+  // re-clicking the already-active provider card must not wipe a configured
+  // event selection or secret.
+  const setProvider = (value: string) => {
+    if (value === providerValue) return
+    set({ webhook_provider: value, webhook_events: [], webhook_secret_credential: '' })
+  }
+
+  const toggleEvent = (value: string, checked: boolean) => {
+    set({ webhook_events: checked ? [...events, value] : events.filter((e) => e !== value) })
+  }
+
   return (
-    <div className="space-y-1.5">
-      <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Webhook URL</Label>
-      {url ? (
-        <>
-          <div className="flex items-center gap-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-2.5 py-1.5">
-            <code className="min-w-0 flex-1 truncate text-[11px] text-[hsl(var(--muted-foreground))]">{url}</code>
-            <button
-              type="button"
-              onClick={copy}
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted-foreground))]/20 hover:text-[hsl(var(--foreground))]"
-              title="Copy URL"
-            >
-              {copied ? <Check size={12} className="text-[hsl(var(--success))]" /> : <Copy size={12} />}
-            </button>
-          </div>
-          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-            Send a <span className="font-mono">POST</span> request here with a JSON object body — its fields are
-            available to every node as <span className="font-mono">Vars["fieldKey"]</span>, the same way a
-            triggering record's fields are. A body-less call is treated as an empty payload.
+    <div className="space-y-3">
+      <div className="space-y-1.5">
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Webhook URL</Label>
+        {url ? (
+          <>
+            <div className="flex items-center gap-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-2.5 py-1.5">
+              <code className="min-w-0 flex-1 truncate text-[11px] text-[hsl(var(--muted-foreground))]">{url}</code>
+              <button
+                type="button"
+                onClick={copy}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted-foreground))]/20 hover:text-[hsl(var(--foreground))]"
+                title="Copy URL"
+              >
+                {copied ? <Check size={12} className="text-[hsl(var(--success))]" /> : <Copy size={12} />}
+              </button>
+            </div>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
+              Send a <span className="font-mono">POST</span> request here with a JSON object body — its fields are
+              available to every node as <span className="font-mono">Vars["fieldKey"]</span>, the same way a
+              triggering record's fields are. A body-less call is treated as an empty payload.
+            </p>
+          </>
+        ) : (
+          <p className="flex items-center gap-1.5 rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-[11px] text-[hsl(var(--muted-foreground))]">
+            <RefreshCw size={12} className="shrink-0" />
+            Save this workflow once to generate its webhook URL.
           </p>
-        </>
-      ) : (
-        <p className="flex items-center gap-1.5 rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-[11px] text-[hsl(var(--muted-foreground))]">
-          <RefreshCw size={12} className="shrink-0" />
-          Save this workflow once to generate its webhook URL.
-        </p>
+        )}
+      </div>
+
+      <div className="h-px bg-[hsl(var(--border))]" />
+
+      {/* Provider select */}
+      <div className="space-y-1.5">
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
+          {t('workflows.trigger.webhook.provider_label')}
+        </Label>
+        {!provider && (
+          <p className="rounded-lg border border-dashed border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-2.5 text-[10px] text-[hsl(var(--warning))]">
+            {t('workflows.trigger.webhook.unrecognized_provider', { provider: providerValue })}
+          </p>
+        )}
+        <div className="space-y-1.5">
+          {WEBHOOK_PROVIDERS.map((p) => {
+            const active = providerValue === p.value
+            return (
+              <button
+                key={p.value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setProvider(p.value)}
+                className={cn(
+                  'flex w-full flex-col items-start gap-0.5 rounded-xl border p-2.5 text-left transition-colors',
+                  active ? 'border-[hsl(var(--success))]/50 bg-[hsl(var(--success))]/10' : 'border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:border-[hsl(var(--muted-foreground))]/40',
+                )}
+              >
+                <span className={cn('text-[12px] font-semibold', active ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--foreground))]')}>
+                  {t(p.labelKey)}
+                </span>
+                <span className="text-[10px] leading-snug text-[hsl(var(--muted-foreground))]">{t(p.descriptionKey)}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Events multiselect — only for a provider with a declared event
+          vocabulary (generic has none — see WEBHOOK_PROVIDERS above). */}
+      {provider && provider.events.length > 0 && (
+        <div className="space-y-1.5">
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
+            {t('workflows.trigger.webhook.events_label')}
+          </Label>
+          <div className="space-y-1.5">
+            {provider.events.map((e) => {
+              const checked = events.includes(e.value)
+              return (
+                <label
+                  key={e.value}
+                  className="flex items-center gap-2 rounded-lg border border-[hsl(var(--border))] p-2"
+                >
+                  <Checkbox checked={checked} onCheckedChange={(c) => toggleEvent(e.value, c === true)} />
+                  <span className="text-[11px] text-[hsl(var(--foreground))]">{t(e.labelKey)}</span>
+                </label>
+              )
+            })}
+          </div>
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.trigger.webhook.events_hint')}</p>
+        </div>
       )}
+
+      {/* Secret credential — only for a provider that authenticates
+          requests (needsSecret), matching resolveWebhookSecret's own
+          server-side requirement, which also rejects an empty value here at
+          save time (a hard failure this asterisk/hint surfaces up front
+          instead of only after a save round-trip). */}
+      {provider && provider.needsSecret && (
+        <div className="space-y-1.5">
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
+            {t('workflows.trigger.webhook.secret_label')}
+            <span className="ml-1 text-[hsl(var(--destructive))]">*</span>
+          </Label>
+          <CredentialSelect
+            value={config.webhook_secret_credential || undefined}
+            onChange={(name) => set({ webhook_secret_credential: name ?? '' })}
+            typeFilter={['bearer', 'api_key']}
+          />
+          {!config.webhook_secret_credential && (
+            <p className="text-[10px] text-[hsl(var(--warning))]">
+              {t('workflows.trigger.webhook.secret_required', { provider: t(provider.labelKey) })}
+            </p>
+          )}
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
+            {t('workflows.trigger.webhook.secret_hint', { provider: t(provider.labelKey) })}
+          </p>
+        </div>
+      )}
+
+      {/* Provider setup instructions — mirrors that provider's own
+          Describe().Instructions (internal/webhookprovider). Data-driven off
+          WEBHOOK_PROVIDERS' own instructionsKey (not a second providerValue
+          comparison) so a provider missing one is a TS error at the array
+          literal, not a silent fallback to generic's text for it. */}
+      <div className="space-y-1">
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
+          {t('workflows.trigger.webhook.instructions_label')}
+        </Label>
+        {!url && (
+          <p className="text-[10px] text-[hsl(var(--warning))]">{t('workflows.trigger.webhook.save_first_hint')}</p>
+        )}
+        {provider && (
+          <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-2.5 text-[10px] leading-snug text-[hsl(var(--muted-foreground))]">
+            {t(provider.instructionsKey)}
+          </p>
+        )}
+      </div>
     </div>
   )
 }

@@ -27,6 +27,13 @@ describe('normaliseTriggerConfig', () => {
       filter: { id: expect.any(String), combinator: 'and', conditions: [], groups: [] },
       source_form_id: '',
       webhook_token: '',
+      // webhook_provider/webhook_events/webhook_secret_credential — Phase
+      // 2(b) step 5's provider select/events multiselect/secret fields.
+      // Same "toEqual compares the whole object" trap the Expose-as-Tool
+      // comment below already notes.
+      webhook_provider: '',
+      webhook_events: [],
+      webhook_secret_credential: '',
       source_definition_id: '',
       enabled: true,
       // Expose-as-Tool defaults (FR-C8-004) — this expectation went stale when
