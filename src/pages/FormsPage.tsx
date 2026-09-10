@@ -21,7 +21,7 @@ export function FormsPage() {
   const canWrite = usePermission('forms:write')
   const [helpOpen, setHelpOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
-  const [view, setView] = useState<'tree' | 'list'>('tree')
+  const [view, setView] = useState<'tree' | 'list'>('list')
   const { appId } = useParams({ strict: false }) as { appId?: string }
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Spinner /></div>
