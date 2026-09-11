@@ -1,17 +1,19 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, KeyRound, Braces, Trash2, Loader2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import {
-  useCredentials, useUpsertCredential, useDeleteCredential,
+  useCredentials, useUpsertCredential, useDeleteCredential, useCredentialTypes,
   useVariables, useUpsertVariable, useDeleteVariable,
 } from '@/features/app-settings/hooks'
+import { CredentialTypeFieldForm, credentialFieldsComplete } from '@/features/app-settings/CredentialTypeFieldForm'
 import { usePermission } from '@/features/auth/permissions'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { IntegrationsSubsection } from '@/features/integrations/IntegrationsSubsection'
 import { ApiKeysSubsection } from '@/features/api-keys/ApiKeysSubsection'
-import type { CredentialSummary, CredentialType, AppVariable } from '@/features/app-settings/types'
+import type { CredentialSummary, CredentialTypeInfo, AppVariable } from '@/features/app-settings/types'
 
 export function GlobalSettingsSection() {
   return (
@@ -32,24 +34,24 @@ export function GlobalSettingsSection() {
 // ---------------------------------------------------------------------------
 
 function CredentialsSubsection() {
+  const t = useTranslation()
   const { data: credentials, isLoading } = useCredentials()
+  const { data: credentialTypesData } = useCredentialTypes()
   const deleteMutation = useDeleteCredential()
   const canWrite = usePermission('credentials:write')
   const [editing, setEditing] = useState<'new' | null>(null)
+  const credentialTypes = credentialTypesData?.types ?? []
 
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Credentials</h2>
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">
-            Saved authentication credentials the HTTP Request node can reference by name. Values are encrypted
-            and never shown again after saving.
-          </p>
+          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">{t('app_settings.credentials.title')}</h2>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">{t('app_settings.credentials.description')}</p>
         </div>
         {canWrite && (
           <Button size="sm" onClick={() => setEditing('new')} className="shrink-0 gap-1.5">
-            <Plus size={14} />Add credential
+            <Plus size={14} />{t('app_settings.credentials.add')}
           </Button>
         )}
       </div>
@@ -58,7 +60,7 @@ function CredentialsSubsection() {
         <div className="flex h-24 items-center justify-center"><Spinner /></div>
       ) : !credentials?.length ? (
         <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
-          No credentials yet.
+          {t('app_settings.credentials.empty')}
         </div>
       ) : (
         <div className="space-y-2">
@@ -66,6 +68,7 @@ function CredentialsSubsection() {
             <CredentialRow
               key={c.name}
               credential={c}
+              credentialTypes={credentialTypes}
               canWrite={canWrite}
               onDelete={() => deleteMutation.mutate(c.name)}
               deleting={deleteMutation.isPending && deleteMutation.variables === c.name}
@@ -74,23 +77,25 @@ function CredentialsSubsection() {
         </div>
       )}
 
-      {editing === 'new' && <CredentialFormDialog onClose={() => setEditing(null)} />}
+      {editing === 'new' && <CredentialFormDialog credentialTypes={credentialTypes} onClose={() => setEditing(null)} />}
     </section>
   )
 }
 
-function CredentialRow({ credential, canWrite, onDelete, deleting }: {
+function CredentialRow({ credential, credentialTypes, canWrite, onDelete, deleting }: {
   credential: CredentialSummary
+  credentialTypes: CredentialTypeInfo[]
   canWrite: boolean
   onDelete: () => void
   deleting: boolean
 }) {
+  const displayName = credentialTypes.find((ct) => ct.name === credential.type)?.display_name ?? credential.type
   return (
     <div className="flex items-center gap-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3">
       <KeyRound size={16} className="shrink-0 text-[hsl(var(--primary))]" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-[hsl(var(--foreground))]">{credential.name}</p>
-        <p className="text-xs text-[hsl(var(--muted-foreground))]">{CREDENTIAL_TYPE_LABELS[credential.type]}</p>
+        <p className="text-xs text-[hsl(var(--muted-foreground))]">{displayName}</p>
       </div>
       {canWrite && (
         <Button
@@ -105,34 +110,28 @@ function CredentialRow({ credential, canWrite, onDelete, deleting }: {
   )
 }
 
-const CREDENTIAL_TYPE_LABELS: Record<CredentialType, string> = {
-  basic: 'Basic auth',
-  bearer: 'Bearer token',
-  api_key: 'API key',
-}
-
-function CredentialFormDialog({ onClose }: { onClose: () => void }) {
+function CredentialFormDialog({ credentialTypes, onClose }: { credentialTypes: CredentialTypeInfo[]; onClose: () => void }) {
+  const t = useTranslation()
   const upsertMutation = useUpsertCredential()
   const [name, setName] = useState('')
-  const [type, setType] = useState<CredentialType>('bearer')
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [token, setToken] = useState('')
-  const [apiKeyValue, setApiKeyValue] = useState('')
-  const [apiKeyParamName, setApiKeyParamName] = useState('')
-  const [apiKeyLocation, setApiKeyLocation] = useState<'header' | 'query'>('header')
+  const [type, setType] = useState('')
+  const [values, setValues] = useState<Record<string, string>>({})
 
-  const canSave = name.trim() !== '' && (
-    (type === 'basic' && username.trim() !== '' && password.trim() !== '') ||
-    (type === 'bearer' && token.trim() !== '') ||
-    (type === 'api_key' && apiKeyValue.trim() !== '' && apiKeyParamName.trim() !== '')
-  )
+  // Default to "bearer" (the most common shape) once the registry has
+  // loaded, rather than hardcoding it before credentialTypes is known to
+  // actually contain it — a deployment could in principle not have loaded
+  // yet, or (never today, but the registry is extensible) not offer it.
+  useEffect(() => {
+    if (type || credentialTypes.length === 0) return
+    setType(credentialTypes.find((ct) => ct.name === 'bearer')?.name ?? credentialTypes[0].name)
+  }, [type, credentialTypes])
+
+  const selected = credentialTypes.find((ct) => ct.name === type)
+  const canSave = name.trim() !== '' && !!selected && credentialFieldsComplete(selected.fields, values)
 
   const handleSave = async () => {
-    const value =
-      type === 'basic' ? { username, password } :
-      type === 'bearer' ? { token } :
-      { key: apiKeyValue, location: apiKeyLocation, param_name: apiKeyParamName }
+    if (!selected) return
+    const value = Object.fromEntries(selected.fields.map((f) => [f.key, values[f.key] ?? '']))
     await upsertMutation.mutateAsync({ name: name.trim(), payload: { type, value } })
     onClose()
   }
@@ -141,86 +140,47 @@ function CredentialFormDialog({ onClose }: { onClose: () => void }) {
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add credential</DialogTitle>
-          <DialogDescription>
-            Referenced from the HTTP Request node's Auth tab by name — the value is encrypted at rest and never
-            shown again.
-          </DialogDescription>
+          <DialogTitle>{t('app_settings.credentials.add')}</DialogTitle>
+          <DialogDescription>{t('app_settings.credentials.dialog_description')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 px-6 py-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. stripe_api" className="font-mono text-xs" />
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('app_settings.credentials.name_label')}</label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('app_settings.credentials.name_placeholder')} className="font-mono text-xs" />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Type</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('app_settings.credentials.type_label')}</label>
             <select
               value={type}
-              onChange={(e) => setType(e.target.value as CredentialType)}
+              onChange={(e) => { setType(e.target.value); setValues({}) }}
               className="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1.5 text-sm text-[hsl(var(--foreground))]"
             >
-              <option value="bearer">Bearer token</option>
-              <option value="basic">Basic auth</option>
-              <option value="api_key">API key</option>
+              {credentialTypes.map((ct) => (
+                <option key={ct.name} value={ct.name}>{ct.display_name}</option>
+              ))}
             </select>
           </div>
 
-          {type === 'basic' && (
-            <>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Username</label>
-                <Input value={username} onChange={(e) => setUsername(e.target.value)} />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Password</label>
-                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-              </div>
-            </>
-          )}
-
-          {type === 'bearer' && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Token</label>
-              <Input type="password" value={token} onChange={(e) => setToken(e.target.value)} className="font-mono text-xs" />
-            </div>
-          )}
-
-          {type === 'api_key' && (
-            <>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Key</label>
-                <Input type="password" value={apiKeyValue} onChange={(e) => setApiKeyValue(e.target.value)} className="font-mono text-xs" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Param name</label>
-                <Input value={apiKeyParamName} onChange={(e) => setApiKeyParamName(e.target.value)} placeholder="e.g. X-API-Key" className="font-mono text-xs" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Send as</label>
-                <select
-                  value={apiKeyLocation}
-                  onChange={(e) => setApiKeyLocation(e.target.value as 'header' | 'query')}
-                  className="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1.5 text-sm text-[hsl(var(--foreground))]"
-                >
-                  <option value="header">Header</option>
-                  <option value="query">Query param</option>
-                </select>
-              </div>
-            </>
+          {selected && (
+            <CredentialTypeFieldForm
+              fields={selected.fields}
+              values={values}
+              onChange={(key, value) => setValues((v) => ({ ...v, [key]: value }))}
+            />
           )}
 
           {upsertMutation.isError && (
-            <p className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={13} />Failed to save credential</p>
+            <p className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={13} />{t('app_settings.credentials.save_error')}</p>
           )}
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={onClose}>{t('app_settings.credentials.cancel')}</Button>
           <Button onClick={handleSave} disabled={!canSave || upsertMutation.isPending} className="gap-1.5">
             {upsertMutation.isPending && <Loader2 size={14} className="animate-spin" />}
-            Save
+            {t('app_settings.credentials.save')}
           </Button>
         </div>
       </DialogContent>

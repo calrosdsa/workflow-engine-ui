@@ -3,12 +3,26 @@ import { appSettingsApi } from './api'
 import type { UpsertCredentialPayload, UpsertVariablePayload } from './types'
 
 export const appSettingsKeys = {
-  credentials: () => ['app-settings', 'credentials'] as const,
-  variables:   () => ['app-settings', 'variables'] as const,
+  credentials:     () => ['app-settings', 'credentials'] as const,
+  credentialTypes: () => ['app-settings', 'credential-types'] as const,
+  variables:       () => ['app-settings', 'variables'] as const,
 }
 
 export function useCredentials() {
   return useQuery({ queryKey: appSettingsKeys.credentials(), queryFn: appSettingsApi.listCredentials })
+}
+
+/** The merged built-in + package-declared credential-type registry — what a
+ *  creation form needs to know which types exist and what fields each one
+ *  has. Effectively static for a given deployment (changes only when a
+ *  package is enabled/disabled/updated), so a longer staleTime than the
+ *  default avoids refetching it on every Application Settings visit. */
+export function useCredentialTypes() {
+  return useQuery({
+    queryKey: appSettingsKeys.credentialTypes(),
+    queryFn: appSettingsApi.listCredentialTypes,
+    staleTime: 5 * 60 * 1000,
+  })
 }
 
 export function useUpsertCredential() {

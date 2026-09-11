@@ -1,6 +1,6 @@
 import { api } from '@/lib/api'
 import type {
-  CredentialSummary, UpsertCredentialPayload,
+  CredentialSummary, UpsertCredentialPayload, CredentialTypeInfo,
   AppVariable, UpsertVariablePayload,
 } from './types'
 
@@ -13,6 +13,7 @@ export const appSettingsApi = {
   upsertCredential: (name: string, p: UpsertCredentialPayload) =>
     api.put(`application/credentials/${encodeName(name)}`, { json: p }).json<{ name: string; type: string }>(),
   deleteCredential: (name: string) => api.delete(`application/credentials/${encodeName(name)}`),
+  listCredentialTypes: () => api.get('meta/credential-types').json<{ types: CredentialTypeInfo[] }>(),
 
   listVariables: () => api.get('application/variables').json<AppVariable[]>(),
   upsertVariable: (name: string, p: UpsertVariablePayload) =>
