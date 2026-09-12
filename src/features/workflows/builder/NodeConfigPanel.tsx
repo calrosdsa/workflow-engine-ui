@@ -2,23 +2,18 @@ import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import {
   AlertCircle,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   CircleHelp,
   Clipboard,
   Copy,
   Download,
   FileCode2,
   Loader2,
-  Maximize2,
-  Minimize2,
   PanelLeft,
   Pin,
   Play,
   Plug,
   RotateCcw,
   Settings2,
-  SlidersHorizontal,
   Square,
   Table2,
   Unplug,
@@ -85,8 +80,8 @@ const EMPTY_RUN: StepRun = { phase: 'idle' }
 export function NodeConfigPanel() {
   const {
     nodes, edges, selectedNodeId, variables, updateNodeConfig, updateNodeLabel,
-    updateNodeWorkbench, configPanelOpen, toggleConfigPanel, configPanelWide,
-    toggleConfigPanelWide, selectNode, isDirty,
+    updateNodeWorkbench, configPanelOpen, toggleConfigPanel, closeActiveSidebar,
+    selectNode, isDirty,
   } = useBuilderStore()
   const node = nodes.find((candidate) => candidate.id === selectedNodeId)
   const [compactPane, setCompactPane] = useState<CompactPane>('parameters')
@@ -111,6 +106,20 @@ export function NodeConfigPanel() {
   useEffect(() => {
     selectedNodeDataRef.current = selectedNodeData
   }, [selectedNodeData])
+
+  // Closes the modal outright (unlike the header's old selectNode(null)
+  // alone, which used to just fall through to the EmptyWorkbench state —
+  // fine for a docked panel that could sit half-open, wrong for a modal,
+  // where every close affordance (X, backdrop click, Escape) needs to
+  // return to the canvas in one action).
+  const closeWorkbench = () => { selectNode(null); closeActiveSidebar() }
+
+  useEffect(() => {
+    if (!configPanelOpen) return
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') closeWorkbench() }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [configPanelOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const currentNode = selectedNodeDataRef.current
@@ -291,7 +300,7 @@ export function NodeConfigPanel() {
   }
 
   const beginResize = (pane: 'input' | 'output') => (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (!configPanelWide || !workbenchColumnsRef.current) return
+    if (!workbenchColumnsRef.current) return
     event.preventDefault()
     const columns = workbenchColumnsRef.current
     const bounds = columns.getBoundingClientRect()
@@ -312,165 +321,149 @@ export function NodeConfigPanel() {
     window.addEventListener('pointerup', stop)
   }
 
+  if (!configPanelOpen) return null
+
   return (
-    <aside
-      className={cn(
-        'node-workbench absolute inset-y-0 right-0 z-30 flex flex-col border-l border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-[-16px_0_36px_hsl(var(--background)/0.34)] transition-[width] duration-200',
-        !configPanelOpen ? 'w-10' : configPanelWide ? 'node-workbench-wide w-[min(1120px,calc(100vw-3rem))]' : 'node-workbench-compact w-[26rem]',
-      )}
-      aria-label="Node configuration workbench"
+    // A true modal takeover (FR-C5-008's exclusive-sidebar model still
+    // governs WHEN this opens; this is only about HOW it renders once
+    // open) — scoped to workflow-builder-main via `absolute`, not `fixed`,
+    // so the header/Save button above it stay reachable, matching
+    // TriggerOnboardingModal's own in-canvas overlay convention rather
+    // than a viewport-spanning portal.
+    <div
+      className="absolute inset-0 z-40 flex items-center justify-center bg-[hsl(var(--background))]/70 p-4 backdrop-blur-sm"
+      role="presentation"
+      onMouseDown={(event) => { if (event.target === event.currentTarget) closeWorkbench() }}
     >
-      <button
-        onClick={toggleConfigPanel}
-        className="absolute -left-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] shadow-sm transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
-        title={configPanelOpen ? 'Close node workbench' : 'Open node workbench'}
+      <div
+        className="node-workbench node-workbench-wide relative flex h-full w-full max-w-[1600px] flex-col overflow-hidden rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl shadow-black/40"
+        aria-label="Node configuration workbench"
       >
-        {configPanelOpen ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
-      </button>
+        {!node ? (
+          <EmptyWorkbench onClose={toggleConfigPanel} />
+        ) : (
+          <>
+            <WorkbenchHeader
+              node={node.data}
+              icon={Icon}
+              kind={packageEntry?.kind}
+              readiness={readiness}
+              issueCount={issues.length}
+              running={run.phase === 'running'}
+              resultIsStale={resultIsStale}
+              helpOpen={helpOpen}
+              unsaved={isDirty}
+              onLabelChange={(label) => updateNodeLabel(node.id, label)}
+              onToggleHelp={() => setHelpOpen((open) => !open)}
+              onClose={closeWorkbench}
+              onPin={pinCapturedOutput}
+              canPin={liveOutput !== undefined}
+            />
 
-      {configPanelOpen && (
-        <button
-          onClick={toggleConfigPanelWide}
-          className="absolute -left-3 top-16 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] shadow-sm transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
-          title={configPanelWide ? 'Use compact inspector' : 'Use three-pane workbench'}
-        >
-          {configPanelWide ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-        </button>
-      )}
-
-      {!configPanelOpen && (
-        <div className="flex flex-1 flex-col items-center gap-2 pt-4">
-          <SlidersHorizontal size={15} className="text-[hsl(var(--muted-foreground))]" />
-          <span className="rotate-90 select-none whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Configure</span>
-        </div>
-      )}
-
-      {configPanelOpen && !node && (
-        <EmptyWorkbench onClose={toggleConfigPanel} />
-      )}
-
-      {configPanelOpen && node && (
-        <>
-          <WorkbenchHeader
-            node={node.data}
-            icon={Icon}
-            kind={packageEntry?.kind}
-            readiness={readiness}
-            issueCount={issues.length}
-            running={run.phase === 'running'}
-            resultIsStale={resultIsStale}
-            helpOpen={helpOpen}
-            unsaved={isDirty}
-            onLabelChange={(label) => updateNodeLabel(node.id, label)}
-            onToggleHelp={() => setHelpOpen((open) => !open)}
-            onClose={() => selectNode(null)}
-            onPin={pinCapturedOutput}
-            canPin={liveOutput !== undefined}
-          />
-
-          {helpOpen && (
-            <div id="node-workbench-help" className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 px-4 py-3 text-[12px] text-[hsl(var(--muted-foreground))]">
-              <p className="font-medium text-[hsl(var(--foreground))]">{builtIn?.label ?? packageEntry?.display_name ?? node.data.type}</p>
-              <p className="mt-1 leading-relaxed">{builtIn?.description ?? packageEntry?.summary ?? 'This saved node type is not installed locally. Its existing configuration remains available read-only.'}</p>
-              <p className="mt-2 text-[11px]">Parameters configure this node. Settings are design-time metadata until matching execution policies are enabled by the server.</p>
-            </div>
-          )}
-
-          <div className="node-workbench-compact-tabs flex border-b border-[hsl(var(--border))] px-3 py-2">
-            {(['input', 'parameters', 'output'] as CompactPane[]).map((pane) => (
-              <button
-                key={pane}
-                type="button"
-                onClick={() => setCompactPane(pane)}
-                data-active={compactPane === pane}
-                className="node-workbench-pane-tab flex-1 rounded-md px-2 py-1.5 text-xs font-medium capitalize"
-              >
-                {pane}
-              </button>
-            ))}
-          </div>
-
-          <div ref={workbenchColumnsRef} className="node-workbench-columns flex min-h-0 flex-1">
-            <section style={{ flexBasis: `${inputPaneWidth}%` }} className={cn('node-workbench-pane node-workbench-input min-w-0 border-r border-[hsl(var(--border))]', compactPane !== 'input' && 'node-workbench-hidden-compact')} aria-label="Input context">
-              <DataPane
-                title="Input"
-                subtitle="Captured values and design-time context"
-                value={inputData}
-                emptyMessage="No upstream data is available yet."
-                onInsertPath={(path) => insertExpressionPath(path)}
-              />
-            </section>
-
-            <button type="button" aria-label="Resize input pane" onPointerDown={beginResize('input')} onKeyDown={(event) => { if (event.key === 'ArrowLeft') setInputPaneWidth((width) => Math.max(18, width - 2)); if (event.key === 'ArrowRight') setInputPaneWidth((width) => Math.min(38, width + 2)) }} className="node-workbench-splitter" />
-
-            <section className={cn('node-workbench-pane node-workbench-parameters min-w-0', compactPane !== 'parameters' && 'node-workbench-hidden-compact')} aria-label="Node parameters and settings">
-              <div className="flex h-full min-h-0 flex-col">
-                <div className="flex shrink-0 items-center gap-1 border-b border-[hsl(var(--border))] px-4 py-2">
-                  <button type="button" onClick={() => setConfigurationTab('parameters')} data-active={configurationTab === 'parameters'} className="node-workbench-tab rounded-md px-2.5 py-1.5 text-xs font-semibold">Parameters</button>
-                  <button type="button" onClick={() => setConfigurationTab('settings')} data-active={configurationTab === 'settings'} className="node-workbench-tab rounded-md px-2.5 py-1.5 text-xs font-semibold">Settings</button>
-                  {issues.length > 0 && <span className="ml-auto rounded-full bg-[hsl(var(--destructive))]/10 px-2 py-0.5 text-[10px] font-semibold text-[hsl(var(--destructive))]">{issues.length} issue{issues.length === 1 ? '' : 's'}</span>}
-                </div>
-
-                <ScrollArea className="min-h-0 flex-1">
-                  <div className="space-y-5 p-4">
-                    {configurationTab === 'parameters' ? (
-                      <ParametersPane
-                        node={node.data}
-                        builtIn={builtIn}
-                        packageEntry={packageEntry}
-                        variables={variables}
-                        nodeContext={nodeContext}
-                        issues={parameterIssues}
-                        triggerPresets={taxonomy?.trigger_presets ?? []}
-                        onChange={(configuration) => updateNodeConfig(node.id, configuration)}
-                      />
-                    ) : (
-                      <SettingsPane settings={workbench!.settings} issues={settingsIssues} onChange={updateSettings} />
-                    )}
-                    <ValidationSummary issues={issues} onSelect={(issue) => {
-                      setConfigurationTab(issue.path.startsWith('settings.') ? 'settings' : 'parameters')
-                      requestAnimationFrame(() => document.getElementById(`node-workbench-${issue.path}`)?.focus())
-                    }} />
-                  </div>
-                </ScrollArea>
+            {helpOpen && (
+              <div id="node-workbench-help" className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 px-4 py-3 text-[12px] text-[hsl(var(--muted-foreground))]">
+                <p className="font-medium text-[hsl(var(--foreground))]">{builtIn?.label ?? packageEntry?.display_name ?? node.data.type}</p>
+                <p className="mt-1 leading-relaxed">{builtIn?.description ?? packageEntry?.summary ?? 'This saved node type is not installed locally. Its existing configuration remains available read-only.'}</p>
+                <p className="mt-2 text-[11px]">Parameters configure this node. Settings are design-time metadata until matching execution policies are enabled by the server.</p>
               </div>
-            </section>
+            )}
 
-            <button type="button" aria-label="Resize output pane" onPointerDown={beginResize('output')} onKeyDown={(event) => { if (event.key === 'ArrowLeft') setOutputPaneWidth((width) => Math.min(38, width + 2)); if (event.key === 'ArrowRight') setOutputPaneWidth((width) => Math.max(18, width - 2)) }} className="node-workbench-splitter" />
-
-            <section style={{ flexBasis: `${outputPaneWidth}%` }} className={cn('node-workbench-pane node-workbench-output min-w-0 border-l border-[hsl(var(--border))]', compactPane !== 'output' && 'node-workbench-hidden-compact')} aria-label="Node output">
-              <OutputPane
-                displayedOutput={displayedOutput}
-                run={run}
-                resultIsStale={resultIsStale}
-                mockDraft={mockDraft}
-                mockError={mockError}
-                onMockChange={setMockDraft}
-                onApplyMock={applyMock}
-                onClearMock={() => { updateNodeWorkbench(node.id, { mockOutput: undefined }); setMockDraft(''); setMockError(null) }}
-                onClearPin={() => updateNodeWorkbench(node.id, { pinnedOutput: undefined })}
-              />
-            </section>
-          </div>
-
-          <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-2.5">
-            <p className="min-w-0 text-[11px] text-[hsl(var(--muted-foreground))]">
-              {node.data.type === 'http_request' ? 'Tests the current draft request; it does not save or publish this workflow.' : 'Draft preview only — server-side per-step execution is not available yet.'}
-            </p>
-            <div className="flex shrink-0 items-center gap-2">
-              {run.phase === 'running' ? (
-                <Button variant="outline" size="sm" onClick={cancelStep} className="h-8 gap-1.5 rounded-full text-xs"><Square size={12} />Cancel</Button>
-              ) : (
-                <Button size="sm" onClick={runStep} className="h-8 gap-1.5 rounded-full bg-[hsl(var(--foreground))] text-xs text-[hsl(var(--background))] hover:bg-[hsl(var(--foreground))]/90">
-                  {run.phase === 'failed' || run.phase === 'cancelled' ? <RotateCcw size={12} /> : <Play size={12} />}
-                  {node.data.type === 'http_request' ? 'Execute step' : 'Preview step'}
-                </Button>
-              )}
+            <div className="node-workbench-compact-tabs flex border-b border-[hsl(var(--border))] px-3 py-2">
+              {(['input', 'parameters', 'output'] as CompactPane[]).map((pane) => (
+                <button
+                  key={pane}
+                  type="button"
+                  onClick={() => setCompactPane(pane)}
+                  data-active={compactPane === pane}
+                  className="node-workbench-pane-tab flex-1 rounded-md px-2 py-1.5 text-xs font-medium capitalize"
+                >
+                  {pane}
+                </button>
+              ))}
             </div>
-          </div>
-        </>
-      )}
-    </aside>
+
+            <div ref={workbenchColumnsRef} className="node-workbench-columns flex min-h-0 flex-1">
+              <section style={{ flexBasis: `${inputPaneWidth}%` }} className={cn('node-workbench-pane node-workbench-input min-w-0 border-r border-[hsl(var(--border))]', compactPane !== 'input' && 'node-workbench-hidden-compact')} aria-label="Input context">
+                <DataPane
+                  title="Input"
+                  subtitle="Captured values and design-time context"
+                  value={inputData}
+                  emptyMessage="No upstream data is available yet."
+                  onInsertPath={(path) => insertExpressionPath(path)}
+                />
+              </section>
+
+              <button type="button" aria-label="Resize input pane" onPointerDown={beginResize('input')} onKeyDown={(event) => { if (event.key === 'ArrowLeft') setInputPaneWidth((width) => Math.max(18, width - 2)); if (event.key === 'ArrowRight') setInputPaneWidth((width) => Math.min(38, width + 2)) }} className="node-workbench-splitter" />
+
+              <section className={cn('node-workbench-pane node-workbench-parameters min-w-0', compactPane !== 'parameters' && 'node-workbench-hidden-compact')} aria-label="Node parameters and settings">
+                <div className="flex h-full min-h-0 flex-col">
+                  <div className="flex shrink-0 items-center gap-1 border-b border-[hsl(var(--border))] px-4 py-2">
+                    <button type="button" onClick={() => setConfigurationTab('parameters')} data-active={configurationTab === 'parameters'} className="node-workbench-tab rounded-md px-2.5 py-1.5 text-xs font-semibold">Parameters</button>
+                    <button type="button" onClick={() => setConfigurationTab('settings')} data-active={configurationTab === 'settings'} className="node-workbench-tab rounded-md px-2.5 py-1.5 text-xs font-semibold">Settings</button>
+                    {issues.length > 0 && <span className="ml-auto rounded-full bg-[hsl(var(--destructive))]/10 px-2 py-0.5 text-[10px] font-semibold text-[hsl(var(--destructive))]">{issues.length} issue{issues.length === 1 ? '' : 's'}</span>}
+                  </div>
+
+                  <ScrollArea className="min-h-0 flex-1">
+                    <div className="space-y-5 p-4">
+                      {configurationTab === 'parameters' ? (
+                        <ParametersPane
+                          node={node.data}
+                          builtIn={builtIn}
+                          packageEntry={packageEntry}
+                          variables={variables}
+                          nodeContext={nodeContext}
+                          issues={parameterIssues}
+                          triggerPresets={taxonomy?.trigger_presets ?? []}
+                          onChange={(configuration) => updateNodeConfig(node.id, configuration)}
+                        />
+                      ) : (
+                        <SettingsPane settings={workbench!.settings} issues={settingsIssues} onChange={updateSettings} />
+                      )}
+                      <ValidationSummary issues={issues} onSelect={(issue) => {
+                        setConfigurationTab(issue.path.startsWith('settings.') ? 'settings' : 'parameters')
+                        requestAnimationFrame(() => document.getElementById(`node-workbench-${issue.path}`)?.focus())
+                      }} />
+                    </div>
+                  </ScrollArea>
+                </div>
+              </section>
+
+              <button type="button" aria-label="Resize output pane" onPointerDown={beginResize('output')} onKeyDown={(event) => { if (event.key === 'ArrowLeft') setOutputPaneWidth((width) => Math.min(38, width + 2)); if (event.key === 'ArrowRight') setOutputPaneWidth((width) => Math.max(18, width - 2)) }} className="node-workbench-splitter" />
+
+              <section style={{ flexBasis: `${outputPaneWidth}%` }} className={cn('node-workbench-pane node-workbench-output min-w-0 border-l border-[hsl(var(--border))]', compactPane !== 'output' && 'node-workbench-hidden-compact')} aria-label="Node output">
+                <OutputPane
+                  displayedOutput={displayedOutput}
+                  run={run}
+                  resultIsStale={resultIsStale}
+                  mockDraft={mockDraft}
+                  mockError={mockError}
+                  onMockChange={setMockDraft}
+                  onApplyMock={applyMock}
+                  onClearMock={() => { updateNodeWorkbench(node.id, { mockOutput: undefined }); setMockDraft(''); setMockError(null) }}
+                  onClearPin={() => updateNodeWorkbench(node.id, { pinnedOutput: undefined })}
+                />
+              </section>
+            </div>
+
+            <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-2.5">
+              <p className="min-w-0 text-[11px] text-[hsl(var(--muted-foreground))]">
+                {node.data.type === 'http_request' ? 'Tests the current draft request; it does not save or publish this workflow.' : 'Draft preview only — server-side per-step execution is not available yet.'}
+              </p>
+              <div className="flex shrink-0 items-center gap-2">
+                {run.phase === 'running' ? (
+                  <Button variant="outline" size="sm" onClick={cancelStep} className="h-8 gap-1.5 rounded-full text-xs"><Square size={12} />Cancel</Button>
+                ) : (
+                  <Button size="sm" onClick={runStep} className="h-8 gap-1.5 rounded-full bg-[hsl(var(--foreground))] text-xs text-[hsl(var(--background))] hover:bg-[hsl(var(--foreground))]/90">
+                    {run.phase === 'failed' || run.phase === 'cancelled' ? <RotateCcw size={12} /> : <Play size={12} />}
+                    {node.data.type === 'http_request' ? 'Execute step' : 'Preview step'}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   )
 }
 

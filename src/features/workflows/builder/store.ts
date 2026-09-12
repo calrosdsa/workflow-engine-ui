@@ -289,10 +289,6 @@ export interface BuilderState {
   varsPanelOpen:    boolean
   configPanelOpen:  boolean
   executionsPanelOpen: boolean
-  /** Widen the config panel (e.g. for the HTTP node's response schema
-   *  builder). Orthogonal to which sidebar is active — a global preference,
-   *  not scoped per-node (never reset on node selection). */
-  configPanelWide:  boolean
   toggleVarsPanel:  () => void
   toggleConfigPanel:() => void
   toggleExecutionsPanel: () => void
@@ -300,7 +296,6 @@ export interface BuilderState {
    *  (e.g. a Run completing) where flipping an already-open panel closed
    *  would be wrong. */
   openExecutionsPanel: () => void
-  toggleConfigPanelWide: () => void
   closeActiveSidebar: () => void
 
   // drag-to-reorder state
@@ -451,7 +446,6 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
   varsPanelOpen:       true,
   configPanelOpen:     false,
   executionsPanelOpen: false,
-  configPanelWide:     true,
   toggleVarsPanel: () => set((s) => {
     const next = s.activeSidebar === 'variables' ? null : 'variables'
     return { activeSidebar: next, varsPanelOpen: next === 'variables', configPanelOpen: next === 'config', executionsPanelOpen: next === 'executions' }
@@ -465,7 +459,6 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
     return { activeSidebar: next, varsPanelOpen: next === 'variables', configPanelOpen: next === 'config', executionsPanelOpen: next === 'executions' }
   }),
   openExecutionsPanel: () => set({ activeSidebar: 'executions', varsPanelOpen: false, configPanelOpen: false, executionsPanelOpen: true }),
-  toggleConfigPanelWide: () => set((s) => ({ configPanelWide: !s.configPanelWide })),
   closeActiveSidebar: () => set({ activeSidebar: null, varsPanelOpen: false, configPanelOpen: false, executionsPanelOpen: false }),
 
   draggingNodeId:      null,
