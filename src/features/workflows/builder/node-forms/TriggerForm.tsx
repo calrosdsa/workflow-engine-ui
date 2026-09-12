@@ -673,7 +673,22 @@ function WebhookModeFields({ config, set }: { config: TriggerConfig; set: (patch
           <CredentialSelect
             value={config.webhook_secret_credential || undefined}
             onChange={(name) => set({ webhook_secret_credential: name ?? '' })}
-            typeFilter={['bearer', 'api_key']}
+            // Pinned to exactly 'whatsapp_oauth' — 'meta' is the only
+            // needsSecret provider today (this block only renders for one),
+            // and it's WhatsApp's own provider in practice, so its secret
+            // credential should always be a WhatsApp OAuth API credential
+            // (Client ID + Client Secret), matching n8n's own WhatsApp
+            // Trigger, which never offers a generic Bearer/API key choice
+            // either. A single allowed type collapses CreateCredentialDialog
+            // straight to the field form — no Type picker step at all. If a
+            // second needsSecret provider is ever added with a different
+            // credential shape, this filter (and the resolveWebhookSecret
+            // mechanism it maps to server-side) needs to branch on provider
+            // at that point, not before — resolveWebhookSecretMechanism
+            // itself still accepts a plain Bearer/API key credential too,
+            // so an existing one keeps working even though the UI here no
+            // longer offers creating a new one that way.
+            typeFilter="whatsapp_oauth"
           />
           {!config.webhook_secret_credential && (
             <p className="text-[10px] text-[hsl(var(--warning))]">
