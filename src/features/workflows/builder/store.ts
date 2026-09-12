@@ -12,6 +12,7 @@ import dagre from '@dagrejs/dagre'
 import { nanoid } from './nanoid'
 import type { GraphNode, GraphEdge, VariableDecl, NodeType, WorkflowDefinitionGraph } from '../types'
 import { defaultPorts, defaultConfig, defaultLabel } from './node-registry'
+import { nodeMetadataWithWorkbench, type NodeWorkbenchData } from './configuration-workbench'
 
 // isEditChange reports whether a React Flow change actually EDITS the
 // definition, as opposed to merely reporting canvas bookkeeping.
@@ -338,6 +339,9 @@ export interface BuilderState {
    *  canvas doesn't have one yet (a brand-new workflow before its first
    *  trigger choice). See TriggerOnboardingModal. */
   applyTriggerConfig:   (config: unknown) => void
+  /** Persists workbench-only settings and mock/pinned data in node metadata,
+   * leaving the node type's execution configuration untouched. */
+  updateNodeWorkbench:  (nodeId: string, patch: Partial<NodeWorkbenchData>) => void
   /** Condition nodes only: switch between the single-output gate (default)
    *  and an explicit two-path true/false branch. Disabling drops the false
    *  port AND every edge wired to it. */
@@ -914,6 +918,18 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
     set((s) => ({
       nodes: s.nodes.map((n) =>
         n.id === nodeId ? { ...n, data: { ...n.data, configuration: config } } : n,
+      ),
+      isDirty: true,
+    }))
+  },
+
+  updateNodeWorkbench: (nodeId, patch) => {
+    pushHistory(`workbench:${nodeId}`)
+    set((s) => ({
+      nodes: s.nodes.map((n) =>
+        n.id === nodeId
+          ? { ...n, data: { ...n.data, metadata: nodeMetadataWithWorkbench(n.data.metadata, patch) } }
+          : n,
       ),
       isDirty: true,
     }))
