@@ -663,9 +663,25 @@ function buildInputData(node: FlowNode | undefined, nodes: FlowNode[], edges: Fl
       })),
     }]
   }))
-  const triggerConfiguration = nodes.find((candidate) => candidate.data.type === 'trigger')?.data.configuration ?? { available: 'Trigger payload is available only when the workflow is invoked.' }
+  // The trigger's own record fields (name/type only, e.g. from its bound
+  // form), NOT its raw node.data.configuration — cron/enabled/expose_as_tool/
+  // filter.* etc. are the trigger's OWN setup knobs, not data a downstream
+  // expression can ever reference, and dumping them here just buried the
+  // fields a user actually wants behind implementation noise. Reuses the
+  // same buildNodeOutputSchema the trigger's own "(triggering record)"
+  // nodeContext entry already computes, so this pane and the Parameters
+  // pane's expression autocomplete always agree on what the trigger exposes.
+  const triggerNode = nodes.find((candidate) => candidate.data.type === 'trigger')
+  const triggerFields = triggerNode ? buildNodeOutputSchema(triggerNode, formsById, nodes).flatMap((entry) => entry.fields) : []
   return {
-    triggerContext: { payload: 'No captured trigger payload. Run the workflow to inspect a live payload.', configuration: redactSensitiveData(triggerConfiguration) },
+    // Keyed 'trigger' (not 'triggerContext') so insertExpressionPath's own
+    // 'trigger.' prefix check below actually matches these paths.
+    trigger: {
+      payload: 'No captured trigger payload. Run the workflow to inspect a live payload.',
+      ...(triggerFields.length > 0
+        ? Object.fromEntries(triggerFields.map((field) => [field.key, field.type]))
+        : { fields: 'This trigger has no known fields yet — bind it to a form (or run the workflow) to see them here.' }),
+    },
     upstream,
     variables: Object.fromEntries(variables.map((variable) => [variable.name, variable.default ?? { type: variable.type, value: 'Available at execution time' }])),
     environment: { context: 'Tenant, current user, and trigger metadata are resolved at execution time.' },
