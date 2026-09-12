@@ -179,9 +179,18 @@ function validateSchemaProperty(path: string, property: JSONSchemaProperty, valu
 
 const SECRET_KEY = /(?:api[_-]?key|authorization|cookie|password|secret|token|credential|private[_-]?key)/i
 
+// Known keys that would otherwise match SECRET_KEY on keyword alone but are
+// never a secret value — e.g. the CORS response header
+// Access-Control-Allow-Credentials is always the literal boolean "true"/
+// "false" (per the Fetch/CORS spec), never a credential. There is no way to
+// tell these apart from a real secret field by shape alone (both legitimately
+// end in "...credentials"), so this has to be an explicit exception rather
+// than a stricter pattern.
+const SECRET_KEY_EXCEPTIONS = /^access-control-allow-credentials$/i
+
 /** Safe representation for every configuration viewer and clipboard action. */
 export function redactSensitiveData(value: unknown, key = ''): unknown {
-  if (SECRET_KEY.test(key)) return '[REDACTED]'
+  if (SECRET_KEY.test(key) && !SECRET_KEY_EXCEPTIONS.test(key)) return '[REDACTED]'
   if (Array.isArray(value)) return value.map((item) => redactSensitiveData(item))
   if (!isRecord(value)) return value
   return Object.fromEntries(Object.entries(value).map(([childKey, childValue]) => [childKey, redactSensitiveData(childValue, childKey)]))

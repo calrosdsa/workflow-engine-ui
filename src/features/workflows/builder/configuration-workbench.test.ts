@@ -68,6 +68,16 @@ describe('node configuration workbench contract', () => {
     })
   })
 
+  it('does not redact the CORS access-control-allow-credentials header, which is always a plain boolean', () => {
+    expect(redactSensitiveData({
+      'access-control-allow-credentials': 'true',
+      authorization: 'Bearer secret-value',
+    })).toEqual({
+      'access-control-allow-credentials': 'true',
+      authorization: '[REDACTED]',
+    })
+  })
+
   it('keeps pinned and mock data ahead of stale captured output', () => {
     expect(selectWorkbenchOutput({
       pinnedOutput: { id: 'pinned' }, mockOutput: { id: 'mock' }, runOutput: { id: 'live' }, runSource: 'live',
