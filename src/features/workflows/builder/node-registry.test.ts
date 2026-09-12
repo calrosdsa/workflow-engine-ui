@@ -34,6 +34,9 @@ describe('normaliseTriggerConfig', () => {
       webhook_provider: '',
       webhook_events: [],
       webhook_secret_credential: '',
+      // webhook_preset — trigger-preset feature's own cosmetic marker, see
+      // TriggerConfig's own doc comment.
+      webhook_preset: '',
       source_definition_id: '',
       enabled: true,
       // Expose-as-Tool defaults (FR-C8-004) — this expectation went stale when

@@ -21,6 +21,7 @@ export type NodeType =
   | 'transform'
   | 'save_records'
   | 'notification'
+  | 'email'
   | 'knowledge_retrieval'
   | 'knowledge_ingest'
   | 'debug'
@@ -536,6 +537,19 @@ export interface TriggerConfig {
   // above. Required when the selected provider needs one; ignored for
   // "generic".
   webhook_secret_credential?: string
+
+  // webhook mode only. Names the package-declared trigger preset (see
+  // node-taxonomy.ts's TriggerPresetInfo) that set webhook_provider/
+  // webhook_events, purely so the builder can show a preset's own
+  // display_name/icon on the canvas instead of a generic "Webhook" label.
+  // Cosmetic only — never validated server-side, never read by dispatch
+  // (internal/graph.TriggerConfig.Validate and api/workflows's registry-
+  // aware validateWebhookProvider both skip it deliberately, mirroring
+  // source_definition_id's own "no validation beyond mode" stance) — a
+  // webhook trigger works identically with or without it. Must be cleared
+  // whenever webhook_provider changes by hand, the same staleness guard
+  // already applied to webhook_events/webhook_secret_credential above.
+  webhook_preset?: string
 
   // on_error mode only. Which workflow's FAILED executions this trigger
   // reacts to — empty means "any workflow in this app" (excluding this

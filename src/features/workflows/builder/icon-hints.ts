@@ -31,3 +31,17 @@ export function iconFor(type: string, iconHint?: string): LucideIcon {
   if (builtin) return builtin.icon
   return (iconHint && ICON_HINTS[iconHint]) || Plug
 }
+
+/** Resolves ONLY an icon_hint, with no NODE_REGISTRY short-circuit — for a
+ *  built-in type (e.g. "trigger") whose canvas icon should still change
+ *  cosmetically based on data the type itself doesn't carry (a package
+ *  trigger preset's own icon_hint). iconFor cannot do this: it returns a
+ *  built-in type's compiled-in icon unconditionally, before ever consulting
+ *  iconHint, so iconFor('trigger', 'message-square') silently ignores the
+ *  hint. Returns undefined (not Plug) for an absent/unrecognized hint — the
+ *  caller decides its own fallback, since "no preset icon" should read as
+ *  the built-in type's normal icon, not as "broken" the way Plug reads on a
+ *  package node with no icon_hint. */
+export function iconForHint(iconHint?: string): LucideIcon | undefined {
+  return iconHint ? ICON_HINTS[iconHint] : undefined
+}

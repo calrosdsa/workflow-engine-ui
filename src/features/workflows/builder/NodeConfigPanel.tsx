@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import {
   AlertCircle,
   CheckCircle2,
@@ -35,9 +35,9 @@ import { cn } from '@/lib/utils'
 import { testHttpRequest } from '@/lib/api'
 import { useForms } from '@/features/forms/hooks'
 import type { FormDefinition } from '@/features/forms/types'
-import { useNodeTaxonomy, findPackageNode } from './node-taxonomy'
+import { useNodeTaxonomy, findPackageNode, type TriggerPresetInfo } from './node-taxonomy'
 import { iconFor } from './icon-hints'
-import { NODE_REGISTRY } from './node-registry'
+import { NODE_REGISTRY, type NodeFormProps } from './node-registry'
 import { SchemaForm, defaultsForSchema, type JSONSchema } from './SchemaForm'
 import { computeAncestors } from './executionOrder'
 import { buildNodeOutputSchema, iteratorItemSchema, type NodeOutputSchema } from './node-output-schema'
@@ -409,6 +409,7 @@ export function NodeConfigPanel() {
                         variables={variables}
                         nodeContext={nodeContext}
                         issues={parameterIssues}
+                        triggerPresets={taxonomy?.trigger_presets ?? []}
                         onChange={(configuration) => updateNodeConfig(node.id, configuration)}
                       />
                     ) : (
@@ -515,18 +516,24 @@ function WorkbenchHeader({ node, icon: Icon, kind, readiness, issueCount, runnin
   )
 }
 
-function ParametersPane({ node, builtIn, packageEntry, variables, nodeContext, issues, onChange }: {
+function ParametersPane({ node, builtIn, packageEntry, variables, nodeContext, issues, triggerPresets, onChange }: {
   node: GraphNode
   builtIn: typeof NODE_REGISTRY[NodeType] | null
   packageEntry: { config_schema?: JSONSchema; kind: string } | null | undefined
   variables: Parameters<typeof SchemaForm>[0]['value'] extends never ? never : import('../types').VariableDecl[]
   nodeContext: NodeOutputSchema[]
   issues: FieldValidationIssue[]
+  triggerPresets: TriggerPresetInfo[]
   onChange: (configuration: unknown) => void
 }) {
   if (builtIn) {
-    const Form = builtIn.form
-    return <Form config={builtIn.normalise(node.configuration)} variables={variables} nodeContext={nodeContext} onChange={onChange} />
+    // Cast widens past NodeFormProps' fixed shape so trigger's own extra
+    // triggerPresets prop can reach it — safe for every other built-in form
+    // too (NodeFormProps' own doc comment: "unused props are simply unused
+    // by an individual form"), so this is one shared render path, not a
+    // trigger-only branch.
+    const Form = builtIn.form as ComponentType<NodeFormProps & { triggerPresets?: TriggerPresetInfo[] }>
+    return <Form config={builtIn.normalise(node.configuration)} variables={variables} nodeContext={nodeContext} triggerPresets={triggerPresets} onChange={onChange} />
   }
   if (packageEntry?.config_schema) {
     // A length check, not a plain truthy/typeof check: defaultConfig() seeds

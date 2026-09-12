@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { groupByCategory, categoryLabel, type PaletteEntry, type CategoryInfo } from './node-taxonomy'
+import { groupByCategory, categoryLabel, findTriggerPreset, type PaletteEntry, type CategoryInfo, type NodeTaxonomy, type TriggerPresetInfo } from './node-taxonomy'
 import { PALETTE_NODES, NODE_REGISTRY } from './node-registry'
 
 const cats: CategoryInfo[] = [
@@ -86,6 +86,44 @@ describe('categoryLabel', () => {
 
   it('falls back to the compiled-in label when the server has not answered', () => {
     expect(categoryLabel('integration', [])).toBe('Integration')
+  })
+})
+
+describe('findTriggerPreset', () => {
+  const preset: TriggerPresetInfo = {
+    name: 'whatsapp_on_message',
+    display_name: 'WhatsApp — On Message',
+    description: 'Fires when a message arrives.',
+    icon_hint: 'message-square',
+    provider: 'meta',
+    default_events: ['messages'],
+  }
+  const taxonomy: NodeTaxonomy = { categories: [], kinds: [], nodes: [], trigger_presets: [preset] }
+
+  it('finds the preset matching a trigger\'s saved webhook_preset', () => {
+    // This is what makes a WhatsApp trigger render its own icon/label on the
+    // canvas instead of the generic webhook trigger's — BaseNode.tsx feeds
+    // this straight into iconForHint/headerLabel.
+    expect(findTriggerPreset(taxonomy, 'whatsapp_on_message')).toEqual(preset)
+  })
+
+  it('returns undefined for an unset webhook_preset', () => {
+    // The common case: a plain webhook trigger, or any non-webhook mode —
+    // must fall back to the built-in trigger icon/label, not crash on a
+    // missing field.
+    expect(findTriggerPreset(taxonomy, undefined)).toBeUndefined()
+    expect(findTriggerPreset(taxonomy, '')).toBeUndefined()
+  })
+
+  it('returns undefined for a preset name this build has never heard of', () => {
+    // A preset removed server-side (or from a package no longer loaded)
+    // after a workflow saved it — the trigger must still render, just
+    // without the preset's icon/label, not throw.
+    expect(findTriggerPreset(taxonomy, 'some_removed_preset')).toBeUndefined()
+  })
+
+  it('returns undefined before the taxonomy has loaded', () => {
+    expect(findTriggerPreset(undefined, 'whatsapp_on_message')).toBeUndefined()
   })
 })
 

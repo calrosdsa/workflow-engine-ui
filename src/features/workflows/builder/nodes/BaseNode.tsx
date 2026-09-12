@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react'
 import { Handle, Position, type NodeProps, useStore } from '@xyflow/react'
 import { Plus, GripVertical, ArrowLeftRight, Trash2, GitBranchPlus, Copy, Check, AlertTriangle, AlertCircle, CheckCircle2, XCircle, MinusCircle, Loader2, MessageCircle, Bug } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { NODE_REGISTRY } from '../node-registry'
-import { useNodeTaxonomy, findPackageNode } from '../node-taxonomy'
-import { iconFor } from '../icon-hints'
+import { NODE_REGISTRY, fallbackCategory } from '../node-registry'
+import { useNodeTaxonomy, findPackageNode, findTriggerPreset } from '../node-taxonomy'
+import { iconFor, iconForHint } from '../icon-hints'
 import { useBuilderStore, DUPLICABLE_NODE_TYPES, type FlowNode, type DropPosition } from '../store'
 import { computeExecutionOrder } from '../executionOrder'
 import { nodeSetupIssue } from '../node-validation'
@@ -23,14 +23,14 @@ const DRAG_TRANSFER_KEY = 'application/workflow-node-reorder'
 // is actively running), but are included for completeness against the full
 // NodeExecutionStatus union.
 const overlayStatusStyle: Record<NodeExecutionStatus, string> = {
-  PENDING:                'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
-  RUNNING:                'bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]',
-  COMPLETED:              'bg-[hsl(var(--success))]/15 text-[hsl(var(--success))]',
-  FAILED:                 'bg-[hsl(var(--destructive))]/15 text-[hsl(var(--destructive))]',
-  SKIPPED:                'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]/70',
+  PENDING:                'workflow-node-status--pending',
+  RUNNING:                'workflow-node-status--running',
+  COMPLETED:              'workflow-node-status--completed',
+  FAILED:                 'workflow-node-status--failed',
+  SKIPPED:                'workflow-node-status--skipped',
   // An iterator with continue_on_error that ran every item but had failures
   // (FR-B2-015) — amber, distinct from both a clean COMPLETED and a FAILED.
-  COMPLETED_WITH_ERRORS:  'bg-[hsl(var(--warning))]/15 text-[hsl(var(--warning))]',
+  COMPLETED_WITH_ERRORS:  'workflow-node-status--completed-with-errors',
 }
 
 const overlayStatusIcon: Record<NodeExecutionStatus, React.ReactNode> = {
@@ -46,7 +46,15 @@ const overlayStatusIcon: Record<NodeExecutionStatus, React.ReactNode> = {
 // own confirmed scope boundary; only the execution-level total is real data,
 // shown once in the Executions sidebar row instead of fabricated per node).
 function overlayStatusLabel(status: NodeExecutionStatus): string {
-  return status
+  return status === 'COMPLETED_WITH_ERRORS'
+    ? 'Completed with errors'
+    : status.charAt(0) + status.slice(1).toLowerCase()
+}
+
+function nodeCategoryLabel(category: string): string {
+  return category === 'ai'
+    ? 'AI'
+    : category.charAt(0).toUpperCase() + category.slice(1)
 }
 
 export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
@@ -64,16 +72,35 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   // which crashed with "Cannot read properties of undefined" the first time
   // a real package node reached this component — this two-step lookup is
   // that fix. NodeBody's own switch already has a safe `default: return
-  // null` for body content, so only the header (icon/gradient/label) needed
+  // null` for body content, so only the header (icon/label) needed
   // it. A type in NEITHER registry (a deregistered package node) gets a
   // neutral fallback too (iconFor's own Plug default), rather than crashing
   // a third time on some future edge case.
   const builtInReg = NODE_REGISTRY[data.type as keyof typeof NODE_REGISTRY]
   const { data: taxonomy } = useNodeTaxonomy()
   const packageEntry = !builtInReg ? findPackageNode(taxonomy, data.type) : undefined
-  const Icon      = iconFor(data.type, packageEntry?.icon_hint)
-  const gradient  = builtInReg?.gradient ?? 'bg-gradient-to-br from-slate-600 to-slate-700'
-  const headerLabel = builtInReg?.label ?? packageEntry?.display_name ?? data.type
+  // A trigger preset (e.g. "WhatsApp — On Message") isn't a node entry — it's
+  // package data naming a webhook provider/default events, applied to the
+  // one singleton trigger every workflow already has — so findTriggerPreset
+  // matches it by the trigger's own saved webhook_preset, not through
+  // findPackageNode (which only searches taxonomy.nodes). undefined for
+  // every non-trigger node, a trigger with no preset applied, or a preset
+  // name this build doesn't recognize — every case falling back to the
+  // plain trigger icon/label below, same as an unrecognized package
+  // icon_hint already does.
+  const triggerPreset = data.type === 'trigger'
+    ? findTriggerPreset(taxonomy, (data.configuration as TriggerConfig | undefined)?.webhook_preset)
+    : undefined
+  // iconForHint, not iconFor: iconFor would short-circuit to the built-in
+  // trigger icon before ever consulting the preset's icon_hint (see
+  // icon-hints.ts's own doc comment on why iconFor can't do this).
+  const Icon      = (triggerPreset && iconForHint(triggerPreset.icon_hint)) || iconFor(data.type, packageEntry?.icon_hint)
+  const headerLabel = triggerPreset?.display_name ?? builtInReg?.label ?? packageEntry?.display_name ?? data.type
+  const nodeCategory = packageEntry?.category
+    ?? builtInReg?.category
+    ?? fallbackCategory(data.type as keyof typeof NODE_REGISTRY)
+  const usesDefaultLabel = data.label.trim().toLocaleLowerCase() === headerLabel.trim().toLocaleLowerCase()
+  const nodeMeta = usesDefaultLabel ? nodeCategoryLabel(nodeCategory) : headerLabel
   const hasInputs  = data.inputs?.length  > 0
   const hasOutputs = data.outputs?.length > 0
 
@@ -217,16 +244,16 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
 
   return (
     <div
+      data-node-category={nodeCategory}
+      data-selected={selected ? 'true' : 'false'}
+      data-execution-state={nodeStatus?.toLowerCase()}
       className={cn(
-        'group relative w-[200px] rounded-2xl border bg-[hsl(var(--card))] transition-[border-color,box-shadow,opacity,transform] duration-150',
-        selected
-          ? 'border-[hsl(var(--primary))]/60 ring-2 ring-[hsl(var(--primary))]/30 shadow-lg shadow-[hsl(var(--primary))]/10'
-          : 'border-[hsl(var(--border))] shadow-sm hover:border-[hsl(var(--muted-foreground))]/40 hover:shadow-md',
-        isDraggingThis ? 'opacity-40 scale-95' : '',
-        dimForDrag ? 'opacity-40' : '',
+        'workflow-node group relative',
+        isDraggingThis ? 'workflow-node--dragging' : '',
+        dimForDrag ? 'workflow-node--dimmed' : '',
         // A node the selected execution never reached (e.g. a condition's
         // untaken branch) recedes rather than showing a misleading badge.
-        dimUnreached ? 'opacity-35' : '',
+        dimUnreached ? 'workflow-node--unreached' : '',
       )}
     >
       {/* Drop zones — appear around the node while another node is dragged */}
@@ -246,34 +273,10 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           id={port.id}
           type="target"
           position={Position.Left}
-          className="!h-2.5 !w-2.5 !border-2 !border-[hsl(var(--card))] !bg-[hsl(var(--muted-foreground))] transition-colors"
+          className="workflow-node-handle workflow-node-handle--input"
           style={{ top: `${((i + 1) / (data.inputs.length + 1)) * 100}%` }}
         />
       ))}
-
-      {/* Execution position badge — floats above-left of the node */}
-      {info && (
-        <div className="absolute -top-3 -left-3 z-10 flex items-center gap-1">
-          <div className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[hsl(var(--foreground))] px-1.5 text-[11px] font-bold tabular-nums text-[hsl(var(--background))] shadow-md shadow-black/20 ring-2 ring-[hsl(var(--card))]">
-            {info.step}
-          </div>
-          {info.wave > 0 && (
-            <div className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[hsl(var(--foreground))]/70 px-1 text-[9px] font-semibold tabular-nums text-[hsl(var(--background))]/90 shadow ring-2 ring-[hsl(var(--card))]">
-              W{info.wave}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Needs-setup badge — the node can't run until this is resolved */}
-      {setupIssue && (
-        <div
-          className="absolute -top-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))] shadow-md shadow-[hsl(var(--warning))]/30 ring-2 ring-[hsl(var(--card))]"
-          title={setupIssue}
-        >
-          <AlertTriangle size={11} strokeWidth={2.75} />
-        </div>
-      )}
 
       {/* Execution overlay: status + duration badge (FR-C5-007) — bottom-right,
           a corner distinct from the execution-order badge (top-left) and the
@@ -282,12 +285,13 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
       {showStatusBadge && nodeStatus && (
         <div
           className={cn(
-            'absolute -bottom-2 -right-2 z-10 flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold shadow-md ring-2 ring-[hsl(var(--card))]',
+            'workflow-node-status absolute bottom-2 right-2 z-10 flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
             overlayStatusStyle[nodeStatus],
           )}
           title={overlayStatusLabel(nodeStatus)}
         >
           {overlayStatusIcon[nodeStatus]}
+          <span>{overlayStatusLabel(nodeStatus)}</span>
         </div>
       )}
 
@@ -305,11 +309,11 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               className={cn(
-                'absolute -bottom-2 -left-2 z-20 flex h-6 w-6 items-center justify-center rounded-full text-white shadow-md ring-2 ring-[hsl(var(--card))] transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--card))] nodrag nopan',
-                nodeStatus === 'COMPLETED_WITH_ERRORS' ? 'bg-[hsl(var(--warning))] shadow-[hsl(var(--warning))]/30'
-                  : nodeError || nodeMessage?.message_type === 'error' ? 'bg-[hsl(var(--destructive))] shadow-[hsl(var(--destructive))]/30'
-                  : nodeMessage?.message_type === 'info' ? 'bg-[hsl(var(--warning))] shadow-[hsl(var(--warning))]/30'
-                  : 'bg-[hsl(var(--success))] shadow-[hsl(var(--success))]/30',
+                'workflow-node-overlay-button absolute bottom-2 left-2 z-20 flex h-6 w-6 items-center justify-center rounded-full shadow-md ring-2 ring-[hsl(var(--card))] nodrag nopan',
+                nodeStatus === 'COMPLETED_WITH_ERRORS' ? 'bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))] shadow-[hsl(var(--warning))]/30'
+                  : nodeError || nodeMessage?.message_type === 'error' ? 'bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))] shadow-[hsl(var(--destructive))]/30'
+                  : nodeMessage?.message_type === 'info' ? 'bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))] shadow-[hsl(var(--warning))]/30'
+                  : 'bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] shadow-[hsl(var(--success))]/30',
               )}
               title={failedItems?.length ? 'View failed items' : nodeError ? 'View error details' : 'View message'}
             >
@@ -383,7 +387,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
             <button
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
-              className="absolute -right-2 top-1/2 z-20 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] shadow-md shadow-[hsl(var(--success))]/30 ring-2 ring-[hsl(var(--card))] transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--card))] nodrag nopan"
+              className="workflow-node-overlay-button absolute -right-2 top-1/2 z-20 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] shadow-md shadow-[hsl(var(--success))]/30 ring-2 ring-[hsl(var(--card))] nodrag nopan"
               title="View captured snapshot"
             >
               <Bug size={12} strokeWidth={2.5} />
@@ -450,7 +454,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
             <button
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
-              className="absolute -left-2 -top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))] shadow-md shadow-[hsl(var(--warning))]/30 ring-2 ring-[hsl(var(--card))] transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--card))] nodrag nopan"
+              className="workflow-node-overlay-button absolute -left-2 -top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))] shadow-md shadow-[hsl(var(--warning))]/30 ring-2 ring-[hsl(var(--card))] nodrag nopan"
               title="View warning"
             >
               <AlertTriangle size={12} strokeWidth={2.5} />
@@ -483,7 +487,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
       {(canDelete || canDuplicate) && !draggingNodeId && (
         <div
           className={cn(
-            'absolute -top-8 right-0 z-20 flex items-center gap-0.5 rounded-full bg-[hsl(var(--card))] p-0.5 shadow-lg shadow-black/10 ring-1 ring-[hsl(var(--border))] transition-[opacity,transform] duration-150 nodrag nopan',
+            'workflow-node-quick-actions absolute -top-8 right-0 z-20 flex items-center gap-0.5 rounded-full bg-[hsl(var(--card))] p-0.5 shadow-lg shadow-[hsl(var(--background))]/40 ring-1 ring-[hsl(var(--border))] nodrag nopan',
             selected
               ? 'opacity-100 scale-100 pointer-events-auto'
               : 'opacity-0 scale-90 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto',
@@ -523,7 +527,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
       )}
 
       {/* Header */}
-      <div className={cn('relative flex items-center gap-2 rounded-t-2xl px-2 py-1.5', gradient)}>
+      <div className="workflow-node-header relative flex items-center gap-2 px-2.5 py-2">
         {/* Drag grip — initiates reorder drag (only this is draggable).
             Native HTML5 `draggable`, unlike dnd-kit elsewhere in this app
             (see ElementCard.tsx's "Space to drag, arrows to move" grip),
@@ -538,24 +542,37 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           draggable
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
-          className="flex h-7 w-4 shrink-0 cursor-grab items-center justify-center rounded text-white/40 transition-colors hover:bg-white/15 hover:text-white/80 active:cursor-grabbing nodrag nopan"
+          className="workflow-node-drag-handle flex h-7 w-4 shrink-0 cursor-grab items-center justify-center rounded nodrag nopan"
           title="Drag to reorder"
           onMouseDown={(e) => e.stopPropagation()}
         >
           <GripVertical size={14} strokeWidth={2.25} />
         </div>
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/20 ring-1 ring-white/25">
-          <Icon size={15} strokeWidth={2.25} className="text-white" />
+        <div className="workflow-node-icon flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
+          <Icon size={15} strokeWidth={2.25} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-semibold leading-tight text-white">{data.label}</p>
-          <p className="text-[9px] font-medium uppercase tracking-wider text-white/70 leading-tight">{headerLabel}</p>
+          <p className="workflow-node-title truncate">{data.label}</p>
+          <p className="workflow-node-meta truncate">{nodeMeta}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {setupIssue && (
+            <span className="workflow-node-setup-flag flex h-6 w-6 items-center justify-center rounded-md" title={`Needs setup: ${setupIssue}`}>
+              <AlertTriangle size={12} strokeWidth={2.5} aria-hidden="true" />
+              <span className="sr-only">Needs setup: {setupIssue}</span>
+            </span>
+          )}
+          {info && (
+            <span className="workflow-node-step" title={`Execution step ${info.step}${info.wave > 0 ? `, wave ${info.wave}` : ''}`}>
+              {info.step}{info.wave > 0 ? <small>W{info.wave}</small> : null}
+            </span>
+          )}
         </div>
       </div>
 
       {/* Body */}
-      <div className="px-3 py-2.5">
-        <NodeBody data={data} />
+      <div className="workflow-node-body px-3 py-2.5">
+        <NodeBody data={data} triggerPresetLabel={triggerPreset?.display_name} />
       </div>
 
       {/* Output handles — right edge */}
@@ -570,16 +587,16 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               type="source"
               position={Position.Right}
               className={cn(
-                '!h-2.5 !w-2.5 !border-2 !border-white transition-colors',
-                isTrue ? '!bg-emerald-500' : isFalse ? '!bg-rose-500' : '!bg-blue-500',
+                'workflow-node-handle workflow-node-handle--output',
+                isTrue ? 'workflow-node-handle--true' : isFalse ? 'workflow-node-handle--false' : '',
               )}
               style={{ top }}
             />
             {data.outputs.length > 1 && (
               <span
                 className={cn(
-                  'absolute -right-12 -translate-y-1/2 text-[9px] font-semibold pointer-events-none select-none',
-                  isTrue ? 'text-emerald-600' : isFalse ? 'text-rose-600' : 'text-slate-400',
+                  'workflow-node-port-label absolute -right-14 -translate-y-1/2 pointer-events-none select-none',
+                  isTrue ? 'workflow-node-port-label--true' : isFalse ? 'workflow-node-port-label--false' : '',
                 )}
                 style={{ top }}
               >
@@ -595,7 +612,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
         <div className="absolute -right-9 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
           <div className="h-px w-3.5 bg-[hsl(var(--border))]" />
           <button
-            className="pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-md shadow-[hsl(var(--primary))]/30 ring-4 ring-[hsl(var(--card))] transition-transform hover:brightness-110 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--card))] nodrag nopan"
+            className="workflow-node-add pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-md shadow-[hsl(var(--primary))]/30 ring-4 ring-[hsl(var(--card))] nodrag nopan"
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => handleAddClick(e, data.outputs[0]?.id ?? 'out')}
             title="Add next node"
@@ -618,7 +635,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           <div className="h-3.5 w-px bg-[hsl(var(--border))]" />
           <div
             className={cn(
-              'pointer-events-auto flex items-center gap-0.5 rounded-full bg-[hsl(var(--card))] p-1 shadow-lg shadow-black/10 ring-1 ring-[hsl(var(--border))] transition-[opacity,transform] duration-150 nodrag nopan',
+              'workflow-node-branch-toolbar pointer-events-auto flex items-center gap-0.5 rounded-full bg-[hsl(var(--card))] p-1 shadow-lg shadow-[hsl(var(--background))]/40 ring-1 ring-[hsl(var(--border))] nodrag nopan',
               branchToolbarOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none',
             )}
           >
@@ -647,7 +664,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               <Trash2 size={12} strokeWidth={2.5} />
             </button>
             <button
-              className="flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm transition-transform hover:brightness-110 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+              className="workflow-node-branch-add flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => handleAddClick(e, data.outputs[0]?.id ?? 'out')}
               title="Add node in a new branch"
@@ -663,7 +680,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
 
 // ---------------------------------------------------------------------------
 
-function NodeBody({ data }: { data: FlowNode['data'] }) {
+function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; triggerPresetLabel?: string }) {
   switch (data.type) {
     case 'entry':
       return <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Workflow starts here</p>
@@ -674,6 +691,9 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
         on_demand: 'On demand', scheduled: 'Scheduled',
         before: 'Before write', after: 'After write', after_async: 'After write (async)',
         on_demand_data_driven: 'On demand (with a record)',
+        // A plain webhook mode reads generically here — an applied trigger
+        // preset (e.g. "WhatsApp — On Message") overrides this flat label
+        // below, same as it overrides the header label.
         webhook: 'Webhook',
         executed_by_workflow: 'Executed by workflow',
         on_error: 'On error',
@@ -681,7 +701,9 @@ function NodeBody({ data }: { data: FlowNode['data'] }) {
       return (
         <div className="space-y-1 text-[10px]">
           <div className="flex items-center gap-1">
-            <code className="rounded bg-[hsl(var(--success))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--success))]">{labels[cfg.mode]}</code>
+            <code className="rounded bg-[hsl(var(--success))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--success))]">
+              {cfg.mode === 'webhook' && triggerPresetLabel ? triggerPresetLabel : labels[cfg.mode]}
+            </code>
             {cfg.enabled === false && <span className="rounded bg-[hsl(var(--muted))] px-1 text-[hsl(var(--muted-foreground))]">disabled</span>}
           </div>
           {cfg.mode === 'scheduled' && cfg.cron && (

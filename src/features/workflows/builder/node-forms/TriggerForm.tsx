@@ -18,6 +18,8 @@ import { CredentialSelect } from '@/features/app-settings/CredentialSelect'
 import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, TriggerConfig, TriggerMode, TriggerEventType } from '../../types'
+import type { TriggerPresetInfo } from '../node-taxonomy'
+import { iconForHint } from '../icon-hints'
 
 export function normaliseTriggerConfig(raw: unknown): TriggerConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<TriggerConfig>
@@ -34,6 +36,7 @@ export function normaliseTriggerConfig(raw: unknown): TriggerConfig {
     webhook_provider:      r.webhook_provider ?? '',
     webhook_events:        r.webhook_events ?? [],
     webhook_secret_credential: r.webhook_secret_credential ?? '',
+    webhook_preset:        r.webhook_preset ?? '',
     source_definition_id:  r.source_definition_id ?? '',
     enabled:               r.enabled ?? true,
     expose_as_tool:        r.expose_as_tool ?? false,
@@ -106,9 +109,13 @@ export interface TriggerFormProps {
   variables: VariableDecl[]
   nodeContext?: NodeOutputSchema[]
   onChange: (c: TriggerConfig) => void
+  /** Package-declared webhook-trigger shortcuts (e.g. WhatsApp's
+   *  "whatsapp_on_message") — sourced from the same served node-taxonomy
+   *  the config panel already fetches, so no new request per node render. */
+  triggerPresets?: TriggerPresetInfo[]
 }
 
-export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
+export function TriggerForm({ config, variables, onChange, triggerPresets = [] }: TriggerFormProps) {
   const { data: form } = useForm(config.form_id || '')
   const fields = form?.fields ?? []
   const isDataDriven = config.mode === 'before' || config.mode === 'after' || config.mode === 'after_async'
@@ -312,7 +319,7 @@ export function TriggerForm({ config, variables, onChange }: TriggerFormProps) {
       )}
 
       {/* Webhook mode */}
-      {config.mode === 'webhook' && <WebhookModeFields config={config} set={set} />}
+      {config.mode === 'webhook' && <WebhookModeFields config={config} set={set} triggerPresets={triggerPresets} />}
 
       {/* Executed-by-workflow mode */}
       {config.mode === 'executed_by_workflow' && (
@@ -465,7 +472,7 @@ function ExposeAsToolFields({
 // server-minted — see api/workflows.Handler.syncWebhook — so there is
 // nothing to fill in for it before the first save; that section stays
 // read-only by design.
-function WebhookModeFields({ config, set }: { config: TriggerConfig; set: (patch: Partial<TriggerConfig>) => void }) {
+function WebhookModeFields({ config, set, triggerPresets }: { config: TriggerConfig; set: (patch: Partial<TriggerConfig>) => void; triggerPresets: TriggerPresetInfo[] }) {
   const t = useTranslation()
   const [copied, setCopied] = useState(false)
   const url = config.webhook_token
@@ -506,7 +513,22 @@ function WebhookModeFields({ config, set }: { config: TriggerConfig; set: (patch
   // event selection or secret.
   const setProvider = (value: string) => {
     if (value === providerValue) return
-    set({ webhook_provider: value, webhook_events: [], webhook_secret_credential: '' })
+    // webhook_preset clears here too: a preset's own display_name/icon only
+    // means anything alongside the provider it was applied for, and a
+    // manual provider switch is exactly the staleness this same clear
+    // already guards against for events/secret above.
+    set({ webhook_provider: value, webhook_events: [], webhook_secret_credential: '', webhook_preset: '' })
+  }
+
+  // Applying a preset sets provider + a starting event selection together —
+  // a fast-path, never a restriction: the events multiselect below stays
+  // fully interactive afterward, so the author can still freely add/remove
+  // events on top of the preset's own defaults. toggleEvent deliberately
+  // does NOT clear webhook_preset (unlike setProvider above) — hand-tweaking
+  // events under an applied preset is a legitimate customization, not
+  // "switching away from WhatsApp."
+  const applyPreset = (preset: TriggerPresetInfo) => {
+    set({ webhook_provider: preset.provider, webhook_events: preset.default_events ?? [], webhook_preset: preset.name })
   }
 
   const toggleEvent = (value: string, checked: boolean) => {
@@ -543,6 +565,54 @@ function WebhookModeFields({ config, set }: { config: TriggerConfig; set: (patch
           </p>
         )}
       </div>
+
+      <div className="h-px bg-[hsl(var(--border))]" />
+
+      {/* Quick Setup — package-declared shortcuts (e.g. WhatsApp's "On
+          Message") that set provider + a starting event selection together.
+          Purely a fast-path/identity marker, never a restriction: the
+          Provider section below still renders (the manual/advanced path, and
+          the truthful view for a definition saved before this existed), and
+          the events multiselect further down stays fully interactive after a
+          preset is applied. Hidden entirely when no package declares one. */}
+      {triggerPresets.length > 0 && (
+        <div className="space-y-1.5">
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
+            {t('workflows.trigger.webhook.quick_setup_label')}
+          </Label>
+          <p className="text-[10px] leading-snug text-[hsl(var(--muted-foreground))]">
+            {t('workflows.trigger.webhook.quick_setup_hint')}
+          </p>
+          <div className="space-y-1.5">
+            {triggerPresets.map((preset) => {
+              const active = config.webhook_preset === preset.name
+              const PresetIcon = iconForHint(preset.icon_hint) ?? Webhook
+              return (
+                <button
+                  key={preset.name}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => applyPreset(preset)}
+                  className={cn(
+                    'flex w-full items-start gap-2 rounded-xl border p-2.5 text-left transition-colors',
+                    active ? 'border-[hsl(var(--success))]/50 bg-[hsl(var(--success))]/10' : 'border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:border-[hsl(var(--muted-foreground))]/40',
+                  )}
+                >
+                  <PresetIcon size={14} className={cn('mt-0.5 shrink-0', active ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--muted-foreground))]')} />
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className={cn('text-[12px] font-semibold', active ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--foreground))]')}>
+                      {preset.display_name}
+                    </span>
+                    {preset.description && (
+                      <span className="text-[10px] leading-snug text-[hsl(var(--muted-foreground))]">{preset.description}</span>
+                    )}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="h-px bg-[hsl(var(--border))]" />
 

@@ -76,10 +76,39 @@ export function findPackageNode(taxonomy: NodeTaxonomy | undefined, type: string
   return taxonomy?.nodes.find((n) => n.type === type && n.kind === 'package')
 }
 
+/** A package-declared webhook-trigger shortcut (e.g. WhatsApp's
+ *  "whatsapp_on_message") — mirrors api/meta's TriggerPresetInfo
+ *  field-for-field. A preset names an existing webhook Provider (the
+ *  provider itself stays server-side code, never authored here) plus a
+ *  default event selection; applying one is a fast-path over manually
+ *  picking a provider and checking events, never a restriction on either. */
+export interface TriggerPresetInfo {
+  name: string
+  display_name: string
+  description?: string
+  icon_hint?: string
+  provider: string
+  default_events?: string[]
+}
+
 export interface NodeTaxonomy {
   categories: CategoryInfo[]
   kinds: { value: string; description?: string }[]
   nodes: NodeTaxonomyEntry[]
+  trigger_presets: TriggerPresetInfo[]
+}
+
+/** Looks up a trigger's active preset, if any, by matching its own saved
+ *  TriggerConfig.webhook_preset against taxonomy.trigger_presets — presets
+ *  aren't node entries (see TriggerPresetInfo's own doc comment), so this
+ *  mirrors findPackageNode's shape rather than reusing it. undefined for an
+ *  unset webhook_preset, before the taxonomy has loaded, or a preset name
+ *  this build has never heard of (e.g. removed server-side since the
+ *  workflow was saved) — every case the caller treats the same way: fall
+ *  back to the trigger's plain built-in icon/label. */
+export function findTriggerPreset(taxonomy: NodeTaxonomy | undefined, webhookPreset: string | undefined): TriggerPresetInfo | undefined {
+  if (!webhookPreset) return undefined
+  return taxonomy?.trigger_presets.find((p) => p.name === webhookPreset)
 }
 
 // The vocabulary as of the build this bundle was cut from, used ONLY until
@@ -106,11 +135,17 @@ export const taxonomyKeys = {
   all: () => ['workflows', 'node-taxonomy'] as const,
 }
 
-const EMPTY_TAXONOMY: NodeTaxonomy = { categories: FALLBACK_CATEGORIES, kinds: [], nodes: [] }
+const EMPTY_TAXONOMY: NodeTaxonomy = { categories: FALLBACK_CATEGORIES, kinds: [], nodes: [], trigger_presets: [] }
 
 async function fetchTaxonomy(): Promise<NodeTaxonomy> {
   try {
-    return await api.get('meta/node-taxonomy').json<NodeTaxonomy>()
+    const raw = await api.get('meta/node-taxonomy').json<NodeTaxonomy>()
+    // trigger_presets carries `omitempty` server-side (api/meta), so the key
+    // is ABSENT from the response entirely when no package declares a
+    // preset — normalized to [] here so every caller can trust it's always
+    // a real array, the same guarantee EMPTY_TAXONOMY's other fields already
+    // give, rather than every read site needing its own `?? []`.
+    return { ...raw, trigger_presets: raw.trigger_presets ?? [] }
   } catch {
     // A backend older than this endpoint is a real deployment state, not an
     // error worth surfacing: the palette still works off compiled-in

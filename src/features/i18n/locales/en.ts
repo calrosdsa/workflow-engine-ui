@@ -241,6 +241,8 @@ export const en = {
   'runtime.dashboard_chart.menu.reset': 'Reset',
   'runtime.dashboard_chart.menu.export': 'Export CSV',
   'runtime.dashboard_chart.menu.view_records': 'View records',
+  'workflows.trigger.webhook.quick_setup_label': 'Quick Setup',
+  'workflows.trigger.webhook.quick_setup_hint': 'A named shortcut for a common webhook setup — applying one sets the provider and a starting event selection together. You can still add or remove events afterward.',
   'workflows.trigger.webhook.provider_label': 'Provider',
   'workflows.trigger.webhook.provider_generic_label': 'Generic',
   'workflows.trigger.webhook.provider_generic_description': 'Any JSON POST — no signature check, no event filtering.',
@@ -270,4 +272,5 @@ export const en = {
   'app_settings.credentials.save_error': 'Failed to save credential',
   'app_settings.credentials.cancel': 'Cancel',
   'app_settings.credentials.save': 'Save',
+  'app_settings.credentials.create_new': 'Create new credential',
 } satisfies Record<string, string>
