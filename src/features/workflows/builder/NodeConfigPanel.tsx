@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import {
   AlertCircle,
   CheckCircle2,
+  ChevronRight,
   CircleHelp,
   Clipboard,
   Copy,
@@ -617,6 +618,13 @@ function DataPane({ title, subtitle, value, emptyMessage, onInsertPath, status, 
 }) {
   const [view, setView] = useState<'schema' | 'table' | 'json'>('schema')
   const [query, setQuery] = useState('')
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const toggleCollapsed = (path: string) => setCollapsed((current) => {
+    const next = new Set(current)
+    if (next.has(path)) next.delete(path)
+    else next.add(path)
+    return next
+  })
   const safeValue = redactSensitiveData(value)
   const matches = value === undefined ? [] : findDataPaths(safeValue, query)
   const copy = async () => { if (value !== undefined && navigator.clipboard) await navigator.clipboard.writeText(JSON.stringify(safeValue, null, 2)) }
@@ -626,7 +634,7 @@ function DataPane({ title, subtitle, value, emptyMessage, onInsertPath, status, 
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a'); link.href = url; link.download = 'node-output.json'; link.click(); URL.revokeObjectURL(url)
   }
-  return <div className="flex min-h-0 flex-1 flex-col"><div className="shrink-0 border-b border-[hsl(var(--border))] px-3 py-2.5"><div className="flex items-start justify-between gap-2"><div><p className="text-xs font-semibold text-[hsl(var(--foreground))]">{title}</p><p className="mt-0.5 text-[10px] text-[hsl(var(--muted-foreground))]">{subtitle}</p></div><div className="flex gap-1"><button type="button" onClick={() => void copy()} disabled={value === undefined} title="Copy redacted data" className="node-workbench-icon-button disabled:opacity-40"><Copy size={13} /></button>{allowDownload && <button type="button" onClick={download} disabled={value === undefined} title="Download redacted JSON" className="node-workbench-icon-button disabled:opacity-40"><Download size={13} /></button>}</div></div>{status && status.phase !== 'idle' && <RunStatus run={status} stale={stale} />}</div>{value === undefined ? <div className="flex flex-1 items-center justify-center p-5 text-center text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]">{emptyMessage}</div> : <><div className="flex shrink-0 items-center gap-1 border-b border-[hsl(var(--border))] px-3 py-2"><div className="flex rounded-md bg-[hsl(var(--muted))] p-0.5">{([['schema', PanelLeft], ['table', Table2], ['json', FileCode2]] as const).map(([name, ViewIcon]) => <button key={name} type="button" onClick={() => setView(name)} data-active={view === name} className="node-workbench-view-tab" title={`${name} view`}><ViewIcon size={12} /><span>{name}</span></button>)}</div><div className="relative min-w-0 flex-1"><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search fields" className="h-7 pr-7 text-[11px]" />{query && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-[hsl(var(--muted-foreground))]">{matches.length}</span>}</div></div><ScrollArea className="min-h-0 flex-1"><div className="p-3">{view === 'json' ? <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]">{JSON.stringify(safeValue, null, 2)}</pre> : view === 'table' ? <DataTable value={safeValue} query={query} /> : <SchemaRows value={safeValue} query={query} onInsertPath={onInsertPath} />}</div></ScrollArea></>}</div>
+  return <div className="flex min-h-0 flex-1 flex-col"><div className="shrink-0 border-b border-[hsl(var(--border))] px-3 py-2.5"><div className="flex items-start justify-between gap-2"><div><p className="text-xs font-semibold text-[hsl(var(--foreground))]">{title}</p><p className="mt-0.5 text-[10px] text-[hsl(var(--muted-foreground))]">{subtitle}</p></div><div className="flex gap-1"><button type="button" onClick={() => void copy()} disabled={value === undefined} title="Copy redacted data" className="node-workbench-icon-button disabled:opacity-40"><Copy size={13} /></button>{allowDownload && <button type="button" onClick={download} disabled={value === undefined} title="Download redacted JSON" className="node-workbench-icon-button disabled:opacity-40"><Download size={13} /></button>}</div></div>{status && status.phase !== 'idle' && <RunStatus run={status} stale={stale} />}</div>{value === undefined ? <div className="flex flex-1 items-center justify-center p-5 text-center text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]">{emptyMessage}</div> : <><div className="flex shrink-0 items-center gap-1 border-b border-[hsl(var(--border))] px-3 py-2"><div className="flex rounded-md bg-[hsl(var(--muted))] p-0.5">{([['schema', PanelLeft], ['table', Table2], ['json', FileCode2]] as const).map(([name, ViewIcon]) => <button key={name} type="button" onClick={() => setView(name)} data-active={view === name} className="node-workbench-view-tab" title={`${name} view`}><ViewIcon size={12} /><span>{name}</span></button>)}</div><div className="relative min-w-0 flex-1"><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search fields" className="h-7 pr-7 text-[11px]" />{query && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-[hsl(var(--muted-foreground))]">{matches.length}</span>}</div></div><ScrollArea className="min-h-0 flex-1"><div className="p-3">{view === 'json' ? <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]">{JSON.stringify(safeValue, null, 2)}</pre> : view === 'table' ? <DataTable value={safeValue} query={query} /> : <SchemaRows value={safeValue} query={query} onInsertPath={onInsertPath} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />}</div></ScrollArea></>}</div>
 }
 
 function RunStatus({ run, stale }: { run: StepRun; stale?: boolean }) {
@@ -642,10 +650,56 @@ function DataTable({ value, query }: { value: unknown; query: string }) {
   return <div className="overflow-auto rounded-md border border-[hsl(var(--border))]"><table className="w-full text-left text-[11px]"><thead className="bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]"><tr>{Array.isArray(value) ? <><th className="px-2 py-1.5">#</th><th className="px-2 py-1.5">Value</th></> : <><th className="px-2 py-1.5">Field</th><th className="px-2 py-1.5">Value</th></>}</tr></thead><tbody>{filtered.slice(0, 100).map((row, index) => <tr key={index} className="border-t border-[hsl(var(--border))]"><td className="px-2 py-1.5 font-mono text-[hsl(var(--muted-foreground))]">{Array.isArray(value) ? index : (row as { field: string }).field}</td><td className="max-w-52 truncate px-2 py-1.5 font-mono text-[hsl(var(--foreground))]">{formatData((row as { value?: unknown }).value ?? row)}</td></tr>)}</tbody></table></div>
 }
 
-function SchemaRows({ value, query, onInsertPath, path = '' }: { value: unknown; query: string; onInsertPath?: (path: string) => void; path?: string }) {
-  if (Array.isArray(value)) return <div className="space-y-1">{value.slice(0, 20).map((item, index) => <SchemaRows key={index} value={item} query={query} onInsertPath={onInsertPath} path={`${path}[${index}]`} />)}</div>
-  if (typeof value === 'object' && value !== null) return <div className="space-y-1">{Object.entries(value as Record<string, unknown>).map(([key, child]) => { const childPath = path ? `${path}.${key}` : key; const visible = !query || `${childPath} ${formatData(child)}`.toLowerCase().includes(query.toLowerCase()); return <div key={childPath}>{visible && <div className="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-[hsl(var(--muted))]"><code className="min-w-0 flex-1 truncate text-[11px] text-[hsl(var(--foreground))]">{childPath}</code><span className="rounded bg-[hsl(var(--muted))] px-1 text-[9px] text-[hsl(var(--muted-foreground))]">{dataType(child)}</span>{onInsertPath && <button type="button" onClick={() => onInsertPath(childPath)} title="Insert expression path" className="node-workbench-icon-button h-5 w-5"><Clipboard size={10} /></button>}</div>}{typeof child === 'object' && child !== null && <div className="ml-2 border-l border-[hsl(var(--border))] pl-2"><SchemaRows value={child} query={query} onInsertPath={onInsertPath} path={childPath} /></div>}</div> })}</div>
-  return <div className="flex items-center gap-2 rounded px-1.5 py-1"><code className="min-w-0 flex-1 truncate text-[11px] text-[hsl(var(--muted-foreground))]">{path || '$'}</code><span className="rounded bg-[hsl(var(--muted))] px-1 text-[9px] text-[hsl(var(--muted-foreground))]">{dataType(value)}</span></div>
+function SchemaRows({ value, query, onInsertPath, path = '', collapsed, onToggleCollapsed }: {
+  value: unknown
+  query: string
+  onInsertPath?: (path: string) => void
+  path?: string
+  collapsed: Set<string>
+  onToggleCollapsed: (path: string) => void
+}) {
+  if (Array.isArray(value)) return <div className="space-y-1">{value.slice(0, 20).map((item, index) => <SchemaRows key={index} value={item} query={query} onInsertPath={onInsertPath} path={`${path}[${index}]`} collapsed={collapsed} onToggleCollapsed={onToggleCollapsed} />)}</div>
+  if (typeof value === 'object' && value !== null) return <div className="space-y-1">{Object.entries(value as Record<string, unknown>).map(([key, child]) => {
+    const childPath = path ? `${path}.${key}` : key
+    const visible = !query || `${childPath} ${formatData(child)}`.toLowerCase().includes(query.toLowerCase())
+    const hasChildren = typeof child === 'object' && child !== null
+    // A search bypasses collapse entirely — otherwise a match nested under a
+    // manually-collapsed parent would be unreachable (this recursion never
+    // runs for a collapsed branch, so the row could never even be checked
+    // against `query`), which would make "search" silently miss results
+    // depending on unrelated UI state the user set earlier.
+    const showChildren = hasChildren && (!!query || !collapsed.has(childPath))
+    return (
+      <div key={childPath}>
+        {visible && (
+          <div className="flex items-center gap-1.5 rounded px-1.5 py-1 hover:bg-[hsl(var(--muted))]">
+            {hasChildren ? (
+              <button
+                type="button"
+                onClick={() => onToggleCollapsed(childPath)}
+                aria-expanded={showChildren}
+                title={collapsed.has(childPath) ? 'Expand' : 'Collapse'}
+                className="flex h-4 w-4 shrink-0 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+              >
+                <ChevronRight size={11} className={cn('transition-transform duration-150', showChildren && 'rotate-90')} />
+              </button>
+            ) : (
+              <span className="w-4 shrink-0" />
+            )}
+            <code className="min-w-0 flex-1 truncate text-[11px] text-[hsl(var(--foreground))]">{childPath}</code>
+            <span className="rounded bg-[hsl(var(--muted))] px-1 text-[9px] text-[hsl(var(--muted-foreground))]">{dataType(child)}</span>
+            {onInsertPath && <button type="button" onClick={() => onInsertPath(childPath)} title="Insert expression path" className="node-workbench-icon-button h-5 w-5"><Clipboard size={10} /></button>}
+          </div>
+        )}
+        {showChildren && (
+          <div className="ml-2 border-l border-[hsl(var(--border))] pl-2">
+            <SchemaRows value={child} query={query} onInsertPath={onInsertPath} path={childPath} collapsed={collapsed} onToggleCollapsed={onToggleCollapsed} />
+          </div>
+        )}
+      </div>
+    )
+  })}</div>
+  return <div className="flex items-center gap-1.5 rounded px-1.5 py-1"><span className="w-4 shrink-0" /><code className="min-w-0 flex-1 truncate text-[11px] text-[hsl(var(--muted-foreground))]">{path || '$'}</code><span className="rounded bg-[hsl(var(--muted))] px-1 text-[9px] text-[hsl(var(--muted-foreground))]">{dataType(value)}</span></div>
 }
 
 function buildInputData(node: FlowNode | undefined, nodes: FlowNode[], edges: FlowEdge[], variables: import('../types').VariableDecl[], formsById: Map<string, FormDefinition>, runs: Record<string, StepRun>) {
