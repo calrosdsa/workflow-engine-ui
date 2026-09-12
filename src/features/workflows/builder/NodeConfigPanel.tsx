@@ -35,8 +35,8 @@ import { cn } from '@/lib/utils'
 import { testHttpRequest } from '@/lib/api'
 import { useForms } from '@/features/forms/hooks'
 import type { FormDefinition } from '@/features/forms/types'
-import { useNodeTaxonomy, findPackageNode, type TriggerPresetInfo } from './node-taxonomy'
-import { iconFor } from './icon-hints'
+import { useNodeTaxonomy, findPackageNode, findTriggerPreset, type TriggerPresetInfo } from './node-taxonomy'
+import { iconFor, iconForHint } from './icon-hints'
 import { NODE_REGISTRY, type NodeFormProps } from './node-registry'
 import { SchemaForm, defaultsForSchema, type JSONSchema } from './SchemaForm'
 import { computeAncestors } from './executionOrder'
@@ -56,7 +56,7 @@ import {
   type FieldValidationIssue,
   type NodeExecutionSettings,
 } from './configuration-workbench'
-import type { GraphNode, IteratorConfig, NodeType } from '../types'
+import type { GraphNode, IteratorConfig, NodeType, TriggerConfig } from '../types'
 
 type CompactPane = 'input' | 'parameters' | 'output'
 type ConfigurationTab = 'parameters' | 'settings'
@@ -130,7 +130,19 @@ export function NodeConfigPanel() {
   // undefined (not a resolved icon) when this node's type is registered
   // NOWHERE — a deregistered/orphaned package node — so WorkbenchHeader can
   // still tell that apart from a known package node and render it muted.
-  const Icon = builtIn?.icon ?? (packageEntry ? iconFor(nodeTypeKey!, packageEntry.icon_hint) : undefined)
+  //
+  // A trigger with an applied package preset (e.g. WhatsApp's "On Message")
+  // wins over the plain built-in icon — the same iconForHint-over-iconFor
+  // precedence BaseNode.tsx's own canvas icon already uses (iconFor would
+  // short-circuit to the built-in trigger icon before ever consulting the
+  // preset's icon_hint), so this panel's header and the canvas node it
+  // belongs to always agree on what icon a configured trigger shows.
+  const triggerPreset = nodeTypeKey === 'trigger'
+    ? findTriggerPreset(taxonomy, (node?.data.configuration as TriggerConfig | undefined)?.webhook_preset)
+    : undefined
+  const Icon = (triggerPreset && iconForHint(triggerPreset.icon_hint))
+    || builtIn?.icon
+    || (packageEntry ? iconFor(nodeTypeKey!, packageEntry.icon_hint) : undefined)
 
   const { data: forms } = useForms()
   const formsById = useMemo(() => new Map((forms ?? []).map((form) => [form.id, form])), [forms])

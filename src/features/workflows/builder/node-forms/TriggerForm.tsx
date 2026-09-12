@@ -1,9 +1,7 @@
 // trigger — mirrors internal/graph/configs_trigger.go
 import { useState } from 'react'
 import {
-  Filter as FilterIcon, Clock, Zap as ZapIcon, ShieldCheck, CheckCircle2, Send, MousePointerClick,
-  Webhook, Workflow as WorkflowIcon, AlertTriangle, Copy, Check, RefreshCw,
-  type LucideIcon,
+  Filter as FilterIcon, Copy, Check, RefreshCw, Webhook, ChevronRight, X as CloseIcon,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,6 +18,9 @@ import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, TriggerConfig, TriggerMode, TriggerEventType } from '../../types'
 import type { TriggerPresetInfo } from '../node-taxonomy'
 import { iconForHint } from '../icon-hints'
+import { TRIGGER_MODES } from '../trigger-modes'
+import { TriggerTypePicker } from '../TriggerTypePicker'
+import { applyTriggerPresetPatch } from '../trigger-preset-apply'
 
 export function normaliseTriggerConfig(raw: unknown): TriggerConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<TriggerConfig>
@@ -45,18 +46,6 @@ export function normaliseTriggerConfig(raw: unknown): TriggerConfig {
     tool_parameters:       r.tool_parameters ?? [],
   }
 }
-
-const TRIGGER_MODES: { value: TriggerMode; label: string; icon: LucideIcon; description: string }[] = [
-  { value: 'on_demand',   label: 'On Demand',    icon: ZapIcon,      description: 'Run manually or via API — no automatic trigger.' },
-  { value: 'on_demand_data_driven', label: 'On Demand (with a record)', icon: MousePointerClick, description: 'Run manually against one specific record — its fields are available to every node as Vars["fieldKey"]. Used by record-detail custom actions (FR-D2-017).' },
-  { value: 'scheduled',   label: 'Scheduled',    icon: Clock,        description: 'Run on a recurring cron schedule.' },
-  { value: 'before',      label: 'Before Write', icon: ShieldCheck,  description: 'Run before a record is created/updated/deleted — can block the write.' },
-  { value: 'after',       label: 'After Write',  icon: CheckCircle2, description: 'Run after a record write commits — synchronously, blocking the response.' },
-  { value: 'after_async', label: 'After Write (Async)', icon: Send,  description: 'Run after a record write commits — fire-and-forget, does not block the response.' },
-  { value: 'webhook',     label: 'On Webhook Call', icon: Webhook,   description: 'Run when an external system sends an HTTP request to this workflow\'s own URL.' },
-  { value: 'executed_by_workflow', label: 'When Executed by Another Workflow', icon: WorkflowIcon, description: 'Run only when called by an Execute Workflow node in a different workflow.' },
-  { value: 'on_error',    label: 'Error Trigger', icon: AlertTriangle, description: 'Run when another workflow\'s execution fails.' },
-]
 
 const EVENT_TYPES: { value: TriggerEventType; label: string }[] = [
   { value: 'create', label: 'Create' },
@@ -116,9 +105,17 @@ export interface TriggerFormProps {
 }
 
 export function TriggerForm({ config, variables, onChange, triggerPresets = [] }: TriggerFormProps) {
+  const t = useTranslation()
   const { data: form } = useForm(config.form_id || '')
   const fields = form?.fields ?? []
   const isDataDriven = config.mode === 'before' || config.mode === 'after' || config.mode === 'after_async'
+  // Toggles the always-shown "which trigger is this?" summary row for the
+  // TriggerTypePicker itself — shown only while actively changing, not on
+  // every open, the way this panel used to (n8n's own WhatsApp Trigger node
+  // opens straight into that trigger's own Credential/Trigger-On fields,
+  // never a re-shown "pick a trigger" screen; a configured trigger here now
+  // does the same).
+  const [changingType, setChangingType] = useState(false)
 
   const set = (patch: Partial<TriggerConfig>) => onChange({ ...config, ...patch })
 
@@ -139,6 +136,29 @@ export function TriggerForm({ config, variables, onChange, triggerPresets = [] }
     } else {
       set({ mode })
     }
+  }
+
+  // What the summary row shows: the applied preset's own icon/name when one
+  // is active (webhook mode + a webhook_preset that still resolves against
+  // the currently-served triggerPresets — a preset removed server-side
+  // since this workflow was saved falls through to the plain mode below,
+  // same as BaseNode.tsx's canvas resolution already does), otherwise the
+  // plain TRIGGER_MODES entry for config.mode.
+  const activePreset = config.mode === 'webhook'
+    ? triggerPresets.find((p) => p.name === config.webhook_preset)
+    : undefined
+  const activeModeOption = TRIGGER_MODES.find((m) => m.value === config.mode)
+  const CurrentIcon = activePreset ? (iconForHint(activePreset.icon_hint) ?? Webhook) : (activeModeOption?.icon ?? Webhook)
+  const currentLabel = activePreset ? activePreset.display_name : (activeModeOption ? t(activeModeOption.labelKey) : config.mode)
+
+  const handlePickMode = (mode: TriggerMode) => {
+    setMode(mode)
+    setChangingType(false)
+  }
+
+  const handlePickPreset = (preset: TriggerPresetInfo) => {
+    onChange(applyTriggerPresetPatch(config, preset))
+    setChangingType(false)
   }
 
   return (
@@ -164,38 +184,48 @@ export function TriggerForm({ config, variables, onChange, triggerPresets = [] }
         </button>
       </div>
 
-      {/* Mode picker */}
-      <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Trigger Mode</Label>
-        <div className="space-y-1.5">
-          {TRIGGER_MODES.map((m) => {
-            const Icon = m.icon
-            const active = config.mode === m.value
-            return (
-              <button
-                key={m.value}
-                type="button"
-                onClick={() => setMode(m.value)}
-                className={cn(
-                  'flex w-full items-start gap-2.5 rounded-xl border p-2.5 text-left transition-colors',
-                  active ? 'border-[hsl(var(--success))]/50 bg-[hsl(var(--success))]/10' : 'border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:border-[hsl(var(--muted-foreground))]/40',
-                )}
-              >
-                <div className={cn(
-                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
-                  active ? 'bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))]' : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
-                )}>
-                  <Icon size={14} />
-                </div>
-                <div className="min-w-0">
-                  <p className={cn('text-[12px] font-semibold', active ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--foreground))]')}>{m.label}</p>
-                  <p className="text-[10px] leading-snug text-[hsl(var(--muted-foreground))]">{m.description}</p>
-                </div>
-              </button>
-            )
-          })}
+      {/* Trigger type — a compact summary + "Change" affordance once
+          configured, not an always-expanded picker: opening an
+          already-configured trigger should land directly on THAT trigger's
+          own fields below (matching n8n's own node-detail view), the same
+          way this panel already treats every other node type. Changing
+          type swaps this whole section for TriggerTypePicker inline. */}
+      {changingType ? (
+        <div className="space-y-1.5 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-2.5">
+          <div className="flex items-center justify-between">
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
+              {t('workflows.trigger.type.change_title')}
+            </Label>
+            <button
+              type="button"
+              onClick={() => setChangingType(false)}
+              className="rounded-md p-1 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
+              title={t('workflows.trigger.type.cancel')}
+            >
+              <CloseIcon size={13} />
+            </button>
+          </div>
+          <TriggerTypePicker activeMode={config.mode} onPickMode={handlePickMode} onPickPreset={handlePickPreset} />
         </div>
-      </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setChangingType(true)}
+          className="flex w-full items-center gap-2.5 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-2.5 text-left transition-colors hover:border-[hsl(var(--muted-foreground))]/40"
+        >
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
+            <CurrentIcon size={14} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.trigger.type.label')}</p>
+            <p className="text-[12px] font-semibold text-[hsl(var(--foreground))]">{currentLabel}</p>
+          </div>
+          <span className="flex shrink-0 items-center gap-0.5 text-[11px] font-semibold text-[hsl(var(--primary))]">
+            {t('workflows.trigger.type.change')}
+            <ChevronRight size={13} />
+          </span>
+        </button>
+      )}
 
       <div className="h-px bg-[hsl(var(--border))]" />
 
@@ -319,7 +349,7 @@ export function TriggerForm({ config, variables, onChange, triggerPresets = [] }
       )}
 
       {/* Webhook mode */}
-      {config.mode === 'webhook' && <WebhookModeFields config={config} set={set} triggerPresets={triggerPresets} />}
+      {config.mode === 'webhook' && <WebhookModeFields config={config} set={set} />}
 
       {/* Executed-by-workflow mode */}
       {config.mode === 'executed_by_workflow' && (
@@ -472,7 +502,15 @@ function ExposeAsToolFields({
 // server-minted — see api/workflows.Handler.syncWebhook — so there is
 // nothing to fill in for it before the first save; that section stays
 // read-only by design.
-function WebhookModeFields({ config, set, triggerPresets }: { config: TriggerConfig; set: (patch: Partial<TriggerConfig>) => void; triggerPresets: TriggerPresetInfo[] }) {
+//
+// No "Quick Setup" preset cards here any more — TriggerForm's own top-level
+// "Trigger type" summary + Change affordance is now the ONE place a preset
+// is applied from (via TriggerTypePicker's "On App Event" branch), so a
+// second, duplicate picker down here would just show the same active
+// preset's name twice. Manually switching Provider below still correctly
+// clears webhook_preset (see setProvider), since that's a real "this is no
+// longer that preset" transition regardless of which picker set it.
+function WebhookModeFields({ config, set }: { config: TriggerConfig; set: (patch: Partial<TriggerConfig>) => void }) {
   const t = useTranslation()
   const [copied, setCopied] = useState(false)
   const url = config.webhook_token
@@ -520,17 +558,11 @@ function WebhookModeFields({ config, set, triggerPresets }: { config: TriggerCon
     set({ webhook_provider: value, webhook_events: [], webhook_secret_credential: '', webhook_preset: '' })
   }
 
-  // Applying a preset sets provider + a starting event selection together —
-  // a fast-path, never a restriction: the events multiselect below stays
-  // fully interactive afterward, so the author can still freely add/remove
-  // events on top of the preset's own defaults. toggleEvent deliberately
-  // does NOT clear webhook_preset (unlike setProvider above) — hand-tweaking
+  // toggleEvent deliberately does NOT clear webhook_preset — hand-tweaking
   // events under an applied preset is a legitimate customization, not
-  // "switching away from WhatsApp."
-  const applyPreset = (preset: TriggerPresetInfo) => {
-    set({ webhook_provider: preset.provider, webhook_events: preset.default_events ?? [], webhook_preset: preset.name })
-  }
-
+  // "switching away from WhatsApp." Only a manual provider switch (above)
+  // or picking a different trigger type entirely (TriggerForm's own
+  // handlePickPreset/handlePickMode) clears it.
   const toggleEvent = (value: string, checked: boolean) => {
     set({ webhook_events: checked ? [...events, value] : events.filter((e) => e !== value) })
   }
@@ -565,54 +597,6 @@ function WebhookModeFields({ config, set, triggerPresets }: { config: TriggerCon
           </p>
         )}
       </div>
-
-      <div className="h-px bg-[hsl(var(--border))]" />
-
-      {/* Quick Setup — package-declared shortcuts (e.g. WhatsApp's "On
-          Message") that set provider + a starting event selection together.
-          Purely a fast-path/identity marker, never a restriction: the
-          Provider section below still renders (the manual/advanced path, and
-          the truthful view for a definition saved before this existed), and
-          the events multiselect further down stays fully interactive after a
-          preset is applied. Hidden entirely when no package declares one. */}
-      {triggerPresets.length > 0 && (
-        <div className="space-y-1.5">
-          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-            {t('workflows.trigger.webhook.quick_setup_label')}
-          </Label>
-          <p className="text-[10px] leading-snug text-[hsl(var(--muted-foreground))]">
-            {t('workflows.trigger.webhook.quick_setup_hint')}
-          </p>
-          <div className="space-y-1.5">
-            {triggerPresets.map((preset) => {
-              const active = config.webhook_preset === preset.name
-              const PresetIcon = iconForHint(preset.icon_hint) ?? Webhook
-              return (
-                <button
-                  key={preset.name}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => applyPreset(preset)}
-                  className={cn(
-                    'flex w-full items-start gap-2 rounded-xl border p-2.5 text-left transition-colors',
-                    active ? 'border-[hsl(var(--success))]/50 bg-[hsl(var(--success))]/10' : 'border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:border-[hsl(var(--muted-foreground))]/40',
-                  )}
-                >
-                  <PresetIcon size={14} className={cn('mt-0.5 shrink-0', active ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--muted-foreground))]')} />
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className={cn('text-[12px] font-semibold', active ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--foreground))]')}>
-                      {preset.display_name}
-                    </span>
-                    {preset.description && (
-                      <span className="text-[10px] leading-snug text-[hsl(var(--muted-foreground))]">{preset.description}</span>
-                    )}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
       <div className="h-px bg-[hsl(var(--border))]" />
 
