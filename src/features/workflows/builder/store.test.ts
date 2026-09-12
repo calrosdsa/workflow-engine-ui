@@ -11,8 +11,13 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useBuilderStore } from './store'
 import type { IteratorConfig } from '../types'
 
+// seedNew() itself now leaves the canvas empty (the onboarding modal is
+// what creates the singleton Trigger node on a real page) — these tests
+// aren't about seeding, they just need a trigger node to build a graph
+// from, so create one directly via the same store action the modal uses.
 function reset() {
   useBuilderStore.getState().seedNew()
+  useBuilderStore.getState().applyTriggerConfig({ mode: 'on_demand', enabled: true })
 }
 
 function nodesByType(type: string) {
@@ -92,10 +97,10 @@ describe('addConnectedNode — loop-body-tail splicing', () => {
   })
 
   it('a real second branch off a non-tail node (e.g. the trigger) still forks normally, unaffected by the loop-tail fix', () => {
-    // seedNew() already wires trigger -> exit, so the trigger already has
-    // one outgoing edge (to exit) before this test even starts — every
+    // Give the trigger an existing outgoing edge first, so the next
     // addConnectedNode call on it is inherently "add a second branch."
     const trigger = nodesByType('trigger')[0]
+    useBuilderStore.getState().addConnectedNode('exit', trigger.id)
     const exit = nodesByType('exit')[0]
 
     useBuilderStore.getState().addConnectedNode('http_request', trigger.id)
@@ -122,6 +127,7 @@ describe('addConnectedNode — loop-body-tail splicing', () => {
 describe('insertNodeOnEdge — iterator auto-pairing on edge-hover insert', () => {
   it('inserting an iterator on an edge auto-creates its paired loop_end, not a dangling half-loop', () => {
     const trigger = nodesByType('trigger')[0]
+    useBuilderStore.getState().addConnectedNode('exit', trigger.id)
     const exit = nodesByType('exit')[0]
     const triggerToExit = outgoingFrom(trigger.id)[0]
 
@@ -145,6 +151,7 @@ describe('insertNodeOnEdge — iterator auto-pairing on edge-hover insert', () =
 
   it('a node subsequently added via "+" on that same iterator still splices into the body (both fixes compose)', () => {
     const trigger = nodesByType('trigger')[0]
+    useBuilderStore.getState().addConnectedNode('exit', trigger.id)
     const triggerToExit = outgoingFrom(trigger.id)[0]
     useBuilderStore.getState().insertNodeOnEdge('iterator', triggerToExit.id)
 
@@ -155,5 +162,38 @@ describe('insertNodeOnEdge — iterator auto-pairing on edge-hover insert', () =
 
     expect(outgoingFrom(iterator.id)).toEqual([expect.objectContaining({ target: setVar.id })])
     expect(outgoingFrom(setVar.id)).toEqual([expect.objectContaining({ target: loopEnd.id })])
+  })
+})
+
+describe('seedNew / applyTriggerConfig — brand-new workflow lifecycle', () => {
+  it('seedNew leaves a genuinely empty canvas — no Trigger, no End node', () => {
+    useBuilderStore.getState().seedNew()
+    expect(useBuilderStore.getState().nodes).toEqual([])
+    expect(useBuilderStore.getState().edges).toEqual([])
+  })
+
+  it('applyTriggerConfig creates the singleton Trigger node when none exists yet', () => {
+    useBuilderStore.getState().seedNew()
+    useBuilderStore.getState().applyTriggerConfig({ mode: 'scheduled', cron: '* * * * *' })
+
+    const nodes = useBuilderStore.getState().nodes
+    expect(nodes).toHaveLength(1)
+    expect(nodes[0].data.type).toBe('trigger')
+    expect(nodes[0].data.configuration).toEqual({ mode: 'scheduled', cron: '* * * * *' })
+    expect(useBuilderStore.getState().selectedNodeId).toBe(nodes[0].id)
+    expect(useBuilderStore.getState().configPanelOpen).toBe(true)
+  })
+
+  it('applyTriggerConfig reconfigures the existing Trigger node in place instead of adding a second one', () => {
+    useBuilderStore.getState().seedNew()
+    useBuilderStore.getState().applyTriggerConfig({ mode: 'on_demand' })
+    const firstId = useBuilderStore.getState().nodes[0].id
+
+    useBuilderStore.getState().applyTriggerConfig({ mode: 'scheduled', cron: '0 * * * *' })
+
+    const nodes = useBuilderStore.getState().nodes
+    expect(nodes).toHaveLength(1)
+    expect(nodes[0].id).toBe(firstId)
+    expect(nodes[0].data.configuration).toEqual({ mode: 'scheduled', cron: '0 * * * *' })
   })
 })

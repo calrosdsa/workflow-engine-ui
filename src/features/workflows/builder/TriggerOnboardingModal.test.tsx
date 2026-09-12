@@ -11,6 +11,8 @@ vi.mock('./node-taxonomy', async () => {
   return { ...actual, useNodeTaxonomy: () => ({ data: taxonomy }) }
 })
 
+// seedNew() leaves the canvas genuinely empty — this modal's own choices
+// are what create the singleton Trigger node, which these tests verify.
 function seed() {
   useBuilderStore.getState().seedNew()
 }
@@ -32,6 +34,10 @@ beforeEach(seed)
 afterEach(cleanup)
 
 describe('TriggerOnboardingModal', () => {
+  it('a freshly seeded workflow has no nodes yet — this modal is what creates the trigger', () => {
+    expect(useBuilderStore.getState().nodes).toHaveLength(0)
+  })
+
   it('renders every TRIGGER_MODES tile plus On App Event', () => {
     open()
     expect(screen.getByText('On App Event')).toBeTruthy()
@@ -41,11 +47,13 @@ describe('TriggerOnboardingModal', () => {
     expect(screen.getByText('Error Trigger')).toBeTruthy()
   })
 
-  it('picking a plain mode reconfigures the trigger node and closes', () => {
+  it('picking a plain mode creates the trigger node on the (still empty) canvas and closes', () => {
     const onClose = vi.fn()
+    expect(useBuilderStore.getState().nodes).toHaveLength(0)
     open(onClose)
     fireEvent.click(screen.getByText('Scheduled'))
     expect(triggerConfig()?.mode).toBe('scheduled')
+    expect(useBuilderStore.getState().nodes).toHaveLength(1)
     expect(onClose).toHaveBeenCalled()
   })
 
@@ -71,12 +79,13 @@ describe('TriggerOnboardingModal', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it('the close button dismisses without mutating the trigger', () => {
+  it('the close button still creates a default on_demand trigger, so the canvas is never left permanently empty', () => {
     const onClose = vi.fn()
     open(onClose)
-    const before = triggerConfig()
+    expect(triggerConfig()).toBeUndefined()
     fireEvent.click(screen.getByTitle('Close'))
-    expect(triggerConfig()).toEqual(before)
+    expect(triggerConfig()?.mode).toBe('on_demand')
+    expect(useBuilderStore.getState().nodes).toHaveLength(1)
     expect(onClose).toHaveBeenCalled()
   })
 })

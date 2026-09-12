@@ -334,6 +334,10 @@ export interface BuilderState {
   deleteBranch:         (parentId: string, branchRootId: string) => void
   swapLastTwoBranches:  (parentId: string) => void
   updateNodeConfig:     (nodeId: string, config: unknown) => void
+  /** Applies a config to the singleton Trigger node, creating it if the
+   *  canvas doesn't have one yet (a brand-new workflow before its first
+   *  trigger choice). See TriggerOnboardingModal. */
+  applyTriggerConfig:   (config: unknown) => void
   /** Condition nodes only: switch between the single-output gate (default)
    *  and an explicit two-path true/false branch. Disabling drops the false
    *  port AND every edge wired to it. */
@@ -1009,22 +1013,59 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
     }))
   },
 
-  // Seeds a brand-new workflow: a connected trigger → exit chain, so the
-  // edge's + button is immediately available for the first real step.
+  // Seeds a brand-new workflow with a genuinely empty canvas — neither a
+  // Trigger nor an End node is created here. TriggerOnboardingModal (shown
+  // for every mode:'new' page) creates the singleton Trigger node itself
+  // once the author makes their first choice (applyTriggerConfig below);
+  // an End node is never auto-created at all — it's purely decorative
+  // (internal/flow/decompile.go drops a lone trailing exit node as noise),
+  // so there's nothing worth seeding it for.
   seedNew: () => {
     resetHistory()
-    const trigger = makeNode('trigger', { x: 0, y: 0 })
-    const exit    = makeNode('exit',    { x: 0, y: 240 })
     set({
       workflowId:     '',
       name:           'Untitled Workflow',
       variables:      [],
-      nodes:          [trigger, exit],
-      edges:          [makeEdge(trigger.id, exit.id)],
+      nodes:          [],
+      edges:          [],
       selectedNodeId: null,
       isDirty:        true,
       past:           [],
       future:         [],
+    })
+  },
+
+  // Applies a config to the workflow's singleton Trigger node, creating it
+  // at the canvas origin first if the workflow doesn't have one yet (a
+  // brand-new, still-empty workflow before its first trigger choice — see
+  // TriggerOnboardingModal). Always selects the resulting node, which
+  // auto-opens its config panel (same side effects as selectNode).
+  applyTriggerConfig: (config) => {
+    pushHistory()
+    set((s) => {
+      const existing = s.nodes.find((n) => n.data.type === 'trigger')
+      let nodeId: string
+      let nodes: FlowNode[]
+      if (existing) {
+        nodeId = existing.id
+        nodes = s.nodes.map((n) =>
+          n.id === nodeId ? { ...n, data: { ...n.data, configuration: config } } : n,
+        )
+      } else {
+        const trigger = makeNode('trigger', { x: 0, y: 0 })
+        trigger.data.configuration = config
+        nodeId = trigger.id
+        nodes = [...s.nodes, trigger]
+      }
+      return {
+        nodes,
+        selectedNodeId:   nodeId,
+        activeSidebar:    'config',
+        varsPanelOpen:    false,
+        configPanelOpen:  true,
+        executionsPanelOpen: false,
+        isDirty:          true,
+      }
     })
   },
 

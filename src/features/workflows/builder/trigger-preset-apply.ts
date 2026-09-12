@@ -19,10 +19,12 @@ import type { TriggerConfig, TriggerMode } from '../types'
 import type { TriggerPresetInfo } from './node-taxonomy'
 import { normaliseTriggerConfig } from './node-forms/TriggerForm'
 
-/** The workflow's one singleton Trigger node, if present. Every workflow
- *  this feature touches has exactly one (seedNew() always creates trigger +
- *  exit) — see internal/graph/lint.go's own "exactly one trigger" rule,
- *  which this frontend never tries to route around. */
+/** The workflow's singleton Trigger node, if one exists yet. Every SAVED
+ *  workflow has exactly one — see internal/graph/lint.go's own "exactly
+ *  one trigger" rule, which this frontend never tries to route around —
+ *  but a brand-new workflow starts with zero nodes (seedNew()) until
+ *  TriggerOnboardingModal's first choice creates it (store.ts's
+ *  applyTriggerConfig), so callers must not assume this always resolves. */
 export function findTriggerNode(nodes: FlowNode[]): FlowNode | undefined {
   return nodes.find((n) => n.data.type === 'trigger')
 }

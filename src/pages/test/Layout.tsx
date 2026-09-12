@@ -12,6 +12,7 @@ import {
 } from "@xyflow/react";
 import { Undo2, Redo2, Wand2, Maximize, Map as MapIcon, Plus, Command as CommandIcon, Braces, PanelRight, History, Play, Rocket, Save, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/features/i18n/I18nProvider";
 import {
   Command,
   CommandEmpty,
@@ -73,6 +74,7 @@ const builtInNodeTypes = Object.fromEntries(
 ) as Record<NodeType, typeof BaseNode>;
 
 const Flow = () => {
+  const t = useTranslation();
   const {
     nodes,
     edges,
@@ -142,8 +144,8 @@ const Flow = () => {
     // reading order without turning the visual reflow into a user edit.
     applyDagreLayout("LR", false);
     // Wait a frame so ReactFlow has measured the fresh nodes.
-    const t = setTimeout(fitView, 50);
-    return () => clearTimeout(t);
+    const fitTimer = setTimeout(fitView, 50);
+    return () => clearTimeout(fitTimer);
   }, [fitKey, nodes.length, fitView, applyDagreLayout]);
 
   const tidyLayout = useCallback(() => {
@@ -152,8 +154,12 @@ const Flow = () => {
   }, [applyDagreLayout, fitView]);
 
   const addStepToFlow = useCallback(() => {
-    // The seed graph is trigger → exit, so inserting on that edge is the
-    // clearest first action. Once a workflow grows, use the last visible leaf.
+    // A brand-new workflow seeds with a single Trigger node and no edges,
+    // so the leaf lookup below is what fires on the very first click — it
+    // finds the trigger itself and connects the first real step from it.
+    // The exit-edge branch only still matters for a workflow LOADED from a
+    // saved definition that happens to carry a trailing exit node (legacy
+    // data, or a palette-dropped one); new workflows never produce one.
     const exitEdge = edges.find((edge) => nodes.some((node) => node.id === edge.target && node.data.type === "exit"));
     if (exitEdge) {
       openPicker({ kind: "edge", edgeId: exitEdge.id });
@@ -385,10 +391,13 @@ const Flow = () => {
         </ToolbarButton>
       </div>
 
-      {/* First-steps hint — only while the canvas holds nothing but the seed */}
-      {nodes.length <= 2 && (
+      {/* First-steps hint — only before the trigger's first real step exists.
+          A brand-new workflow now seeds with just the Trigger node and no
+          edges, so there's no connection line to hover yet; once a first
+          step is added (an edge now exists), this hint's job is done. */}
+      {nodes.length <= 1 && (
         <div className="workflow-builder-start-hint pointer-events-none absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-full border px-4 py-2 text-xs font-medium shadow-sm backdrop-blur">
-          Hover the connection line and click <span className="mx-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[hsl(var(--primary))] align-middle text-[10px] font-bold text-[hsl(var(--primary-foreground))]">+</span> to add your first step
+          {t('workflows.canvas.first_step_hint')}
         </div>
       )}
 

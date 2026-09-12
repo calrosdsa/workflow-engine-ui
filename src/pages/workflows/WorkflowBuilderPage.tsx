@@ -64,9 +64,10 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   const [justSaved,   setJustSaved]   = useState(false)
   const [outlineOpen, setOutlineOpen] = useState(true)
   // Shown once for a brand-new workflow only — never for an existing one
-  // reopened via mode 'edit'. The canvas underneath is already fully
-  // seeded (seedNew() below still runs unconditionally); this is a purely
-  // visual gate on interactivity, not a different graph-lifecycle path.
+  // reopened via mode 'edit'. seedNew() below leaves the canvas genuinely
+  // empty; this modal's own choice is what creates the singleton Trigger
+  // node (store.ts's applyTriggerConfig) — it also overlays the canvas so
+  // none of its "add a step" affordances are reachable before that happens.
   const [onboardingOpen, setOnboardingOpen] = useState(false)
 
   const clearOverlay = useExecutionOverlayStore((s) => s.select)

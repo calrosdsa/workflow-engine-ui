@@ -1,19 +1,18 @@
 // A brand-new workflow's blank-canvas "What triggers this workflow?"
 // prompt — shown once, only for mode === 'new' (never on an existing,
 // loaded workflow), gating the canvas's visible interactivity until the
-// author picks a starting trigger. The canvas underneath is already fully
-// seeded (WorkflowBuilderPage.tsx's seedNew() still runs unconditionally,
-// exactly as before this modal existed) — this is purely a visual overlay,
-// not a different graph-lifecycle path, which is what keeps it a small,
-// additive change rather than a new "0 nodes" state to special-case
-// throughout the canvas.
+// author picks a starting trigger. The canvas underneath starts with zero
+// nodes (WorkflowBuilderPage.tsx's seedNew() no longer auto-creates a
+// Trigger or an End node) — this modal's own choice is what creates the
+// singleton Trigger node, via store.ts's applyTriggerConfig, which also
+// handles the (defensive-only) case where a trigger already exists.
 //
 // The picker itself (mode tiles + "On App Event" → AppPickerPanel) is
 // TriggerTypePicker — shared with TriggerForm.tsx's own "change trigger
 // type" flow, so a trigger configured from either entry point behaves
 // identically. This file only supplies the modal's own chrome (backdrop,
-// title, close button) and wires the picker's two callbacks to the
-// singleton Trigger node via the same trigger-preset-apply.ts helpers
+// title, close button) and wires the picker's two callbacks to
+// applyTriggerConfig via the same trigger-preset-apply.ts helpers
 // NodePickerModal's own "Apps" tab uses.
 import { X } from 'lucide-react'
 import { useTranslation } from '@/features/i18n/I18nProvider'
@@ -30,20 +29,13 @@ export interface TriggerOnboardingModalProps {
 export function TriggerOnboardingModal({ onClose }: TriggerOnboardingModalProps) {
   const t = useTranslation()
   const nodes = useBuilderStore((s) => s.nodes)
-  const updateNodeConfig = useBuilderStore((s) => s.updateNodeConfig)
-  const selectNode = useBuilderStore((s) => s.selectNode)
+  const applyTriggerConfig = useBuilderStore((s) => s.applyTriggerConfig)
 
-  // Lands the user in the (now pre-configured) Trigger node's own config
-  // panel — selectNode already auto-opens it (store.ts) — then dismisses.
-  // No canvas re-centering here: the seed graph's trigger node is already
-  // what fitView centered on at mount, unlike NodePickerModal's "Apps" tab,
-  // which can be opened from anywhere on an already-larger canvas.
+  // Creates (or, defensively, reconfigures) the singleton Trigger node —
+  // applyTriggerConfig already selects it, which auto-opens its config
+  // panel (store.ts) — then dismisses.
   function finish(config: ReturnType<typeof applyTriggerModePatch>) {
-    const trigger = findTriggerNode(nodes)
-    if (trigger) {
-      updateNodeConfig(trigger.id, config)
-      selectNode(trigger.id)
-    }
+    applyTriggerConfig(config)
     onClose()
   }
 
@@ -52,6 +44,15 @@ export function TriggerOnboardingModal({ onClose }: TriggerOnboardingModalProps)
 
   const handlePickPreset = (preset: TriggerPresetInfo) =>
     finish(applyTriggerPresetPatch(findTriggerNode(nodes)?.data.configuration, preset))
+
+  // Closing without an explicit choice still needs to leave a real Trigger
+  // node behind — the canvas starts with zero nodes now, so dismissing
+  // here can't just leave it empty: there would be no node or edge left
+  // for the canvas's own "add a step" affordances to attach to.
+  // Defaulting to on_demand mirrors n8n's own "trigger manually" outcome,
+  // and is exactly what the old auto-seeded trigger defaulted to before
+  // this modal existed.
+  const handleClose = () => handlePickMode('on_demand')
 
   return (
     <div className="absolute inset-0 z-[60] flex items-center justify-center bg-[hsl(var(--background))]/70 backdrop-blur-sm">
@@ -63,7 +64,7 @@ export function TriggerOnboardingModal({ onClose }: TriggerOnboardingModalProps)
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-md p-1 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
             title={t('workflows.onboarding.close')}
           >

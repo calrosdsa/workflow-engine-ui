@@ -285,6 +285,7 @@ export const en = {
   'workflows.onboarding.on_app_event.label': 'On App Event',
   'workflows.onboarding.on_app_event.description': 'Run when something happens in an app, like WhatsApp or Slack.',
   'workflows.onboarding.close': 'Close',
+  'workflows.canvas.first_step_hint': 'Click + in the toolbar to add your first step',
   'workflows.app_picker.search_placeholder': 'Search apps…',
   'workflows.app_picker.triggers_heading': 'Triggers ({{count}})',
   'workflows.app_picker.actions_heading': 'Actions ({{count}})',
