@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Handle, Position, type NodeProps, useStore } from '@xyflow/react'
-import { Plus, GripVertical, ArrowLeftRight, Trash2, GitBranchPlus, Copy, Check, AlertTriangle, AlertCircle, CheckCircle2, XCircle, MinusCircle, Loader2, MessageCircle, Bug } from 'lucide-react'
+import { Plus, GripVertical, ArrowLeftRight, Trash2, GitBranchPlus, Copy, Check, AlertTriangle, AlertCircle, CheckCircle2, XCircle, MinusCircle, Loader2, MessageCircle, Bug, PanelRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NODE_REGISTRY, fallbackCategory } from '../node-registry'
 import { useNodeTaxonomy, findPackageNode, findTriggerPreset } from '../node-taxonomy'
@@ -12,6 +12,7 @@ import { useExecutionOverlayStore } from '../execution-overlay-store'
 import type { NodeExecutionStatus } from '@/features/executions/types'
 import { DropZone } from './DropZone'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuLabel } from '@/components/ui/context-menu'
 import type { SetVariableConfig, ConditionConfig, VariableAssignment, FetchRecordsConfig, FilterGroup, IteratorConfig, HttpRequestConfig, TriggerConfig, ShowMessageConfig, NotificationConfig, DebugConfig } from '../../types'
 
 const DRAG_TRANSFER_KEY = 'application/workflow-node-reorder'
@@ -139,6 +140,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const [branchToolbarOpen, setBranchToolbarOpen] = useState(false)
 
   const openPicker          = useBuilderStore((s) => s.openPicker)
+  const selectNode          = useBuilderStore((s) => s.selectNode)
   const draggingNodeId      = useBuilderStore((s) => s.draggingNodeId)
   const activeDropTarget    = useBuilderStore((s) => s.activeDropTarget)
   const setDraggingNode     = useBuilderStore((s) => s.setDraggingNode)
@@ -242,7 +244,13 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const isActiveDropTarget = activeDropTarget?.nodeId === id
   const dimForDrag = draggingNodeId !== null && !isDraggingThis && !isActiveDropTarget
 
+  const deleteLabel = data.type === 'iterator' || data.type === 'loop_end'
+    ? 'Delete loop (keeps body steps)'
+    : 'Delete node'
+
   return (
+    <ContextMenu>
+    <ContextMenuTrigger asChild>
     <div
       data-node-category={nodeCategory}
       data-selected={selected ? 'true' : 'false'}
@@ -675,6 +683,50 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
         </div>
       )}
     </div>
+    </ContextMenuTrigger>
+    {/* nodrag/nopan + stopPropagation: this content is portalled outside the
+        canvas pane's own DOM subtree, but React re-dispatches its synthetic
+        events through the React tree (which IS still nested under this
+        node) — without these, a click inside the menu would bubble to
+        ReactFlow's pane handlers the same way the overlay Popovers above
+        already guard against. */}
+    <ContextMenuContent
+      className="nodrag nopan"
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onCloseAutoFocus={(e) => e.preventDefault()}
+    >
+      <ContextMenuLabel>{data.label}</ContextMenuLabel>
+      <ContextMenuItem onSelect={() => selectNode(id)}>
+        <PanelRight size={13} strokeWidth={2.25} />
+        Open
+      </ContextMenuItem>
+      {(canDuplicate || canDelete) && <ContextMenuSeparator />}
+      {canDuplicate && (
+        <ContextMenuItem
+          onSelect={() => {
+            duplicateNode(id)
+            setTimeout(() => applyDagreLayout('LR'), 0)
+          }}
+        >
+          <Copy size={13} strokeWidth={2.25} />
+          Duplicate
+        </ContextMenuItem>
+      )}
+      {canDelete && (
+        <ContextMenuItem
+          destructive
+          onSelect={() => {
+            deleteNode(id)
+            setTimeout(() => applyDagreLayout('LR'), 0)
+          }}
+        >
+          <Trash2 size={13} strokeWidth={2.25} />
+          {deleteLabel}
+        </ContextMenuItem>
+      )}
+    </ContextMenuContent>
+    </ContextMenu>
   )
 }
 
