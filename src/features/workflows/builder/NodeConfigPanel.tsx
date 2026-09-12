@@ -28,7 +28,7 @@ import { Select } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { testHttpRequest } from '@/lib/api'
+import { testHttpRequest, testWorkflowNode } from '@/lib/api'
 import { useForms } from '@/features/forms/hooks'
 import type { FormDefinition } from '@/features/forms/types'
 import { useNodeTaxonomy, findPackageNode, findTriggerPreset, type TriggerPresetInfo } from './node-taxonomy'
@@ -69,6 +69,18 @@ interface StepRun {
 }
 
 const EMPTY_RUN: StepRun = { phase: 'idle' }
+
+// Three tiers of "what does the step button actually do", read from a
+// single source of truth so the button label, footer copy, and runStep's
+// own branching can never drift apart:
+//   - EXECUTES_FOR_REAL: fires real, potentially side-effecting I/O.
+//   - EVALUATES_FOR_REAL: runs the node's real logic, but it's pure — no
+//     data is read or written (the same activity a live run would call,
+//     just outside Temporal).
+//   - everything else: no backend call at all, just a local config-validity
+//     check (see makeDraftPreview).
+const EXECUTES_FOR_REAL = new Set(['http_request'])
+const EVALUATES_FOR_REAL = new Set(['set_variable', 'condition'])
 
 // ---------------------------------------------------------------------------
 // Node configuration workbench
@@ -255,15 +267,60 @@ export function NodeConfigPanel() {
       return
     }
 
-    // Only HTTP currently has a backend test endpoint. Other nodes use a
-    // labelled draft preview: it validates the current in-memory definition,
-    // makes no network call, and never publishes/saves the workflow.
+    if (EVALUATES_FOR_REAL.has(node.data.type)) {
+      const controller = new AbortController()
+      abortControllers.current.set(node.id, controller)
+      try {
+        const realOutputs = collectRealAncestorOutputs(node, nodes, edges, runs)
+        const node_outputs: Record<string, Record<string, unknown>> = {}
+        for (const [ancestorId, output] of Object.entries(realOutputs)) {
+          if (output && typeof output === 'object' && !Array.isArray(output)) {
+            node_outputs[ancestorId] = output as Record<string, unknown>
+          }
+        }
+        const result = await testWorkflowNode({
+          node_type: node.data.type as 'set_variable' | 'condition',
+          configuration: node.data.configuration,
+          variables,
+          node_outputs,
+        }, controller.signal)
+        if (result.error) {
+          setRuns((current) => ({ ...current, [node.id]: {
+            phase: 'failed', source: 'live', error: result.error,
+            durationMs: Date.now() - startedAt, requestId: previewRequestId(node.id), configurationFingerprint,
+          } }))
+        } else {
+          setRuns((current) => ({ ...current, [node.id]: {
+            phase: 'succeeded', source: 'live', output: result,
+            durationMs: Date.now() - startedAt,
+            requestId: previewRequestId(node.id), configurationFingerprint, completedAt: Date.now(),
+          } }))
+        }
+      } catch (error) {
+        if (controller.signal.aborted) {
+          setRuns((current) => ({ ...current, [node.id]: { phase: 'cancelled', configurationFingerprint } }))
+        } else {
+          setRuns((current) => ({ ...current, [node.id]: {
+            phase: 'failed', source: 'live', error: error instanceof Error ? error.message : 'Step evaluation failed',
+            durationMs: Date.now() - startedAt, requestId: previewRequestId(node.id), configurationFingerprint,
+          } }))
+        }
+      } finally {
+        abortControllers.current.delete(node.id)
+      }
+      return
+    }
+
+    // No backend preview exists yet for this node type — a labelled local
+    // check: it validates the current in-memory definition, makes no
+    // network call, executes nothing, and never publishes/saves the
+    // workflow. See makeDraftPreview.
     const timer = setTimeout(() => {
       previewTimers.current.delete(node.id)
       setRuns((current) => ({ ...current, [node.id]: {
         phase: 'succeeded', source: 'draft',
         output: makeDraftPreview(node.data), durationMs: Date.now() - startedAt,
-        requestId: previewRequestId(node.id), configurationFingerprint, completedAt: Date.now(),
+        configurationFingerprint, completedAt: Date.now(),
       } }))
     }, 350)
     previewTimers.current.set(node.id, timer)
@@ -448,7 +505,11 @@ export function NodeConfigPanel() {
 
             <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-2.5">
               <p className="min-w-0 text-[11px] text-[hsl(var(--muted-foreground))]">
-                {node.data.type === 'http_request' ? 'Tests the current draft request; it does not save or publish this workflow.' : 'Draft preview only — server-side per-step execution is not available yet.'}
+                {EXECUTES_FOR_REAL.has(node.data.type)
+                  ? 'Tests the current draft request; it does not save or publish this workflow.'
+                  : EVALUATES_FOR_REAL.has(node.data.type)
+                    ? 'Runs the real evaluation logic for this node — no data is read or written, and nothing is saved or published.'
+                    : 'Checks the current configuration; it does not run this node or save/publish the workflow.'}
               </p>
               <div className="flex shrink-0 items-center gap-2">
                 {run.phase === 'running' ? (
@@ -456,7 +517,7 @@ export function NodeConfigPanel() {
                 ) : (
                   <Button size="sm" onClick={runStep} className="h-8 gap-1.5 rounded-full bg-[hsl(var(--foreground))] text-xs text-[hsl(var(--background))] hover:bg-[hsl(var(--foreground))]/90">
                     {run.phase === 'failed' || run.phase === 'cancelled' ? <RotateCcw size={12} /> : <Play size={12} />}
-                    {node.data.type === 'http_request' ? 'Execute step' : 'Preview step'}
+                    {EXECUTES_FOR_REAL.has(node.data.type) ? 'Execute step' : EVALUATES_FOR_REAL.has(node.data.type) ? 'Evaluate step' : 'Validate step'}
                   </Button>
                 )}
               </div>
@@ -702,14 +763,33 @@ function SchemaRows({ value, query, onInsertPath, path = '', collapsed, onToggle
   return <div className="flex items-center gap-1.5 rounded px-1.5 py-1"><span className="w-4 shrink-0" /><code className="min-w-0 flex-1 truncate text-[11px] text-[hsl(var(--muted-foreground))]">{path || '$'}</code><span className="rounded bg-[hsl(var(--muted))] px-1 text-[9px] text-[hsl(var(--muted-foreground))]">{dataType(value)}</span></div>
 }
 
+// Real captured outputs only (pinned > mock > last run), keyed by ancestor
+// node id — an ancestor with nothing captured yet is simply omitted rather
+// than given a placeholder shape. Shared by buildInputData (which still
+// falls back to a placeholder for on-screen display) and the set_variable/
+// condition preview request (which must NOT send a placeholder into
+// NodeOutputs — that would silently evaluate against the wrong shape
+// instead of failing with a clear "not found" error).
+function collectRealAncestorOutputs(node: FlowNode | undefined, nodes: FlowNode[], edges: FlowEdge[], runs: Record<string, StepRun>): Record<string, unknown> {
+  if (!node) return {}
+  const ancestorIds = computeAncestors(nodes, edges, node.id)
+  const out: Record<string, unknown> = {}
+  for (const candidate of nodes) {
+    if (!ancestorIds.has(candidate.id)) continue
+    const captured = readNodeWorkbench(candidate.data)
+    const output = captured.pinnedOutput ?? captured.mockOutput ?? runs[candidate.id]?.output
+    if (output !== undefined) out[candidate.id] = output
+  }
+  return out
+}
+
 function buildInputData(node: FlowNode | undefined, nodes: FlowNode[], edges: FlowEdge[], variables: import('../types').VariableDecl[], formsById: Map<string, FormDefinition>, runs: Record<string, StepRun>) {
   if (!node) return undefined
   const ancestorIds = computeAncestors(nodes, edges, node.id)
+  const realOutputs = collectRealAncestorOutputs(node, nodes, edges, runs)
   const upstream = Object.fromEntries(nodes.filter((candidate) => ancestorIds.has(candidate.id)).map((candidate) => {
-    const captured = readNodeWorkbench(candidate.data)
-    const output = captured.pinnedOutput ?? captured.mockOutput ?? runs[candidate.id]?.output
     const schema = buildNodeOutputSchema(candidate, formsById, nodes)
-    return [candidate.id, output ?? {
+    return [candidate.id, realOutputs[candidate.id] ?? {
       label: candidate.data.label,
       outputShape: schema.map((item) => ({
         label: item.nodeLabel,
@@ -754,7 +834,7 @@ function insertExpressionPath(path: string) {
 }
 
 function makeDraftPreview(node: GraphNode) {
-  return { preview: { nodeType: node.type, label: node.label, configuration: redactSensitiveData(node.configuration), message: 'Draft configuration passed local readiness checks. No saved workflow was changed.' } }
+  return { preview: { nodeType: node.type, label: node.label, configuration: redactSensitiveData(node.configuration), message: 'Configuration is valid. This node was not executed — no data was read, written, or evaluated.' } }
 }
 
 function setupIssuePath(type: string): string {
@@ -764,6 +844,6 @@ function setupIssuePath(type: string): string {
 
 function configurationFingerprintFor(value: unknown) { return configurationFingerprint(value) }
 function previewRequestId(nodeId: string) { return `preview-${nodeId.slice(0, 6)}-${Date.now().toString(36)}` }
-function sourceLabel(source: string) { return source === 'live' ? 'Live test' : source === 'draft' ? 'Draft preview' : source === 'mock' ? 'Mock data' : 'Pinned data' }
+function sourceLabel(source: string) { return source === 'live' ? 'Live test' : source === 'draft' ? 'Configuration check' : source === 'mock' ? 'Mock data' : 'Pinned data' }
 function dataType(value: unknown) { return Array.isArray(value) ? `array(${value.length})` : value === null ? 'null' : typeof value }
 function formatData(value: unknown) { const text = typeof value === 'string' ? value : JSON.stringify(value); return text.length > 100 ? `${text.slice(0, 100)}…` : text }

@@ -147,6 +147,46 @@ export async function testHttpRequest(
 }
 
 // ---------------------------------------------------------------------------
+// Node preview (Workflow Builder's set_variable/condition nodes — the only
+// node types whose real activity is I/O-free enough to run outside Temporal
+// for a design-time preview). Mirrors api/nodetest's request/response wire
+// shapes exactly; response fields match activities.NodeOutput's own JSON
+// tags directly, no separate DTO on the Go side.
+// ---------------------------------------------------------------------------
+
+export interface TestNodeRequest {
+  node_type: 'set_variable' | 'condition'
+  configuration: unknown
+  variables?: VariableDecl[]
+  variable_values?: Record<string, unknown>
+  node_outputs?: Record<string, Record<string, unknown>>
+  trigger_record?: Record<string, unknown>
+}
+
+export interface TestNodeResult {
+  updated_variables?: Record<string, unknown>
+  node_output?: Record<string, unknown>
+  branch_taken?: string
+  /** A soft/business-logic failure (bad config, an expression referencing an
+   *  ancestor with no captured output) — carried here rather than thrown. */
+  error?: string
+}
+
+/** Runs a set_variable/condition node's REAL evaluation logic — the same
+ *  activity function a live workflow run would call, just outside Temporal
+ *  — against caller-supplied variables/upstream outputs. Never throws on a
+ *  bad config/expression; the result carries `error` with a message. Only
+ *  throws on a genuine failure to reach this backend itself. */
+export async function testWorkflowNode(
+  req: TestNodeRequest,
+  signal?: AbortSignal,
+): Promise<TestNodeResult> {
+  return api
+    .post('nodes/test', { json: req, signal })
+    .json<TestNodeResult>()
+}
+
+// ---------------------------------------------------------------------------
 // Embed-check (Custom menu type, embed mode)
 // ---------------------------------------------------------------------------
 
