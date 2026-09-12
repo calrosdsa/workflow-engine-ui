@@ -30,7 +30,10 @@ export function CredentialTypeFieldForm({ fields, values, onChange }: Credential
     <>
       {fields.map((field) => (
         <div key={field.key}>
-          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{field.label}</label>
+          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">
+            {field.label}
+            {field.required && <span className="ml-1 text-[hsl(var(--destructive))]">*</span>}
+          </label>
           {field.options?.length ? (
             <select
               value={values[field.key] ?? ''}

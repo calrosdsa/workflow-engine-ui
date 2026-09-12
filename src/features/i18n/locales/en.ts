@@ -305,4 +305,13 @@ export const en = {
   'app_settings.credentials.cancel': 'Cancel',
   'app_settings.credentials.save': 'Save',
   'app_settings.credentials.create_new': 'Create new credential',
+  'app_settings.credentials.tab_connection': 'Connection',
+  'app_settings.credentials.tab_details': 'Details',
+  'app_settings.credentials.details_type_heading': 'Credential type',
+  'app_settings.credentials.details_builtin': 'Built in to workflow-engine.',
+  'app_settings.credentials.details_package': 'Provided by an installed package.',
+  'app_settings.credentials.details_fields_heading': 'Fields',
+  'app_settings.credentials.details_field_secret': 'secret',
+  'app_settings.credentials.details_field_required': 'required',
+  'app_settings.credentials.details_no_type': 'Pick a type on the Connection tab to see its details here.',
 } satisfies Record<string, string>
