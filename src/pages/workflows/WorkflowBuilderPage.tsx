@@ -11,6 +11,7 @@ import { VariablesPanel } from '@/features/workflows/builder/VariablesPanel'
 import { OutlinePanel } from '@/features/workflows/builder/OutlinePanel'
 import { NodeConfigPanel } from '@/features/workflows/builder/NodeConfigPanel'
 import { ExecutionsSidebar, statusDot } from '@/features/workflows/builder/ExecutionsSidebar'
+import { TriggerOnboardingModal } from '@/features/workflows/builder/TriggerOnboardingModal'
 import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -62,6 +63,11 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   const [initialised, setInitialised] = useState(false)
   const [justSaved,   setJustSaved]   = useState(false)
   const [outlineOpen, setOutlineOpen] = useState(true)
+  // Shown once for a brand-new workflow only — never for an existing one
+  // reopened via mode 'edit'. The canvas underneath is already fully
+  // seeded (seedNew() below still runs unconditionally); this is a purely
+  // visual gate on interactivity, not a different graph-lifecycle path.
+  const [onboardingOpen, setOnboardingOpen] = useState(false)
 
   const clearOverlay = useExecutionOverlayStore((s) => s.select)
   const selectOverlay = useExecutionOverlayStore((s) => s.setSelected)
@@ -121,6 +127,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
     if (mode === 'new' && !initialised) {
       seedNew()
       setInitialised(true)
+      setOnboardingOpen(true)
     }
     if (mode === 'edit' && existing && !initialised) {
       loadDefinition(existing.id, existing.name, existing.definition)
@@ -347,12 +354,13 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
       </header>
 
       {/* ── Main layout ──────────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="relative flex flex-1 overflow-hidden">
         <OutlinePanel open={outlineOpen} onToggle={() => setOutlineOpen((o) => !o)} />
         <VariablesPanel />
         <FlowLayout />
         <NodeConfigPanel />
         {mode === 'edit' && <ExecutionsSidebar workflowId={id} />}
+        {onboardingOpen && <TriggerOnboardingModal onClose={() => setOnboardingOpen(false)} />}
       </div>
     </div>
   )

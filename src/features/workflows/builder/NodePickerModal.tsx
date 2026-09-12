@@ -3,17 +3,27 @@ import { Search, X } from 'lucide-react'
 import { NODE_REGISTRY, PALETTE_NODES, fallbackCategory } from './node-registry'
 import { useNodeTaxonomy, groupByCategory, type PaletteEntry } from './node-taxonomy'
 import { iconFor } from './icon-hints'
+import { AppPickerPanel, type PickerSelection } from './AppPickerPanel'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { cn } from '@/lib/utils'
 import type { NodeType } from '../types'
 
 interface NodePickerModalProps {
-  onSelect: (type: string) => void
+  onSelect: (selection: PickerSelection) => void
   onClose:  () => void
 }
 
 export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
+  const t = useTranslation()
   const [search,    setSearch]    = useState('')
-  const [activeTab, setActiveTab] = useState(0)
+  // 'apps' is a distinct, additive browsing mode alongside the numeric
+  // category tabs — NOT a replacement for them. A package node still also
+  // appears under its own functional-category tab exactly as today;
+  // nothing is removed from those tabs by adding this one, unlike the old
+  // per-source "Connectors" tab this file's own tests guard against
+  // reintroducing (see NodePickerModal.test.tsx's "has no Connectors tab
+  // any more").
+  const [activeTab, setActiveTab] = useState<number | 'apps'>(0)
   const searchRef = useRef<HTMLInputElement>(null)
   const { data: taxonomy } = useNodeTaxonomy()
 
@@ -73,7 +83,7 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
         c.label.toLowerCase().includes(search.toLowerCase()) ||
         c.description.toLowerCase().includes(search.toLowerCase())
       )
-    : (tabs[activeTab]?.entries ?? [])
+    : (typeof activeTab === 'number' ? (tabs[activeTab]?.entries ?? []) : [])
 
   return (
     // Backdrop. Click-to-close is a supplementary pointer gesture — Escape
@@ -98,6 +108,11 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
               <X size={15} />
             </button>
           </div>
+          {/* Own search box, hidden in Apps mode — AppPickerPanel renders
+              its own (scoped to app names, not node labels/descriptions),
+              and showing both at once would be confusing about which one
+              a keystroke is filtering. */}
+          {activeTab !== 'apps' && (
           <div className="flex items-center gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 focus-within:border-[hsl(var(--primary))] focus-within:ring-2 focus-within:ring-[hsl(var(--ring))]/30">
             <Search size={15} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
             <input
@@ -108,7 +123,7 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
                 // Enter picks the top match — type a few letters and hit Enter.
                 if (e.key === 'Enter' && candidates.length > 0) {
                   e.preventDefault()
-                  onSelect(candidates[0].type)
+                  onSelect({ kind: 'node', type: candidates[0].type })
                 }
               }}
               placeholder="Search nodes…"
@@ -118,9 +133,13 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
               <kbd className="rounded border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-semibold text-[hsl(var(--muted-foreground))]">↵</kbd>
             )}
           </div>
+          )}
         </div>
 
-        {/* Category tabs — only show when not searching */}
+        {/* Category tabs — only show when not searching. "Apps" is always
+            last, after every occupied category — an additional browsing
+            mode, not competing for the front-of-list position with the
+            function-based tabs a node is normally found under. */}
         {!search && (
           <div className="flex gap-1 overflow-x-auto px-5 pt-3">
             {tabs.map((tab, i) => (
@@ -137,10 +156,27 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
                 {tab.label}
               </button>
             ))}
+            <button
+              onClick={() => setActiveTab('apps')}
+              className={cn(
+                'rounded-lg px-3 py-1.5 text-xs font-semibold transition-[background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
+                activeTab === 'apps'
+                  ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm'
+                  : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]',
+              )}
+            >
+              {t('workflows.node_picker.apps_tab')}
+            </button>
           </div>
         )}
 
-        {/* Node grid */}
+        {/* Body: the Apps tab swaps in its own two-screen browsing panel
+            (which has its own search box) in place of the flat node grid
+            below — not a second modal, just a different body for the same
+            frame. */}
+        {!search && activeTab === 'apps' ? (
+          <AppPickerPanel scope="triggers-and-actions" onSelect={onSelect} />
+        ) : (
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           {candidates.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-center">
@@ -158,7 +194,7 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
                 return (
                   <button
                     key={c.type}
-                    onClick={() => onSelect(c.type)}
+                    onClick={() => onSelect({ kind: 'node', type: c.type })}
                     className={cn(
                       'group flex items-center gap-3 rounded-lg border border-[hsl(var(--border))] p-3 text-left',
                       'transition-[border-color,background-color,box-shadow,transform] hover:border-[hsl(var(--muted-foreground))]/40 hover:bg-[hsl(var(--muted))] hover:shadow-md hover:-translate-y-0.5',
@@ -192,6 +228,7 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   )

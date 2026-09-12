@@ -66,6 +66,10 @@ export interface NodeTaxonomyEntry {
   icon_hint?: string
   config_schema?: JSONSchema
   output_schema?: JSONSchema
+  /** Set only for a package entry — the package that declared it (e.g.
+   *  "whatsapp"), the join key against AppInfo.name for an app-grouped
+   *  picker. Absent for a core entry (built-ins belong to no app). */
+  package?: string
 }
 
 /** Looks up one package node's full descriptor (schema included) by type.
@@ -89,6 +93,21 @@ export interface TriggerPresetInfo {
   icon_hint?: string
   provider: string
   default_events?: string[]
+  /** The package that declared this preset (e.g. "whatsapp") — the join
+   *  key against AppInfo.name for an app-grouped picker. */
+  package?: string
+}
+
+/** One loaded package's own identity — the "app" a picker groups that
+ *  package's trigger presets (TriggerPresetInfo.package) and nodes
+ *  (NodeTaxonomyEntry.package) under (e.g. "WhatsApp"). Mirrors api/meta's
+ *  AppInfo field-for-field. "App" is the user-facing term; "package" stays
+ *  the backend's own loading/deployment vocabulary. */
+export interface AppInfo {
+  name: string
+  display_name: string
+  description?: string
+  icon_hint?: string
 }
 
 export interface NodeTaxonomy {
@@ -96,6 +115,7 @@ export interface NodeTaxonomy {
   kinds: { value: string; description?: string }[]
   nodes: NodeTaxonomyEntry[]
   trigger_presets: TriggerPresetInfo[]
+  apps: AppInfo[]
 }
 
 /** Looks up a trigger's active preset, if any, by matching its own saved
@@ -135,17 +155,17 @@ export const taxonomyKeys = {
   all: () => ['workflows', 'node-taxonomy'] as const,
 }
 
-const EMPTY_TAXONOMY: NodeTaxonomy = { categories: FALLBACK_CATEGORIES, kinds: [], nodes: [], trigger_presets: [] }
+const EMPTY_TAXONOMY: NodeTaxonomy = { categories: FALLBACK_CATEGORIES, kinds: [], nodes: [], trigger_presets: [], apps: [] }
 
 async function fetchTaxonomy(): Promise<NodeTaxonomy> {
   try {
     const raw = await api.get('meta/node-taxonomy').json<NodeTaxonomy>()
-    // trigger_presets carries `omitempty` server-side (api/meta), so the key
-    // is ABSENT from the response entirely when no package declares a
-    // preset — normalized to [] here so every caller can trust it's always
-    // a real array, the same guarantee EMPTY_TAXONOMY's other fields already
-    // give, rather than every read site needing its own `?? []`.
-    return { ...raw, trigger_presets: raw.trigger_presets ?? [] }
+    // trigger_presets/apps carry `omitempty` server-side (api/meta), so the
+    // key is ABSENT from the response entirely when nothing was declared —
+    // normalized to [] here so every caller can trust it's always a real
+    // array, the same guarantee EMPTY_TAXONOMY's other fields already give,
+    // rather than every read site needing its own `?? []`.
+    return { ...raw, trigger_presets: raw.trigger_presets ?? [], apps: raw.apps ?? [] }
   } catch {
     // A backend older than this endpoint is a real deployment state, not an
     // error worth surfacing: the palette still works off compiled-in
@@ -234,4 +254,44 @@ export function groupByCategory(entries: PaletteEntry[], categories: CategoryInf
       entries: [...list].sort((a, b) => kindRank(a.kind) - kindRank(b.kind)),
     }))
     .sort((a, b) => categoryOrder(a.id, categories) - categoryOrder(b.id, categories))
+}
+
+/** Package nodes grouped by their declaring app, keyed by AppInfo.name.
+ *  Only kind==='package' entries with a `package` field participate — a
+ *  core entry, or a package entry served by a build too old to set
+ *  `package`, is simply absent from every group rather than crashing. */
+export function groupNodesByApp(nodes: NodeTaxonomyEntry[]): Map<string, NodeTaxonomyEntry[]> {
+  const byApp = new Map<string, NodeTaxonomyEntry[]>()
+  for (const n of nodes) {
+    if (n.kind !== 'package' || !n.package) continue
+    const list = byApp.get(n.package)
+    if (list) list.push(n)
+    else byApp.set(n.package, [n])
+  }
+  return byApp
+}
+
+/** Trigger presets grouped by their declaring app, same key convention as
+ *  groupNodesByApp. */
+export function groupTriggerPresetsByApp(presets: TriggerPresetInfo[]): Map<string, TriggerPresetInfo[]> {
+  const byApp = new Map<string, TriggerPresetInfo[]>()
+  for (const p of presets) {
+    if (!p.package) continue
+    const list = byApp.get(p.package)
+    if (list) list.push(p)
+    else byApp.set(p.package, [p])
+  }
+  return byApp
+}
+
+/** Case-insensitive substring match on display_name/description — the flat
+ *  filter powering the app-picker's search box. Deliberately flat: with a
+ *  handful of real apps today, a secondary "results in other categories"
+ *  grouping (the way n8n's own app search works) has nothing to show. */
+export function searchApps(apps: AppInfo[], query: string): AppInfo[] {
+  const q = query.trim().toLowerCase()
+  if (!q) return apps
+  return apps.filter((a) =>
+    a.display_name.toLowerCase().includes(q) || (a.description ?? '').toLowerCase().includes(q),
+  )
 }

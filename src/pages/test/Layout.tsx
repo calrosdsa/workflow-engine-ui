@@ -32,6 +32,8 @@ import { NODE_REGISTRY } from "@/features/workflows/builder/node-registry";
 import { useNodeTaxonomy } from "@/features/workflows/builder/node-taxonomy";
 import type { NodeType } from "@/features/workflows/types";
 import { NodePickerModal } from "@/features/workflows/builder/NodePickerModal";
+import type { PickerSelection } from "@/features/workflows/builder/AppPickerPanel";
+import { findTriggerNode, applyTriggerPresetPatch } from "@/features/workflows/builder/trigger-preset-apply";
 import {
   WORKFLOW_COMMANDS,
   dispatchWorkflowCommand,
@@ -84,6 +86,7 @@ const Flow = () => {
     closePicker,
     addConnectedNode,
     insertNodeOnEdge,
+    updateNodeConfig,
     undo,
     redo,
     applyDagreLayout,
@@ -242,11 +245,46 @@ const Flow = () => {
     return () => window.removeEventListener("keydown", handler);
   }, [commandOpen, tidyLayout]);
 
-  // Node picker selection — type is NodeType | package node type string; see
-  // NodePickerModal's own onSelect prop for why it's plain `string` there.
+  // Centers the viewport on one node — React Flow's own fitView above only
+  // ever frames the WHOLE graph; this is the single-node equivalent used
+  // when a picker selection reconfigures the singleton Trigger node rather
+  // than adding a step near wherever the picker happened to open.
+  const centerOnNode = useCallback((nodeId: string) => {
+    const node = useBuilderStore.getState().nodes.find((n) => n.id === nodeId);
+    if (node && rfInstanceRef.current) {
+      // Falls back to store.ts's own dagre layout dimensions (180x80) when
+      // React Flow hasn't measured the node yet — close enough for a
+      // centering nudge, not pixel-exact.
+      rfInstanceRef.current.setCenter(
+        node.position.x + (node.width ?? 180) / 2,
+        node.position.y + (node.height ?? 80) / 2,
+        { zoom: 1, duration: 300 },
+      );
+    }
+  }, []);
+
+  // Node picker selection — a discriminated union, not just a node type
+  // string: picking a package-declared trigger preset (from the picker's
+  // "Apps" tab) must reconfigure the workflow's ALREADY-EXISTING singleton
+  // Trigger node, never add a second graph node — the same invariant
+  // graph.Lint enforces server-side ("a workflow must have exactly one
+  // trigger/entry node"). Selection kind wins over picker context kind: a
+  // trigger-preset pick reached through an edge's own "+" button still
+  // reconfigures the trigger and leaves that edge completely untouched.
   const handlePickerSelect = useCallback(
-    (type: string) => {
+    (selection: PickerSelection) => {
       if (!pickerContext) return;
+      if (selection.kind === "trigger_preset") {
+        const trigger = findTriggerNode(nodes);
+        if (trigger) {
+          updateNodeConfig(trigger.id, applyTriggerPresetPatch(trigger.data.configuration, selection.preset));
+          selectNode(trigger.id); // auto-opens the Node Config panel (store.ts)
+          centerOnNode(trigger.id);
+        }
+        closePicker();
+        return;
+      }
+      const { type } = selection;
       if (pickerContext.kind === "edge") {
         insertNodeOnEdge(type, pickerContext.edgeId);
       } else {
@@ -259,7 +297,7 @@ const Flow = () => {
       closePicker();
       setTimeout(() => useBuilderStore.getState().applyDagreLayout("LR"), 0);
     },
-    [pickerContext, insertNodeOnEdge, addConnectedNode, closePicker],
+    [pickerContext, nodes, insertNodeOnEdge, addConnectedNode, updateNodeConfig, selectNode, centerOnNode, closePicker],
   );
 
   // Re-layout when a new connection is drawn

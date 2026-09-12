@@ -9,7 +9,9 @@
 // moves, re-capture it and this test tells you what broke.
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, within, cleanup, fireEvent } from '@testing-library/react'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import { NodePickerModal } from './NodePickerModal'
+import type { PickerSelection } from './AppPickerPanel'
 import taxonomy from './__fixtures__/live-node-taxonomy.json'
 
 // The one hook is this component's only I/O. Stubbed with the live payload
@@ -22,8 +24,12 @@ vi.mock('./node-taxonomy', async () => {
 
 afterEach(cleanup)
 
-function open() {
-  render(<NodePickerModal onSelect={() => {}} onClose={() => {}} />)
+function open(onSelect: (s: PickerSelection) => void = () => {}) {
+  render(
+    <I18nProvider>
+      <NodePickerModal onSelect={onSelect} onClose={() => {}} />
+    </I18nProvider>,
+  )
 }
 
 const tabNames = () =>
@@ -60,6 +66,12 @@ describe('the node picker, against the live catalog', () => {
     open()
     // The old layout grouped by provenance. Someone looking for "post to
     // Slack" scans for what a node does, not for which process implements it.
+    // The new "Apps" tab below does NOT reintroduce this — it's an
+    // additional browsing mode, not a replacement: a package node still
+    // also appears under its own functional-category tab exactly as
+    // today, so nothing is removed from the tabs this test guards, unlike
+    // the old Connectors tab, which fragmented the SAME entries across two
+    // competing grouping axes.
     expect(screen.queryByRole('button', { name: 'Connectors' })).toBeNull()
   })
 
@@ -107,5 +119,49 @@ describe('the node picker, against the live catalog', () => {
     // And the search really filtered, rather than the match merely being
     // present in an unfiltered list.
     expect(screen.queryByText('Slack — Post Message')).toBeNull()
+  })
+
+  it('has an Apps tab that renders the app-grouped picker', () => {
+    open()
+    fireEvent.click(screen.getByRole('button', { name: 'Apps' }))
+    expect(screen.getByText('WhatsApp')).toBeTruthy()
+    expect(screen.getByText('Slack')).toBeTruthy()
+    // The flat node grid's own search box is gone — AppPickerPanel has its
+    // own, and showing both would be confusing.
+    expect(screen.queryByPlaceholderText('Search nodes…')).toBeNull()
+    expect(screen.getByPlaceholderText('Search apps…')).toBeTruthy()
+  })
+
+  it('reports an action picked from the Apps tab as a node selection', () => {
+    const onSelect = vi.fn()
+    open(onSelect)
+    fireEvent.click(screen.getByRole('button', { name: 'Apps' }))
+    fireEvent.click(screen.getByText('WhatsApp'))
+    fireEvent.click(screen.getByText('WhatsApp — Send Template Message'))
+    expect(onSelect).toHaveBeenCalledWith({ kind: 'node', type: 'whatsapp_send' })
+  })
+
+  it('reports a trigger picked from the Apps tab as a trigger_preset selection, not a node', () => {
+    // The whole point of the discriminated selection: picking a trigger
+    // from THIS mid-workflow picker must not add a graph node — the
+    // singleton Trigger node gets reconfigured instead, one layer up in
+    // Layout.tsx's handlePickerSelect.
+    const onSelect = vi.fn()
+    open(onSelect)
+    fireEvent.click(screen.getByRole('button', { name: 'Apps' }))
+    fireEvent.click(screen.getByText('WhatsApp'))
+    fireEvent.click(screen.getByText('WhatsApp — On Message'))
+    expect(onSelect).toHaveBeenCalledWith({
+      kind: 'trigger_preset',
+      preset: expect.objectContaining({ name: 'whatsapp_on_message' }),
+    })
+  })
+
+  it('returns to the flat category view when switching tabs away from Apps', () => {
+    open()
+    fireEvent.click(screen.getByRole('button', { name: 'Apps' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Integration' }))
+    expect(screen.getByPlaceholderText('Search nodes…')).toBeTruthy()
+    expect(screen.getByText('Slack — Post Message')).toBeTruthy()
   })
 })

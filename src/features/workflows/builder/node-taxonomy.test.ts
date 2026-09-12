@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { groupByCategory, categoryLabel, findTriggerPreset, type PaletteEntry, type CategoryInfo, type NodeTaxonomy, type TriggerPresetInfo } from './node-taxonomy'
+import {
+  groupByCategory, categoryLabel, findTriggerPreset, groupNodesByApp, groupTriggerPresetsByApp, searchApps,
+  type PaletteEntry, type CategoryInfo, type NodeTaxonomy, type TriggerPresetInfo, type NodeTaxonomyEntry, type AppInfo,
+} from './node-taxonomy'
 import { PALETTE_NODES, NODE_REGISTRY } from './node-registry'
 
 const cats: CategoryInfo[] = [
@@ -98,7 +101,7 @@ describe('findTriggerPreset', () => {
     provider: 'meta',
     default_events: ['messages'],
   }
-  const taxonomy: NodeTaxonomy = { categories: [], kinds: [], nodes: [], trigger_presets: [preset] }
+  const taxonomy: NodeTaxonomy = { categories: [], kinds: [], nodes: [], trigger_presets: [preset], apps: [] }
 
   it('finds the preset matching a trigger\'s saved webhook_preset', () => {
     // This is what makes a WhatsApp trigger render its own icon/label on the
@@ -124,6 +127,65 @@ describe('findTriggerPreset', () => {
 
   it('returns undefined before the taxonomy has loaded', () => {
     expect(findTriggerPreset(undefined, 'whatsapp_on_message')).toBeUndefined()
+  })
+})
+
+describe('groupNodesByApp', () => {
+  const whatsappSend: NodeTaxonomyEntry = { type: 'whatsapp_send', kind: 'package', category: 'integration', package: 'whatsapp' }
+  const slackPost: NodeTaxonomyEntry = { type: 'slack_post_message', kind: 'package', category: 'integration', package: 'slack' }
+  const coreNode: NodeTaxonomyEntry = { type: 'http_request', kind: 'core', category: 'integration' }
+  const packageNoApp: NodeTaxonomyEntry = { type: 'format_reference', kind: 'package', category: 'utility' }
+
+  it('groups package nodes by their declaring app', () => {
+    const grouped = groupNodesByApp([whatsappSend, slackPost])
+    expect(grouped.get('whatsapp')).toEqual([whatsappSend])
+    expect(grouped.get('slack')).toEqual([slackPost])
+  })
+
+  it('excludes core nodes — built-ins belong to no app', () => {
+    expect(groupNodesByApp([coreNode]).size).toBe(0)
+  })
+
+  it('excludes a package node with no package field, rather than crashing', () => {
+    // A build old enough to predate this field, or a genuinely appless
+    // package node — either way it's simply absent from every group.
+    expect(groupNodesByApp([packageNoApp]).size).toBe(0)
+  })
+})
+
+describe('groupTriggerPresetsByApp', () => {
+  const whatsappPreset: TriggerPresetInfo = { name: 'whatsapp_on_message', display_name: 'd', provider: 'meta', package: 'whatsapp' }
+  const noPackagePreset: TriggerPresetInfo = { name: 'orphan', display_name: 'd', provider: 'generic' }
+
+  it('groups presets by their declaring app', () => {
+    expect(groupTriggerPresetsByApp([whatsappPreset]).get('whatsapp')).toEqual([whatsappPreset])
+  })
+
+  it('excludes a preset with no package field', () => {
+    expect(groupTriggerPresetsByApp([noPackagePreset]).size).toBe(0)
+  })
+})
+
+describe('searchApps', () => {
+  const apps: AppInfo[] = [
+    { name: 'whatsapp', display_name: 'WhatsApp', description: 'Send WhatsApp Business Cloud API messages.', icon_hint: 'message-square' },
+    { name: 'slack', display_name: 'Slack', description: 'Post to Slack channels.', icon_hint: 'message-square' },
+  ]
+
+  it('returns every app for an empty query', () => {
+    expect(searchApps(apps, '')).toEqual(apps)
+  })
+
+  it('matches case-insensitively on display_name', () => {
+    expect(searchApps(apps, 'whatsapp')).toEqual([apps[0]])
+  })
+
+  it('matches on description too', () => {
+    expect(searchApps(apps, 'business cloud')).toEqual([apps[0]])
+  })
+
+  it('returns an empty list when nothing matches', () => {
+    expect(searchApps(apps, 'discord')).toEqual([])
   })
 })
 
