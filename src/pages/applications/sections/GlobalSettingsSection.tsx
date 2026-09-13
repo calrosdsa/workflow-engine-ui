@@ -1,14 +1,13 @@
-import { useEffect, useState } from 'react'
-import { Plus, KeyRound, Braces, Trash2, Loader2, AlertCircle } from 'lucide-react'
+import { useState } from 'react'
+import { Plus, KeyRound, Braces, Trash2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import {
-  useCredentials, useUpsertCredential, useDeleteCredential, useCredentialTypes,
+  useCredentials, useDeleteCredential, useCredentialTypes,
   useVariables, useUpsertVariable, useDeleteVariable,
 } from '@/features/app-settings/hooks'
-import { CredentialTypeFieldForm, credentialFieldsComplete } from '@/features/app-settings/CredentialTypeFieldForm'
+import { CreateCredentialDialog } from '@/features/app-settings/CreateCredentialDialog'
 import { usePermission } from '@/features/auth/permissions'
 import { useTranslation } from '@/features/i18n/I18nProvider'
 import { IntegrationsSubsection } from '@/features/integrations/IntegrationsSubsection'
@@ -77,7 +76,7 @@ function CredentialsSubsection() {
         </div>
       )}
 
-      {editing === 'new' && <CredentialFormDialog credentialTypes={credentialTypes} onClose={() => setEditing(null)} />}
+      {editing === 'new' && <CreateCredentialDialog onClose={() => setEditing(null)} />}
     </section>
   )
 }
@@ -107,84 +106,6 @@ function CredentialRow({ credential, credentialTypes, canWrite, onDelete, deleti
         </Button>
       )}
     </div>
-  )
-}
-
-function CredentialFormDialog({ credentialTypes, onClose }: { credentialTypes: CredentialTypeInfo[]; onClose: () => void }) {
-  const t = useTranslation()
-  const upsertMutation = useUpsertCredential()
-  const [name, setName] = useState('')
-  const [type, setType] = useState('')
-  const [values, setValues] = useState<Record<string, string>>({})
-
-  // Default to "bearer" (the most common shape) once the registry has
-  // loaded, rather than hardcoding it before credentialTypes is known to
-  // actually contain it — a deployment could in principle not have loaded
-  // yet, or (never today, but the registry is extensible) not offer it.
-  useEffect(() => {
-    if (type || credentialTypes.length === 0) return
-    setType(credentialTypes.find((ct) => ct.name === 'bearer')?.name ?? credentialTypes[0].name)
-  }, [type, credentialTypes])
-
-  const selected = credentialTypes.find((ct) => ct.name === type)
-  const canSave = name.trim() !== '' && !!selected && credentialFieldsComplete(selected.fields, values)
-
-  const handleSave = async () => {
-    if (!selected) return
-    const value = Object.fromEntries(selected.fields.map((f) => [f.key, values[f.key] ?? '']))
-    await upsertMutation.mutateAsync({ name: name.trim(), payload: { type, value } })
-    onClose()
-  }
-
-  return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{t('app_settings.credentials.add')}</DialogTitle>
-          <DialogDescription>{t('app_settings.credentials.dialog_description')}</DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-3 px-6 py-4">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('app_settings.credentials.name_label')}</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('app_settings.credentials.name_placeholder')} className="font-mono text-xs" />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('app_settings.credentials.type_label')}</label>
-            <select
-              value={type}
-              onChange={(e) => { setType(e.target.value); setValues({}) }}
-              className="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1.5 text-sm text-[hsl(var(--foreground))]"
-            >
-              {credentialTypes.map((ct) => (
-                <option key={ct.name} value={ct.name}>{ct.display_name}</option>
-              ))}
-            </select>
-          </div>
-
-          {selected && (
-            <CredentialTypeFieldForm
-              fields={selected.fields}
-              values={values}
-              onChange={(key, value) => setValues((v) => ({ ...v, [key]: value }))}
-            />
-          )}
-
-          {upsertMutation.isError && (
-            <p className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={13} />{t('app_settings.credentials.save_error')}</p>
-          )}
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onClose}>{t('app_settings.credentials.cancel')}</Button>
-          <Button onClick={handleSave} disabled={!canSave || upsertMutation.isPending} className="gap-1.5">
-            {upsertMutation.isPending && <Loader2 size={14} className="animate-spin" />}
-            {t('app_settings.credentials.save')}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
   )
 }
 

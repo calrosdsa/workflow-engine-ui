@@ -4,12 +4,15 @@
 // reuse it. Mirrors FormReferenceSelect/KnowledgeBaseSelect's async-picker
 // pattern.
 import { useMemo, useState } from 'react'
-import { Check, ChevronsUpDown, Loader2, KeyRound } from 'lucide-react'
+import { Check, ChevronsUpDown, Loader2, KeyRound, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/features/i18n/I18nProvider'
+import { usePermission } from '@/features/auth/permissions'
 import { useCredentials } from './hooks'
+import { CreateCredentialDialog } from './CreateCredentialDialog'
 import type { CredentialType } from './types'
 
 interface CredentialSelectProps {
@@ -23,8 +26,11 @@ interface CredentialSelectProps {
 }
 
 export function CredentialSelect({ value, onChange, typeFilter, accentClassName = 'text-cyan-600' }: CredentialSelectProps) {
+  const t = useTranslation()
+  const canCreate = usePermission('credentials:write')
   const { data: allCredentials, isLoading } = useCredentials()
   const [open, setOpen] = useState(false)
+  const [creating, setCreating] = useState(false)
 
   const allowedTypes = useMemo(
     () => (typeFilter === undefined ? undefined : Array.isArray(typeFilter) ? typeFilter : [typeFilter]),
@@ -38,64 +44,86 @@ export function CredentialSelect({ value, onChange, typeFilter, accentClassName 
   const isBroken = !!value && !isLoading && !selected
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn(
-            'h-8 w-full justify-between gap-2 px-2.5 text-[12px] font-normal',
-            !value && 'text-slate-400',
-            isBroken && 'border-amber-300',
-          )}
-        >
-          <span className="flex min-w-0 items-center gap-1.5">
-            <KeyRound size={13} className="shrink-0 text-slate-400" />
-            <span className="truncate">
-              {isLoading && !selected
-                ? 'Loading credentials…'
-                : selected
-                  ? selected.name
-                  : isBroken
-                    ? 'Unavailable credential'
-                    : 'Select a credential…'}
-            </span>
-          </span>
-          <ChevronsUpDown size={13} className="shrink-0 text-slate-400" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-        <Command filter={(itemValue, search) => (itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0)}>
-          <CommandInput placeholder="Search credentials…" />
-          <CommandList>
-            {isLoading ? (
-              <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-slate-400">
-                <Loader2 size={13} className="animate-spin" /> Loading credentials…
-              </div>
-            ) : (
-              <>
-                <CommandEmpty>No credentials found. Add one in Application Settings.</CommandEmpty>
-                <CommandGroup>
-                  {credentials.map((c) => (
-                    <CommandItem
-                      key={c.name}
-                      value={c.name}
-                      onSelect={() => { onChange(c.name === value ? undefined : c.name); setOpen(false) }}
-                    >
-                      <Check size={14} className={cn('shrink-0', c.name === value ? `opacity-100 ${accentClassName}` : 'opacity-0')} />
-                      <span className="flex min-w-0 flex-col">
-                        <span className="truncate">{c.name}</span>
-                        <span className="truncate font-mono text-[10px] text-slate-400">{c.type}</span>
-                      </span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </>
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className={cn(
+              'h-8 w-full justify-between gap-2 px-2.5 text-[12px] font-normal',
+              !value && 'text-slate-400',
+              isBroken && 'border-amber-300',
             )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+          >
+            <span className="flex min-w-0 items-center gap-1.5">
+              <KeyRound size={13} className="shrink-0 text-slate-400" />
+              <span className="truncate">
+                {isLoading && !selected
+                  ? 'Loading credentials…'
+                  : selected
+                    ? selected.name
+                    : isBroken
+                      ? 'Unavailable credential'
+                      : 'Select a credential…'}
+              </span>
+            </span>
+            <ChevronsUpDown size={13} className="shrink-0 text-slate-400" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command filter={(itemValue, search) => (itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0)}>
+            <CommandInput placeholder="Search credentials…" />
+            <CommandList>
+              {isLoading ? (
+                <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-slate-400">
+                  <Loader2 size={13} className="animate-spin" /> Loading credentials…
+                </div>
+              ) : (
+                <>
+                  <CommandEmpty>No credentials found. Add one in Application Settings.</CommandEmpty>
+                  <CommandGroup>
+                    {credentials.map((c) => (
+                      <CommandItem
+                        key={c.name}
+                        value={c.name}
+                        onSelect={() => { onChange(c.name === value ? undefined : c.name); setOpen(false) }}
+                      >
+                        <Check size={14} className={cn('shrink-0', c.name === value ? `opacity-100 ${accentClassName}` : 'opacity-0')} />
+                        <span className="flex min-w-0 flex-col">
+                          <span className="truncate">{c.name}</span>
+                          <span className="truncate font-mono text-[10px] text-slate-400">{c.type}</span>
+                        </span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </>
+              )}
+              {!isLoading && canCreate && (
+                <CommandGroup>
+                  <CommandItem
+                    value="__create_new_credential__"
+                    onSelect={() => { setOpen(false); setCreating(true) }}
+                    className={accentClassName}
+                  >
+                    <Plus size={14} className="shrink-0" />
+                    {t('app_settings.credentials.create_new')}
+                  </CommandItem>
+                </CommandGroup>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+
+      {creating && (
+        <CreateCredentialDialog
+          typeFilter={typeFilter}
+          onClose={() => setCreating(false)}
+          onCreated={(name) => { onChange(name); setCreating(false) }}
+        />
+      )}
+    </>
   )
 }
