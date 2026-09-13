@@ -14,6 +14,7 @@ export const es = {
   'menus.module.requires_module_parent': 'Solo disponible en el nivel superior o bajo otro Módulo.',
   'runtime.home.drilldown_back': 'Atrás',
   'runtime.sidebar.back_to_home': 'Volver al inicio',
+  'runtime.record_detail.more_actions': 'Más acciones',
   'detail_tab.default_label.details': 'Detalles',
   'detail_tab.default_label.audit': 'Registro de auditoría',
   'detail_tab.default_label.linked': 'Registros vinculados',
