@@ -72,15 +72,17 @@ export interface CreateKnowledgeBasePayload {
 // Sharing Settings section on the detail page (see sharing.ts).
 export type KnowledgeBaseVisibility = 'private' | 'read_only' | 'full_access'
 
-// Provider and embedding settings can't be changed after creation — rag-
-// engine rejects an embedding dimension change outright, and swapping
-// providers would silently break the KB's existing embedding space. Create
-// a new knowledge base instead.
+// The vector space stays fixed after creation. embedding_model_id may select
+// another configured Provider Instance only when it exposes the KB's exact
+// current embedding model and dimension; this supports API-key rotation for
+// the same model without re-indexing existing chunks. The backend enforces
+// this too, so callers cannot bypass it with a handcrafted request.
 export interface UpdateKnowledgeBasePayload {
   name?: string
   description?: string
   credential_name?: string
   llm_model?: string
+  embedding_model_id?: string
 }
 
 export type DocumentStatus = 'pending' | 'processing' | 'processed' | 'failed' | 'unknown'
@@ -132,6 +134,22 @@ export interface GraphRelation {
 export interface DocumentGraphResponse {
   entities: GraphEntity[]
   relations: GraphRelation[]
+}
+
+export interface DocumentContentResponse {
+  content: string
+  truncated: boolean
+}
+
+export interface DocumentChunk {
+  id: string
+  content: string
+  order: number
+  tokens: number
+}
+
+export interface DocumentChunksResponse {
+  chunks: DocumentChunk[]
 }
 
 // The wire shape of one SSE frame from GET .../documents/stream — see

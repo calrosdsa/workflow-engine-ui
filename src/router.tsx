@@ -87,6 +87,9 @@ const KnowledgeBasesPage = lazyRouteComponent(() =>
 const KnowledgeBaseDetailPage = lazyRouteComponent(() =>
   import('@/pages/knowledge/KnowledgeBaseDetailPage').then((m) => ({ default: m.KnowledgeBaseDetailPage })),
 )
+const KnowledgeDocumentDetailPage = lazyRouteComponent(() =>
+  import('@/pages/knowledge/KnowledgeDocumentDetailPage').then((m) => ({ default: m.KnowledgeDocumentDetailPage })),
+)
 const FormRendererHarness = lazyRouteComponent(() =>
   import('@/pages/dev/FormRendererHarness').then((m) => ({ default: m.FormRendererHarness })),
 )
@@ -448,6 +451,12 @@ const appKnowledgeBaseDetailRoute = createRoute({
   component: KnowledgeBaseDetailPage,
 })
 
+const appKnowledgeDocumentDetailRoute = createRoute({
+  getParentRoute: () => applicationShellRoute,
+  path: '/knowledge-bases/$kbId/documents/$docId',
+  component: KnowledgeDocumentDetailPage,
+})
+
 // ---------------------------------------------------------------------------
 // Dev-only verification harnesses (not linked from any nav)
 // ---------------------------------------------------------------------------
@@ -514,6 +523,7 @@ const routeTree = rootRoute.addChildren([
       appSettingsRoute,
       appKnowledgeBasesRoute,
       appKnowledgeBaseDetailRoute,
+      appKnowledgeDocumentDetailRoute,
     ]),
     formRendererHarnessRoute,
     pageBuilderHarnessRoute,

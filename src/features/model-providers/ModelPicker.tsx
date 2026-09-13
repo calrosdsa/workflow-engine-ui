@@ -12,22 +12,34 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
 import { useAllProviderModels } from './hooks'
-import type { Capability } from './types'
+import type { Capability, ProviderModelWithInstance } from './types'
+import { selectableModels } from './model-filter'
 
 interface ModelPickerProps {
   value?: string
   onChange: (modelId: string | undefined) => void
   capability: Capability
   accentClassName?: string
+  // Lets callers narrow the enabled models to a compatibility-safe subset
+  // while keeping instance identity (and therefore its credential) visible.
+  isOptionAllowed?: (model: ProviderModelWithInstance) => boolean
+  emptyLabel?: string
 }
 
-export function ModelPicker({ value, onChange, capability, accentClassName = 'text-[hsl(var(--primary))]' }: ModelPickerProps) {
+export function ModelPicker({
+  value,
+  onChange,
+  capability,
+  accentClassName = 'text-[hsl(var(--primary))]',
+  isOptionAllowed,
+  emptyLabel = 'No models found. Add a provider in Model Providers.',
+}: ModelPickerProps) {
   const { data: allModels, isLoading } = useAllProviderModels()
   const [open, setOpen] = useState(false)
 
   const models = useMemo(
-    () => (allModels ?? []).filter((m) => m.capability === capability && m.enabled),
-    [allModels, capability],
+    () => selectableModels(allModels, capability, isOptionAllowed),
+    [allModels, capability, isOptionAllowed],
   )
   const selected = useMemo(() => models.find((m) => m.id === value), [models, value])
   const isBroken = !!value && !isLoading && !selected
@@ -70,7 +82,7 @@ export function ModelPicker({ value, onChange, capability, accentClassName = 'te
               </div>
             ) : (
               <>
-                <CommandEmpty>No models found. Add a provider in Model Providers.</CommandEmpty>
+                <CommandEmpty>{emptyLabel}</CommandEmpty>
                 <CommandGroup>
                   {models.map((m) => (
                     <CommandItem

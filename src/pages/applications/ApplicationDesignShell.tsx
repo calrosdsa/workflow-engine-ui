@@ -1,6 +1,5 @@
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { toast } from 'sonner'
-import { ArrowLeft, Bot, Workflow, FileText, Palette, SlidersHorizontal, Rocket, Save, Loader2, AlertCircle, ListTree, Eye, LogOut, Sun, Moon, BookOpen, Lock } from 'lucide-react'
+import { Bot, Workflow, FileText, Palette, SlidersHorizontal, Rocket, Loader2, AlertCircle, ListTree, Eye, LogOut, Sun, Moon, BookOpen, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
@@ -10,7 +9,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { useApplication, useApplicationVersions, usePublishApplication, useSaveVersion } from '@/features/applications/hooks'
+import { useApplication, useApplicationVersions, usePublishApplication } from '@/features/applications/hooks'
 import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
 import { usePermission } from '@/features/auth/permissions'
 import { useLogout } from '@/features/auth/hooks'
@@ -63,6 +62,15 @@ function isFormEditRoute(pathname: string, appId: string): boolean {
   return new RegExp(`^/applications/${escapedAppId}/forms/[^/]+/?$`).test(pathname)
 }
 
+// A document inspection is a focused workspace: its source preview, chunks,
+// and graph need the viewport the same way a canvas editor does. It keeps its
+// own Back control, so suppressing this shell's global navigation does not
+// remove the user's way back to the knowledge base.
+function isKnowledgeDocumentDetailRoute(pathname: string, appId: string): boolean {
+  const escapedAppId = appId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`^/applications/${escapedAppId}/knowledge-bases/[^/]+/documents/[^/]+/?$`).test(pathname)
+}
+
 export function ApplicationDesignShell({ appId }: { appId: string }) {
   const navigate = useNavigate()
   const { data: app, isLoading } = useApplication()
@@ -70,18 +78,18 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
   const { data: envStatus } = useEnvironmentLinkStatus()
   const isLockedProduction = envStatus?.linked && envStatus.role === 'production'
   const publishMutation = usePublishApplication()
-  const saveVersionMutation = useSaveVersion()
   const canPublish = usePermission('application:publish')
-  const canWrite = usePermission('application:write')
   // Everyone who reached this shell at all already holds application:design
   // (it's the same permission that gates the runtime's "Edit Design" link
   // INTO here — see RuntimeAppShell.tsx's canDesign check), but check it
-  // explicitly anyway rather than reusing canWrite, since it's the exact
+  // explicitly because it is the exact
   // permission the backend's GET /application/draft-snapshot route is
   // actually gated on.
   const canPreviewDraft = usePermission('application:design')
   const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const hideShellChrome = isWorkflowEditRoute(pathname, appId) || isFormEditRoute(pathname, appId)
+  const hideShellChrome = isWorkflowEditRoute(pathname, appId)
+    || isFormEditRoute(pathname, appId)
+    || isKnowledgeDocumentDetailRoute(pathname, appId)
 
   const [publishIssues, setPublishIssues] = useState<ValidationIssue[] | null>(null)
   const [publishError, setPublishError] = useState<string | null>(null)
@@ -111,19 +119,6 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
     }
   }
 
-  // Quick checkpoint with no label/description — the full Save Version
-  // dialog (with label/description fields) lives in the Version History
-  // tab; this header button is the low-friction, frequent path, matching
-  // git's "commit with no message" default.
-  const handleQuickSaveVersion = async () => {
-    try {
-      const result = await saveVersionMutation.mutateAsync({})
-      toast.success(`Checkpoint v${result.major_version}.${result.minor_version} saved`)
-    } catch (e) {
-      toast.error('Could not save version', { description: e instanceof Error ? e.message : undefined })
-    }
-  }
-
   return (
     <div className="flex h-screen flex-col">
       {/* This header carries the shell chrome for every app screen (Dashboard,
@@ -137,9 +132,6 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
        *  that all 5 destinations plus the Live badge and Launch button fit
        *  without any of them needing an overflow menu. */}
       <header className="grid h-20 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4">
-        {/* <Button variant="ghost" size="icon" onClick={() => navigate({ to: '/' })} title="Back to Home">
-          <ArrowLeft size={16} />
-        </Button> */}
         <div className="flex min-w-0 items-center gap-2 justify-self-start">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
             <ListTree size={14} />

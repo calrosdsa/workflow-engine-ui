@@ -1,0 +1,43 @@
+@import '@xyflow/react/dist/style.css';
+
+/* Scope React Flow's dark variables to the document-inspection canvas. The
+ * package's defaults are intentionally overridden so this embedded canvas
+ * stays inside the builder's token system instead of introducing its own
+ * blue/gray theme. */
+.document-graph-flow,
+.document-graph-flow.dark {
+  --xy-background-color: hsl(var(--card));
+  --xy-theme-selected: hsl(var(--primary));
+  --xy-theme-hover: hsl(var(--primary));
+  --xy-theme-edge-hover: hsl(var(--primary));
+  --xy-theme-color-focus: hsl(var(--primary) / 0.25);
+  --xy-node-border-default: 1px solid hsl(var(--border));
+  --xy-node-boxshadow-default: 0 3px 10px hsl(var(--background) / 0.45);
+  --xy-node-border-radius-default: 0.4375rem;
+  --xy-node-background-color-default: hsl(var(--card));
+  --xy-edge-label-color-default: hsl(var(--foreground));
+  --xy-controls-button-background-color-default: hsl(var(--card));
+  --xy-controls-button-background-color-hover-default: hsl(var(--muted));
+  --xy-controls-button-color-default: hsl(var(--muted-foreground));
+  --xy-controls-button-color-hover-default: hsl(var(--foreground));
+  --xy-minimap-background-color-default: hsl(var(--card));
+  --xy-minimap-mask-background-color-default: hsl(var(--background) / 0.72);
+}
+
+.document-graph-flow .react-flow__controls {
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.4375rem;
+  box-shadow: 0 3px 10px hsl(var(--background) / 0.45);
+}
+
+.document-graph-flow .react-flow__controls-button {
+  border-bottom-color: hsl(var(--border));
+}
+
+.document-graph-flow .react-flow__minimap {
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.4375rem;
+  box-shadow: 0 3px 10px hsl(var(--background) / 0.45);
+}

@@ -13,6 +13,8 @@ import {
 } from '@/features/knowledge/hooks'
 import { useDocumentPipelineEvents } from '@/features/knowledge/useDocumentEvents'
 import { CredentialSelect } from '@/features/app-settings/CredentialSelect'
+import { ModelPicker } from '@/features/model-providers/ModelPicker'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { ModelSelect } from '@/features/knowledge/ModelSelect'
 import { usePermission } from '@/features/auth/permissions'
 import { Button } from '@/components/ui/button'
@@ -136,7 +138,7 @@ export function KnowledgeBaseDetailPage() {
 
         <div className="min-w-0 flex-1 overflow-y-auto">
           {section === 'files' && (
-            <FilesSection kbId={kbId} docs={docs} docsLoading={docsLoading} canWrite={canWrite} hasInFlight={hasInFlight} />
+            <FilesSection appId={appId} kbId={kbId} docs={docs} docsLoading={docsLoading} canWrite={canWrite} hasInFlight={hasInFlight} />
           )}
           {section === 'retrieval' && (
             <div className="p-6">
@@ -155,6 +157,7 @@ export function KnowledgeBaseDetailPage() {
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 
 interface FilesSectionProps {
+  appId: string
   kbId: string
   docs: KnowledgeDocument[]
   docsLoading: boolean
@@ -162,7 +165,7 @@ interface FilesSectionProps {
   hasInFlight: boolean
 }
 
-function FilesSection({ kbId, docs, docsLoading, canWrite, hasInFlight }: FilesSectionProps) {
+function FilesSection({ appId, kbId, docs, docsLoading, canWrite, hasInFlight }: FilesSectionProps) {
   const deleteMutation = useDeleteDocument(kbId)
   const retryMutation = useRetryDocument(kbId)
 
@@ -220,7 +223,13 @@ function FilesSection({ kbId, docs, docsLoading, canWrite, hasInFlight }: FilesS
           <div className="flex min-w-0 items-center gap-2">
             <Icon size={16} className={cn('shrink-0', className)} />
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-[hsl(var(--foreground))]">{label}</p>
+              <Link
+                to="/applications/$appId/knowledge-bases/$kbId/documents/$docId"
+                params={{ appId, kbId, docId: doc.doc_id }}
+                className="block truncate text-sm font-medium text-[hsl(var(--foreground))] hover:text-[hsl(var(--primary))] hover:underline"
+              >
+                {label}
+              </Link>
               {(doc.error_msg || hasGraph) && (
                 <div className="flex items-center gap-2">
                   {doc.error_msg && (
@@ -749,16 +758,17 @@ function ConfigurationSection({ kb, kbId, canWrite }: { kb: KnowledgeBase; kbId:
   )
 }
 
-// Provider and embedding model are fixed at creation (see
-// UpdateKnowledgeBasePayload's doc comment — embedding dimension is baked
-// into the vector indexes, and swapping providers would break the existing
-// embedding space). This dialog only lets the credential and LLM model
-// rotate; the embedding model is shown for reference only.
+// The embedding model and its dimension are fixed at creation because they
+// name the existing vector space. A user may still select another configured
+// Provider Instance that exposes that exact pair, which rotates the API key
+// without requiring re-ingestion.
 function EditModelSettingsDialog({ kb, open, onOpenChange }: { kb: KnowledgeBase; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const t = useTranslation()
   const { data: providers } = useProviders()
   const updateMutation = useUpdateKnowledgeBase(kb.id)
   const [credentialName, setCredentialName] = useState(kb.credential_name)
   const [llmModel, setLlmModel] = useState(kb.llm_model)
+  const [embeddingModelID, setEmbeddingModelID] = useState<string | undefined>()
 
   // Re-sync from the current KB whenever the dialog is (re-)opened, so a
   // previous edit that was cancelled doesn't leak into the next open.
@@ -766,18 +776,25 @@ function EditModelSettingsDialog({ kb, open, onOpenChange }: { kb: KnowledgeBase
     if (open) {
       setCredentialName(kb.credential_name)
       setLlmModel(kb.llm_model)
+      setEmbeddingModelID(undefined)
     }
   }, [open, kb.credential_name, kb.llm_model])
 
   const selectedProvider = providers?.find((p) => p.provider === kb.provider)
   const canSubmit = credentialName.trim() !== '' && llmModel.trim() !== ''
-    && (credentialName !== kb.credential_name || llmModel !== kb.llm_model)
+    && (credentialName !== kb.credential_name || llmModel !== kb.llm_model || embeddingModelID !== undefined)
 
   const submit = () => {
-    const payload: { credential_name?: string; llm_model?: string } = {}
+    const payload: { credential_name?: string; llm_model?: string; embedding_model_id?: string } = {}
     if (credentialName !== kb.credential_name) payload.credential_name = credentialName
     if (llmModel !== kb.llm_model) payload.llm_model = llmModel
-    updateMutation.mutate(payload, { onSuccess: () => onOpenChange(false) })
+    if (embeddingModelID) payload.embedding_model_id = embeddingModelID
+    updateMutation.mutate(payload, {
+      onSuccess: () => {
+        if (embeddingModelID) toast.success(t('knowledge.settings.embedding_instance_updated'))
+        onOpenChange(false)
+      },
+    })
   }
 
   return (
@@ -786,7 +803,7 @@ function EditModelSettingsDialog({ kb, open, onOpenChange }: { kb: KnowledgeBase
         <DialogHeader>
           <DialogTitle>Model Settings</DialogTitle>
           <DialogDescription>
-            Rotate the credential or switch LLM models. Provider and embedding model are fixed once a knowledge base is created.
+            {t('knowledge.settings.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -799,7 +816,7 @@ function EditModelSettingsDialog({ kb, open, onOpenChange }: { kb: KnowledgeBase
           </div>
 
           <div>
-            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Credential</Label>
+            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('knowledge.settings.llm_credential')}</Label>
             <CredentialSelect
               value={credentialName || undefined}
               onChange={(name) => setCredentialName(name ?? '')}
@@ -827,8 +844,21 @@ function EditModelSettingsDialog({ kb, open, onOpenChange }: { kb: KnowledgeBase
               </div>
             </div>
           </div>
+          <div>
+            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('knowledge.settings.embedding_instance')}</Label>
+            <ModelPicker
+              value={embeddingModelID}
+              onChange={setEmbeddingModelID}
+              capability="embedding"
+              isOptionAllowed={(model) => model.model === kb.embedding_model && model.embedding_dim === kb.embedding_dim}
+              emptyLabel={t('knowledge.settings.embedding_instance_empty', { model: kb.embedding_model, dim: kb.embedding_dim })}
+            />
+            <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
+              {t('knowledge.settings.embedding_instance_hint', { model: kb.embedding_model, dim: kb.embedding_dim })}
+            </p>
+          </div>
           <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-            To use a different embedding model, create a new knowledge base — existing embeddings can't be migrated in place.
+            {t('knowledge.settings.embedding_model_fixed')}
           </p>
 
           {updateMutation.isError && (

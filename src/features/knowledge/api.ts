@@ -3,7 +3,8 @@ import type {
   KnowledgeBase, KnowledgeBaseSummary, ProviderCatalogEntry,
   CreateKnowledgeBasePayload, UpdateKnowledgeBasePayload,
   KnowledgeDocument, ListDocumentsResponse, QueryKnowledgeBasePayload, QueryKnowledgeBaseResponse,
-  DocumentGraphResponse, KnowledgeBaseVisibility, SharingResponse, SharingUsageResponse,
+  DocumentGraphResponse, DocumentContentResponse, DocumentChunksResponse,
+  KnowledgeBaseVisibility, SharingResponse, SharingUsageResponse,
 } from './types'
 
 export const knowledgeApi = {
@@ -33,6 +34,10 @@ export const knowledgeApi = {
     api.get(`knowledge-bases/${kbId}/documents`).json<ListDocumentsResponse>(),
   getDocument: (kbId: string, docId: string) =>
     api.get(`knowledge-bases/${kbId}/documents/${docId}`).json<KnowledgeDocument>(),
+  getDocumentContent: (kbId: string, docId: string) =>
+    api.get(`knowledge-bases/${kbId}/documents/${docId}/content`).json<DocumentContentResponse>(),
+  getDocumentChunks: (kbId: string, docId: string) =>
+    api.get(`knowledge-bases/${kbId}/documents/${docId}/chunks`).json<DocumentChunksResponse>(),
   insertText: (kbId: string, content: string, filePath?: string) =>
     api.post(`knowledge-bases/${kbId}/documents`, { json: { content, file_path: filePath ?? '' } })
       .json<{ doc_id: string; status: string; duplicate: boolean }>(),

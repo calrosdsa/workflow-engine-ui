@@ -7,6 +7,9 @@ export const knowledgeKeys = {
   all:       ['knowledge-bases'] as const,
   detail:    (id: string) => ['knowledge-bases', id] as const,
   documents: (id: string) => ['knowledge-bases', id, 'documents'] as const,
+  document:  (id: string, docId: string) => ['knowledge-bases', id, 'documents', docId] as const,
+  content:   (id: string, docId: string) => ['knowledge-bases', id, 'documents', docId, 'content'] as const,
+  chunks:    (id: string, docId: string) => ['knowledge-bases', id, 'documents', docId, 'chunks'] as const,
   graph:     (id: string, docId: string) => ['knowledge-bases', id, 'documents', docId, 'graph'] as const,
   sharing:   (id: string) => ['knowledge-bases', id, 'sharing'] as const,
 }
@@ -31,6 +34,31 @@ export function useKnowledgeDocuments(id: string, opts?: { refetchInterval?: num
     queryFn: () => knowledgeApi.listDocuments(id),
     enabled: !!id,
     refetchInterval: opts?.refetchInterval,
+  })
+}
+
+export function useKnowledgeDocument(kbId: string, docId: string) {
+  return useQuery({
+    queryKey: knowledgeKeys.document(kbId, docId),
+    queryFn: () => knowledgeApi.getDocument(kbId, docId),
+    enabled: !!kbId && !!docId,
+  })
+}
+
+export function useDocumentContent(kbId: string, docId: string) {
+  return useQuery({
+    queryKey: knowledgeKeys.content(kbId, docId),
+    queryFn: () => knowledgeApi.getDocumentContent(kbId, docId),
+    enabled: !!kbId && !!docId,
+    retry: false,
+  })
+}
+
+export function useDocumentChunks(kbId: string, docId: string) {
+  return useQuery({
+    queryKey: knowledgeKeys.chunks(kbId, docId),
+    queryFn: () => knowledgeApi.getDocumentChunks(kbId, docId),
+    enabled: !!kbId && !!docId,
   })
 }
 
