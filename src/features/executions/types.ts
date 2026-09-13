@@ -21,6 +21,64 @@ export interface ExecutionFailedItem {
   error: string
 }
 
+// Status vocabulary for a single node-timing/log entry. Deliberately its own
+// 4-member union, NOT widened to NodeExecutionStatus (6 members, adds
+// PENDING/COMPLETED_WITH_ERRORS) or ExecutionStatus (5 members, adds
+// CANCELLED instead of SKIPPED) — those describe an execution or a node's
+// *overlay* outcome, while this describes one timing/log row as the backend
+// actually emits it. Keeping them separate lets the compiler catch any
+// accidental mixing (e.g. indexing an ExecutionStatus-keyed map with one of
+// these) instead of silently accepting a status the map never declared.
+export type ExecutionLogStatus = 'RUNNING' | 'COMPLETED' | 'FAILED' | 'SKIPPED'
+
+// Per-node timing captured during a run (new field, see GET /executions/{id}).
+// Keyed by node_id on Execution.node_timings. A node_id absent from this map
+// means either "not reached" or "a structurally activity-free node type
+// (Entry/Exit/Merge/LoopEnd/Trigger) that never gets a timing entry" — use
+// node_statuses (which DOES have an entry for any reached node) to tell
+// those two cases apart, not the absence of a node_timings entry alone.
+export interface NodeTiming {
+  status: ExecutionLogStatus
+  duration_ms: number
+  attempt: number
+}
+
+// One row of GET /executions/{id}/logs — the real Input/Output payload that
+// flowed through a single node execution (or trigger firing, or loop-body
+// chunk). Field names mirror the backend contract exactly.
+export interface ExecutionNodeLog {
+  id: string
+  execution_id: string
+  node_id: string
+  node_type: string
+  kind: 'node' | 'trigger' | 'loop_chunk'
+  attempt: number
+  status: ExecutionLogStatus
+  started_at: string // RFC3339
+  finished_at: string | null
+  duration_ms: number | null
+  input: unknown | null
+  output: unknown | null
+  error_message: string | null
+  dropped_payload: boolean
+  chunk_index: number | null
+  chunk_count: number | null
+  item_count: number | null
+  failed_item_count: number | null
+  trace_id: string | null
+  span_id: string | null
+}
+
+// GET /executions/{id}/logs response envelope. Rows are ordered
+// chronologically (started_at ASC) by the backend — a kind:'trigger' row
+// always comes first.
+export interface ExecutionLogsResponse {
+  logs: ExecutionNodeLog[]
+  total: number
+  page: number
+  page_size: number
+}
+
 export interface Execution {
   execution_id: string
   workflow_definition_id: string
@@ -48,6 +106,10 @@ export interface Execution {
   // (still COMPLETED — a warning flags what DIDN'T happen, not a failure).
   // Today populated only by an Iterator that processed zero items.
   node_warnings?: Record<string, string>
+  // nodeID -> live status/duration/attempt for this run (FR-C5-007 per-node
+  // duration). Rides the same poll as everything else on this type — no
+  // separate request needed for the canvas's per-node duration badge.
+  node_timings?: Record<string, NodeTiming>
   messages?: ExecutionMessage[]
   error_message?: string
   created_at: string

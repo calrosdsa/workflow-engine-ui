@@ -33,16 +33,16 @@ export function ExecutionsSidebar({ workflowId }: { workflowId: string }) {
   return (
     <aside
       className={[
-        'relative flex shrink-0 flex-col border-l border-[hsl(var(--border))] bg-[hsl(var(--card))] transition-all duration-200',
+        'relative flex shrink-0 flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] transition-all duration-200',
         open ? 'w-64' : 'w-10',
       ].join(' ')}
     >
       <button
         onClick={toggle}
-        className="absolute -left-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] shadow-sm transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+        className="absolute -right-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] shadow-sm transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
         title={open ? 'Collapse executions' : 'Expand executions'}
       >
-        {open ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
+        {open ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}
       </button>
 
       {!open && (

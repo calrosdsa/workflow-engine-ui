@@ -1,5 +1,7 @@
 import { useParams } from '@tanstack/react-router'
 import { useExecution } from '@/features/executions/hooks'
+import { ExecutionLogsPanel } from '@/features/executions/ExecutionLogsPanel'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
@@ -14,6 +16,7 @@ const statusVariant: Record<ExecutionStatus, 'warning' | 'default' | 'success' |
 }
 
 export function ExecutionDetailPage() {
+  const t = useTranslation()
   const { executionId } = useParams({ from: '/shell/applications/$appId/executions/$executionId' })
   const { data: execution, isLoading } = useExecution(executionId)
 
@@ -65,6 +68,11 @@ export function ExecutionDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      <div>
+        <h2 className="mb-2 text-lg font-semibold text-[hsl(var(--foreground))]">{t('workflows.executions.logs.title')}</h2>
+        <ExecutionLogsPanel executionId={execution.execution_id} executionStatus={execution.status} executionFinishedAt={execution.finished_at} />
+      </div>
     </div>
   )
 }

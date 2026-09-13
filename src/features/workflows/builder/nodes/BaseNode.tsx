@@ -9,7 +9,8 @@ import { useBuilderStore, DUPLICABLE_NODE_TYPES, type FlowNode, type DropPositio
 import { computeExecutionOrder } from '../executionOrder'
 import { nodeSetupIssue } from '../node-validation'
 import { useExecutionOverlayStore } from '../execution-overlay-store'
-import type { NodeExecutionStatus } from '@/features/executions/types'
+import { formatDuration } from '@/features/executions/duration'
+import type { NodeExecutionStatus, NodeTiming } from '@/features/executions/types'
 import { DropZone } from './DropZone'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuLabel } from '@/components/ui/context-menu'
@@ -43,13 +44,23 @@ const overlayStatusIcon: Record<NodeExecutionStatus, React.ReactNode> = {
   COMPLETED_WITH_ERRORS: <AlertTriangle size={10} strokeWidth={3} />,
 }
 
-// No per-node duration is shown here — none is persisted anywhere (FR-B2-012's
-// own confirmed scope boundary; only the execution-level total is real data,
-// shown once in the Executions sidebar row instead of fabricated per node).
 function overlayStatusLabel(status: NodeExecutionStatus): string {
   return status === 'COMPLETED_WITH_ERRORS'
     ? 'Completed with errors'
     : status.charAt(0) + status.slice(1).toLowerCase()
+}
+
+// Composes the status badge's rendered text (and title) — a pure function so
+// the "append per-node duration" behavior (FR-C5-007) is testable without a
+// full ReactFlow-provider render. `timing` comes from the selected overlay
+// execution's node_timings[id] (new field on Execution, rides the existing
+// useExecution 2s poll — no extra request). Absent timing (a node with no
+// node_timings entry — either unreached, already excluded by showStatusBadge's
+// own `reached` check, or a structurally activity-free type like Merge/Exit
+// that never gets a timing row) just omits the duration suffix.
+export function statusBadgeText(status: NodeExecutionStatus, timing?: NodeTiming): string {
+  const label = overlayStatusLabel(status)
+  return timing ? `${label} · ${formatDuration(timing.duration_ms)}` : label
 }
 
 function nodeCategoryLabel(category: string): string {
@@ -168,10 +179,23 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   // whichever past run is selected in the Executions sidebar. undefined
   // means "no overlay active"; a node key absent from node_statuses means
   // "overlay active, but this node was never reached" (dimmed, no badge).
+  // node_timings is a SEPARATE map with its own, narrower absence meaning:
+  // a key can be missing there even for a REACHED node, either because it's
+  // a structurally activity-free type (Entry/Exit/Merge/LoopEnd/Trigger —
+  // never timed) or simply not captured — node_statuses, not node_timings,
+  // is what decides "reached" (below), so that dimming behavior is
+  // unaffected either way.
   const overlayExecution = useExecutionOverlayStore((s) => s.data)
+  // Real chronological node order (FR-C5-007) for the selected overlay
+  // execution, computed once centrally (WorkflowBuilderPage) from its log
+  // rows. null = "no log data for this execution" (a run predating this
+  // feature) — the per-EXECUTION signal to keep the static heuristic below
+  // instead of switching this node alone (never mix real/fake in one overlay).
+  const logOrder = useExecutionOverlayStore((s) => s.logOrder)
   const showCompletedSteps = useBuilderStore((s) => s.showCompletedSteps)
   const overlayActive    = overlayExecution != null
   const nodeStatus: NodeExecutionStatus | undefined = overlayExecution?.node_statuses?.[id]
+  const nodeTiming                                  = overlayExecution?.node_timings?.[id]
   const nodeError                                   = overlayExecution?.node_errors?.[id]
   const nodeMessage                                 = overlayExecution?.messages?.find((m) => m.node_id === id)
   const failedItems                                 = overlayExecution?.iterator_failed_items?.[id]
@@ -180,6 +204,8 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const reached          = overlayActive && nodeStatus !== undefined
   const showStatusBadge  = reached && nodeStatus !== undefined && (showCompletedSteps || nodeStatus !== 'COMPLETED')
   const dimUnreached     = overlayActive && !reached
+  const realOrderActive  = overlayActive && logOrder !== null
+  const realOrderRank    = realOrderActive ? logOrder![id] : undefined
   const [overlayNoteOpen, setOverlayNoteOpen] = useState(false)
   const [debugPopoverOpen, setDebugPopoverOpen] = useState(false)
   const [warningPopoverOpen, setWarningPopoverOpen] = useState(false)
@@ -296,10 +322,10 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
             'workflow-node-status absolute bottom-2 right-2 z-10 flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
             overlayStatusStyle[nodeStatus],
           )}
-          title={overlayStatusLabel(nodeStatus)}
+          title={statusBadgeText(nodeStatus, nodeTiming)}
         >
           {overlayStatusIcon[nodeStatus]}
-          <span>{overlayStatusLabel(nodeStatus)}</span>
+          <span>{statusBadgeText(nodeStatus, nodeTiming)}</span>
         </div>
       )}
 
@@ -570,7 +596,23 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               <span className="sr-only">Needs setup: {setupIssue}</span>
             </span>
           )}
-          {info && (
+          {/* Per-execution mode switch (FR-C5-007): once the selected overlay
+              execution has real log data, its badges show REAL chronological
+              order (realOrderRank, no "wave" concept — it doesn't map to real
+              timestamps) instead of the static graph-authoring heuristic
+              (`info`). A node absent from a real-order map renders NO badge
+              here rather than falling back to the static one — falling back
+              per-node would mix real and fake order within the same overlay,
+              which is exactly what this mode switch must never do. Only when
+              the WHOLE execution has no log data (realOrderActive false) does
+              the static heuristic apply, unchanged from before this feature. */}
+          {realOrderActive ? (
+            realOrderRank !== undefined && (
+              <span className="workflow-node-step" title={`Execution step ${realOrderRank} (actual run order)`}>
+                {realOrderRank}
+              </span>
+            )
+          ) : info && (
             <span className="workflow-node-step" title={`Execution step ${info.step}${info.wave > 0 ? `, wave ${info.wave}` : ''}`}>
               {info.step}{info.wave > 0 ? <small>W{info.wave}</small> : null}
             </span>

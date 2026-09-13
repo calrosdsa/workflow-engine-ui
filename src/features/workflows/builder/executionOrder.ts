@@ -1,4 +1,5 @@
 import type { FlowNode, FlowEdge } from './store'
+import type { ExecutionNodeLog } from '@/features/executions/types'
 
 export interface NodeExecutionInfo {
   step: number  // 1-based position in the left-to-right depth-first order
@@ -96,6 +97,42 @@ export function computeExecutionOrder(
   order.forEach((id, i) => {
     result.set(id, { step: i + 1, wave: wave.get(id) ?? 0 })
   })
+  return result
+}
+
+/**
+ * Computes REAL chronological execution order (FR-C5-007) from an
+ * execution's actual log rows, for the canvas's per-execution mode switch:
+ * once a selected overlay execution has log data, its step badges must show
+ * real order (this), never the static graph-authoring heuristic above — and
+ * the switch is per-EXECUTION, not per-node (see BaseNode.tsx).
+ *
+ * Returns null when `logs` is empty (no log data for this execution — e.g.
+ * a run predating this feature), which the caller uses as the "keep the
+ * static heuristic" signal. A non-null result is never empty.
+ *
+ * De-duping matters here: a node can own multiple log rows (a loop_chunk
+ * row per chunk, a retried attempt), so this groups by node_id and ranks by
+ * each node's EARLIEST started_at, rather than ranking raw rows (which
+ * would produce duplicate/skipped step numbers for any node with >1 row).
+ */
+export function computeLogOrder(
+  logs: Pick<ExecutionNodeLog, 'node_id' | 'started_at'>[],
+): Record<string, number> | null {
+  if (logs.length === 0) return null
+
+  const earliest = new Map<string, number>()
+  for (const log of logs) {
+    const t = new Date(log.started_at).getTime()
+    if (Number.isNaN(t)) continue
+    const current = earliest.get(log.node_id)
+    if (current === undefined || t < current) earliest.set(log.node_id, t)
+  }
+  if (earliest.size === 0) return null
+
+  const ranked = Array.from(earliest.entries()).sort((a, b) => a[1] - b[1])
+  const result: Record<string, number> = {}
+  ranked.forEach(([nodeId], i) => { result[nodeId] = i + 1 })
   return result
 }
 

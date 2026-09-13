@@ -3,14 +3,16 @@ import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, AlertTriangle, ArrowLeft, Braces, Check, History, Play, Save, Workflow, X } from 'lucide-react'
 import { useWorkflow, useCreateWorkflow, useUpdateWorkflow } from '@/features/workflows/hooks'
-import { useTriggerExecution, useExecution } from '@/features/executions/hooks'
+import { useTriggerExecution, useExecution, useExecutionLogs } from '@/features/executions/hooks'
 import { useBuilderStore } from '@/features/workflows/builder/store'
 import { useExecutionOverlayStore } from '@/features/workflows/builder/execution-overlay-store'
+import { computeLogOrder } from '@/features/workflows/builder/executionOrder'
 import { nodeSetupIssue } from '@/features/workflows/builder/node-validation'
 import { VariablesPanel } from '@/features/workflows/builder/VariablesPanel'
 import { OutlinePanel } from '@/features/workflows/builder/OutlinePanel'
 import { NodeConfigPanel } from '@/features/workflows/builder/NodeConfigPanel'
 import { ExecutionsSidebar, statusDot } from '@/features/workflows/builder/ExecutionsSidebar'
+import { ExecutionLogsDock, DOCK_LOGS_PAGE_SIZE } from '@/features/workflows/builder/ExecutionLogsDock'
 import { TriggerOnboardingModal } from '@/features/workflows/builder/TriggerOnboardingModal'
 import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
 import { cn } from '@/lib/utils'
@@ -50,7 +52,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   const {
     loadDefinition, seedNew, toDefinition, name, setName,
     isDirty, markSaved, nodes, selectNode,
-    executionsPanelOpen, toggleExecutionsPanel, openExecutionsPanel,
+    executionsPanelOpen, toggleExecutionsPanel,
     varsPanelOpen, toggleVarsPanel,
   } = useBuilderStore()
 
@@ -74,6 +76,8 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   const selectOverlay = useExecutionOverlayStore((s) => s.setSelected)
   const selectedExecutionId = useExecutionOverlayStore((s) => s.selectedExecutionId)
   const setOverlayData = useExecutionOverlayStore((s) => s.setData)
+  const setLogOrder = useExecutionOverlayStore((s) => s.setLogOrder)
+  const setLogsDockOpen = useExecutionOverlayStore((s) => s.setLogsDockOpen)
 
   // Selecting a different workflow (or leaving edit mode) must not carry a
   // stale overlay selection over — it would silently reference node IDs on
@@ -98,14 +102,58 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
     }
   }, [selectedExecutionId, overlayExecution, id, setOverlayData])
 
+  // Real chronological node order for the canvas's per-execution mode switch
+  // (FR-C5-007). Enabled only while the canvas overlay is actively showing a
+  // selected execution — this is the one other place besides a mounted Logs
+  // panel allowed to call useExecutionLogs (see that hook's own doc comment
+  // on why it's opt-in). pageSize: 200 (the endpoint's cap) so ordering
+  // covers the whole run, not just its first page; no mid-run polling
+  // because this is a "compute the order" fetch, not a live view — the
+  // badge's own duration text still updates live via useExecution's
+  // existing 2s poll above.
+  const overlayLogsEnabled = !!selectedExecutionId && overlayExecution?.workflow_definition_id === id
+  const { data: overlayLogs } = useExecutionLogs(
+    selectedExecutionId ?? undefined,
+    // page: 1 spelled out so these params match the Logs dock's first page
+    // exactly — same query key, one shared fetch.
+    { page: 1, pageSize: DOCK_LOGS_PAGE_SIZE },
+    // No polling mid-run (pollWhileRunning: false), but status/finishedAt
+    // still let it settle once the run ends — a run selected while in flight
+    // ends up ordered from its complete rows — and then mark those rows
+    // immutable, so a window refocus never re-downloads up to 200
+    // payload-carrying rows.
+    {
+      enabled: overlayLogsEnabled,
+      executionStatus: overlayExecution?.status,
+      finishedAt: overlayExecution?.finished_at,
+      pollWhileRunning: false,
+    },
+  )
+  useEffect(() => {
+    if (overlayLogsEnabled && overlayLogs) {
+      setLogOrder(computeLogOrder(overlayLogs.logs))
+    } else if (!selectedExecutionId) {
+      setLogOrder(null)
+    }
+  }, [overlayLogsEnabled, overlayLogs, selectedExecutionId, setLogOrder])
+
+  // The bottom Logs dock only ever shows a run confirmed to belong to this
+  // workflow (same FR-C5-007 guard as the overlay above).
+  const dockExecution = overlayLogsEnabled ? overlayExecution ?? null : null
+  const dockLoading = !!selectedExecutionId && !overlayExecution
+  const nodeLabels = useMemo(
+    () => Object.fromEntries(nodes.map((n) => [n.id, n.data.label])),
+    [nodes],
+  )
+
   // Tracks the run just triggered from this page's own Run button —
   // independent of selectedExecutionId (the sidebar/overlay's own, possibly
   // unrelated, selection). Polls in the background (useExecution's existing
   // 2s-until-terminal behavior) without blocking the canvas; only once it
-  // reaches COMPLETED or FAILED does the Executions sidebar auto-open,
-  // selected on that run, so a long-running workflow never traps the user
-  // behind a loader — they keep editing, and the sidebar surfaces the result
-  // when it's actually ready.
+  // reaches COMPLETED or FAILED does the Logs dock expand, selected on that
+  // run (n8n's behavior after a manual run), so a long-running workflow never
+  // traps the user behind a loader — they keep editing, and the dock
+  // surfaces the result when it's actually ready.
   const { data: triggeredExecution } = useExecution(triggeredId ?? '')
   const isTriggeredRunning = !!triggeredId && (!triggeredExecution || triggeredExecution.status === 'PENDING' || triggeredExecution.status === 'RUNNING')
   useEffect(() => {
@@ -118,10 +166,10 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
       // already knows the real terminal status.
       qc.invalidateQueries({ queryKey: ['executions'] })
       selectOverlay(triggeredId)
-      openExecutionsPanel()
+      setLogsDockOpen(true)
       setTriggeredId(null)
     }
-  }, [triggeredId, triggeredExecution, selectOverlay, openExecutionsPanel, qc])
+  }, [triggeredId, triggeredExecution, selectOverlay, setLogsDockOpen, qc])
 
   // Load existing definition into the store once
   useEffect(() => {
@@ -279,9 +327,9 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
 
         {/* Small, dismissible, non-blocking — the canvas stays fully
             editable while this run is in flight. It clears itself once the
-            run reaches COMPLETED/FAILED (the effect above opens the
-            Executions sidebar at that point instead), so this chip only
-            shows for genuinely in-progress runs, not finished ones. */}
+            run reaches COMPLETED/FAILED (the effect above expands the Logs
+            dock at that point instead), so this chip only shows for
+            genuinely in-progress runs, not finished ones. */}
         {isTriggeredRunning && (
           <span className="flex items-center gap-1.5 rounded-md bg-[hsl(var(--primary))]/10 py-1.5 pl-2.5 pr-1.5 text-xs font-medium text-[hsl(var(--primary))]">
             <Spinner className="h-3 w-3" />Running…
@@ -355,12 +403,21 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
       </header>
 
       {/* ── Main layout ──────────────────────────────────────────────── */}
+      {/* n8n's arrangement: the executions list sits left of the canvas, and
+          the Logs dock sits under the canvas only (not under the side
+          panels). Every level of the canvas column carries min-h-0 so React
+          Flow gets a definite, shrinkable height as the dock grows. */}
       <div className="relative flex flex-1 overflow-hidden">
         <OutlinePanel open={outlineOpen} onToggle={() => setOutlineOpen((o) => !o)} />
         <VariablesPanel />
-        <FlowLayout />
-        <NodeConfigPanel />
         {mode === 'edit' && <ExecutionsSidebar workflowId={id} />}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="relative flex min-h-0 flex-1">
+            <FlowLayout />
+          </div>
+          {mode === 'edit' && <ExecutionLogsDock execution={dockExecution} loading={dockLoading} nodeLabels={nodeLabels} />}
+        </div>
+        <NodeConfigPanel />
         {onboardingOpen && <TriggerOnboardingModal onClose={() => setOnboardingOpen(false)} />}
       </div>
     </div>
