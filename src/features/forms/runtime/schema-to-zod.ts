@@ -149,7 +149,20 @@ export function fieldSchema(el: FormElement, relaxRequired = false): z.ZodTypeAn
         const emailMessage = el.validation.customMessage ?? `${el.label} must be a valid email address.`
         str = str.refine((v) => v === '' || z.string().email().safeParse(v).success, emailMessage)
       }
-      base = str
+      // A required field with no author-configured minLength had no floor at
+      // all: bare z.string() accepts '' (a required text field could submit
+      // blank). A reference field's real unset value is a SQL NULL, not ''
+      // (see emptyDefaults/nullsToEmptyStrings above — that's deliberate,
+      // not a bug), so the bare z.string() rejected IT at the type level
+      // with Zod's own raw "Invalid input: expected string, received null"
+      // instead of a real validation message. Preprocessing every unset
+      // shape (null, undefined, '') to '' first means both failure modes
+      // funnel through the same .min(1) check with one human message,
+      // whichever shape the value happens to arrive in.
+      if (isStaticRequired && el.validation.minLength === undefined) {
+        str = str.min(1, el.validation.customMessage ?? `${el.label} is required.`)
+      }
+      base = isStaticRequired ? z.preprocess((v) => v ?? '', str) : str
       break
     }
   }

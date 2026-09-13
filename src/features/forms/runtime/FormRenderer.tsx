@@ -26,6 +26,22 @@ import type { FieldDef } from '@/features/forms/types'
 // (`true` for booleans) instead of the real unchecked state. Every
 // data-bearing field needs a defined, type-appropriate default from the
 // first render so live expression evaluation reflects reality immediately.
+// react-hook-form's FieldError carries the originating Zod issue code as
+// `.type` (e.g. 'invalid_type', 'too_small', 'invalid_string', 'custom').
+// 'invalid_type' means the value never reached a real validation rule at
+// all — the schema rejected its shape outright — so its `.message` is
+// Zod's own internal wording ("Invalid input: expected string, received
+// null"), not something authored for an end user. Every field this form
+// renders that CAN legitimately hit that path is already given a real
+// required-field message at the schema level (schema-to-zod.ts's default
+// case); this is the backstop for any fieldType that isn't, so a raw Zod
+// string can never reach the page regardless.
+function humanizeFieldError(error: { message?: string; type?: string } | undefined, label: string): string | undefined {
+  if (!error) return undefined
+  if (error.type === 'invalid_type') return `${label} is required.`
+  return error.message
+}
+
 function emptyDefaults(schema: FormSchema): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   for (const el of iterElements(schema)) {
@@ -306,7 +322,7 @@ export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitti
                         control={control}
                         formId={formId}
                         runtimeState={{ visible, required, readOnly }}
-                        error={errors[el.key]?.message as string | undefined}
+                        error={humanizeFieldError(errors[el.key] as { message?: string; type?: string } | undefined, el.label)}
                       />
                     )
                   })}

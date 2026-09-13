@@ -18,7 +18,7 @@
 // search field — see that function's doc comment.
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useForm as useRHF, useWatch, type Control } from 'react-hook-form'
+import { useForm as useRHF, useWatch, type Control, type FieldValues } from 'react-hook-form'
 import { Check, ChevronsUpDown, X, Loader2, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -45,7 +45,7 @@ function buildContainsFilter(field: string, search: string): FilterGroup {
   }
 }
 
-interface ReferenceFieldAutocompleteProps {
+interface ReferenceFieldAutocompleteProps<TFieldValues extends FieldValues = FieldValues> {
   el: FormElement
   field: { value: unknown; onChange: (v: unknown) => void }
   disabled: boolean
@@ -63,7 +63,7 @@ interface ReferenceFieldAutocompleteProps {
   /** The enclosing form's RHF control — watched so a filter hopping through
    *  a sibling reference field (Supplier limited by Manager's area) refetches
    *  the moment that sibling changes: the cascading-select behaviour. */
-  control?: Control
+  control?: Control<TFieldValues>
   /** Pre-built this_record hop source, for a caller whose rows are NOT
    *  RHF-backed (LineItemsGrid's grid rows are plain objects, not react-
    *  hook-form fields) — the raw sibling values, same shape `control`'s
@@ -72,7 +72,7 @@ interface ReferenceFieldAutocompleteProps {
   refDraft?: Record<string, unknown>
 }
 
-export function ReferenceFieldAutocomplete({ el, field, disabled, id, sourceFormId, control, refDraft }: ReferenceFieldAutocompleteProps) {
+export function ReferenceFieldAutocomplete<TFieldValues extends FieldValues = FieldValues>({ el, field, disabled, id, sourceFormId, control, refDraft }: ReferenceFieldAutocompleteProps<TFieldValues>) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search, 300)
@@ -90,7 +90,7 @@ export function ReferenceFieldAutocomplete({ el, field, disabled, id, sourceForm
   // (report arguments, or LineItemsGrid's refDraft path) watch a throwaway
   // local form instead of branching.
   const fallbackForm = useRHF()
-  const watchedValues = useWatch({ control: control ?? fallbackForm.control }) as Record<string, unknown>
+  const watchedValues = useWatch({ control: control ?? (fallbackForm.control as unknown as Control<TFieldValues>) }) as Record<string, unknown>
   // refDraft's raw sibling values win when passed explicitly; otherwise fall
   // back to whatever the RHF watch produced (garbage/unused when control is
   // also absent, matching the existing no-enclosing-form case).

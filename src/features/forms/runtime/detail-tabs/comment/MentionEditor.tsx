@@ -13,7 +13,7 @@
 // dumb as possible: it owns only rendering + delegating events, all the
 // actual chip-insertion/serialization logic lives in mention-dom.ts /
 // useMentionEditor.ts so this component stays a thin View.
-import { forwardRef, useEffect, useRef, useImperativeHandle } from 'react'
+import { forwardRef, useRef, useImperativeHandle } from 'react'
 import { cn } from '@/lib/utils'
 import { populateEditorFromBody } from './mention-dom'
 

@@ -111,7 +111,9 @@ export function CommentTabRenderer({ formId, recordId }: DetailTabRendererProps<
               usersById={authorById}
               isOwn={!!currentUserId && entry.author_user_id === currentUserId}
               saving={updateComment.isPending}
-              onEdit={(body) => updateComment.mutateAsync({ commentId: entry.id, body })}
+              onEdit={async (body) => {
+                await updateComment.mutateAsync({ commentId: entry.id, body })
+              }}
               onDelete={() => setDeleteTarget(entry.id)}
             />
           ))}

@@ -47,7 +47,7 @@ function freshConfig(): RelatedFormTabConfig {
 
 describe('RelatedFormTabRenderer — hideWhenEmpty existence-check query stability', () => {
   it('fires the existence-check query once, not once per re-render with a fresh config object', async () => {
-    const searchRecords = vi.spyOn(formsApi, 'searchRecords').mockResolvedValue({ records: [], total: 0 })
+    const searchRecords = vi.spyOn(formsApi, 'searchRecords').mockResolvedValue({ records: [], total: 0, page: 1, page_size: 20 })
 
     const { rerender, client } = renderWithQueryClient(
       <RelatedFormTabRenderer

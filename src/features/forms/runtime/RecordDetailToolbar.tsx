@@ -14,6 +14,7 @@
 import { useEffect, useState } from 'react'
 import { MoreHorizontal, Trash2, RotateCw, XCircle, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EnableAccountDialog } from './EnableAccountDialog'
@@ -47,6 +48,7 @@ interface RecordDetailToolbarProps {
 }
 
 export function RecordDetailToolbar({ formId, recordId, record, createUserSettings, schema, onDeleted }: RecordDetailToolbarProps) {
+  const t = useTranslation()
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [confirmingRemoveAccess, setConfirmingRemoveAccess] = useState(false)
   const [enablingAccount, setEnablingAccount] = useState(false)
@@ -115,7 +117,10 @@ export function RecordDetailToolbar({ formId, recordId, record, createUserSettin
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]">
+        <DropdownMenuTrigger
+          aria-label={t('runtime.record_detail.more_actions')}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
+        >
           <MoreHorizontal size={16} />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56" container={document.getElementById('runtime-root')}>

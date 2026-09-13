@@ -551,7 +551,6 @@ function LineItemsGridInner({
   // (add/delete/duplicate/reorder, the summary table's own cells) keeps
   // using the plain `disabled` flag unchanged.
   const sidebarDisabled = disabled && !(saveRowIndependently && !editingIsDraft)
-  const colCount = columns.length + (canReorder ? 1 : 0) + (canSelect ? 1 : 0) + 1
   const bulkDeleteDisabled = allRows.length - selected.size < minRows
 
   return (
