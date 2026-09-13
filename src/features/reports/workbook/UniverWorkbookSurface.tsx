@@ -36,6 +36,7 @@ import {
   projectedRegionBounds,
   sourceCompletionColumns,
   type FormLookup,
+  type ProjectedRegionCell,
 } from './region-projection'
 
 // Univer's own number-format controls are hidden, and this is the decision
@@ -423,6 +424,15 @@ function registerRegionTables(
     if (!cells || cells.length < 2) return
     const bounds = projectedRegionBounds(cells)
     if (!bounds) return
+    // Univer draws a registered table's name tag floating in the row directly
+    // above its own range — not something this app draws or can reposition.
+    // A block stacked with zero gap under another (the common case: no blank
+    // spacer row was left between them) puts that tag right on top of the
+    // block above's own content. Skipping registration there trades away
+    // this block's live in-editor formula autocomplete (#NAME? until export,
+    // same as any other best-effort registration failure per the doc comment
+    // above) for not drawing a name tag over another block's text. Found live.
+    if (rowOccupiedByOtherBlock(projections, block.id, bounds.startRow - 1, bounds.startColumn, bounds.endColumn)) return
 
     try {
       const sheet = workbook.getSheetBySheetId?.(block.sheet_id || defaultSheetID)
@@ -431,6 +441,25 @@ function registerRegionTables(
       // Registration is an editor convenience; export resolves regardless.
     }
   })
+}
+
+/** Whether some other block's projected cells occupy `row` within
+ *  [startColumn, endColumn] — see registerRegionTables' skip-if-crowded
+ *  check above. A negative row (a region starting at the very top of the
+ *  sheet) trivially has nothing above it. */
+function rowOccupiedByOtherBlock(
+  projections: Map<string, ProjectedRegionCell[]>,
+  blockId: string,
+  row: number,
+  startColumn: number,
+  endColumn: number,
+): boolean {
+  if (row < 0) return false
+  for (const [id, cells] of projections) {
+    if (id === blockId) continue
+    if (cells.some((cell) => cell.row === row && cell.col >= startColumn && cell.col <= endColumn)) return true
+  }
+  return false
 }
 
 // Builds the empty grid a report without a saved workbook starts from.

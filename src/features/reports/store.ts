@@ -2,6 +2,26 @@ import { create } from 'zustand'
 import type { ReportDefinition, ReportBlock, ReportBlockRegion, ReportVisibility, BlockStyle, ReportSettings, ReportWorkbook, ReportDataSource, ReportArgument, ArgumentBinding } from './types'
 import { emptyReportDefinition } from './types'
 import { createReportBlock, duplicateReportBlock } from './factory'
+import { normalizeFilterGroup } from './data-sources'
+
+// The backend's `graph.FilterGroup` carries `omitempty` on both its Conditions
+// and Groups slices (see normalizeFilterGroup's own doc comment), so a report
+// fetched straight from the API can have data-source filters missing `groups`
+// (or even `conditions`) entirely — a shape the FilterGroup type promises never
+// happens. Left unnormalized, that gap made Save look inert: pruneIncompleteFilters
+// always fills those fields back in before POSTing, so the freshly-loaded
+// definition and the one just sent to the server were never byte-identical,
+// so handleSave's post-save equality check always failed and the editor stayed
+// stuck on "Unsaved" even though the save itself had succeeded. Found live.
+function normalizeLoadedDefinition(definition: ReportDefinition): ReportDefinition {
+  if (!definition.data_sources?.length) return definition
+  return {
+    ...definition,
+    data_sources: definition.data_sources.map((source) =>
+      source.filter ? { ...source, filter: normalizeFilterGroup(source.filter) } : source,
+    ),
+  }
+}
 
 // Direct mirror of features/dashboard/store.ts's mutate()-chokepoint +
 // undo/redo + coalescing pattern, applied to ReportDefinition instead of
@@ -99,7 +119,7 @@ export const useReportStore = create<ReportStoreState>((set, get) => {
     loadDefinition: (definition) => {
       undoStack = []
       redoStack = []
-      set({ definition, selectedBlockId: null, dirty: false, canUndo: false, canRedo: false })
+      set({ definition: normalizeLoadedDefinition(definition), selectedBlockId: null, dirty: false, canUndo: false, canRedo: false })
     },
     reset: () => {
       undoStack = []

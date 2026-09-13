@@ -1,9 +1,17 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react'
-import { createRef } from 'react'
+import { createRef, type ReactElement } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { UniverWorkbookSurface, type WorkbookSurfaceHandle } from './UniverWorkbookSurface'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import type { ReportDefinition } from '../types'
+
+// InsertDataMenu (rendered inside the surface's toolbar) calls useTranslation,
+// which throws outside an I18nProvider ancestor — real provider, no props,
+// same pattern as InsertDataMenu.test.tsx / ReportMenuRuntime.test.tsx.
+function renderSurface(ui: ReactElement) {
+  return render(<I18nProvider>{ui}</I18nProvider>)
+}
 
 const univer = vi.hoisted(() => {
   const createWorkbook = vi.fn()
@@ -74,7 +82,7 @@ describe('UniverWorkbookSurface', () => {
   })
 
   it('creates a projected workbook and disposes the editor on unmount', () => {
-    const { unmount } = render(<UniverWorkbookSurface definition={definition} />)
+    const { unmount } = renderSurface(<UniverWorkbookSurface definition={definition} />)
 
     // The bar now leads with the primary action rather than a "Workbook"
     // label — placing data is a sheet gesture (FR-J1-006 SN-01).
@@ -100,7 +108,7 @@ describe('UniverWorkbookSurface', () => {
   })
 
   it('shows version-2 semantic blocks as guides without adding them to the saved cell contract', () => {
-    render(<UniverWorkbookSurface definition={{
+    renderSurface(<UniverWorkbookSurface definition={{
       ...definition,
       version: 2,
       workbook: {
@@ -141,7 +149,7 @@ describe('UniverWorkbookSurface', () => {
       getSheetBySheetId: vi.fn(() => ({ addTable })),
     })
 
-    render(<UniverWorkbookSurface definition={{
+    renderSurface(<UniverWorkbookSurface definition={{
       ...definition,
       blocks: [{
         id: 'charges',
@@ -169,7 +177,7 @@ describe('UniverWorkbookSurface', () => {
       getSheetBySheetId: vi.fn(() => ({ addTable })),
     })
 
-    render(<UniverWorkbookSurface definition={{
+    renderSurface(<UniverWorkbookSurface definition={{
       ...definition,
       blocks: [{
         id: 'charges',
@@ -196,7 +204,7 @@ describe('UniverWorkbookSurface', () => {
       }),
     })
     const ref = createRef<WorkbookSurfaceHandle>()
-    render(<UniverWorkbookSurface ref={ref} definition={definition} />)
+    renderSurface(<UniverWorkbookSurface ref={ref} definition={definition} />)
 
     expect(ref.current?.getSelection()).toEqual({
       sheet_id: 'overview',
@@ -211,10 +219,10 @@ describe('UniverWorkbookSurface', () => {
       workbook: { sheets: [{ id: 'overview', name: 'Overview', row_count: 24, column_count: 8 }] },
       blocks: [{ ...definition.blocks[0], sheet_id: 'overview' }],
     }
-    const { rerender } = render(<UniverWorkbookSurface definition={workbookDefinition} />)
+    const { rerender } = renderSurface(<UniverWorkbookSurface definition={workbookDefinition} />)
 
     // The report name lives outside the grid, so it never rebuilds.
-    rerender(<UniverWorkbookSurface definition={{ ...workbookDefinition, name: 'Renamed report' }} />)
+    rerender(<I18nProvider><UniverWorkbookSurface definition={{ ...workbookDefinition, name: 'Renamed report' }} /></I18nProvider>)
     expect(univer.createWorkbook).toHaveBeenCalledTimes(1)
   })
 
@@ -225,29 +233,29 @@ describe('UniverWorkbookSurface', () => {
       workbook: { sheets: [{ id: 'overview', name: 'Overview', row_count: 24, column_count: 8 }] },
       blocks: [{ ...definition.blocks[0], sheet_id: 'overview' }],
     }
-    const { rerender } = render(<UniverWorkbookSurface definition={workbookDefinition} />)
+    const { rerender } = renderSurface(<UniverWorkbookSurface definition={workbookDefinition} />)
 
     // A config change now alters the cells a region draws (its columns and
     // their labels), so unlike the previous placeholder-only guide it has to
     // redraw. ReportBuilderPage captures live cell edits into the definition
     // before any such change, so rebuilding restores the author's own cells
     // rather than discarding them.
-    rerender(<UniverWorkbookSurface definition={{
+    rerender(<I18nProvider><UniverWorkbookSurface definition={{
       ...workbookDefinition,
       blocks: [{ ...workbookDefinition.blocks[0], config: { text: 'Updated heading' } }],
-    }} />)
+    }} /></I18nProvider>)
     expect(univer.createWorkbook).toHaveBeenCalledTimes(2)
 
-    rerender(<UniverWorkbookSurface definition={{
+    rerender(<I18nProvider><UniverWorkbookSurface definition={{
       ...workbookDefinition,
       blocks: [{ ...workbookDefinition.blocks[0], config: { text: 'Updated heading' }, style: { bold: false } }],
-    }} />)
+    }} /></I18nProvider>)
     expect(univer.createWorkbook).toHaveBeenCalledTimes(3)
 
-    rerender(<UniverWorkbookSurface definition={{
+    rerender(<I18nProvider><UniverWorkbookSurface definition={{
       ...workbookDefinition,
       blocks: [{ ...workbookDefinition.blocks[0], config: { text: 'Updated heading' }, style: { bold: false }, layout: { row: 3, col: 1, row_span: 1, col_span: 4 } }],
-    }} />)
+    }} /></I18nProvider>)
     expect(univer.createWorkbook).toHaveBeenCalledTimes(4)
   })
 })
