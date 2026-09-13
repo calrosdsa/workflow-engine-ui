@@ -2,7 +2,7 @@ import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
-import { cspMetaTag } from './src/lib/csp'
+import { cspMetaTag } from './src/lib/csp.js'
 
 // Every top-level path segment the BUILDER's router.tsx actually owns (Home
 // '/', /applications/$appId/{workflows,forms,design,settings,executions},

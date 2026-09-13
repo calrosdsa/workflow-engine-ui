@@ -74,7 +74,10 @@ export function findItem<
  *  that's the whole point of a producer function, not a workaround. */
 export function produce<Schema>(schema: Schema, mut: (draft: Schema) => void): Schema {
   return immerProduce(schema, (draft) => {
-    mut(draft)
+    // Immer's Draft<Schema> cannot be proven assignable to an unconstrained
+    // generic Schema, even though this producer is deliberately the boundary
+    // where callers are allowed to mutate that draft.
+    mut(draft as Schema)
   })
 }
 

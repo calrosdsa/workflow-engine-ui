@@ -28,6 +28,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors, closestCorners,
   useDroppable, DragOverlay, type DragStartEvent, type DragEndEvent, type DragOverEvent,
+  type DraggableAttributes, type DraggableSyntheticListeners,
 } from '@dnd-kit/core'
 import { SortableContext, horizontalListSortingStrategy, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -483,14 +484,27 @@ function SortableKanbanCard(props: { record: FormRecord; fields: FieldDef[]; bod
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
 
+  // attributes/listeners/setNodeRef go directly onto KanbanCard's own
+  // <button> now, not a wrapping <div> — dnd-kit's `attributes` include
+  // role="button"/tabIndex, which on a plain div around a real <button>
+  // produced an invalid nested-interactive (button-in-button) element: a
+  // screen reader and keyboard user got two ambiguous stops for one card.
+  // A real <button> is already focusable/keyboard-operable on its own, so
+  // spreading dnd-kit's attributes onto it directly is safe and leaves
+  // exactly one interactive element in the DOM per card.
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <KanbanCard {...props} onClick={() => onOpenRecord(record)} />
-    </div>
+    <KanbanCard
+      {...props}
+      onClick={() => onOpenRecord(record)}
+      dragRef={setNodeRef}
+      dragAttributes={attributes}
+      dragListeners={listeners}
+      dragStyle={style}
+    />
   )
 }
 
-function KanbanCard({ record, fields, bodyFields, roleField, enumLabels, onClick, overlay }: {
+function KanbanCard({ record, fields, bodyFields, roleField, enumLabels, onClick, overlay, dragRef, dragAttributes, dragListeners, dragStyle }: {
   record: FormRecord
   fields: FieldDef[]
   bodyFields: FieldDef[]
@@ -498,19 +512,27 @@ function KanbanCard({ record, fields, bodyFields, roleField, enumLabels, onClick
   enumLabels: Map<string, Map<string, string>>
   onClick?: () => void
   overlay?: boolean
+  dragRef?: (node: HTMLElement | null) => void
+  dragAttributes?: DraggableAttributes
+  dragListeners?: DraggableSyntheticListeners
+  dragStyle?: React.CSSProperties
 }) {
   const title = resolveRecordTitle(fields, record)
   return (
     <button
+      ref={dragRef}
       type="button"
       onClick={onClick}
       className="flex w-full cursor-grab flex-col gap-1.5 rounded-md border p-2 text-left text-xs transition-colors hover:bg-[hsl(var(--accent))] active:cursor-grabbing"
       style={{
+        ...dragStyle,
         borderColor: 'hsl(var(--border))',
         backgroundColor: 'hsl(var(--card))',
         boxShadow: overlay ? '0 8px 24px -8px rgb(0 0 0 / 0.35)' : undefined,
         cursor: overlay ? 'grabbing' : undefined,
       }}
+      {...dragAttributes}
+      {...dragListeners}
     >
       <span className="truncate font-medium" style={{ color: 'hsl(var(--foreground))' }}>{title}</span>
       {bodyFields.length > 0 && (

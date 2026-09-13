@@ -286,6 +286,7 @@ interface FormMetaState {
   name: string
   slug: string
   description: string
+  isDirty: boolean
   /** The parent form this one is a dependent/child of ("Add Dependent Form"),
    *  or undefined for a form with no such relationship. Loaded read-only from
    *  FormDefinition.parent_form_id — the builder never writes this itself

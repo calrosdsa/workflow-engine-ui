@@ -203,9 +203,9 @@ const runtimeAppRoute = createRoute({
 })
 
 function RuntimeAppRouteComponent() {
-  // Inferred locally from THIS route's own `loader` return type above —
-  // correct without needing the global Register.
-  const { snapshot, draft } = runtimeAppRoute.useLoaderData()
+  // This runtime tree is deliberately separate from the globally registered
+  // builder router, so TanStack cannot infer this route's loader data here.
+  const { snapshot, draft } = runtimeAppRoute.useLoaderData() as { snapshot: AppSnapshot; draft: boolean }
   const theme = mergeTheme(snapshot.theme)
   return (
     // I18nProvider wraps RuntimeSnapshotContext (not the other way around,
