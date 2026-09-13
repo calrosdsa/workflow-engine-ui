@@ -32,7 +32,7 @@ export function VariablesPanel() {
   return (
     <aside
       className={[
-        'relative flex shrink-0 flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] transition-all duration-200',
+        'relative flex shrink-0 flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] transition-[width] duration-200',
         varsPanelOpen ? 'w-60' : 'w-10',
       ].join(' ')}
     >

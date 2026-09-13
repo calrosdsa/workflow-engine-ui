@@ -12,7 +12,6 @@
 // more than this renders its overflow fields as raw JSON in the fallback
 // textarea rather than silently dropping them — see UnsupportedField below.
 import { useMemo } from 'react'
-import { KeyRound } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
@@ -20,6 +19,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { CredentialSelect } from '@/features/app-settings/CredentialSelect'
 import type { CredentialType } from '@/features/app-settings/types'
+import type { FieldValidationIssue } from './configuration-workbench'
 
 /** A deliberately loose JSON Schema type — this form only ever reads a
  *  small, known subset of draft 2020-12 (type/properties/required/enum/
@@ -42,6 +42,12 @@ export interface JSONSchemaProperty {
   description?: string
   enum?: (string | number)[]
   default?: unknown
+  minimum?: number
+  maximum?: number
+  minLength?: number
+  maxLength?: number
+  pattern?: string
+  format?: string
   /** Vendor extension: renders this field with the platform's own
    *  CredentialSelect picker instead of a generic string input. The only
    *  currently-supported value is "credential-select"; anything else (or
@@ -57,6 +63,9 @@ interface SchemaFormProps {
   schema: JSONSchema
   value: unknown
   onChange: (value: Record<string, unknown>) => void
+  /** Validation comes from the workbench contract so a connector field has
+   * the same inline error behavior as a built-in form. */
+  issues?: FieldValidationIssue[]
 }
 
 /** True node-registry-style default-filling: every property gets its
@@ -79,7 +88,7 @@ export function defaultsForSchema(schema: JSONSchema): Record<string, unknown> {
   return out
 }
 
-export function SchemaForm({ schema, value, onChange }: SchemaFormProps) {
+export function SchemaForm({ schema, value, onChange, issues = [] }: SchemaFormProps) {
   const config = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>
   const properties = schema.properties ?? {}
   const required = useMemo(() => new Set(schema.required ?? []), [schema.required])
@@ -106,6 +115,7 @@ export function SchemaForm({ schema, value, onChange }: SchemaFormProps) {
           prop={prop}
           value={config[key]}
           required={required.has(key)}
+          issue={issues.find((issue) => issue.path === `parameters.${key}`)?.message}
           onChange={(v) => setField(key, v)}
         />
       ))}
@@ -118,10 +128,11 @@ interface SchemaFieldProps {
   prop: JSONSchemaProperty
   value: unknown
   required: boolean
+  issue?: string
   onChange: (value: unknown) => void
 }
 
-function SchemaField({ fieldKey, prop, value, required, onChange }: SchemaFieldProps) {
+function SchemaField({ fieldKey, prop, value, required, issue, onChange }: SchemaFieldProps) {
   const label = prop.title || humanizeKey(fieldKey)
 
   return (
@@ -131,16 +142,18 @@ function SchemaField({ fieldKey, prop, value, required, onChange }: SchemaFieldP
           {label}{required && <span className="ml-0.5 text-[hsl(var(--destructive))]">*</span>}
         </Label>
       </div>
-      <FieldControl fieldKey={fieldKey} prop={prop} value={value} onChange={onChange} />
+      <FieldControl fieldKey={fieldKey} prop={prop} value={value} onChange={onChange} issue={issue} />
       {prop.description && (
         <p className="text-[11px] leading-snug text-[hsl(var(--muted-foreground))]">{prop.description}</p>
       )}
+      {issue && <p className="text-[11px] text-[hsl(var(--destructive))]">{issue}</p>}
     </div>
   )
 }
 
-function FieldControl({ fieldKey, prop, value, onChange }: Omit<SchemaFieldProps, 'required'>) {
+function FieldControl({ fieldKey, prop, value, onChange, issue }: Omit<SchemaFieldProps, 'required'>) {
   const widget = prop['x-workflow-engine-widget']
+  const common = { id: `node-workbench-parameters.${fieldKey}`, 'aria-invalid': !!issue }
 
   if (widget === 'credential-select') {
     return (
@@ -156,6 +169,7 @@ function FieldControl({ fieldKey, prop, value, onChange }: Omit<SchemaFieldProps
   if (prop.enum && prop.enum.length > 0) {
     return (
       <Select
+        {...common}
         value={String(value ?? '')}
         onChange={(e) => onChange(coerceEnumValue(e.target.value, prop.enum!))}
         className="h-8 text-[12px]"
@@ -179,6 +193,7 @@ function FieldControl({ fieldKey, prop, value, onChange }: Omit<SchemaFieldProps
     case 'integer':
       return (
         <Input
+          {...common}
           type="number"
           value={typeof value === 'number' ? value : ''}
           onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))}
@@ -192,6 +207,7 @@ function FieldControl({ fieldKey, prop, value, onChange }: Omit<SchemaFieldProps
       if (looksMultiline(fieldKey, prop)) {
         return (
           <Textarea
+            {...common}
             value={typeof value === 'string' ? value : ''}
             onChange={(e) => onChange(e.target.value)}
             className="min-h-16 text-[12px]"
@@ -200,6 +216,7 @@ function FieldControl({ fieldKey, prop, value, onChange }: Omit<SchemaFieldProps
       }
       return (
         <Input
+          {...common}
           value={typeof value === 'string' ? value : ''}
           onChange={(e) => onChange(e.target.value)}
           className="h-8 text-[12px]"

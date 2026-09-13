@@ -150,6 +150,7 @@
     --input: 0 0% 100% / 10%;
     --ring: 175 100% 37%;                 /* same as --primary — RAGFlow reuses one color for accent + focus */
     --radius: 0.4375rem;                  /* 7px, RAGFlow's card radius (was 0.5rem/8px) */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --sidebar: 240 4% 8%;
     --sidebar-foreground: 240 2% 97%;
 

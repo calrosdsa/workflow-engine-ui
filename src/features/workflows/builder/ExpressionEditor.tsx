@@ -22,7 +22,7 @@ import { exprAssist } from './expr-autocomplete'
 import {
   EXPR_FUNCTIONS, FUNCTION_CATEGORIES, EXPR_ROOTS, CONTEXT_ENTRIES, CURRENT_USER_ENTRIES, type ExprFunction,
 } from './expr-meta'
-import { outputFieldPath, type NodeOutputSchema, type OutputField } from './node-output-schema'
+import { outputFieldPath, type NodeOutputSchema, type OutputField, type SchemaRoot } from './node-output-schema'
 import type { VariableDecl } from '../types'
 
 // ---------------------------------------------------------------------------
@@ -251,6 +251,20 @@ export function ExpressionEditor({ open, onClose, value, onChange, variables, no
       setDraft((d) => d + text)
     }
   }, [])
+
+  // The node workbench's Input viewer can insert an inspected field path
+  // directly into whichever expression editor is open. This stays a browser
+  // event rather than prop-drilling through every node form, and only an open
+  // editor reacts, so browsing context never mutates a hidden field.
+  useEffect(() => {
+    if (!open) return
+    const receivePath = (event: Event) => {
+      const expression = (event as CustomEvent<{ expression?: unknown }>).detail?.expression
+      if (typeof expression === 'string' && expression) insert(expression)
+    }
+    window.addEventListener('workflow-expression-insert', receivePath)
+    return () => window.removeEventListener('workflow-expression-insert', receivePath)
+  }, [open, insert])
 
   const filteredVars = variables.filter((v) => v.name.toLowerCase().includes(varSearch.toLowerCase()))
   const filteredFns = EXPR_FUNCTIONS.filter((f) => {
@@ -575,7 +589,7 @@ function OutputFieldRow({ field, path, nodeId, root, search, depth, onInsert }: 
   field: OutputField
   path: OutputField[]
   nodeId: string
-  root: 'node_outputs' | 'vars'
+  root: SchemaRoot
   search: string
   depth: number
   onInsert: (text: string) => void

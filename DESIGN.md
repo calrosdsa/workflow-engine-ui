@@ -43,6 +43,14 @@ matched to what each screen actually is:
   draw from (it has no visual authoring tool), so this macrostructure is
   preserved as-is; only its color tokens change. Variation knob: rail width
   (`w-96` unchanged).
+- **Workflow node configuration workbench:** a deliberate, canvas-editor
+  exception added for the node-configuration foundation. The compact inspector
+  remains rail-sized; the desktop Input / Parameters / Output workbench opens
+  as a right-anchored overlay, not a layout column, so it never compresses or
+  reorients the horizontal graph beneath it. Its panes may resize within that
+  overlay and collapse to an explicit single-pane switcher at constrained
+  widths. This is an interaction-density exception, not a new page family or
+  a license to widen other editor rails.
 - **List + detail pages** (Knowledge Base list/detail, App Design's tabbed
   sections): **Dashboard-Workbench** macrostructure, per the DNA's own
   system axis — a page-title header, then repeating

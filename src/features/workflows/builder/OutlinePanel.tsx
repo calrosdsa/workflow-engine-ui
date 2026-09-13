@@ -37,7 +37,7 @@ export function OutlinePanel({ open, onToggle }: OutlinePanelProps) {
   return (
     <aside
       className={cn(
-        'relative flex shrink-0 flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] transition-all duration-200',
+        'relative flex shrink-0 flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] transition-[width] duration-200',
         open ? 'w-64' : 'w-10',
       )}
     >

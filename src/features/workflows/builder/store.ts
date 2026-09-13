@@ -102,7 +102,7 @@ function makeNode(type: NodeType | (string & {}), position: { x: number; y: numb
   return {
     id, type, position,
     data: {
-      id, type,
+      id, type: type as NodeType,
       label:         defaultLabel(type),
       position:      { x: position.x, y: position.y },
       configuration: defaultConfig(type),
@@ -122,11 +122,11 @@ function makeEdge(source: string, target: string, sourceHandle = 'out', targetHa
 }
 
 // Builds an iterator + its paired Loop End node, linked iterator→loop_end, with
-// the iterator's config pointing at the loop_end id. The Loop End sits below so
-// body nodes can be dropped between them.
+// the iterator's config pointing at the loop_end id. The Loop End starts to the
+// right so an empty loop reads naturally in the horizontal canvas.
 function makeIteratorPair(position: { x: number; y: number }) {
   const iterator = makeNode('iterator', position)
-  const loopEnd = makeNode('loop_end', { x: position.x, y: position.y + 220 })
+  const loopEnd = makeNode('loop_end', { x: position.x + 280, y: position.y })
   iterator.data.configuration = {
     ...(iterator.data.configuration as Record<string, unknown>),
     loop_end_id: loopEnd.id,
@@ -211,7 +211,7 @@ const NODE_HEIGHT = 80
 function dagreLayout(
   nodes: Node[],
   edges: Edge[],
-  direction: 'TB' | 'LR' = 'TB',
+  direction: 'TB' | 'LR' = 'LR',
 ): Node[] {
   const g = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}))
   g.setGraph({ rankdir: direction, nodesep: 60, ranksep: 80 })
@@ -289,6 +289,9 @@ export interface BuilderState {
   varsPanelOpen:    boolean
   configPanelOpen:  boolean
   executionsPanelOpen: boolean
+  /** Personal canvas preference, deliberately not serialized into a workflow
+   * definition: a run overlay is inspection state, not workflow behavior. */
+  showCompletedSteps: boolean
   toggleVarsPanel:  () => void
   toggleConfigPanel:() => void
   toggleExecutionsPanel: () => void
@@ -296,6 +299,7 @@ export interface BuilderState {
    *  (e.g. a Run completing) where flipping an already-open panel closed
    *  would be wrong. */
   openExecutionsPanel: () => void
+  setShowCompletedSteps: (show: boolean) => void
   closeActiveSidebar: () => void
 
   // drag-to-reorder state
@@ -347,7 +351,7 @@ export interface BuilderState {
   duplicateNode:        (nodeId: string) => void
   deleteSelected:       () => void
   seedNew:              () => void
-  applyDagreLayout:     (direction?: 'TB' | 'LR') => void
+  applyDagreLayout:     (direction?: 'TB' | 'LR', markDirty?: boolean) => void
   loadDefinition:       (id: string, name: string, def: WorkflowDefinitionGraph) => void
   toDefinition:         () => WorkflowDefinitionGraph
   markSaved:            () => void
@@ -440,25 +444,27 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
     })
   },
 
-  // Variables starts as the active sidebar (matches today's "both open by
-  // default" starting impression without violating the new exclusivity rule).
-  activeSidebar:       'variables',
-  varsPanelOpen:       true,
+  // The canvas is the primary work surface. Utility panels remain exclusive,
+  // but start closed so a new workflow opens with a readable graph.
+  activeSidebar:       null,
+  varsPanelOpen:       false,
   configPanelOpen:     false,
   executionsPanelOpen: false,
+  showCompletedSteps:  true,
   toggleVarsPanel: () => set((s) => {
     const next = s.activeSidebar === 'variables' ? null : 'variables'
-    return { activeSidebar: next, varsPanelOpen: next === 'variables', configPanelOpen: next === 'config', executionsPanelOpen: next === 'executions' }
+    return { activeSidebar: next, varsPanelOpen: next === 'variables', configPanelOpen: false, executionsPanelOpen: false }
   }),
   toggleConfigPanel: () => set((s) => {
     const next = s.activeSidebar === 'config' ? null : 'config'
-    return { activeSidebar: next, varsPanelOpen: next === 'variables', configPanelOpen: next === 'config', executionsPanelOpen: next === 'executions' }
+    return { activeSidebar: next, varsPanelOpen: false, configPanelOpen: next === 'config', executionsPanelOpen: false }
   }),
   toggleExecutionsPanel: () => set((s) => {
     const next = s.activeSidebar === 'executions' ? null : 'executions'
-    return { activeSidebar: next, varsPanelOpen: next === 'variables', configPanelOpen: next === 'config', executionsPanelOpen: next === 'executions' }
+    return { activeSidebar: next, varsPanelOpen: false, configPanelOpen: false, executionsPanelOpen: next === 'executions' }
   }),
   openExecutionsPanel: () => set({ activeSidebar: 'executions', varsPanelOpen: false, configPanelOpen: false, executionsPanelOpen: true }),
+  setShowCompletedSteps: (show) => set({ showCompletedSteps: show }),
   closeActiveSidebar: () => set({ activeSidebar: null, varsPanelOpen: false, configPanelOpen: false, executionsPanelOpen: false }),
 
   draggingNodeId:      null,
@@ -529,13 +535,13 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
     }))
   },
 
-  // Add a node connected FROM an existing node's output handle (vertical layout: below).
+  // Add a node connected FROM an existing node's output handle (horizontal layout: right).
   addConnectedNode: (type, sourceNodeId, sourceHandle = 'out') => {
     pushHistory()
     const s = get()
     const sourceNode = s.nodes.find((n) => n.id === sourceNodeId)
     const position = sourceNode
-      ? { x: sourceNode.position.x, y: sourceNode.position.y + 160 }
+      ? { x: sourceNode.position.x + 280, y: sourceNode.position.y }
       : { x: 300, y: 200 }
 
     const linkEdge = (target: string): FlowEdge => ({
@@ -661,7 +667,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
     const newNode: FlowNode = {
       id, type, position,
       data: {
-        id, type,
+        id, type: type as NodeType,
         label:         defaultLabel(type),
         position:      { x: position.x, y: position.y },
         configuration: defaultConfig(type),
@@ -854,7 +860,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
   // Removes an entire parallel branch — the branchRootId subtree reachable
   // only through parentId's edge to it (siblings sharing further-downstream
   // nodes, e.g. after a merge, are left intact).
-  deleteBranch: (parentId, branchRootId) => {
+  deleteBranch: (_parentId, branchRootId) => {
     pushHistory()
     const s = get()
     const toRemove = new Set<string>([branchRootId])
@@ -960,7 +966,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
   // Variables/Executions if either was open. Deselecting (id === null, e.g.
   // an empty-canvas click) leaves activeSidebar untouched here; the canvas's
   // own onPaneClick additionally calls closeActiveSidebar for that case.
-  selectNode: (id) => set((s) => {
+  selectNode: (id) => set(() => {
     if (id === null) return { selectedNodeId: null }
     return { selectedNodeId: id, activeSidebar: 'config', varsPanelOpen: false, configPanelOpen: true, executionsPanelOpen: false }
   }),
@@ -1078,10 +1084,10 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
     })
   },
 
-  applyDagreLayout: (direction = 'TB') =>
+  applyDagreLayout: (direction = 'LR', markDirty = true) =>
     set((s) => ({
       nodes: dagreLayout(s.nodes, s.edges, direction) as FlowNode[],
-      isDirty: true,
+      isDirty: markDirty ? true : s.isDirty,
     })),
 
   loadDefinition: (id, name, def) => {

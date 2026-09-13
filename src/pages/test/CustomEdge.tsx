@@ -22,10 +22,10 @@ export function CustomEdge({
 }: EdgeProps<FlowEdge>) {
   const [hovered, setHovered] = useState(false)
 
-  // Vertical flow: source exits bottom, target enters top — rounded step path
+  // Horizontal flow: source exits right, target enters left — rounded step path
   const [edgePath, labelX, labelY] = getSmoothStepPath({
-    sourceX, sourceY, sourcePosition: Position.Bottom,
-    targetX, targetY, targetPosition: Position.Top,
+    sourceX, sourceY, sourcePosition: Position.Right,
+    targetX, targetY, targetPosition: Position.Left,
     borderRadius: 16,
   })
 
@@ -91,7 +91,7 @@ export function CustomEdge({
               }}
               className={[
                 'flex h-6 w-6 items-center justify-center rounded-full text-[hsl(var(--primary-foreground))] ring-4 ring-[hsl(var(--background))]',
-                'transition-all duration-150 hover:scale-110',
+        'transition-[opacity,transform] duration-150 hover:scale-110',
                 'bg-[hsl(var(--primary))] hover:brightness-110 shadow-md shadow-[hsl(var(--primary))]/30',
                 (hovered || selected) ? 'opacity-100 scale-100' : 'opacity-0 scale-50',
               ].join(' ')}

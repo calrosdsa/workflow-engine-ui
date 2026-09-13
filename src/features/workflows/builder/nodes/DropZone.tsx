@@ -32,7 +32,7 @@ export function DropZone({ position, active, onDragOver, onDrop, onDragLeave }: 
     <div
       className={cn(
         'absolute z-30 flex items-center justify-center',
-        'transition-all duration-150 nodrag nopan',
+        'transition-[opacity] duration-150 nodrag nopan',
         ZONE_GEOMETRY[position],
       )}
       onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onDragOver(e, position) }}
@@ -41,7 +41,7 @@ export function DropZone({ position, active, onDragOver, onDrop, onDragLeave }: 
     >
       <div
         className={cn(
-          'rounded-full transition-all duration-150',
+          'rounded-full transition-[background-color,box-shadow] duration-150',
           BAR_GEOMETRY[position],
           active
             ? 'bg-[hsl(var(--primary))] shadow-[0_0_0_3px_hsl(var(--primary)/0.25)]'
