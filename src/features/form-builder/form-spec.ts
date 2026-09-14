@@ -47,6 +47,27 @@ import { createSection, createElement, slugifyKey, RESERVED_FIELD_KEYS } from '.
 import { parseLayout } from './parse-layout'
 import type { BuilderFormState } from './serialize'
 import type { NumberFormat } from '@/features/forms/types'
+import { en } from '@/features/i18n/locales/en'
+
+// ---------------------------------------------------------------------------
+// Translation
+// ---------------------------------------------------------------------------
+
+/** Matches I18nContextValue['t'] (features/i18n/I18nProvider.tsx) structurally
+ *  — this module can't import the provider itself without pulling React in. */
+type Translate = (key: string, vars?: Record<string, string | number>) => string
+
+const EN_STRINGS: Record<string, string> = en
+
+// Mirrors I18nProvider.tsx's own {{var}} interpolation, so a message reads
+// the same whether resolved by a real locale-aware t() or this fallback —
+// used by callers with no locale context (heal.ts, tests).
+function interpolate(template: string, vars?: Record<string, string | number>): string {
+  if (!vars) return template
+  return template.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => String(vars[name] ?? ''))
+}
+
+const defaultTranslate: Translate = (key, vars) => interpolate(EN_STRINGS[key] ?? key, vars)
 
 // ---------------------------------------------------------------------------
 // The compact shape
@@ -220,6 +241,10 @@ export interface ParseFormSpecOptions {
    *  and gets a fresh column, orphaning the data in the old one. Omit when
    *  creating a form, where there is no physical identity to preserve. */
   existingSchema?: FormSchema
+  /** Locale-aware translator for error/warning messages — pass the real
+   *  t() from useTranslation(). Defaults to English, for callers with no
+   *  locale context (tests, heal.ts). */
+  t?: Translate
 }
 
 // ---------------------------------------------------------------------------
@@ -232,36 +257,38 @@ export interface ParseFormSpecOptions {
  *  Never throws: malformed input comes back as `{ ok: false, errors }` so a
  *  caller can render the problems next to the text the author typed. */
 export function parseFormSpec(raw: string | unknown, opts: ParseFormSpecOptions = {}): FormSpecParseResult {
+  const t = opts.t ?? defaultTranslate
   let obj: unknown = raw
   if (typeof raw === 'string') {
     const trimmed = raw.trim()
-    if (!trimmed) return { ok: false, errors: ['Paste a JSON form specification to import.'] }
+    if (!trimmed) return { ok: false, errors: [t('forms.import_json_dialog.spec_error.empty_input')] }
     try {
       obj = JSON.parse(trimmed)
     } catch (e) {
-      return { ok: false, errors: [`Not valid JSON: ${e instanceof Error ? e.message : String(e)}`] }
+      const message = e instanceof Error ? e.message : String(e)
+      return { ok: false, errors: [t('forms.import_json_dialog.spec_error.invalid_json', { message })] }
     }
   }
 
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
-    return { ok: false, errors: ['Expected a JSON object describing one form.'] }
+    return { ok: false, errors: [t('forms.import_json_dialog.spec_error.not_an_object')] }
   }
   const spec = obj as CompactFormSpec & NativeFormSpec
 
   const name = typeof spec.name === 'string' ? spec.name.trim() : ''
-  if (!name) return { ok: false, errors: ['"name" is required and must be a non-empty string.'] }
+  if (!name) return { ok: false, errors: [t('forms.import_json_dialog.spec_error.name_required')] }
 
   const warnings: string[] = []
   const native = hasUsableLayout(spec.layout)
   const schema = native
-    ? adoptNativeLayout(spec.layout, warnings)
-    : compactToSchema(spec, warnings)
+    ? adoptNativeLayout(spec.layout, warnings, t)
+    : compactToSchema(spec, warnings, t)
 
   if (schema.sections.length === 0) {
-    warnings.push('This spec has no fields — it will create an empty form you can build on.')
+    warnings.push(t('forms.import_json_dialog.spec_warning.no_fields'))
   }
 
-  if (opts.existingSchema) carryColumnsForward(schema, opts.existingSchema, warnings)
+  if (opts.existingSchema) carryColumnsForward(schema, opts.existingSchema, warnings, t)
 
   const slug = typeof spec.slug === 'string' && spec.slug.trim() ? slugifyKey(spec.slug) : slugifyKey(name)
 
@@ -287,7 +314,7 @@ function hasUsableLayout(layout: unknown): boolean {
   return Array.isArray(sections)
 }
 
-function adoptNativeLayout(layout: unknown, warnings: string[]): FormSchema {
+function adoptNativeLayout(layout: unknown, warnings: string[], t: Translate): FormSchema {
   const schema = parseLayout(layout)
   let repaired = 0
   for (const section of schema.sections) {
@@ -301,7 +328,12 @@ function adoptNativeLayout(layout: unknown, warnings: string[]): FormSchema {
     }
   }
   if (repaired > 0) {
-    warnings.push(`${repaired} section${repaired === 1 ? '' : 's'} had no columns and were given a single-column layout.`)
+    warnings.push(t(
+      repaired === 1
+        ? 'forms.import_json_dialog.spec_warning.sections_repaired_one'
+        : 'forms.import_json_dialog.spec_warning.sections_repaired_many',
+      { count: repaired },
+    ))
   }
   return schema
 }
@@ -310,7 +342,7 @@ function adoptNativeLayout(layout: unknown, warnings: string[]): FormSchema {
 // Compact → FormSchema
 // ---------------------------------------------------------------------------
 
-function compactToSchema(spec: CompactFormSpec, warnings: string[]): FormSchema {
+function compactToSchema(spec: CompactFormSpec, warnings: string[], t: Translate): FormSchema {
   const rawSections: FormSpecSection[] = Array.isArray(spec.sections) && spec.sections.length > 0
     ? spec.sections
     : Array.isArray(spec.fields) && spec.fields.length > 0
@@ -318,7 +350,7 @@ function compactToSchema(spec: CompactFormSpec, warnings: string[]): FormSchema 
       : []
 
   if (Array.isArray(spec.sections) && spec.sections.length > 0 && Array.isArray(spec.fields) && spec.fields.length > 0) {
-    warnings.push('Both "sections" and a top-level "fields" list were given — "sections" wins and the top-level list was ignored.')
+    warnings.push(t('forms.import_json_dialog.spec_warning.sections_fields_conflict'))
   }
 
   // Keys are deduplicated across the WHOLE form, not per section: the key is
@@ -329,7 +361,7 @@ function compactToSchema(spec: CompactFormSpec, warnings: string[]): FormSchema 
 
   rawSections.forEach((rawSection, sectionIndex) => {
     const fields = Array.isArray(rawSection.fields) ? rawSection.fields : []
-    const layout = resolveColumnLayout(rawSection.layout ?? rawSection.columns, warnings, sectionIndex)
+    const layout = resolveColumnLayout(rawSection.layout ?? rawSection.columns, warnings, sectionIndex, t)
     const section = createSection(
       typeof rawSection.title === 'string' && rawSection.title.trim() ? rawSection.title.trim() : 'Details',
       layout,
@@ -339,7 +371,8 @@ function compactToSchema(spec: CompactFormSpec, warnings: string[]): FormSchema 
     }
 
     fields.forEach((rawField, fieldIndex) => {
-      const el = specFieldToElement(rawField, usedKeys, warnings, `section ${sectionIndex + 1}, field ${fieldIndex + 1}`)
+      const where = t('forms.import_json_dialog.spec_warning.field_location', { section: sectionIndex + 1, field: fieldIndex + 1 })
+      const el = specFieldToElement(rawField, usedKeys, warnings, where, t)
       if (!el) return
       // Deal fields across the section's columns in order, the same way
       // relayoutSection does when a layout changes on the canvas.
@@ -352,13 +385,13 @@ function compactToSchema(spec: CompactFormSpec, warnings: string[]): FormSchema 
   return { version: 1, sections, settings: emptyFormSettings() }
 }
 
-function resolveColumnLayout(raw: unknown, warnings: string[], sectionIndex: number): ColumnLayout {
+function resolveColumnLayout(raw: unknown, warnings: string[], sectionIndex: number, t: Translate): ColumnLayout {
   if (raw === undefined || raw === null) return '1'
   const asString = String(raw)
   if (asString in COLUMN_LAYOUTS) return asString as ColumnLayout
   const n = Number(raw)
   if (Number.isInteger(n) && n >= 1 && n <= 4) return String(n) as ColumnLayout
-  warnings.push(`Section ${sectionIndex + 1}: unknown layout "${asString}" — used a single column instead.`)
+  warnings.push(t('forms.import_json_dialog.spec_warning.unknown_layout', { section: sectionIndex + 1, layout: asString }))
   return '1'
 }
 
@@ -371,9 +404,10 @@ export function specFieldToElement(
   usedKeys: Set<string>,
   warnings: string[],
   where: string,
+  t: Translate = defaultTranslate,
 ): FormElement | null {
   if (!raw || typeof raw !== 'object') {
-    warnings.push(`${where}: not an object — skipped.`)
+    warnings.push(t('forms.import_json_dialog.spec_warning.field_not_an_object', { where }))
     return null
   }
 
@@ -381,8 +415,8 @@ export function specFieldToElement(
   if (!component) {
     warnings.push(
       raw.type
-        ? `${where}: unknown type "${raw.type}" — skipped. Accepted types: ${acceptedTypeNames().join(', ')}.`
-        : `${where}: no "type" given — skipped.`,
+        ? t('forms.import_json_dialog.spec_warning.unknown_type', { where, type: raw.type, types: acceptedTypeNames().join(', ') })
+        : t('forms.import_json_dialog.spec_warning.type_missing', { where }),
     )
     return null
   }
@@ -430,11 +464,11 @@ export function specFieldToElement(
   if (Array.isArray(raw.options) && raw.options.length > 0) {
     el.options = raw.options.map(normalizeOption).filter((o): o is SelectOption => o !== null)
     if (el.options.length === 0) {
-      warnings.push(`${where} ("${label}"): none of the options were usable — kept the defaults.`)
+      warnings.push(t('forms.import_json_dialog.spec_warning.options_unusable', { where, label }))
       el.options = createElement(component).options
     }
   } else if (CHOICE_COMPONENTS.has(component)) {
-    warnings.push(`${where} ("${label}"): a ${component} with no "options" — placeholder options were used.`)
+    warnings.push(t('forms.import_json_dialog.spec_warning.options_missing', { where, label, component }))
   }
 
   // Form reference target
@@ -443,7 +477,7 @@ export function specFieldToElement(
     if (formRef) {
       el.formRef = formRef
     } else {
-      warnings.push(`${where} ("${label}"): a reference field with no "formRef" — pick its target form in the builder before saving.`)
+      warnings.push(t('forms.import_json_dialog.spec_warning.form_ref_missing', { where, label }))
     }
   }
 
@@ -498,7 +532,7 @@ function uniqueKey(preferred: string, used: Set<string>, explicit: boolean): str
  *  already holds its data. A field whose key changed (or is new) has no
  *  match, stays column-less, and the backend assigns it a fresh column on
  *  save — the same thing that happens when you rename a key on the canvas. */
-export function carryColumnsForward(next: FormSchema, current: FormSchema, warnings: string[]): void {
+export function carryColumnsForward(next: FormSchema, current: FormSchema, warnings: string[], t: Translate = defaultTranslate): void {
   const columnByKey = new Map<string, string>()
   for (const el of allElements(current)) {
     if (el.column) columnByKey.set(el.key, el.column)
@@ -516,14 +550,17 @@ export function carryColumnsForward(next: FormSchema, current: FormSchema, warni
 
   const dropped = columnByKey.size - matched
   if (dropped > 0) {
-    warnings.push(
-      `${dropped} existing field${dropped === 1 ? '' : 's'} ${dropped === 1 ? 'is' : 'are'} missing from this spec — ` +
-      `saving will drop ${dropped === 1 ? 'its column' : 'their columns'} and the data in ${dropped === 1 ? 'it' : 'them'}.`,
-    )
+    warnings.push(t(
+      dropped === 1
+        ? 'forms.import_json_dialog.spec_warning.columns_dropped_one'
+        : 'forms.import_json_dialog.spec_warning.columns_dropped_many',
+      { count: dropped },
+    ))
   }
 }
 
 function* allElements(schema: FormSchema): Generator<FormElement> {
+
   for (const section of schema.sections ?? []) {
     for (const column of section.columns ?? []) {
       for (const el of column.elements ?? []) yield el

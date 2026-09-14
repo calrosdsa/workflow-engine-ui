@@ -7,6 +7,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { parseFormSpec, acceptedTypeNames } from '@/features/form-builder/form-spec'
 import { stageNewForm } from '@/features/form-builder/store'
 
@@ -57,13 +58,15 @@ const EXAMPLE_SPEC = `{
  *  warnings) already lives in FormBuilderPage — duplicating any of it here
  *  would mean two implementations of "save a new form" drifting apart. */
 export function ImportFormJsonDialog({ appId, open, onOpenChange }: ImportFormJsonDialogProps) {
+  const t = useTranslation()
   const navigate = useNavigate()
   const [raw, setRaw] = useState('')
 
   // Parsed on every keystroke: the spec is small, the parser never throws,
   // and live feedback is the whole point — an author pasting agent output
   // wants to see what was and wasn't understood before committing.
-  const result = useMemo(() => (raw.trim() ? parseFormSpec(raw) : null), [raw])
+  const result = useMemo(() => (raw.trim() ? parseFormSpec(raw, { t }) : null), [raw, t])
+
 
   const preview = useMemo(() => {
     if (!result?.ok) return null
@@ -96,11 +99,9 @@ export function ImportFormJsonDialog({ appId, open, onOpenChange }: ImportFormJs
     <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : close())}>
       <DialogContent className="flex max-h-[85vh] w-full max-w-2xl flex-col">
         <DialogHeader>
-          <DialogTitle>New form from a JSON specification</DialogTitle>
+          <DialogTitle>{t('forms.import_json_dialog.title')}</DialogTitle>
           <DialogDescription>
-            Paste a form definition. Two shapes are accepted: a compact spec (a name and a list of fields)
-            or the full native definition exported from an existing form. The form opens in the builder for
-            review — nothing is created until you save it there.
+            {t('forms.import_json_dialog.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -116,11 +117,10 @@ export function ImportFormJsonDialog({ appId, open, onOpenChange }: ImportFormJs
           {!raw.trim() && (
             <div className="flex items-center justify-between rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30 px-3 py-2">
               <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                Field types accept builder names and the backend&apos;s own names — {acceptedTypeNames().length} in
-                all, e.g. text, longtext, number, date, select, checkbox, reference.
+                {t('forms.import_json_dialog.type_hint', { count: acceptedTypeNames().length })}
               </p>
               <Button size="sm" variant="ghost" className="shrink-0" onClick={() => setRaw(EXAMPLE_SPEC)}>
-                Insert example
+                {t('forms.import_json_dialog.insert_example')}
               </Button>
             </div>
           )}
@@ -128,7 +128,7 @@ export function ImportFormJsonDialog({ appId, open, onOpenChange }: ImportFormJs
           {result && !result.ok && (
             <div className="rounded-md border border-[hsl(var(--destructive))]/40 bg-[hsl(var(--destructive))]/5 px-3 py-2.5">
               <p className="flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--destructive))]">
-                <FileWarning size={13} /> This spec can&apos;t be imported yet
+                <FileWarning size={13} /> {t('forms.import_json_dialog.cant_import_yet')}
               </p>
               <ul className="mt-1 list-inside list-disc space-y-0.5 text-xs text-[hsl(var(--destructive))]">
                 {result.errors.map((e) => <li key={e}>{e}</li>)}
@@ -144,13 +144,13 @@ export function ImportFormJsonDialog({ appId, open, onOpenChange }: ImportFormJs
                   {preview.name}
                 </p>
                 <Badge variant="secondary" className="shrink-0">
-                  {preview.mode === 'native' ? 'Native definition' : 'Compact spec'}
+                  {preview.mode === 'native' ? t('forms.import_json_dialog.native_definition') : t('forms.import_json_dialog.compact_spec')}
                 </Badge>
               </div>
               <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
                 <span className="font-mono">{preview.slug}</span>
-                {' · '}{preview.sectionCount} section{preview.sectionCount === 1 ? '' : 's'}
-                {' · '}{preview.fields.length} field{preview.fields.length === 1 ? '' : 's'}
+                {' · '}{t(preview.sectionCount === 1 ? 'forms.import_json_dialog.section_count_one' : 'forms.import_json_dialog.section_count_many', { count: preview.sectionCount })}
+                {' · '}{t(preview.fields.length === 1 ? 'forms.import_json_dialog.field_count_one' : 'forms.import_json_dialog.field_count_many', { count: preview.fields.length })}
               </p>
               {preview.fields.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
@@ -172,7 +172,7 @@ export function ImportFormJsonDialog({ appId, open, onOpenChange }: ImportFormJs
           {result?.ok && result.warnings.length > 0 && (
             <div className="rounded-md border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/5 px-3 py-2.5">
               <p className="flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--warning))]">
-                <AlertTriangle size={13} /> Imported with changes
+                <AlertTriangle size={13} /> {t('forms.import_json_dialog.imported_with_changes')}
               </p>
               <ul className="mt-1 list-inside list-disc space-y-0.5 text-xs text-[hsl(var(--muted-foreground))]">
                 {result.warnings.map((wmsg) => <li key={wmsg}>{wmsg}</li>)}
@@ -182,9 +182,9 @@ export function ImportFormJsonDialog({ appId, open, onOpenChange }: ImportFormJs
         </div>
 
         <DialogFooter className="mt-2">
-          <Button variant="ghost" onClick={close}>Cancel</Button>
+          <Button variant="ghost" onClick={close}>{t('common.cancel')}</Button>
           <Button onClick={openInBuilder} disabled={!result?.ok}>
-            <Braces size={15} />Open in builder
+            <Braces size={15} />{t('forms.import_json_dialog.open_in_builder')}
           </Button>
         </DialogFooter>
       </DialogContent>
