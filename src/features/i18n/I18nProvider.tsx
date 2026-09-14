@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { BASE_DICTIONARIES, BASE_LOCALES } from './dictionaries'
 import type { TranslationsConfig } from './types'
 
-const LOCALE_STORAGE_KEY = 'app-locale'
+const DEFAULT_LOCALE_STORAGE_KEY = 'app-locale'
 
 export interface I18nContextValue {
   locale: string
@@ -36,17 +36,42 @@ export function useTranslation(): I18nContextValue['t'] {
   return useI18n().t
 }
 
-function readStoredLocale(): string | null {
+// Base-English-only fallback for useTranslationSafe, module-scope (not a
+// closure inside the hook) so the returned `t` has a stable identity
+// across renders — same as any other hook return value a caller might drop
+// into a dependency array. No app overrides, no locale: a component
+// rendering with no I18nContext ancestor has no app in scope to resolve
+// either from.
+const FALLBACK_T: I18nContextValue['t'] = (key, vars) => {
+  const raw = BASE_DICTIONARIES.en[key] ?? key
+  if (!vars) return raw
+  return raw.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => String(vars[name] ?? ''))
+}
+
+/** Like useTranslation(), but safe to call with no I18nProvider ancestor —
+ *  falls back to FALLBACK_T instead of throwing. Reads the context via
+ *  useContext directly rather than useI18n(), since useI18n() is exactly
+ *  the throw this exists to avoid. For components that can render before
+ *  I18nProvider mounts, or never inside it at all — see runtime-router.tsx's
+ *  runtimeCatchAllRoute and runtimeRouter's defaultNotFoundComponent, both
+ *  of which fire under runtime-main.tsx's bare RouterProvider, before
+ *  RuntimeAppRouteComponent (the thing that actually renders I18nProvider)
+ *  ever mounts. */
+export function useTranslationSafe(): I18nContextValue['t'] {
+  return useContext(I18nContext)?.t ?? FALLBACK_T
+}
+
+function readStoredLocale(storageKey: string): string | null {
   if (typeof window === 'undefined') return null
   try {
-    return window.localStorage.getItem(LOCALE_STORAGE_KEY)
+    return window.localStorage.getItem(storageKey)
   } catch {
     return null
   }
 }
 
-function resolveInitialLocale(supportedLocales: string[], defaultLocale: string): string {
-  const stored = readStoredLocale()
+function resolveInitialLocale(supportedLocales: string[], defaultLocale: string, storageKey: string): string {
+  const stored = readStoredLocale(storageKey)
   if (stored && supportedLocales.includes(stored)) return stored
   if (typeof navigator !== 'undefined') {
     const browserLocale = navigator.language?.slice(0, 2)
@@ -67,6 +92,9 @@ interface I18nProviderProps {
    *  English default to fall back to, which is what makes the builder-entry
    *  case work at all. */
   overrides?: TranslationsConfig
+  /** Storage is scoped so the builder's system language never changes the
+   *  language preference of a published app runtime, and vice versa. */
+  storageKey?: string
   children: ReactNode
 }
 
@@ -77,13 +105,15 @@ interface I18nProviderProps {
 // English -> the key itself. Locale resolution: explicit stored choice ->
 // app default_locale -> browser language (if the app supports it) -> "en".
 // Never blank, never throws.
-export function I18nProvider({ overrides, children }: I18nProviderProps) {
+export function I18nProvider({ overrides, storageKey = DEFAULT_LOCALE_STORAGE_KEY, children }: I18nProviderProps) {
   const supportedLocales = overrides?.supported_locales?.length ? overrides.supported_locales : BASE_LOCALES
   const defaultLocale = overrides?.default_locale && supportedLocales.includes(overrides.default_locale)
     ? overrides.default_locale
     : 'en'
 
-  const [locale, setLocaleState] = useState<string>(() => resolveInitialLocale(supportedLocales, defaultLocale))
+  const [locale, setLocaleState] = useState<string>(() => {
+    return resolveInitialLocale(supportedLocales, defaultLocale, storageKey)
+  })
 
   // supportedLocales/defaultLocale can change under an already-mounted
   // provider (e.g. the runtime router re-resolving a different app's
@@ -96,14 +126,19 @@ export function I18nProvider({ overrides, children }: I18nProviderProps) {
   }, [supportedKey, defaultLocale])
 
   const setLocale = (next: string) => {
+    if (!supportedLocales.includes(next)) return
     setLocaleState(next)
     try {
-      window.localStorage.setItem(LOCALE_STORAGE_KEY, next)
+      window.localStorage.setItem(storageKey, next)
     } catch {
       // Private-browsing/storage-blocked contexts can throw — worst case
       // the choice just doesn't persist across loads.
     }
   }
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') document.documentElement.lang = locale
+  }, [locale])
 
   const t = useMemo(() => {
     const appStrings = overrides?.strings ?? {}
