@@ -1,0 +1,19 @@
+{
+  "scannedAt": "2026-09-11",
+  "scope": "component",
+  "fontStack": "InterVariable with system fallbacks, as defined by DESIGN.md",
+  "palette": "Existing HSL semantic variables from src/index.css",
+  "motion": "CSS transitions using the existing workflow easing tokens",
+  "spacing": "Existing Tailwind scale and --workflow-* tokens",
+  "framework": "React 19 with Vite",
+  "files": {
+    "packageJson": "package.json",
+    "globalCss": "src/index.css",
+    "designSystem": "DESIGN.md"
+  },
+  "preserved": [
+    "The current workflow-canvas composition and React Flow behaviors",
+    "Existing semantic color roles and dark-theme visual system",
+    "Current node body configuration renderers and execution data"
+  ]
+}
