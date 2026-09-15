@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { WidgetRendererProps } from '../../widget-contract'
 import type { CustomHtmlWidgetConfig } from './schema'
 import { sanitizeInlineHtml } from './sanitize'
@@ -25,8 +26,9 @@ import { sanitizeInlineHtml } from './sanitize'
 // codes (YouTube, analytics snippets) that need <script>/<iframe>, which
 //'inline' mode's DOMPurify allowlist deliberately strips.
 export function CustomHtmlRenderer({ config }: WidgetRendererProps<CustomHtmlWidgetConfig>) {
+  const t = useTranslation()
   if (!config.html.trim()) {
-    return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No HTML added yet.</div>
+    return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('builder.dashboard_custom-html.empty')}</div>
   }
 
   if (config.mode === 'sandbox') {
@@ -34,7 +36,7 @@ export function CustomHtmlRenderer({ config }: WidgetRendererProps<CustomHtmlWid
       <iframe
         srcDoc={config.html}
         sandbox="allow-scripts allow-popups"
-        title="Custom HTML"
+        title={t('builder.dashboard.custom-html.label')}
         className="h-full w-full border-0"
       />
     )

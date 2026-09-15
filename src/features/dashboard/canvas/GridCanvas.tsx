@@ -19,6 +19,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { LayoutGrid, Plus } from 'lucide-react'
 import { useDroppable } from '@dnd-kit/core'
 import { Button } from '@/components/ui/button'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useDashboardStore } from '../store'
 import { WidgetTile } from './WidgetTile'
 
@@ -185,17 +186,18 @@ export function GridCanvas({ clientId, appId, onAddFirstWidget }: GridCanvasProp
 }
 
 function EmptyCanvas({ onAdd }: { onAdd: () => void }) {
+  const t = useTranslation()
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[hsl(var(--border))] bg-[hsl(var(--card))]/60 py-24 text-center">
       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--muted))]">
         <LayoutGrid size={26} className="text-[hsl(var(--muted-foreground))]/60" />
       </div>
       <div>
-        <p className="text-sm font-medium text-[hsl(var(--foreground))]/80">Start building your dashboard</p>
-        <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">Drag a widget from the left, or add one to get started.</p>
+        <p className="text-sm font-medium text-[hsl(var(--foreground))]/80">{t('builder.dashboard.empty_title')}</p>
+        <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{t('builder.dashboard.empty_hint')}</p>
       </div>
       <Button onClick={(e) => { e.stopPropagation(); onAdd() }} className="mt-1 gap-2">
-        <Plus size={15} /> Add Widget
+        <Plus size={15} /> {t('builder.dashboard.add_widget')}
       </Button>
     </div>
   )

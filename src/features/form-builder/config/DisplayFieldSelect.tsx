@@ -7,6 +7,7 @@ import { useMemo } from 'react'
 import {
   SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select-menu'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import type { FieldType } from '@/features/forms/types'
 
@@ -28,6 +29,7 @@ interface DisplayFieldSelectProps {
 }
 
 export function DisplayFieldSelect({ formId, value, onChange }: DisplayFieldSelectProps) {
+  const t = useTranslation()
   const { data: targetForm, isLoading } = useFormDef(formId ?? '')
 
   const options = useMemo(
@@ -38,7 +40,7 @@ export function DisplayFieldSelect({ formId, value, onChange }: DisplayFieldSele
   if (!formId) {
     return (
       <SelectMenu disabled>
-        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select a referenced form first" /></SelectTrigger>
+        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('form_config.select_referenced_form_first')} /></SelectTrigger>
         <SelectContent />
       </SelectMenu>
     )
@@ -47,7 +49,7 @@ export function DisplayFieldSelect({ formId, value, onChange }: DisplayFieldSele
   if (!isLoading && options.length === 0) {
     return (
       <SelectMenu disabled>
-        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="No suitable fields on this form" /></SelectTrigger>
+        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('form_config.no_suitable_fields')} /></SelectTrigger>
         <SelectContent />
       </SelectMenu>
     )
@@ -60,10 +62,10 @@ export function DisplayFieldSelect({ formId, value, onChange }: DisplayFieldSele
       disabled={isLoading}
     >
       <SelectTrigger className="h-8 text-sm">
-        <SelectValue placeholder={isLoading ? 'Loading fields…' : 'Select a field'} />
+        <SelectValue placeholder={isLoading ? t('form_config.loading_fields') : t('form_config.select_a_field')} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={AUTO} className="text-xs">Auto (name/label/id)</SelectItem>
+        <SelectItem value={AUTO} className="text-xs">{t('form_config.auto_name_label_id')}</SelectItem>
         {options.map((f) => (
           <SelectItem key={f.name} value={f.name} className="text-xs">{f.label || f.name}</SelectItem>
         ))}

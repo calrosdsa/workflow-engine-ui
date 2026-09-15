@@ -13,6 +13,7 @@ import { render, cleanup, screen, waitFor, fireEvent } from '@testing-library/re
 import { FormRenderer } from './FormRenderer'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
 import { useAuthStore } from '@/stores/auth'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import type { FieldDef } from '@/features/forms/types'
 import type { AdvancedSetting, FormSchema } from '@/features/form-builder/schema'
 
@@ -70,11 +71,13 @@ beforeEach(() => signInAs('role-sales'))
 describe('hidden_in_ui', () => {
   it('hides the field from a viewer in the rule audience', async () => {
     render(
-      <FormRenderer
-        schema={schemaWithRules('discount_reason', [hideForSales])}
-        fields={fields}
-        onSubmit={() => {}}
-      />,
+      <I18nProvider>
+        <FormRenderer
+          schema={schemaWithRules('discount_reason', [hideForSales])}
+          fields={fields}
+          onSubmit={() => {}}
+        />
+      </I18nProvider>,
     )
 
     // The unrestricted fields still render...
@@ -87,11 +90,13 @@ describe('hidden_in_ui', () => {
   it('leaves the field alone for a viewer outside the audience', () => {
     signInAs('role-manager')
     render(
-      <FormRenderer
-        schema={schemaWithRules('discount_reason', [hideForSales])}
-        fields={fields}
-        onSubmit={() => {}}
-      />,
+      <I18nProvider>
+        <FormRenderer
+          schema={schemaWithRules('discount_reason', [hideForSales])}
+          fields={fields}
+          onSubmit={() => {}}
+        />
+      </I18nProvider>,
     )
     expect(screen.getByText('Discount Reason')).toBeTruthy()
   })
@@ -114,7 +119,9 @@ describe('hidden_in_ui', () => {
 
     const onSubmit = vi.fn()
     const { container } = render(
-      <FormRenderer schema={requiredAndHidden} fields={fields} onSubmit={onSubmit} />,
+      <I18nProvider>
+        <FormRenderer schema={requiredAndHidden} fields={fields} onSubmit={onSubmit} />
+      </I18nProvider>,
     )
 
     // Let the hidden set settle into the validator before submitting.
@@ -145,13 +152,13 @@ describe('show_exception', () => {
     const schema = schemaWithRules('discount_reason', [hideAll, except])
 
     // Sales: hidden by the broad rule, no exception applies.
-    render(<FormRenderer schema={schema} fields={fields} onSubmit={() => {}} />)
+    render(<I18nProvider><FormRenderer schema={schema} fields={fields} onSubmit={() => {}} /></I18nProvider>)
     await waitFor(() => expect(screen.queryByText('Discount Reason')).toBeNull())
     cleanup()
 
     // Manager: the exception puts it back.
     signInAs('role-manager')
-    render(<FormRenderer schema={schema} fields={fields} onSubmit={() => {}} />)
+    render(<I18nProvider><FormRenderer schema={schema} fields={fields} onSubmit={() => {}} /></I18nProvider>)
     expect(screen.getByText('Discount Reason')).toBeTruthy()
   })
 })
@@ -172,11 +179,13 @@ describe('conditional rules over live values', () => {
     }
 
     render(
-      <FormRenderer
-        schema={schemaWithRules('discount_reason', [hideWhenLarge])}
-        fields={fields}
-        onSubmit={() => {}}
-      />,
+      <I18nProvider>
+        <FormRenderer
+          schema={schemaWithRules('discount_reason', [hideWhenLarge])}
+          fields={fields}
+          onSubmit={() => {}}
+        />
+      </I18nProvider>,
     )
 
     // Condition false at rest — the field is present.

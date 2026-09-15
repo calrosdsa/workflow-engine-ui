@@ -1,4 +1,5 @@
 import { ChevronRight, Home } from 'lucide-react'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { RuntimeLink } from './RuntimeLink'
 import type { Menu } from '@/features/menus/types'
 import type { MenuSnapshotItem } from './types'
@@ -12,9 +13,10 @@ interface RuntimeBreadcrumbsProps {
 }
 
 export function RuntimeBreadcrumbs({ appName, ancestors, current, clientId, appId }: RuntimeBreadcrumbsProps) {
+  const t = useTranslation()
   return (
     <nav
-      aria-label="Breadcrumb"
+      aria-label={t('runtime.breadcrumbs.aria_label')}
       className="flex min-w-0 items-center gap-1.5 overflow-hidden text-xs"
       style={{ color: 'hsl(var(--muted-foreground))' }}
     >

@@ -4,6 +4,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { registerUiWorkflowNode, type UiWorkflowNodeConfigPanelProps } from '../node-registry'
 import { Field } from './panel-kit'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { ALL_PLATFORMS } from '../types'
 import type { DialogKind, DialogOption } from '../ask-store'
 
@@ -70,32 +71,33 @@ export function parseShowDialogConfig(raw: unknown): ShowDialogStepConfig {
 }
 
 function ShowDialogPanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<ShowDialogStepConfig>) {
+  const t = useTranslation()
   const setOption = (i: number, patch: Partial<DialogOption>) =>
     onChange({ ...config, options: (config.options ?? []).map((o, idx) => (idx === i ? { ...o, ...patch } : o)) })
 
   return (
     <div className="space-y-2">
-      <Field label="Ask for">
+      <Field label={t('ui_workflows.panel.show_dialog.ask_for_label')}>
         <SelectMenu value={config.kind} onValueChange={(v) => onChange({ ...config, kind: v as DialogKind })}>
           <SelectTrigger className="h-8 text-[12px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="confirm" className="text-[12px]">A yes / no confirmation</SelectItem>
-            <SelectItem value="prompt" className="text-[12px]">Some text</SelectItem>
-            <SelectItem value="choose" className="text-[12px]">A choice from a list</SelectItem>
+            <SelectItem value="confirm" className="text-[12px]">{t('ui_workflows.panel.show_dialog.kind_confirm')}</SelectItem>
+            <SelectItem value="prompt" className="text-[12px]">{t('ui_workflows.panel.show_dialog.kind_prompt')}</SelectItem>
+            <SelectItem value="choose" className="text-[12px]">{t('ui_workflows.panel.show_dialog.kind_choose')}</SelectItem>
           </SelectContent>
         </SelectMenu>
       </Field>
 
-      <Field label="Title">
+      <Field label={t('ui_workflows.panel.show_dialog.title_label')}>
         <Input
           value={config.title}
           onChange={(e) => onChange({ ...config, title: e.target.value })}
-          placeholder="Delete this record?"
+          placeholder={t('ui_workflows.panel.show_dialog.title_placeholder')}
           className="h-8 text-[12px]"
         />
       </Field>
 
-      <Field label="Message">
+      <Field label={t('ui_workflows.panel.message_label')}>
         <Textarea
           value={config.message ?? ''}
           onChange={(e) => onChange({ ...config, message: e.target.value })}
@@ -105,7 +107,7 @@ function ShowDialogPanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<Sh
       </Field>
 
       {config.kind === 'prompt' && (
-        <Field label="Placeholder">
+        <Field label={t('ui_workflows.panel.show_dialog.placeholder_field_label')}>
           <Input
             value={config.placeholder ?? ''}
             onChange={(e) => onChange({ ...config, placeholder: e.target.value })}
@@ -115,20 +117,20 @@ function ShowDialogPanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<Sh
       )}
 
       {config.kind === 'choose' && (
-        <Field label="Options">
+        <Field label={t('ui_workflows.panel.show_dialog.options_label')}>
           <div className="space-y-1">
             {(config.options ?? []).map((o, i) => (
               <div key={i} className="flex gap-1.5">
                 <Input
                   value={o.label}
                   onChange={(e) => setOption(i, { label: e.target.value })}
-                  placeholder="Label"
+                  placeholder={t('ui_workflows.panel.show_dialog.option_label_placeholder')}
                   className="h-8 flex-1 text-[11px]"
                 />
                 <Input
                   value={o.value}
                   onChange={(e) => setOption(i, { value: e.target.value })}
-                  placeholder="value"
+                  placeholder={t('ui_workflows.panel.show_dialog.option_value_placeholder')}
                   className="h-8 w-24 font-mono text-[11px]"
                 />
               </div>
@@ -138,33 +140,33 @@ function ShowDialogPanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<Sh
               className="text-[11px] text-[hsl(var(--primary))]"
               onClick={() => onChange({ ...config, options: [...(config.options ?? []), { value: '', label: '' }] })}
             >
-              + Add option
+              {t('ui_workflows.panel.show_dialog.add_option')}
             </button>
           </div>
         </Field>
       )}
 
       <Field
-        label="Store answer in"
-        hint="Also sets “<name>_confirmed” — true unless they dismissed."
+        label={t('ui_workflows.panel.show_dialog.store_answer_label')}
+        hint={t('ui_workflows.panel.show_dialog.store_answer_hint')}
       >
         <Input
           value={config.output_variable ?? ''}
           onChange={(e) => onChange({ ...config, output_variable: e.target.value })}
-          placeholder="answer"
+          placeholder={t('ui_workflows.panel.show_dialog.answer_placeholder')}
           className="h-8 font-mono text-[11px]"
         />
       </Field>
 
-      <Field label="If they cancel">
+      <Field label={t('ui_workflows.panel.show_dialog.if_cancel_label')}>
         <SelectMenu
           value={config.on_cancel}
           onValueChange={(v) => onChange({ ...config, on_cancel: v as ShowDialogStepConfig['on_cancel'] })}
         >
           <SelectTrigger className="h-8 text-[12px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="stop" className="text-[12px]">Stop here</SelectItem>
-            <SelectItem value="continue" className="text-[12px]">Carry on to the next step</SelectItem>
+            <SelectItem value="stop" className="text-[12px]">{t('ui_workflows.panel.on_cancel.stop')}</SelectItem>
+            <SelectItem value="continue" className="text-[12px]">{t('ui_workflows.panel.on_cancel.continue')}</SelectItem>
           </SelectContent>
         </SelectMenu>
       </Field>

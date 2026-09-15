@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 import { useAllProviderModels } from './hooks'
 import type { Capability, ProviderModelWithInstance } from './types'
 import { selectableModels } from './model-filter'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 interface ModelPickerProps {
   value?: string
@@ -34,6 +35,7 @@ export function ModelPicker({
   isOptionAllowed,
   emptyLabel = 'No models found. Add a provider in Model Providers.',
 }: ModelPickerProps) {
+  const t = useTranslation()
   const { data: allModels, isLoading } = useAllProviderModels()
   const [open, setOpen] = useState(false)
 
@@ -61,12 +63,12 @@ export function ModelPicker({
             <Sparkles size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
             <span className="truncate">
               {isLoading && !selected
-                ? 'Loading models…'
+                ? t('model_providers.loading_models')
                 : selected
                   ? `${selected.instance_name} · ${selected.model}`
                   : isBroken
-                    ? 'Unavailable model'
-                    : `Select a ${capability} model…`}
+                    ? t('model_providers.unavailable')
+                    : t('model_providers.select_capability', { capability: capability === 'llm' ? t('model_providers.llm') : t('model_providers.embedding') })}
             </span>
           </span>
           <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
@@ -74,11 +76,11 @@ export function ModelPicker({
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command filter={(itemValue, search) => (itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0)}>
-          <CommandInput placeholder="Search models…" />
+          <CommandInput placeholder={t('model_providers.search_models')} />
           <CommandList>
             {isLoading ? (
               <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
-                <Loader2 size={13} className="animate-spin" /> Loading models…
+                <Loader2 size={13} className="animate-spin" /> {t('model_providers.loading_models')}
               </div>
             ) : (
               <>

@@ -11,6 +11,7 @@ import { usePermission } from '@/features/auth/permissions'
 import { extractApiError } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { ReportDefinitionRow } from '@/features/reports/types'
 
 interface ReportsSectionProps {
@@ -24,6 +25,7 @@ interface ReportsSectionProps {
 // Closes 3.3 §J's own named gap: before this, a report was reachable only
 // by pasting its raw UUID into /applications/$appId/design/reports/$reportId.
 export function ReportsSection({ appId }: ReportsSectionProps) {
+  const t = useTranslation()
   const { data: reports, isLoading } = useReports()
   const createMutation = useCreateReport()
   const deleteMutation = useDeleteReport()
@@ -37,6 +39,9 @@ export function ReportsSection({ appId }: ReportsSectionProps) {
   const handleCreate = async () => {
     setCreating(true)
     try {
+      // Not translated: this is the persisted row.name/definition.name saved to
+      // the database, not display-time UI chrome — same class of exclusion as
+      // argument.label (see ReportArgumentsDialog.tsx).
       const row = await createMutation.mutateAsync({ name: 'Untitled Report', definition: emptyReportDefinition('Untitled Report') })
       navigate({ to: '/applications/$appId/design/reports/$reportId', params: { appId, reportId: row.id } })
     } finally {
@@ -45,7 +50,7 @@ export function ReportsSection({ appId }: ReportsSectionProps) {
   }
 
   const handleDelete = (id: string) => {
-    if (!window.confirm('Delete this report? This cannot be undone.')) return
+    if (!window.confirm(t('reports.section.delete_confirm'))) return
     deleteMutation.mutate(id)
   }
 
@@ -55,13 +60,15 @@ export function ReportsSection({ appId }: ReportsSectionProps) {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Reports</h1>
-          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">{rows.length} report{rows.length === 1 ? '' : 's'}</p>
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">{t('reports.section.title')}</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+            {t(rows.length === 1 ? 'reports.section.count_one' : 'reports.section.count_many', { count: rows.length })}
+          </p>
         </div>
         {canWrite && (
           <Button onClick={handleCreate} disabled={creating}>
             {creating ? <Spinner className="h-4 w-4" /> : <Plus size={16} />}
-            New Report
+            {t('reports.section.new_report')}
           </Button>
         )}
       </div>
@@ -85,6 +92,7 @@ function ReportRow({ appId, row, canWrite, onDelete }: {
   canWrite: boolean
   onDelete: () => void
 }) {
+  const t = useTranslation()
   const navigate = useNavigate()
   const blockCount = row.definition.blocks.length
 
@@ -97,16 +105,16 @@ function ReportRow({ appId, row, canWrite, onDelete }: {
   const run = async (argumentValues?: Record<string, unknown>) => {
     if (running) return
     setRunning(true)
-    const toastId = toast.loading(`Running "${row.name}"…`)
+    const toastId = toast.loading(t('reports.section.running_toast', { name: row.name }))
     try {
       const { filename, rowCount } = await runReportToDownload(row.definition, argumentValues)
       setPromptOpen(false)
-      toast.success(`"${row.name}" is ready`, {
+      toast.success(t('reports.section.ready_toast', { name: row.name }), {
         id: toastId,
-        description: `${filename} · ${rowCount} row${rowCount === 1 ? '' : 's'}`,
+        description: t(rowCount === 1 ? 'reports.section.download_rows_one' : 'reports.section.download_rows_many', { filename, count: rowCount }),
       })
     } catch (e) {
-      toast.error(`Couldn't run "${row.name}"`, { id: toastId, description: extractApiError(e) })
+      toast.error(t('reports.section.run_failed_toast', { name: row.name }), { id: toastId, description: extractApiError(e) })
     } finally {
       setRunning(false)
     }
@@ -125,7 +133,9 @@ function ReportRow({ appId, row, canWrite, onDelete }: {
       <div className="min-w-0 flex-1">
         <span className="truncate font-medium text-[hsl(var(--foreground))]">{row.name}</span>
         <p className="mt-0.5 truncate text-xs text-[hsl(var(--muted-foreground))]">
-          {blockCount} block{blockCount === 1 ? '' : 's'} · Updated {new Date(row.updated_at).toLocaleDateString()}
+          {t(blockCount === 1 ? 'reports.section.block_count_one' : 'reports.section.block_count_many', { count: blockCount })}
+          {' · '}
+          {t('reports.section.updated_on', { date: new Date(row.updated_at).toLocaleDateString() })}
         </p>
       </div>
 
@@ -134,16 +144,16 @@ function ReportRow({ appId, row, canWrite, onDelete }: {
           variant="ghost" size="icon"
           onClick={handleRun}
           disabled={running}
-          title="Run this report"
-          aria-label={`Run ${row.name}`}
+          title={t('reports.section.run_title')}
+          aria-label={t('reports.section.run_aria', { name: row.name })}
         >
           {running ? <Spinner className="h-3.5 w-3.5" /> : <Play size={14} />}
         </Button>
         <Button
           variant="ghost" size="icon"
           onClick={() => navigate({ to: '/applications/$appId/design/reports/$reportId', params: { appId, reportId: row.id } })}
-          title="Edit this report"
-          aria-label={`Edit ${row.name}`}
+          title={t('reports.section.edit_title')}
+          aria-label={t('reports.section.edit_aria', { name: row.name })}
         >
           <ExternalLink size={14} />
         </Button>
@@ -161,7 +171,7 @@ function ReportRow({ appId, row, canWrite, onDelete }: {
       <ReportArgumentsDialog
         open={promptOpen}
         argumentList={argumentList}
-        title={`Run "${row.name}"`}
+        title={t('reports.section.run_dialog_title', { name: row.name })}
         busy={running}
         onCancel={() => setPromptOpen(false)}
         onConfirm={(values) => void run(values)}
@@ -171,13 +181,14 @@ function ReportRow({ appId, row, canWrite, onDelete }: {
 }
 
 function EmptyState({ canWrite, onCreate, creating }: { canWrite: boolean; onCreate: () => void; creating: boolean }) {
+  const t = useTranslation()
   return (
     <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center">
-      <p className="text-[hsl(var(--muted-foreground))] mb-4">No reports yet</p>
+      <p className="text-[hsl(var(--muted-foreground))] mb-4">{t('reports.section.empty_title')}</p>
       {canWrite && (
         <Button variant="outline" onClick={onCreate} disabled={creating}>
           {creating ? <Spinner className="h-4 w-4" /> : <Plus size={16} />}
-          Create your first report
+          {t('reports.section.create_first')}
         </Button>
       )}
     </div>

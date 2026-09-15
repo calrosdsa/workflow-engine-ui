@@ -20,6 +20,7 @@ import {
 import type { AppSummary } from '@/features/applications/types'
 import type { InvitationGrant } from '@/features/invitations/types'
 import type { TeamUser } from '@/features/users/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 interface UserFormDrawerProps {
   open: boolean
@@ -41,6 +42,7 @@ interface UserFormDrawerProps {
  *  (existingUser case in api/invitations/handler.go), so this form only
  *  ever calls useCreateInvitation regardless of which happens. */
 export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }: UserFormDrawerProps) {
+  const t = useTranslation()
   const { data: apps } = useApps()
   const createMutation = useCreateInvitation()
   const revokeAppAccessMutation = useRevokeUserAppAccess()
@@ -109,13 +111,13 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
       // existing memberships, and any newly selected app+role grants — Save
       // should mean "apply everything shown in this drawer," not just one.
       if (nameChanged && (!firstName.trim() || !lastName.trim())) {
-        setError('First and last name are required.')
+        setError(t('team.name_required'))
         return
       }
       if (!grantingSuperAdmin) {
         const missingRole = selectedAppIds.find((id) => !roleByApp[id])
         if (missingRole) {
-          setError('Choose a role for every selected app.')
+          setError(t('team.role_required'))
           return
         }
       }
@@ -137,32 +139,32 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
           const grants: InvitationGrant[] = selectedAppIds.map((appId) => ({ app_id: appId, role_id: roleByApp[appId] }))
           await createMutation.mutateAsync({ email: existingUser.email, grants })
         }
-        setResult('Access updated.')
+        setResult(t('team.access_updated'))
       } catch {
-        setError('Could not update access.')
+        setError(t('team.access_update_failed'))
       }
       return
     }
 
     if (!email.trim()) {
-      setError('Email is required.')
+      setError(t('team.email_required'))
       return
     }
     if (selectedAppIds.length === 0) {
-      setError('Select at least one app.')
+      setError(t('team.select_app_required'))
       return
     }
     const missingRole = selectedAppIds.find((id) => !roleByApp[id])
     if (missingRole) {
-      setError('Choose a role for every selected app.')
+      setError(t('team.role_required'))
       return
     }
     const grants: InvitationGrant[] = selectedAppIds.map((appId) => ({ app_id: appId, role_id: roleByApp[appId] }))
     try {
       const res = await createMutation.mutateAsync({ email, grants })
-      setResult(res.immediate ? 'Access granted — they can log in now.' : `Invitation sent to ${email}.`)
+      setResult(res.immediate ? t('team.access_granted') : t('team.invitation_sent', { email }))
     } catch {
-      setError('Could not send invitation.')
+      setError(t('team.invitation_failed'))
     }
   }
 
@@ -182,11 +184,11 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
     <Drawer open={open} onOpenChange={(o) => !o && handleClose()}>
       <DrawerContent size="lg">
         <DrawerHeader>
-          <DrawerTitle>{isManageAccess ? 'Edit User' : 'User Details'}</DrawerTitle>
+          <DrawerTitle>{isManageAccess ? t('team.edit_user_title') : t('team.user_details')}</DrawerTitle>
           <DrawerDescription>
             {isManageAccess
-              ? `Update ${existingUser?.email}'s role and access.`
-              : 'Grant access to one or more applications, each with its own role.'}
+              ? t('team.update_access_description', { email: existingUser?.email ?? '' })
+              : t('team.grant_access_description')}
           </DrawerDescription>
         </DrawerHeader>
 
@@ -198,30 +200,30 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
           <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-6">
             {!isManageAccess && (
               <div>
-                <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Email address *</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter user's email address." />
+                <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('team.email_address')}</Label>
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('team.email_placeholder')} />
               </div>
             )}
 
             {isManageAccess && existingUser && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">First name</Label>
-                  <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First name" />
+                  <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('team.first_name')}</Label>
+                  <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder={t('team.first_name')} />
                 </div>
                 <div>
-                  <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Last name</Label>
-                  <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last name" />
+                  <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('team.last_name')}</Label>
+                  <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder={t('team.last_name')} />
                 </div>
               </div>
             )}
 
             {isManageAccess && existingUser && (
               <div>
-                <p className="mb-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">Current access</p>
+                <p className="mb-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('team.current_access')}</p>
                 {existingUser.memberships.length === 0 ? (
                   <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                    {existingUser.is_super_admin ? 'Super Admin grants access to every app.' : 'No app access yet.'}
+                    {existingUser.is_super_admin ? t('team.super_admin_every_app') : t('team.no_app_access')}
                   </p>
                 ) : (
                   <div className="space-y-1">
@@ -236,7 +238,7 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
                             disabled={grantingSuperAdmin}
                           />
                           <Button
-                            variant="ghost" size="icon" title="Remove access to this app"
+                            variant="ghost" size="icon" title={t('team.remove_app_access')}
                             className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
                             disabled={revokeAppAccessMutation.isPending}
                             onClick={() => handleRemoveGrant(m.app_id)}
@@ -255,10 +257,10 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
               <div>
                 <Label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[hsl(var(--foreground))]">
                   <Checkbox checked={grantingSuperAdmin} onCheckedChange={(c) => setGrantingSuperAdmin(c === true)} />
-                  Is a Super Admin?
+                  {t('team.super_admin')}
                 </Label>
                 <p className="mt-1 pl-6 text-xs text-[hsl(var(--muted-foreground))]">
-                  Grant full administrative access, enabling management of users, roles, app creation, and marketplace templates.
+                  {t('team.super_admin_description')}
                 </p>
               </div>
             )}
@@ -266,10 +268,10 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
             {!grantingSuperAdmin && (
               <div>
                 <p className="mb-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">
-                  {isManageAccess ? 'Add access to another app' : 'Select App and Role'}
+                  {isManageAccess ? t('team.add_access_another_app') : t('team.select_app_role')}
                 </p>
                 {selectableApps.length === 0 ? (
-                  <p className="text-xs text-[hsl(var(--muted-foreground))]">Already has access to every app.</p>
+                  <p className="text-xs text-[hsl(var(--muted-foreground))]">{t('team.already_all_apps')}</p>
                 ) : (
                   <>
                     <Label className="mb-2 flex cursor-pointer items-center gap-2 text-sm font-medium text-[hsl(var(--foreground))]">
@@ -277,7 +279,7 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
                         checked={allSelected ? true : someSelected ? 'indeterminate' : false}
                         onCheckedChange={(c) => toggleAllApps(c === true)}
                       />
-                      Select All Apps
+                      {t('team.all_apps_select')}
                     </Label>
                     <div className="space-y-1 border-l border-[hsl(var(--border))] pl-3">
                       {selectableApps.map((app) => (
@@ -302,16 +304,16 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
 
         <DrawerFooter>
           {result ? (
-            <Button onClick={handleClose}>Done</Button>
+            <Button onClick={handleClose}>{t('team.done')}</Button>
           ) : (
             <>
-              <Button variant="outline" onClick={handleClose}>Cancel</Button>
+              <Button variant="outline" onClick={handleClose}>{t('team.cancel')}</Button>
               <Button
                 onClick={handleSubmit}
                 disabled={isSaving}
               >
                 {isSaving && <Spinner className="h-4 w-4" />}
-                {isManageAccess ? 'Save' : 'Send Invitation'}
+                {isManageAccess ? t('team.save') : t('team.send_invitation')}
               </Button>
             </>
           )}
@@ -328,6 +330,7 @@ function AppRoleRow({ app, checked, roleId, onToggle, onRoleChange }: {
   onToggle: (checked: boolean) => void
   onRoleChange: (roleId: string) => void
 }) {
+  const t = useTranslation()
   const { data: roles } = useRoles(app.id)
 
   return (
@@ -338,9 +341,9 @@ function AppRoleRow({ app, checked, roleId, onToggle, onRoleChange }: {
       </Label>
       {checked && (
         <SelectMenu value={roleId || '__none__'} onValueChange={(v) => onRoleChange(v === '__none__' ? '' : v)}>
-          <SelectTrigger className="mt-1.5 h-8 w-full max-w-xs text-sm"><SelectValue placeholder="Select role…" /></SelectTrigger>
+          <SelectTrigger className="mt-1.5 h-8 w-full max-w-xs text-sm"><SelectValue placeholder={t('team.select_role')} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="__none__" className="text-xs">Select role…</SelectItem>
+            <SelectItem value="__none__" className="text-xs">{t('team.select_role')}</SelectItem>
             {(roles ?? []).map((role) => <SelectItem key={role.id} value={role.id} className="text-xs">{role.name}</SelectItem>)}
           </SelectContent>
         </SelectMenu>

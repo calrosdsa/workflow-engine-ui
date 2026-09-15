@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { ColorPicker } from '@/components/ui/color-picker'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { cn } from '@/lib/utils'
 import type { BlockStyle } from './types'
 
@@ -38,11 +39,12 @@ function triStateToValue(t: TriState): boolean | undefined {
 }
 
 function TriStateControl({ label, value, onChange }: { label: string; value: boolean | undefined; onChange: (v: boolean | undefined) => void }) {
+  const t = useTranslation()
   const current = triStateOf(value)
   const options: { key: TriState; label: string }[] = [
-    { key: 'inherit', label: 'Inherit' },
-    { key: 'off', label: 'Off' },
-    { key: 'on', label: 'On' },
+    { key: 'inherit', label: t('reports.style.inherit') },
+    { key: 'off', label: t('reports.style.off') },
+    { key: 'on', label: t('reports.style.on') },
   ]
   return (
     <div className="flex flex-col gap-1.5">
@@ -66,42 +68,52 @@ function TriStateControl({ label, value, onChange }: { label: string; value: boo
   )
 }
 
+const PADDING_PLACEHOLDER_KEYS = {
+  top: 'reports.style.padding_t',
+  right: 'reports.style.padding_r',
+  bottom: 'reports.style.padding_b',
+  left: 'reports.style.padding_l',
+} as const
+
 export function StyleEditor({ style, onChange, isBlockOverride }: StyleEditorProps) {
-  const inheritNote = isBlockOverride ? ' (overrides the report default)' : ''
+  const t = useTranslation()
 
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-2">
-        <TriStateControl label="Bold" value={style.bold} onChange={(bold) => onChange({ ...style, bold })} />
-        <TriStateControl label="Italic" value={style.italic} onChange={(italic) => onChange({ ...style, italic })} />
+        <TriStateControl label={t('reports.style.bold')} value={style.bold} onChange={(bold) => onChange({ ...style, bold })} />
+        <TriStateControl label={t('reports.style.italic')} value={style.italic} onChange={(italic) => onChange({ ...style, italic })} />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Align{inheritNote}</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
+          {t('reports.style.align_label')}
+          {isBlockOverride ? ` (${t('reports.style.overrides_default')})` : ''}
+        </Label>
         <SelectMenu
           value={style.align ?? ''}
           onValueChange={(align) => onChange({ ...style, align: (align || undefined) as BlockStyle['align'] })}
         >
-          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Inherit" /></SelectTrigger>
+          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('reports.style.inherit')} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="" className="text-xs">Inherit</SelectItem>
-            <SelectItem value="left" className="text-xs">Left</SelectItem>
-            <SelectItem value="center" className="text-xs">Center</SelectItem>
-            <SelectItem value="right" className="text-xs">Right</SelectItem>
+            <SelectItem value="" className="text-xs">{t('reports.style.inherit')}</SelectItem>
+            <SelectItem value="left" className="text-xs">{t('reports.style.left')}</SelectItem>
+            <SelectItem value="center" className="text-xs">{t('reports.style.center')}</SelectItem>
+            <SelectItem value="right" className="text-xs">{t('reports.style.right')}</SelectItem>
           </SelectContent>
         </SelectMenu>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         <div className="flex flex-col gap-1.5">
-          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Text color</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.style.text_color')}</Label>
           <ColorPicker
             value={style.text_color ?? '#111827'}
             onChange={(text_color) => onChange({ ...style, text_color })}
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Fill color</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.style.fill_color')}</Label>
           <ColorPicker
             value={style.fill_color ?? '#ffffff'}
             onChange={(fill_color) => onChange({ ...style, fill_color })}
@@ -110,7 +122,7 @@ export function StyleEditor({ style, onChange, isBlockOverride }: StyleEditorPro
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Border</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.style.border')}</Label>
         <div className="flex gap-2">
           <Input
             type="number"
@@ -120,7 +132,7 @@ export function StyleEditor({ style, onChange, isBlockOverride }: StyleEditorPro
               const width = e.target.value ? Number(e.target.value) : undefined
               onChange({ ...style, border: width === undefined && !style.border?.color ? undefined : { ...style.border, width } })
             }}
-            placeholder="Width"
+            placeholder={t('reports.style.width')}
             className="h-8 flex-1 text-sm"
           />
           <ColorPicker
@@ -133,7 +145,7 @@ export function StyleEditor({ style, onChange, isBlockOverride }: StyleEditorPro
 
       <div className="flex flex-col gap-1.5">
         <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-          Padding <span className="font-normal">(top / right / bottom / left)</span>
+          {t('reports.style.padding')} <span className="font-normal">({t('reports.style.padding_sides')})</span>
         </Label>
         <div className="grid grid-cols-4 gap-1.5">
           {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
@@ -148,7 +160,7 @@ export function StyleEditor({ style, onChange, isBlockOverride }: StyleEditorPro
                 const allUnset = !next.top && !next.right && !next.bottom && !next.left
                 onChange({ ...style, padding: allUnset ? undefined : next })
               }}
-              placeholder={side[0].toUpperCase()}
+              placeholder={t(PADDING_PLACEHOLDER_KEYS[side])}
               className="h-8 text-sm"
             />
           ))}

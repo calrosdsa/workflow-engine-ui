@@ -4,6 +4,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Copy, Trash2, Asterisk, Link2 } from 'lucide-react'
 import { cn, onKeyboardActivate } from '@/lib/utils'
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useFormBuilderStore, useFormMetaStore } from '../store'
 import { COMPONENT_REGISTRY } from '../component-registry'
 import { ElementPreview } from '../ElementPreview'
@@ -26,6 +27,7 @@ interface ElementCardProps {
 // subscription regardless of props, which is correct: it needs to know if
 // IT is the selected card.
 export const ElementCard = memo(function ElementCard({ element, sectionId, columnId }: ElementCardProps) {
+  const t = useTranslation()
   const selectedId = useFormBuilderStore((s) => s.selectedItemId)
   const selectElement = useFormBuilderStore((s) => s.selectItem)
   const duplicate = useFormBuilderStore((s) => s.duplicateItemById)
@@ -35,6 +37,7 @@ export const ElementCard = memo(function ElementCard({ element, sectionId, colum
   const selected = selectedId === element.id
   const reg = COMPONENT_REGISTRY[element.component]
   const Icon = reg.icon
+  const typeLabel = t(`builder.components.${element.component}.label`)
   // The auto-injected "link back to parent" field (see isParentLinkElement's
   // doc comment) — deletable via this card's own trash icon like any other
   // element, but doing so used to silently strip the reference value from
@@ -67,7 +70,7 @@ export const ElementCard = memo(function ElementCard({ element, sectionId, colum
       // from ALSO re-triggering selectElement, the same reason onClick
       // below needs e.stopPropagation() on the mouse side.
       role="group"
-      aria-label={`${element.label || reg.label} field${selected ? ' — selected' : ''}`}
+      aria-label={`${t('builder.canvas.element_aria', { name: element.label || typeLabel })}${selected ? ` — ${t('builder.canvas.element_aria_selected')}` : ''}`}
       tabIndex={0}
       onClick={(e) => { e.stopPropagation(); selectElement(element.id) }}
       onKeyDown={onKeyboardActivate(() => selectElement(element.id))}
@@ -91,9 +94,9 @@ export const ElementCard = memo(function ElementCard({ element, sectionId, colum
             {...attributes}
             {...listeners}
             onClick={(e) => e.stopPropagation()}
-            aria-label="Drag to move"
+            aria-label={t('builder.canvas.drag_move')}
             className="peer flex h-6 w-6 cursor-grab items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 active:cursor-grabbing"
-            title="Drag to move"
+            title={t('builder.canvas.drag_move')}
           >
             <GripVertical size={13} />
           </button>
@@ -107,23 +110,23 @@ export const ElementCard = memo(function ElementCard({ element, sectionId, colum
             role="presentation"
             className="pointer-events-none absolute left-1/2 top-full z-20 mt-1 hidden -translate-x-1/2 whitespace-nowrap rounded border border-[hsl(var(--border))] bg-[hsl(var(--popover))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--popover-foreground))] shadow-sm peer-focus-visible:block"
           >
-            Space to drag, arrows to move
+            {t('builder.canvas.drag_hint')}
           </span>
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); duplicate(element.id) }}
-          aria-label="Duplicate"
+          aria-label={t('common.duplicate')}
           className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
-          title="Duplicate"
+          title={t('common.duplicate')}
         >
           <Copy size={12} />
         </button>
         {!isParentLink && (
           <button
             onClick={(e) => { e.stopPropagation(); remove(element.id) }}
-            aria-label="Delete"
+            aria-label={t('common.delete')}
             className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
-            title="Delete"
+            title={t('common.delete')}
           >
             <Trash2 size={12} />
           </button>
@@ -133,18 +136,18 @@ export const ElementCard = memo(function ElementCard({ element, sectionId, colum
       {/* Type tag */}
       <div className="flex items-center gap-1.5 border-b border-[hsl(var(--border))] px-2.5 py-1">
         <Icon size={11} className="text-[hsl(var(--muted-foreground))]" />
-        <span className="text-[10px] font-medium uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{reg.label}</span>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{typeLabel}</span>
         {element.behavior.required === 'always' && <Asterisk size={8} className="text-[hsl(var(--destructive))]" />}
         {isParentLink && (
           <span
             className="flex items-center gap-1 rounded bg-[hsl(var(--primary))]/15 px-1.5 py-0.5 text-[9px] font-medium text-[hsl(var(--primary))]"
-            title="Links this form to its parent — use “Unlink Dependent Form” from the form list to remove the relationship instead"
+            title={t('builder.canvas.parent_link_title')}
           >
-            <Link2 size={9} />parent link
+            <Link2 size={9} />{t('builder.canvas.parent_link_badge')}
           </span>
         )}
         {element.behavior.visibility !== 'always' && (
-          <span className="ml-auto rounded bg-[hsl(var(--warning))]/15 px-1.5 py-0.5 text-[9px] font-medium text-[hsl(var(--warning))]">conditional</span>
+          <span className="ml-auto rounded bg-[hsl(var(--warning))]/15 px-1.5 py-0.5 text-[9px] font-medium text-[hsl(var(--warning))]">{t('builder.canvas.conditional_badge')}</span>
         )}
       </div>
 

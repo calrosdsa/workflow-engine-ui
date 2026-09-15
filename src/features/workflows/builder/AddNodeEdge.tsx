@@ -7,6 +7,7 @@ import {
   type EdgeProps,
 } from '@xyflow/react'
 import { Plus } from 'lucide-react'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useBuilderStore, type FlowEdge } from './store'
 
 export function AddNodeEdge({
@@ -16,6 +17,7 @@ export function AddNodeEdge({
   style,
   markerEnd,
 }: EdgeProps<FlowEdge>) {
+  const t = useTranslation()
   const [hovered, setHovered] = useState(false)
 
   // Vertical flow: source exits bottom, target enters top
@@ -52,7 +54,7 @@ export function AddNodeEdge({
                 'transition-[opacity,transform,background-color] duration-150 hover:bg-[hsl(var(--primary))]/10',
                 hovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75',
               ].join(' ')}
-              title="Insert node here"
+              title={t('workflows.builder.insert_node_here')}
             >
               <Plus size={10} strokeWidth={3} />
             </button>

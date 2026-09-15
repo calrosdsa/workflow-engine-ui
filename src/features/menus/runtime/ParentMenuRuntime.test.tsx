@@ -11,13 +11,21 @@
 // invalid" — one HTML child menu blanked the whole parent page. This suite
 // covers every menu type so the next type added fails here too, not only in a
 // typecheck someone has to remember to run.
+import type { ReactElement } from 'react'
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, cleanup, screen } from '@testing-library/react'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import { ParentMenuRuntime } from './ParentMenuRuntime'
 import { MENU_TYPE_REGISTRY } from '../menu-registry'
 import type { Menu, MenuType } from '../types'
 
 afterEach(cleanup)
+
+// I18nProvider ancestor — real provider, no props, same pattern used across
+// this session's other test-provider fixes.
+function renderMenu(ui: ReactElement) {
+  return render(<I18nProvider>{ui}</I18nProvider>)
+}
 
 function menu(over: Partial<Menu> & Pick<Menu, 'id' | 'menu_type' | 'name'>): Menu {
   return {
@@ -42,7 +50,7 @@ describe('ParentMenuRuntime child icons', () => {
   it('renders an HTML child menu instead of throwing', () => {
     const htmlChild = menu({ id: 'c-1', menu_type: 'html', name: 'Ops Console', parent_id: 'p-1' })
 
-    render(<ParentMenuRuntime menu={parent} clientId="c" appId="a-1" menus={[parent, htmlChild]} />)
+    renderMenu(<ParentMenuRuntime menu={parent} clientId="c" appId="a-1" menus={[parent, htmlChild]} />)
 
     const card = screen.getByRole('button', { name: /ops console/i })
     expect(card).toBeTruthy()
@@ -59,7 +67,7 @@ describe('ParentMenuRuntime child icons', () => {
       menu({ id: `c-${i}`, menu_type: type, name: `${type} child`, parent_id: 'p-1' }),
     )
 
-    render(<ParentMenuRuntime menu={parent} clientId="c" appId="a-1" menus={[parent, ...children]} />)
+    renderMenu(<ParentMenuRuntime menu={parent} clientId="c" appId="a-1" menus={[parent, ...children]} />)
 
     for (const type of types) {
       const card = screen.getByRole('button', { name: new RegExp(`${type} child`, 'i') })
@@ -68,7 +76,7 @@ describe('ParentMenuRuntime child icons', () => {
   })
 
   it('still shows the empty state when a parent has no children', () => {
-    render(<ParentMenuRuntime menu={parent} clientId="c" appId="a-1" menus={[parent]} />)
+    renderMenu(<ParentMenuRuntime menu={parent} clientId="c" appId="a-1" menus={[parent]} />)
     expect(screen.getByText(/has no sections yet/i)).toBeTruthy()
   })
 })

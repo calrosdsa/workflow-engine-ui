@@ -7,6 +7,7 @@ import {
 } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useFormBuilderStore, findElement } from '../store'
 import { COMPONENT_REGISTRY } from '../component-registry'
 import type { ComponentType } from '../schema'
@@ -27,6 +28,7 @@ type ActiveDrag =
  * this one context, otherwise drops never register.
  */
 export function FormBuilderDnd({ children }: { children: ReactNode }) {
+  const t = useTranslation()
   const schema = useFormBuilderStore((s) => s.schema)
   const addElement = useFormBuilderStore((s) => s.addItem)
   const moveElement = useFormBuilderStore((s) => s.moveItem)
@@ -135,7 +137,7 @@ export function FormBuilderDnd({ children }: { children: ReactNode }) {
         {activeDrag?.kind === 'element' && <ElementDragPreview elementId={activeDrag.elementId} />}
         {activeDrag?.kind === 'section' && (
           <div className="rounded-xl border border-[hsl(var(--primary))]/40 bg-[hsl(var(--card))] px-4 py-3 text-sm font-semibold text-[hsl(var(--foreground))] shadow-xl">
-            Moving section…
+            {t('builder.canvas.moving_section')}
           </div>
         )}
       </DragOverlay>
@@ -148,6 +150,7 @@ export function FormBuilderDnd({ children }: { children: ReactNode }) {
 // ---------------------------------------------------------------------------
 
 function ComponentDragPreview({ component }: { component: ComponentType }) {
+  const t = useTranslation()
   const reg = COMPONENT_REGISTRY[component]
   const Icon = reg.icon
   return (
@@ -155,7 +158,7 @@ function ComponentDragPreview({ component }: { component: ComponentType }) {
       <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]">
         <Icon size={15} />
       </span>
-      <span className="text-[12px] font-medium text-[hsl(var(--foreground))]">{reg.label}</span>
+      <span className="text-[12px] font-medium text-[hsl(var(--foreground))]">{t(`builder.components.${component}.label`)}</span>
     </div>
   )
 }

@@ -16,6 +16,7 @@ import { collectTranslatableFields, FIELD_CONTENT_KIND_LABELS } from '@/features
 import type { CollectedField } from '@/features/form-builder/localize-schema'
 import { BASE_DICTIONARIES, BASE_LOCALES, LOCALE_LABELS } from '@/features/i18n/dictionaries'
 import type { TranslationsConfig } from '@/features/applications/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 interface Draft {
   default_locale: string
@@ -65,6 +66,7 @@ interface LanguageMultiSelectProps {
  *  trigger always renders as one fixed-width "N selected" control and the
  *  chips below it wrap instead of widening the row. */
 function LanguageMultiSelect({ value, onChange, disabled }: LanguageMultiSelectProps) {
+  const t = useTranslation()
   const [open, setOpen] = useState(false)
   const toggle = (locale: string) => {
     onChange(value.includes(locale) ? value.filter((l) => l !== locale) : [...value, locale])
@@ -83,7 +85,7 @@ function LanguageMultiSelect({ value, onChange, disabled }: LanguageMultiSelectP
             <span className="flex min-w-0 items-center gap-1.5">
               <Languages size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
               <span className="truncate">
-                {value.length === 0 ? 'Select languages' : `${value.length} selected`}
+                {value.length === 0 ? t('localization.select_languages') : t('localization.selected_languages', { count: value.length })}
               </span>
             </span>
             <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
@@ -91,9 +93,9 @@ function LanguageMultiSelect({ value, onChange, disabled }: LanguageMultiSelectP
         </PopoverTrigger>
         <PopoverContent className="w-56 p-0" align="start">
           <Command>
-            <CommandInput placeholder="Search languages…" />
+            <CommandInput placeholder={t('localization.search_languages')} />
             <CommandList>
-              <CommandEmpty>No languages found.</CommandEmpty>
+              <CommandEmpty>{t('localization.no_languages')}</CommandEmpty>
               <CommandGroup>
                 {BASE_LOCALES.map((locale) => {
                   const isSelected = value.includes(locale)
@@ -123,7 +125,7 @@ function LanguageMultiSelect({ value, onChange, disabled }: LanguageMultiSelectP
                   type="button"
                   onClick={() => toggle(locale)}
                   className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))]"
-                  title="Remove"
+                  title={t('common.remove')}
                 >
                   <X size={11} />
                 </button>
@@ -138,10 +140,10 @@ function LanguageMultiSelect({ value, onChange, disabled }: LanguageMultiSelectP
 
 type LocalizationTab = 'interface' | 'fields' | 'menus'
 
-const TABS: { id: LocalizationTab; label: string }[] = [
-  { id: 'interface', label: 'Interface text' },
-  { id: 'fields', label: 'Form fields' },
-  { id: 'menus', label: 'Menus' },
+const TABS: { id: LocalizationTab; labelKey: string }[] = [
+  { id: 'interface', labelKey: 'localization.interface_text' },
+  { id: 'fields', labelKey: 'localization.form_fields' },
+  { id: 'menus', labelKey: 'localization.menus' },
 ]
 
 /** Management UI for this app's i18n string overrides — the "dynamic" half
@@ -169,6 +171,7 @@ const TABS: { id: LocalizationTab; label: string }[] = [
  *  languages) no longer changes how wide anything here gets; only the
  *  picker's own option list grows. */
 export function LocalizationSection() {
+  const t = useTranslation()
   const { data: loaded, isLoading } = useApplicationTranslations()
   const updateMutation = useUpdateApplicationTranslations()
   const canWrite = usePermission('application:write')
@@ -227,30 +230,30 @@ export function LocalizationSection() {
     <div className="flex h-full flex-col overflow-hidden p-4 sm:p-6">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Localization</h2>
+          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">{t('app_design.localization')}</h2>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
-            Languages this app's runtime offers end users, and any wording overrides for them.
+            {t('localization.description')}
           </p>
         </div>
         {canWrite && (
           <div className="flex items-center gap-3">
             <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-1.5">
               {updateMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              Save translations
+              {t('localization.save')}
             </Button>
-            {saved && !updateMutation.isPending && <span className="flex items-center gap-1 text-xs text-[hsl(var(--success))]"><CheckCircle2 size={13} />Saved</span>}
-            {updateMutation.isError && <span className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={13} />Failed to save</span>}
+            {saved && !updateMutation.isPending && <span className="flex items-center gap-1 text-xs text-[hsl(var(--success))]"><CheckCircle2 size={13} />{t('common.saved')}</span>}
+            {updateMutation.isError && <span className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={13} />{t('localization.save_failed')}</span>}
           </div>
         )}
       </div>
 
       <div className="mb-4 flex flex-wrap items-start gap-6 rounded-lg border border-[hsl(var(--border))] p-3">
         <div>
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Supported languages</p>
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">{t('localization.supported_languages')}</p>
           <LanguageMultiSelect value={draft.supported_locales} onChange={setSupportedLocales} disabled={!canWrite} />
         </div>
         <div>
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Default language</p>
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">{t('localization.default_language')}</p>
           <SelectMenu
             value={draft.default_locale}
             onValueChange={(v) => { setSaved(false); setDraft((d) => ({ ...d, default_locale: v })) }}
@@ -263,9 +266,9 @@ export function LocalizationSection() {
           </SelectMenu>
         </div>
         <div>
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Translating into</p>
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">{t('localization.translating_into')}</p>
           {otherLocales.length === 0 ? (
-            <p className="flex h-8 items-center text-[13px] text-[hsl(var(--muted-foreground))]">Add another language above</p>
+            <p className="flex h-8 items-center text-[13px] text-[hsl(var(--muted-foreground))]">{t('localization.add_another_language')}</p>
           ) : (
             <SelectMenu value={targetLocale ?? ''} onValueChange={setTargetLocale}>
               <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
@@ -278,7 +281,7 @@ export function LocalizationSection() {
       </div>
 
       <div className="mb-3 flex flex-wrap gap-1">
-        {TABS.map(({ id, label }) => (
+        {TABS.map(({ id, labelKey }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
@@ -290,7 +293,7 @@ export function LocalizationSection() {
                 : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))]',
             )}
           >
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>
@@ -303,7 +306,7 @@ export function LocalizationSection() {
 
       <p className="mt-3 flex items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]">
         <Languages size={13} />
-        End users switch between these from the profile menu in the running app.
+        {t('localization.end_user_hint')}
       </p>
     </div>
   )
@@ -328,14 +331,15 @@ interface TableProps {
  *  here too (unlike the other two tabs' default column) since it has
  *  nowhere else to be re-worded. */
 function InterfaceTextTable({ draft, setCell, canWrite, targetLocale }: TableProps) {
+  const t = useTranslation()
   const keys = Object.keys(BASE_DICTIONARIES.en)
   return (
     <div className="h-full overflow-auto rounded-lg border border-[hsl(var(--border))]">
       <table className="w-full border-collapse text-sm">
         <thead className="sticky top-0 bg-[hsl(var(--card))]">
           <tr>
-            <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">Key</th>
-            <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">English</th>
+            <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">{t('localization.key')}</th>
+            <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">{t('localization.english')}</th>
             {targetLocale && (
               <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">
                 {LOCALE_LABELS[targetLocale] ?? targetLocale}
@@ -380,6 +384,7 @@ function InterfaceTextTable({ draft, setCell, canWrite, targetLocale }: TablePro
  *  language is currently selected in "Translating into," never re-edits
  *  what the designer typed — that happens in the form builder itself. */
 function FormFieldsTable({ draft, setCell, canWrite, targetLocale }: TableProps) {
+  const t = useTranslation()
   const { data: forms, isLoading } = useForms()
   const [formId, setFormId] = useState<string | null>(null)
 
@@ -393,7 +398,7 @@ function FormFieldsTable({ draft, setCell, canWrite, targetLocale }: TableProps)
 
   if (isLoading) return <div className="flex h-32 items-center justify-center"><Spinner /></div>
   if (!forms || forms.length === 0) {
-    return <p className="p-4 text-sm text-[hsl(var(--muted-foreground))]">This app has no forms yet.</p>
+    return <p className="p-4 text-sm text-[hsl(var(--muted-foreground))]">{t('localization.no_forms')}</p>
   }
 
   let lastFieldPath = ''
@@ -411,20 +416,20 @@ function FormFieldsTable({ draft, setCell, canWrite, targetLocale }: TableProps)
 
       {fields.length === 0 ? (
         <p className="p-4 text-center text-sm text-[hsl(var(--muted-foreground))]">
-          This form has no translatable text yet — every label, placeholder, and help text on it is empty.
+          {t('localization.no_translatable_form_text')}
         </p>
       ) : !targetLocale ? (
         <p className="p-4 text-center text-sm text-[hsl(var(--muted-foreground))]">
-          Add a second supported language above to translate this form's fields.
+          {t('localization.add_second_language_form')}
         </p>
       ) : (
         <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-[hsl(var(--border))]">
           <table className="w-full border-collapse text-sm">
             <thead className="sticky top-0 bg-[hsl(var(--card))]">
               <tr>
-                <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">Field</th>
-                <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">Property</th>
-                <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">Default (as authored)</th>
+                <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">{t('common.fields')}</th>
+                <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">{t('localization.property')}</th>
+                <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">{t('localization.default_authored')}</th>
                 <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">
                   {LOCALE_LABELS[targetLocale] ?? targetLocale}
                 </th>
@@ -468,16 +473,17 @@ function FormFieldsTable({ draft, setCell, canWrite, targetLocale }: TableProps)
  *  no nested structure worth grouping (see localize-menus.ts's own key
  *  scheme, one key per menu). */
 function MenusTable({ draft, setCell, canWrite, targetLocale }: TableProps) {
+  const t = useTranslation()
   const { data: menus, isLoading } = useMenus()
 
   if (isLoading) return <div className="flex h-32 items-center justify-center"><Spinner /></div>
   if (!menus || menus.length === 0) {
-    return <p className="p-4 text-sm text-[hsl(var(--muted-foreground))]">This app has no menus yet.</p>
+    return <p className="p-4 text-sm text-[hsl(var(--muted-foreground))]">{t('localization.no_menus')}</p>
   }
   if (!targetLocale) {
     return (
       <p className="p-4 text-center text-sm text-[hsl(var(--muted-foreground))]">
-        Add a second supported language above to translate menu names.
+        {t('localization.add_second_language_menus')}
       </p>
     )
   }
@@ -487,7 +493,7 @@ function MenusTable({ draft, setCell, canWrite, targetLocale }: TableProps) {
       <table className="w-full border-collapse text-sm">
         <thead className="sticky top-0 bg-[hsl(var(--card))]">
           <tr>
-            <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">Menu (as authored)</th>
+            <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">{t('localization.menu_authored')}</th>
             <th className="border-b border-[hsl(var(--border))] p-2 text-left font-medium text-[hsl(var(--muted-foreground))]">
               {LOCALE_LABELS[targetLocale] ?? targetLocale}
             </th>

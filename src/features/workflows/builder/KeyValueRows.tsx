@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/features/i18n/I18nProvider'
 import { ExpressionEditor } from './ExpressionEditor'
 import { nanoid } from './nanoid'
 import type { NodeOutputSchema } from './node-output-schema'
@@ -33,6 +34,7 @@ export function KeyValueRows({
   rows, variables, nodeContext = [], onChange,
   keyPlaceholder = 'key', addLabel = 'Add row',
 }: KeyValueRowsProps) {
+  const { t } = useI18n()
   const addRow = () => onChange([...rows, newKeyValuePair()])
   const updateRow = (id: string, patch: Partial<KeyValuePair>) =>
     onChange(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
@@ -41,7 +43,7 @@ export function KeyValueRows({
   return (
     <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-2.5">
       {rows.length === 0 && (
-        <p className="px-1 py-2 text-center text-[11px] text-[hsl(var(--muted-foreground))]">No rows yet.</p>
+        <p className="px-1 py-2 text-center text-[11px] text-[hsl(var(--muted-foreground))]">{t('workflows.builder.no_rows')}</p>
       )}
 
       <div className="space-y-1.5">
@@ -74,6 +76,7 @@ function KeyValueRow({ row, variables, nodeContext, keyPlaceholder, onChange, on
   onRemove: () => void
 }) {
   const [editorOpen, setEditorOpen] = useState(false)
+  const { t } = useI18n()
   const isExpr = row.value_mode === 'expression'
 
   return (
@@ -82,7 +85,7 @@ function KeyValueRow({ row, variables, nodeContext, keyPlaceholder, onChange, on
         <Checkbox
           checked={row.enabled}
           onCheckedChange={(checked) => onChange({ enabled: checked === true })}
-          title={row.enabled ? 'Disable this row' : 'Enable this row'}
+          title={row.enabled ? t('workflows.builder.disable_row') : t('workflows.builder.enable_row')}
         />
         <Input
           value={row.key}
@@ -93,7 +96,7 @@ function KeyValueRow({ row, variables, nodeContext, keyPlaceholder, onChange, on
         <button
           onClick={onRemove}
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
-          title="Remove row"
+          title={t('workflows.builder.remove_row')}
         >
           <Trash2 size={11} />
         </button>
@@ -111,7 +114,7 @@ function KeyValueRow({ row, variables, nodeContext, keyPlaceholder, onChange, on
                 (row.value_mode ?? 'static') === m ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]',
               )}
             >
-              {m === 'static' ? 'Value' : 'Expression'}
+              {m === 'static' ? t('common.value') : t('workflows.node_forms.expression')}
             </button>
           ))}
         </div>
@@ -126,7 +129,7 @@ function KeyValueRow({ row, variables, nodeContext, keyPlaceholder, onChange, on
             />
             <button
               onClick={() => setEditorOpen(true)}
-              title="Open expression editor"
+              title={t('workflows.builder.open_expression')}
               className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
             >
               <Code2 size={12} />
@@ -136,7 +139,7 @@ function KeyValueRow({ row, variables, nodeContext, keyPlaceholder, onChange, on
           <Input
             value={row.value == null ? '' : String(row.value)}
             onChange={(e) => onChange({ value: e.target.value })}
-            placeholder="value…"
+            placeholder={t('workflows.builder.value_placeholder')}
             className="h-7 text-[12px]"
           />
         )}

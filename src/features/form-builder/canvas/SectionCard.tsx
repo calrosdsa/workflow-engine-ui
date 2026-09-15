@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { cn, onKeyboardActivate } from '@/lib/utils'
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { Input } from '@/components/ui/input'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
@@ -24,6 +25,7 @@ import { ColumnDropZone } from './ColumnDropZone'
 // stand-in. Still re-renders on its own selectedSectionId store
 // subscription regardless of props, which is correct.
 export const SectionCard = memo(function SectionCard({ section }: { section: FormSection }) {
+  const t = useTranslation()
   const updateSection = useFormBuilderStore((s) => s.updateSection)
   const setLayout = useFormBuilderStore((s) => s.setSectionLayout)
   const duplicate = useFormBuilderStore((s) => s.duplicateSectionById)
@@ -54,7 +56,7 @@ export const SectionCard = memo(function SectionCard({ section }: { section: For
       // onClick below (and the two stopPropagation shims further down)
       // exist on the mouse side.
       role="group"
-      aria-label={`${section.title || 'Untitled'} section${selected ? ' — selected' : ''}`}
+      aria-label={`${t('builder.canvas.section_aria', { name: section.title || t('builder.canvas.untitled_section') })}${selected ? ` — ${t('builder.canvas.section_aria_selected')}` : ''}`}
       tabIndex={0}
       onClick={(e) => { e.stopPropagation(); selectSection(section.id) }}
       onKeyDown={onKeyboardActivate(() => selectSection(section.id))}
@@ -72,9 +74,9 @@ export const SectionCard = memo(function SectionCard({ section }: { section: For
             {...attributes}
             {...listeners}
             onClick={(e) => e.stopPropagation()}
-            aria-label="Drag to reorder section"
+            aria-label={t('builder.canvas.drag_reorder_section')}
             className="peer flex h-6 w-5 cursor-grab items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 active:cursor-grabbing"
-            title="Drag to reorder section"
+            title={t('builder.canvas.drag_reorder_section')}
           >
             <GripVertical size={14} />
           </button>
@@ -87,15 +89,15 @@ export const SectionCard = memo(function SectionCard({ section }: { section: For
             role="presentation"
             className="pointer-events-none absolute -bottom-7 left-1/2 z-20 hidden -translate-x-1/2 whitespace-nowrap rounded border border-[hsl(var(--border))] bg-[hsl(var(--popover))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--popover-foreground))] shadow-sm peer-focus-visible:block"
           >
-            Space to drag, arrows to move
+            {t('builder.canvas.drag_hint')}
           </span>
         </div>
 
         <button
           onClick={(e) => { e.stopPropagation(); toggleCollapsed(section.id) }}
-          aria-label={section.collapsed ? 'Expand' : 'Collapse'}
+          aria-label={section.collapsed ? t('common.expand') : t('common.collapse')}
           className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
-          title={section.collapsed ? 'Expand' : 'Collapse'}
+          title={section.collapsed ? t('common.expand') : t('common.collapse')}
         >
           {section.collapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
         </button>
@@ -122,7 +124,7 @@ export const SectionCard = memo(function SectionCard({ section }: { section: For
             </SelectTrigger>
             <SelectContent>
               {(Object.keys(COLUMN_LAYOUTS) as ColumnLayout[]).map((key) => (
-                <SelectItem key={key} value={key} className="text-xs">{COLUMN_LAYOUTS[key].label}</SelectItem>
+                <SelectItem key={key} value={key} className="text-xs">{t(`builder.canvas.column_layout.${key}.label`)}</SelectItem>
               ))}
             </SelectContent>
           </SelectMenu>
@@ -130,18 +132,18 @@ export const SectionCard = memo(function SectionCard({ section }: { section: For
           {/* Section actions */}
           <DropdownMenu>
             <DropdownMenuTrigger
-              aria-label="Section actions"
+              aria-label={t('builder.canvas.section_actions')}
               className="flex h-7 w-7 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
             >
               <MoreVertical size={14} />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => duplicate(section.id)}>
-                <Copy size={13} /> Duplicate section
+                <Copy size={13} /> {t('builder.canvas.duplicate_section')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem destructive onClick={() => remove(section.id)}>
-                <Trash2 size={13} /> Delete section
+                <Trash2 size={13} /> {t('builder.canvas.delete_section')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

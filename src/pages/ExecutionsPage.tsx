@@ -6,6 +6,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { ExecutionStatus } from '@/features/executions/types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 const statusVariant: Record<ExecutionStatus, 'warning' | 'default' | 'success' | 'destructive' | 'secondary'> = {
   PENDING:   'warning',
@@ -19,6 +20,7 @@ const STATUS_FILTERS: Array<ExecutionStatus | 'ALL'> = ['ALL', 'PENDING', 'RUNNI
 const PAGE_SIZE = 25
 
 export function ExecutionsPage() {
+  const { t, locale } = useI18n()
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState<ExecutionStatus | 'ALL'>('ALL')
   const { appId } = useParams({ strict: false }) as { appId?: string }
@@ -41,8 +43,8 @@ export function ExecutionsPage() {
     <div className="p-6 space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Executions</h1>
-          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">{total} total</p>
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">{t('executions.title')}</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">{t('common.total', { count: total })}</p>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {STATUS_FILTERS.map((s) => (
@@ -54,7 +56,7 @@ export function ExecutionsPage() {
                 status === s ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]' : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/70',
               ].join(' ')}
             >
-              {s === 'ALL' ? 'All' : s}
+              {s === 'ALL' ? t('common.all') : t(`common.${s.toLowerCase()}`)}
             </button>
           ))}
         </div>
@@ -65,8 +67,8 @@ export function ExecutionsPage() {
       ) : !executions.length ? (
         <div className="rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center text-[hsl(var(--muted-foreground))]">
           {status === 'ALL'
-            ? 'No executions yet. Trigger a workflow from the Workflows page.'
-            : `No ${status.toLowerCase()} executions.`}
+            ? t('executions.no_executions')
+            : t('executions.no_status_executions', { status: t(`common.${status.toLowerCase()}`) })}
         </div>
       ) : (
         <>
@@ -74,7 +76,7 @@ export function ExecutionsPage() {
             <table className="min-w-full divide-y divide-[hsl(var(--border))]">
               <thead className="bg-[hsl(var(--muted))]">
                 <tr>
-                  {['Execution ID', 'Status', 'Started', 'Finished', 'Duration'].map((h) => (
+                  {[t('executions.execution_id'), t('common.status'), t('executions.started'), t('executions.finished'), t('executions.duration')].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -102,10 +104,10 @@ export function ExecutionsPage() {
                         <Badge variant={statusVariant[ex.status]}>{ex.status}</Badge>
                       </td>
                       <td className="px-4 py-3 text-sm text-[hsl(var(--muted-foreground))]">
-                        {started ? started.toLocaleString() : '—'}
+                        {started ? started.toLocaleString(locale) : '—'}
                       </td>
                       <td className="px-4 py-3 text-sm text-[hsl(var(--muted-foreground))]">
-                        {finished ? finished.toLocaleString() : '—'}
+                        {finished ? finished.toLocaleString(locale) : '—'}
                       </td>
                       <td className="px-4 py-3 text-sm text-[hsl(var(--muted-foreground))]">{duration}</td>
                     </tr>
@@ -116,13 +118,13 @@ export function ExecutionsPage() {
           </div>
 
           <div className="flex items-center justify-between text-xs text-[hsl(var(--muted-foreground))]">
-            <span>Page {page} of {totalPages}</span>
+            <span>{t('common.page_of', { page, totalPages })}</span>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="h-7 gap-1 px-2">
-                <ChevronLeft size={12} />Prev
+                <ChevronLeft size={12} />{t('common.prev')}
               </Button>
               <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="h-7 gap-1 px-2">
-                Next<ChevronRight size={12} />
+                {t('common.next')}<ChevronRight size={12} />
               </Button>
             </div>
           </div>

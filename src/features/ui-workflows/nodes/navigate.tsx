@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { registerUiWorkflowNode, type UiWorkflowNodeConfigPanelProps } from '../node-registry'
 import { Field } from './panel-kit'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { ALL_PLATFORMS } from '../types'
 
 /** Navigation is by MENU SLUG, not URL. A slug is the one addressing scheme
@@ -38,11 +39,12 @@ export function parseNavigateConfig(raw: unknown): NavigateStepConfig {
 }
 
 function NavigatePanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<NavigateStepConfig>) {
+  const t = useTranslation()
   return (
     <div className="space-y-2">
       <Field
-        label="Go to"
-        hint="Anything after this step won’t run — the screen it would act on is being replaced."
+        label={t('ui_workflows.panel.navigate.go_to_label')}
+        hint={t('ui_workflows.panel.navigate.go_to_hint')}
       >
         <SelectMenu
           value={config.target}
@@ -50,19 +52,19 @@ function NavigatePanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<Navi
         >
           <SelectTrigger className="h-8 text-[12px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="menu" className="text-[12px]">A menu</SelectItem>
-            <SelectItem value="record" className="text-[12px]">A record</SelectItem>
-            <SelectItem value="back" className="text-[12px]">Back</SelectItem>
+            <SelectItem value="menu" className="text-[12px]">{t('ui_workflows.panel.navigate.target_menu')}</SelectItem>
+            <SelectItem value="record" className="text-[12px]">{t('ui_workflows.panel.navigate.target_record')}</SelectItem>
+            <SelectItem value="back" className="text-[12px]">{t('common.back')}</SelectItem>
           </SelectContent>
         </SelectMenu>
       </Field>
 
       {config.target === 'menu' && (
-        <Field label="Menu slug" hint="Addressed by slug, not URL, so the same step works on mobile.">
+        <Field label={t('ui_workflows.panel.navigate.menu_slug_label')} hint={t('ui_workflows.panel.navigate.menu_slug_hint')}>
           <Input
             value={config.menu_slug ?? ''}
             onChange={(e) => onChange({ ...config, menu_slug: e.target.value })}
-            placeholder="invoices"
+            placeholder={t('ui_workflows.panel.navigate.menu_slug_placeholder')}
             className="h-8 font-mono text-[11px]"
           />
         </Field>
@@ -70,7 +72,7 @@ function NavigatePanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<Navi
 
       {config.target === 'record' && (
         <>
-          <Field label="Form id" hint="Leave blank to use the form this workflow is attached to.">
+          <Field label={t('ui_workflows.panel.navigate.form_id_label')} hint={t('ui_workflows.panel.navigate.form_id_hint')}>
             <Input
               value={config.form_id ?? ''}
               onChange={(e) => onChange({ ...config, form_id: e.target.value })}
@@ -78,13 +80,13 @@ function NavigatePanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<Navi
             />
           </Field>
           <Field
-            label="Record id from variable"
-            hint="Usually the output variable of a Create Record step earlier in this workflow. Blank means the record already in context."
+            label={t('ui_workflows.panel.record_id_variable_label')}
+            hint={t('ui_workflows.panel.navigate.record_id_variable_hint')}
           >
             <Input
               value={config.record_id_variable ?? ''}
               onChange={(e) => onChange({ ...config, record_id_variable: e.target.value })}
-              placeholder="new_record"
+              placeholder={t('ui_workflows.panel.new_record_placeholder')}
               className="h-8 font-mono text-[11px]"
             />
           </Field>

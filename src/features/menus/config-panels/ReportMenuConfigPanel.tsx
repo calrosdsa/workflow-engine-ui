@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useReports } from '@/features/reports/hooks'
 import { declaredArguments } from '@/features/reports/arguments'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { Menu, ReportMenuConfig } from '../types'
 
 interface ReportMenuConfigPanelProps {
@@ -19,6 +20,7 @@ interface ReportMenuConfigPanelProps {
 }
 
 export function ReportMenuConfigPanel({ menu, onChange }: ReportMenuConfigPanelProps) {
+  const t = useTranslation()
   const config = menu.config as ReportMenuConfig
   const { data: reports } = useReports()
 
@@ -28,16 +30,16 @@ export function ReportMenuConfigPanel({ menu, onChange }: ReportMenuConfigPanelP
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
-        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Report to show</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('menus.config_panels.report.report_label')}</Label>
         <SelectMenu
           value={config.report_definition_id}
           onValueChange={(reportDefinitionId) => onChange({ ...config, report_definition_id: reportDefinitionId })}
         >
-          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Choose a report…" /></SelectTrigger>
+          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('menus.config_panels.report.choose_placeholder')} /></SelectTrigger>
           <SelectContent>
             {!reports || reports.length === 0 ? (
               <div className="px-2 py-1.5 text-[12px] text-[hsl(var(--muted-foreground))]">
-                No reports yet. Create one in Report Builder first.
+                {t('menus.config_panels.report.no_reports')}
               </div>
             ) : (
               reports.map((r) => (
@@ -50,11 +52,15 @@ export function ReportMenuConfigPanel({ menu, onChange }: ReportMenuConfigPanelP
 
       {selectedReport && (
         <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-          {selectedReport.definition.blocks.length} block{selectedReport.definition.blocks.length === 1 ? '' : 's'}
-          {argumentList.length > 0 && (
-            <>, {argumentList.length} filter{argumentList.length === 1 ? '' : 's'} the viewer can set</>
+          {t(
+            selectedReport.definition.blocks.length === 1 ? 'menus.config_panels.report.block_count_one' : 'menus.config_panels.report.block_count_many',
+            { count: selectedReport.definition.blocks.length },
           )}
-          . Anyone who can open this menu sees it — the report's own Visibility setting (in Report Builder) decides who that is, not this menu's own permission.
+          {argumentList.length > 0 && t(
+            argumentList.length === 1 ? 'menus.config_panels.report.filter_count_one' : 'menus.config_panels.report.filter_count_many',
+            { count: argumentList.length },
+          )}
+          {t('menus.config_panels.report.visibility_note')}
         </p>
       )}
     </div>

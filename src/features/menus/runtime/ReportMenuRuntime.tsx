@@ -32,6 +32,7 @@ interface ReportMenuRuntimeProps {
 }
 
 export function ReportMenuRuntime({ menu, onNavigate }: ReportMenuRuntimeProps) {
+  const t = useTranslation()
   const config = menu.config as ReportMenuConfig
   const reportId = config.report_definition_id
 
@@ -73,7 +74,7 @@ export function ReportMenuRuntime({ menu, onNavigate }: ReportMenuRuntimeProps) 
 
   if (!reportId) {
     return (
-      <EmptyNote>No report selected yet. Choose one in this menu's own settings.</EmptyNote>
+      <EmptyNote>{t('menus.runtime.report.no_report_selected')}</EmptyNote>
     )
   }
 
@@ -82,7 +83,7 @@ export function ReportMenuRuntime({ menu, onNavigate }: ReportMenuRuntimeProps) 
   }
 
   if (!reportRow) {
-    return <EmptyNote>This report no longer exists.</EmptyNote>
+    return <EmptyNote>{t('menus.runtime.report.report_not_found')}</EmptyNote>
   }
 
   return (
@@ -115,7 +116,7 @@ export function ReportMenuRuntime({ menu, onNavigate }: ReportMenuRuntimeProps) 
           ))}
           <Button size="sm" onClick={run} disabled={runtime.isPending || missing.length > 0}>
             {runtime.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {runtime.data ? 'Refresh' : 'Run'}
+            {runtime.data ? t('common.refresh') : t('common.run')}
           </Button>
         </div>
       )}
@@ -126,18 +127,18 @@ export function ReportMenuRuntime({ menu, onNavigate }: ReportMenuRuntimeProps) 
           style={{ borderColor: 'hsl(var(--destructive) / 0.3)', backgroundColor: 'hsl(var(--destructive) / 0.05)', color: 'hsl(var(--destructive))' }}
         >
           <AlertCircle className="h-4 w-4 shrink-0" />
-          {runtime.error instanceof Error ? runtime.error.message : 'Failed to load this report.'}
+          {runtime.error instanceof Error ? runtime.error.message : t('menus.runtime.report.load_error')}
         </div>
       )}
 
       {runtime.isPending && !runtime.data && <CenteredSpinner />}
 
       {!runtime.data && !runtime.isPending && !runtime.isError && argumentList.length > 0 && (
-        <EmptyNote>Set the filters above and click Run to see this report.</EmptyNote>
+        <EmptyNote>{t('menus.runtime.report.run_hint')}</EmptyNote>
       )}
 
       {runtime.data && runtime.data.blocks.length === 0 && (
-        <EmptyNote>&quot;{reportRow.name}&quot; has no content yet.</EmptyNote>
+        <EmptyNote>{t('menus.runtime.report.no_content', { name: reportRow.name })}</EmptyNote>
       )}
 
       {runtime.data?.blocks.map((block) => (
@@ -169,12 +170,13 @@ function ReportDownloadButton({
   argumentValues: Record<string, unknown>
   disabled?: boolean
 }) {
+  const t = useTranslation()
   const exportReport = useExportReport(reportId)
   const choices = settings.allowed_formats && settings.allowed_formats.length > 1 ? settings.allowed_formats : undefined
   const [format, setFormat] = useState<ExportFormat>(settings.default_format ?? choices?.[0] ?? 'pdf')
 
   const handleDownload = () => {
-    const toastId = toast.loading('Preparing download…')
+    const toastId = toast.loading(t('menus.runtime.report.preparing_download'))
     exportReport.mutate(
       { format: choices ? format : settings.default_format, argumentValues },
       {
@@ -185,13 +187,13 @@ function ReportDownloadButton({
           link.download = filename
           link.click()
           URL.revokeObjectURL(url)
-          toast.success('Download ready', {
+          toast.success(t('menus.runtime.report.download_ready'), {
             id: toastId,
-            description: `${filename} · ${rowCount} row${rowCount === 1 ? '' : 's'}`,
+            description: `${filename} · ${t(rowCount === 1 ? 'reports.preview.row_count_one' : 'reports.preview.row_count_other', { count: rowCount })}`,
           })
         },
         onError: (e) => {
-          toast.error("Couldn't download this report", { id: toastId, description: extractApiError(e) })
+          toast.error(t('menus.runtime.report.download_failed'), { id: toastId, description: extractApiError(e) })
         },
       },
     )
@@ -219,7 +221,7 @@ function ReportDownloadButton({
         {exportReport.isPending
           ? <Loader2 className="h-4 w-4 animate-spin" />
           : <Download className="h-4 w-4" />}
-        Download
+        {t('menus.runtime.report.download_button')}
       </Button>
     </div>
   )
@@ -386,7 +388,7 @@ function ReportTableBlockView({ block, onNavigate }: { block: RuntimeReportBlock
           onRowClick={block.form_id ? handleClick : undefined}
           isRowClickable={(row) => !!row.__sourceId}
           footer={footer}
-          emptyMessage="No rows."
+          emptyMessage={t('menus.runtime.report.no_rows')}
         />
       </div>
       {showPager && (

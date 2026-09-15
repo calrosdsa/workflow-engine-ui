@@ -7,6 +7,7 @@ import { KnowledgeBaseSelect } from '@/features/knowledge/KnowledgeBaseSelect'
 import { cn } from '@/lib/utils'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, KnowledgeRetrievalConfig, KnowledgeQueryMode, ValueMode } from '../../types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 export function normaliseKnowledgeRetrievalConfig(raw: unknown): KnowledgeRetrievalConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<KnowledgeRetrievalConfig>
@@ -35,6 +36,7 @@ const MODES: { value: KnowledgeQueryMode; label: string; hint: string }[] = [
 ]
 
 function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMode) => void }) {
+  const { t } = useI18n()
   return (
     <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
       {(['static', 'expression'] as const).map((m) => (
@@ -47,7 +49,7 @@ function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMo
             mode === m ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
           )}
         >
-          {m === 'static' ? 'Static' : 'Expression'}
+          {m === 'static' ? t('workflows.node_forms.static') : t('workflows.node_forms.expression')}
         </button>
       ))}
     </div>
@@ -62,19 +64,20 @@ export interface KnowledgeRetrievalFormProps {
 }
 
 export function KnowledgeRetrievalForm({ config, variables, nodeContext, onChange }: KnowledgeRetrievalFormProps) {
+  const { t } = useI18n()
   const set = (patch: Partial<KnowledgeRetrievalConfig>) => onChange({ ...config, ...patch })
 
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Knowledge Base</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.knowledge_base')}</Label>
         <KnowledgeBaseSelect value={config.kb_id || undefined} onChange={(id) => set({ kb_id: id ?? '' })} />
       </div>
 
       <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Query</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.query')}</Label>
         <ModeToggle mode={config.query_mode ?? 'static'} onChange={(m) => set({ query_mode: m })} />
         {config.query_mode === 'expression' ? (
           <ExpressionField
@@ -83,21 +86,21 @@ export function KnowledgeRetrievalForm({ config, variables, nodeContext, onChang
             variables={variables}
             nodeContext={nodeContext}
             placeholder="e.g. Vars.user_question"
-            label="Query"
+            label={t('workflows.node_forms.query')}
           />
         ) : (
           <textarea
             value={config.query ?? ''}
             onChange={(e) => set({ query: e.target.value })}
             rows={2}
-            placeholder="What would you like to know?"
+            placeholder={t('workflows.node_forms.query_placeholder')}
             className="w-full resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-3 py-2 text-[12px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/60 focus:border-[hsl(var(--primary))] focus:bg-[hsl(var(--card))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
           />
         )}
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Retrieval Mode</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.retrieval_mode')}</Label>
         <div className="grid grid-cols-2 gap-1.5">
           {MODES.map((m) => (
             <button
@@ -122,15 +125,15 @@ export function KnowledgeRetrievalForm({ config, variables, nodeContext, onChang
 
       <div className="flex items-center justify-between">
         <div>
-          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Generate Answer</Label>
-          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Off returns raw context only — useful for building a custom prompt downstream.</p>
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.generate_answer')}</Label>
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.knowledge_off_help')}</p>
         </div>
         <Switch checked={config.include_answer} onCheckedChange={(v) => set({ include_answer: v })} />
       </div>
 
       {config.include_answer && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Additional Instructions (optional)</Label>
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.additional_instructions')}</Label>
           <Input
             value={config.user_prompt ?? ''}
             onChange={(e) => set({ user_prompt: e.target.value })}
@@ -143,7 +146,7 @@ export function KnowledgeRetrievalForm({ config, variables, nodeContext, onChang
       <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Output Variable</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.output_variable')}</Label>
         <Input
           value={config.output_var}
           onChange={(e) => set({ output_var: e.target.value })}
@@ -151,7 +154,7 @@ export function KnowledgeRetrievalForm({ config, variables, nodeContext, onChang
           className="h-8 font-mono text-[12px]"
         />
         <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-          Result published as answer/context/chunks/references — both on this node's output and on the named variable.
+          {t('workflows.node_forms.knowledge_result_help')}
         </p>
       </div>
     </div>

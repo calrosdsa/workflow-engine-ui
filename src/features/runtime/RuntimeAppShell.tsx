@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { runtimeRouter, exitDraftPreview } from '@/runtime-router'
 import { useRuntimeDraftPreview } from './snapshot-context'
 import { useAuthStore } from '@/stores/auth'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { canViewMenu, hasPermission } from '@/features/auth/permissions'
 import { resolveSidebarNav, runtimeAncestors, toMenu } from './nav'
 import { RuntimeSidebar } from './RuntimeSidebar'
@@ -36,6 +37,7 @@ interface RuntimeAppShellProps {
 // gating auth model (see runtime-router.tsx) rather than a hard
 // redirect-if-no-session.
 export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu, externalFilter }: RuntimeAppShellProps) {
+  const t = useTranslation()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const session = useAuthStore((s) => s.session)
   const membership = session?.memberships?.find(
@@ -70,12 +72,12 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu, extern
           style={{ backgroundColor: 'hsl(var(--warning))', color: 'hsl(var(--warning-foreground))' }}
         >
           <Eye size={13} />
-          Previewing draft — unpublished changes are shown here only
+          {t('runtime.shell.draft_preview_banner')}
           <button
             onClick={() => exitDraftPreview(clientId, appId)}
             className="ml-2 rounded px-1.5 py-0.5 underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
           >
-            Exit preview
+            {t('runtime.shell.exit_preview')}
           </button>
         </div>
       )}
@@ -127,7 +129,7 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu, extern
           <header className="flex h-12 shrink-0 items-center gap-3 border-b px-4 md:hidden" style={{ borderColor: 'hsl(var(--border))' }}>
             <button
               onClick={() => setMobileNavOpen((o) => !o)}
-              aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+              aria-label={mobileNavOpen ? t('common.close_navigation') : t('common.open_navigation')}
               aria-expanded={mobileNavOpen}
               className="-ml-2.5 flex h-11 w-11 items-center justify-center rounded-md transition-colors hover:bg-[hsl(var(--accent))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
             >
@@ -146,7 +148,7 @@ export function RuntimeAppShell({ snapshot, clientId, appId, currentMenu, extern
                   style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}
                 >
                   <PencilRuler size={13} />
-                  Edit Design
+                  {t('runtime.edit_design')}
                 </button>
               )}
               {session && (

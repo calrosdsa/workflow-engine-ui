@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { PageComponent } from './schema'
 
 // Per-type switch for canvas-preview rendering — mirrors
@@ -17,6 +18,7 @@ const BUTTON_VARIANT_MAP = {
 } as const
 
 export function ComponentPreview({ component }: { component: PageComponent }) {
+  const t = useTranslation()
   switch (component.component) {
     case 'divider':
       return <hr className="my-2 border-slate-200" />
@@ -26,26 +28,30 @@ export function ComponentPreview({ component }: { component: PageComponent }) {
       </div>
     case 'heading': {
       const sizes = { 1: 'text-xl', 2: 'text-lg', 3: 'text-base' }
-      return <p className={cn('font-semibold text-slate-800', sizes[component.level ?? 2])}>{component.text || 'Heading'}</p>
+      // component.text || fallback: a read-only render expression, never
+      // written back — the persisted seed (factory.ts's base.text =
+      // 'Heading') is a separate literal and stays untranslated. Same
+      // display-fallback-vs-seed distinction as button's label below.
+      return <p className={cn('font-semibold text-slate-800', sizes[component.level ?? 2])}>{component.text || t('builder.pages.preview.heading_placeholder')}</p>
     }
     case 'paragraph':
-      return <p className="text-sm leading-relaxed text-slate-500">{component.text || 'Paragraph text.'}</p>
+      return <p className="text-sm leading-relaxed text-slate-500">{component.text || t('builder.pages.preview.paragraph_placeholder')}</p>
     case 'image':
       return component.src ? (
         <img src={component.src} alt={component.alt ?? ''} className="max-h-40 rounded-md object-cover" />
       ) : (
         <div className="flex h-24 items-center justify-center rounded-md border border-dashed border-slate-200 bg-slate-50 text-[11px] text-slate-400">
-          No image URL set
+          {t('builder.pages.preview.no_image')}
         </div>
       )
     case 'button': {
       const target = component.linkType === 'menu'
-        ? (component.menuSlug || 'no menu selected')
-        : (component.url || 'no URL set')
+        ? (component.menuSlug || t('builder.pages.preview.no_menu_selected'))
+        : (component.url || t('builder.pages.preview.no_url_set'))
       return (
         <div className="flex flex-col items-start gap-1">
           <Button type="button" variant={BUTTON_VARIANT_MAP[component.variant ?? 'primary']} size="sm" disabled className="pointer-events-none">
-            {component.label || 'Button'}
+            {component.label || t('builder.pages.preview.button_fallback')}
           </Button>
           <span className="text-[10px] text-slate-400">→ {target}</span>
         </div>

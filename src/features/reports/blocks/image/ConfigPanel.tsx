@@ -15,10 +15,12 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { contentApi } from '@/features/content/api'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { ReportBlockConfigPanelProps } from '../../report-block-contract'
 import type { ImageBlockConfig } from './schema'
 
 export function ImageBlockConfigPanel({ config, onChange }: ReportBlockConfigPanelProps<ImageBlockConfig>) {
+  const t = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -30,7 +32,7 @@ export function ImageBlockConfigPanel({ config, onChange }: ReportBlockConfigPan
       const obj = await contentApi.upload({ ownerKind: 'app_asset', ownerResourceId: '' }, file)
       onChange({ ...config, source: 'content_id', content_id: obj.id, url: undefined })
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Upload failed')
+      setError(e instanceof Error ? e.message : t('reports.blocks.image.upload_failed'))
     } finally {
       setUploading(false)
     }
@@ -39,15 +41,15 @@ export function ImageBlockConfigPanel({ config, onChange }: ReportBlockConfigPan
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
-        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Source</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.blocks.image.source_label')}</Label>
         <SelectMenu
           value={config.source}
           onValueChange={(source) => onChange({ ...config, source: source as ImageBlockConfig['source'] })}
         >
           <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="url" className="text-xs">Image URL</SelectItem>
-            <SelectItem value="content_id" className="text-xs">Upload</SelectItem>
+            <SelectItem value="url" className="text-xs">{t('reports.blocks.image.source_url_option')}</SelectItem>
+            <SelectItem value="content_id" className="text-xs">{t('reports.blocks.image.upload_option')}</SelectItem>
           </SelectContent>
         </SelectMenu>
       </div>
@@ -55,24 +57,24 @@ export function ImageBlockConfigPanel({ config, onChange }: ReportBlockConfigPan
       {config.source === 'url' ? (
         <div className="flex flex-col gap-1.5">
           <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-            Image URL <span className="font-normal">(shown as a link in every export format — never embedded)</span>
+            {t('reports.blocks.image.url_label')} <span className="font-normal">({t('reports.blocks.image.url_hint')})</span>
           </Label>
           <Input
             value={config.url ?? ''}
             onChange={(e) => onChange({ ...config, url: e.target.value })}
-            placeholder="https://…"
+            placeholder={t('reports.blocks.image.url_placeholder')}
             className="h-8 text-sm"
           />
         </div>
       ) : (
         <div className="flex flex-col gap-1.5">
           <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-            Upload <span className="font-normal">(embedded for real in XLSX/DOCX/PDF)</span>
+            {t('reports.blocks.image.upload_label')} <span className="font-normal">({t('reports.blocks.image.upload_hint')})</span>
           </Label>
           {config.content_id ? (
             <div className="flex items-center gap-2 rounded-md border border-[hsl(var(--border))] p-2">
               <ImageIcon size={14} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
-              <span className="min-w-0 flex-1 truncate text-xs text-[hsl(var(--foreground))]">Image uploaded</span>
+              <span className="min-w-0 flex-1 truncate text-xs text-[hsl(var(--foreground))]">{t('reports.blocks.image.uploaded_status')}</span>
               <Button
                 variant="ghost" size="icon" className="h-6 w-6 shrink-0"
                 onClick={() => onChange({ ...config, content_id: undefined })}
@@ -95,7 +97,7 @@ export function ImageBlockConfigPanel({ config, onChange }: ReportBlockConfigPan
                 disabled={uploading}
               >
                 {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-                {uploading ? 'Uploading…' : 'Choose image…'}
+                {uploading ? t('reports.blocks.image.uploading') : t('reports.blocks.image.choose_image')}
               </Button>
             </>
           )}
@@ -109,12 +111,12 @@ export function ImageBlockConfigPanel({ config, onChange }: ReportBlockConfigPan
 
       <div className="flex flex-col gap-1.5">
         <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-          Alt text <span className="font-normal">(optional)</span>
+          {t('reports.blocks.image.alt_text_label')} <span className="font-normal">({t('common.optional')})</span>
         </Label>
         <Input
           value={config.alt ?? ''}
           onChange={(e) => onChange({ ...config, alt: e.target.value })}
-          placeholder="Company logo"
+          placeholder={t('reports.blocks.image.alt_placeholder')}
           className="h-8 text-sm"
         />
       </div>

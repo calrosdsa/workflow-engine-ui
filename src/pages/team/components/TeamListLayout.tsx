@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { AppSummary } from '@/features/applications/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 interface TeamListLayoutProps {
   apps: AppSummary[]
@@ -22,6 +23,7 @@ interface TeamListLayoutProps {
 export function TeamListLayout({
   apps, selectedAppId, onSelectApp, search, onSearchChange, searchPlaceholder, primaryAction, children,
 }: TeamListLayoutProps) {
+  const t = useTranslation()
   return (
     // A fixed w-56 sidebar beside a toolbar pairing a primary-action button
     // with a hard w-64 search input, with no responsive classes anywhere,
@@ -41,7 +43,7 @@ export function TeamListLayout({
             )}
           >
             <Layers size={14} />
-            All
+            {t('team.all_apps')}
           </button>
           <div className="flex gap-1 md:mt-0.5 md:block md:space-y-0.5 md:border-l md:border-[hsl(var(--border))] md:pl-3">
             {apps.map((app) => (

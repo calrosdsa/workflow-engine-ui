@@ -10,6 +10,7 @@ import { Plus, Trash2, FolderPlus } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { FormElement } from '../schema'
 import {
   type AdvancedSettingGroup, type AdvancedSettingCondition, type AdvancedSettingCompareOp,
@@ -17,6 +18,11 @@ import {
   newAdvancedSettingCondition,
 } from '../schema'
 
+// Registry-shaped: .value is the lookup key for t(`form_config.op_${value}`);
+// .label stays only as the English literal that key's own fallback matches.
+// All 11 go through the same dynamic mechanism, symbols included — a mixed
+// render path (t() for words, raw .label for glyphs) invites a future
+// "cleanup" that breaks it.
 const OPERATORS: { value: AdvancedSettingCompareOp; label: string }[] = [
   { value: 'eq', label: '=' },
   { value: 'neq', label: '≠' },
@@ -46,6 +52,7 @@ interface AdvancedSettingConditionBuilderProps {
 export function AdvancedSettingConditionBuilder({
   group, fields, onChange, onRemove, depth = 0,
 }: AdvancedSettingConditionBuilderProps) {
+  const t = useTranslation()
   const setCombinator = (combinator: 'and' | 'or') => onChange({ ...group, combinator })
 
   const addCondition = () => onChange({ ...group, conditions: [...group.conditions, newAdvancedSettingCondition()] })
@@ -77,7 +84,7 @@ export function AdvancedSettingConditionBuilder({
                 group.combinator === c ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
               )}
             >
-              {c}
+              {t(`form_config.combinator_${c}`)}
             </button>
           ))}
         </div>
@@ -85,7 +92,7 @@ export function AdvancedSettingConditionBuilder({
           <button
             onClick={onRemove}
             className="flex h-6 w-6 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
-            title="Remove group"
+            title={t('form_config.remove_group')}
           >
             <Trash2 size={12} />
           </button>
@@ -93,7 +100,7 @@ export function AdvancedSettingConditionBuilder({
       </div>
 
       {isEmpty && (
-        <p className="px-1 py-2 text-center text-[11px] text-[hsl(var(--muted-foreground))]">No conditions yet — settings always apply.</p>
+        <p className="px-1 py-2 text-center text-[11px] text-[hsl(var(--muted-foreground))]">{t('form_config.no_conditions_yet')}</p>
       )}
 
       <div className="space-y-1.5">
@@ -125,11 +132,11 @@ export function AdvancedSettingConditionBuilder({
 
       <div className="mt-2 flex gap-1.5">
         <Button variant="outline" size="sm" onClick={addCondition} className="h-7 flex-1 gap-1 border-dashed text-[11px] text-[hsl(var(--muted-foreground))]">
-          <Plus size={12} /> Condition
+          <Plus size={12} /> {t('form_config.condition_button')}
         </Button>
         {depth < 3 && (
           <Button variant="outline" size="sm" onClick={addGroup} className="h-7 gap-1 border-dashed text-[11px] text-[hsl(var(--muted-foreground))]">
-            <FolderPlus size={12} /> Group
+            <FolderPlus size={12} /> {t('form_config.group_button')}
           </Button>
         )}
       </div>
@@ -143,6 +150,7 @@ function ConditionRow({ condition, fields, onChange, onRemove }: {
   onChange: (patch: Partial<AdvancedSettingCondition>) => void
   onRemove: () => void
 }) {
+  const t = useTranslation()
   const needsValue = opNeedsValue(condition.op)
 
   return (
@@ -153,7 +161,7 @@ function ConditionRow({ condition, fields, onChange, onRemove }: {
           onChange={(e) => onChange({ field: e.target.value })}
           className="min-w-0 flex-1 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-1.5 py-1 text-[11px] text-[hsl(var(--foreground))] focus:border-[hsl(var(--ring))] focus:outline-none"
         >
-          <option value="">field…</option>
+          <option value="">{t('form_config.field_placeholder')}</option>
           {fields.map((f) => (
             <option key={f.id} value={f.key}>{f.label || f.key}</option>
           ))}
@@ -164,13 +172,13 @@ function ConditionRow({ condition, fields, onChange, onRemove }: {
           className="shrink-0 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-1.5 py-1 text-[11px] text-[hsl(var(--foreground))] focus:border-[hsl(var(--ring))] focus:outline-none"
         >
           {OPERATORS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
+            <option key={o.value} value={o.value}>{t(`form_config.op_${o.value}`)}</option>
           ))}
         </select>
         <button
           onClick={onRemove}
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
-          title="Remove condition"
+          title={t('form_config.remove_condition')}
         >
           <Trash2 size={11} />
         </button>
@@ -180,7 +188,7 @@ function ConditionRow({ condition, fields, onChange, onRemove }: {
         <Input
           value={condition.value == null ? '' : String(condition.value)}
           onChange={(e) => onChange({ value: e.target.value })}
-          placeholder={condition.op === 'in' ? 'comma,separated,values' : 'value…'}
+          placeholder={condition.op === 'in' ? t('form_config.comma_separated_placeholder') : t('form_config.value_placeholder')}
           className="mt-1.5 h-7 text-[12px]"
         />
       )}

@@ -21,6 +21,7 @@ import { render, cleanup, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RelatedFormTabRenderer } from './Renderer'
 import { formsApi } from '@/features/forms/api'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import type { RelatedFormTabConfig } from './schema'
 
 afterEach(() => cleanup())
@@ -31,7 +32,7 @@ vi.mock('../../RecordsTable', () => ({
 
 function renderWithQueryClient(ui: React.ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return { ...render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>), client }
+  return { ...render(<QueryClientProvider client={client}><I18nProvider>{ui}</I18nProvider></QueryClientProvider>), client }
 }
 
 // A fresh object every call — mirrors DetailTabList.tsx's
@@ -67,12 +68,14 @@ describe('RelatedFormTabRenderer — hideWhenEmpty existence-check query stabili
     for (let i = 0; i < 5; i++) {
       rerender(
         <QueryClientProvider client={client}>
-          <RelatedFormTabRenderer
-            formId="form_owner"
-            recordId="rec_1"
-            fields={[]}
-            config={freshConfig()}
-          />
+          <I18nProvider>
+            <RelatedFormTabRenderer
+              formId="form_owner"
+              recordId="rec_1"
+              fields={[]}
+              config={freshConfig()}
+            />
+          </I18nProvider>
         </QueryClientProvider>,
       )
     }

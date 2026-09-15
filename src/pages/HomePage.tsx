@@ -12,6 +12,7 @@ import { isSuperAdmin } from '@/features/auth/access'
 import { useCreateApp } from '@/features/applications/hooks'
 import { runtimeUrlFor } from '@/features/runtime/urls'
 import type { Membership } from '@/features/auth/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 // The single landing page for builder-qualified users (Runtime Users who
 // don't qualify for the builder shell at all still land on /portal — see
@@ -25,6 +26,7 @@ export function HomePage() {
   const activeClientId = useAuthStore((s) => s.activeClientId)
   const setActiveMembership = useAuthStore((s) => s.setActiveMembership)
   const canCreateApp = isSuperAdmin(session)
+  const t = useTranslation()
   const [createOpen, setCreateOpen] = useState(false)
 
   const appMemberships = (session?.memberships ?? []).filter(
@@ -44,19 +46,19 @@ export function HomePage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Applications</h1>
-          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">{appMemberships.length} application{appMemberships.length === 1 ? '' : 's'}</p>
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">{t('home.title')}</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">{t('common.applications', { count: appMemberships.length })}</p>
         </div>
         {canCreateApp && (
-          <Button onClick={() => setCreateOpen(true)} className="gap-1.5"><Plus size={16} />Add app</Button>
+          <Button onClick={() => setCreateOpen(true)} className="gap-1.5"><Plus size={16} />{t('home.add_app')}</Button>
         )}
       </div>
 
       {appMemberships.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center">
           <LayoutGrid size={32} className="text-[hsl(var(--muted-foreground))]/60 mb-3" />
-          <p className="text-[hsl(var(--muted-foreground))]">You don't have access to any application yet.</p>
-          <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]/70">Contact your administrator to request access.</p>
+          <p className="text-[hsl(var(--muted-foreground))]">{t('home.no_apps')}</p>
+          <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]/70">{t('home.no_apps_help')}</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -78,6 +80,7 @@ export function HomePage() {
 
 function CreateAppDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const createMutation = useCreateApp()
+  const t = useTranslation()
   const [name, setName] = useState('')
 
   const canSubmit = name.trim() !== ''
@@ -95,34 +98,31 @@ function CreateAppDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setName('') }}>
       <DialogContent className="w-full max-w-sm">
         <DialogHeader>
-          <DialogTitle>New application</DialogTitle>
-          <DialogDescription>
-            Creates an empty application with default roles under this client. Workflows, forms, and design are
-            configured after creation, from the app's Edit design shell.
-          </DialogDescription>
+          <DialogTitle>{t('home.new_application')}</DialogTitle>
+          <DialogDescription>{t('home.new_application_description')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 px-6 py-4">
           <div>
-            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name</Label>
+            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('common.name')}</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Support Portal"
+              placeholder={t('home.app_name_placeholder')}
               autoFocus
               onKeyDown={(e) => { if (e.key === 'Enter' && canSubmit) submit() }}
             />
           </div>
           {createMutation.isError && (
-            <p className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={13} />Failed to create application</p>
+            <p className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={13} />{t('home.create_failed')}</p>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={createMutation.isPending}>Cancel</Button>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={createMutation.isPending}>{t('common.cancel')}</Button>
           <Button size="sm" disabled={!canSubmit || createMutation.isPending} onClick={submit} className="gap-1.5">
             {createMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-            Create
+            {t('common.create')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -136,6 +136,7 @@ function AppCard({ membership, onOpenRuntime, onOpenDesign }: {
   onOpenDesign: () => void
 }) {
   const canDesign = hasPermission(membership.permissions, 'application:design')
+  const t = useTranslation()
 
   return (
     <Card className="group transition-shadow hover:shadow-md">
@@ -149,14 +150,14 @@ function AppCard({ membership, onOpenRuntime, onOpenDesign }: {
             {canDesign && (
               <button
                 onClick={(e) => { e.stopPropagation(); onOpenDesign() }}
-                title="Edit design"
-                aria-label="Edit design"
+                title={t('home.edit_design')}
+                aria-label={t('home.edit_design')}
                 className="rounded-md p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--primary))]/10 hover:text-[hsl(var(--primary))]"
               >
                 <PencilRuler size={14} />
               </button>
             )}
-            <button onClick={onOpenRuntime} title="Open" aria-label="Open" className="rounded-md p-1 text-[hsl(var(--muted-foreground))]/60">
+            <button onClick={onOpenRuntime} title={t('home.open')} aria-label={t('home.open')} className="rounded-md p-1 text-[hsl(var(--muted-foreground))]/60">
               <ChevronRight size={16} />
             </button>
           </div>

@@ -14,11 +14,13 @@ import { FieldInput } from '@/features/forms/runtime/FieldRenderer'
 import { isFieldSingleWritable } from '@/features/forms/runtime/schema-to-zod'
 import { schemaToVariableDecls } from '@/features/forms/runtime/expression-context'
 import { iterElements } from '@/features/form-builder/projection'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { CustomActionConfigPanelProps } from '../contract'
 import type { UpdateFieldActionConfig } from './schema'
 import type { FormElement } from '@/features/form-builder/schema'
 
 export function UpdateFieldConfigPanel({ config, onChange, schema }: CustomActionConfigPanelProps<UpdateFieldActionConfig>) {
+  const t = useTranslation()
   const writableFields = useMemo<FormElement[]>(() => {
     if (!schema) return []
     return Array.from(iterElements(schema)).filter(isFieldSingleWritable)
@@ -30,15 +32,15 @@ export function UpdateFieldConfigPanel({ config, onChange, schema }: CustomActio
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
-        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Field to update</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('update_field.config.field_label')}</Label>
         <SelectMenu
           value={config.fieldKey}
           onValueChange={(fieldKey) => onChange({ ...config, fieldKey, staticValue: '' })}
         >
-          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Choose a field…" /></SelectTrigger>
+          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('update_field.config.choose_field_placeholder')} /></SelectTrigger>
           <SelectContent>
             {writableFields.length === 0 ? (
-              <div className="px-2 py-1.5 text-[12px] text-[hsl(var(--muted-foreground))]">No eligible fields on this form.</div>
+              <div className="px-2 py-1.5 text-[12px] text-[hsl(var(--muted-foreground))]">{t('update_field.config.no_eligible_fields')}</div>
             ) : (
               writableFields.map((f) => (
                 <SelectItem key={f.id} value={f.key} className="text-xs">{f.label || f.key}</SelectItem>
@@ -57,7 +59,7 @@ export function UpdateFieldConfigPanel({ config, onChange, schema }: CustomActio
                 onChange(v ? { ...config, valueMode: 'expression', expressionValue: config.expressionValue ?? '' } : { ...config, valueMode: 'static' })
               }
             />
-            <Label className="cursor-pointer text-[12px] font-normal text-[hsl(var(--muted-foreground))]">Compute the value with an expression</Label>
+            <Label className="cursor-pointer text-[12px] font-normal text-[hsl(var(--muted-foreground))]">{t('update_field.config.use_expression')}</Label>
           </label>
 
           {config.valueMode === 'expression' ? (
@@ -65,12 +67,12 @@ export function UpdateFieldConfigPanel({ config, onChange, schema }: CustomActio
               value={config.expressionValue ?? ''}
               onChange={(v) => onChange({ ...config, expressionValue: v })}
               variables={variables}
-              placeholder='Vars["stage"]'
-              label="new value"
+              placeholder={t('update_field.config.expression_placeholder')}
+              label={t('update_field.config.new_value_label')}
             />
           ) : (
             <div className="flex flex-col gap-1.5">
-              <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Value to set</Label>
+              <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('update_field.config.value_label')}</Label>
               <FieldInput
                 el={targetField}
                 field={{

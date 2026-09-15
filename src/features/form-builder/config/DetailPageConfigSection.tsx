@@ -21,6 +21,7 @@ import { nanoid } from '@/features/workflows/builder/nanoid'
 import { allDetailTabs, getDetailTab, resolveDetailTabs, isAlwaysPresentDetailTab } from '@/features/forms/runtime/detail-tabs/registry'
 import { DetailTabConfigForm } from '@/features/forms/runtime/detail-tabs/DetailTabConfigForm'
 import '@/features/forms/runtime/detail-tabs'
+import { useI18n, useTranslation } from '@/features/i18n/I18nProvider'
 import { cn } from '@/lib/utils'
 import type { DetailTabConfig } from '../schema'
 
@@ -39,6 +40,13 @@ interface DetailPageConfigSectionProps {
 }
 
 export function DetailPageConfigSection({ formId, detailTabs, onChange, applyDefault = true }: DetailPageConfigSectionProps) {
+  // Bound to a non-`t` name: this function's own body shadows `t` as the
+  // per-tab loop/lookup variable throughout (`tabs.find((t) => …)`,
+  // `tabs.map((t) => …)`, `const t = tabs.find(…)` in toggleHidden/removeTab
+  // below) — same collision DetailTabList.tsx's labelFor already hit and
+  // resolved the same way. DetailTabRow, a separate component below, has no
+  // such shadow and uses plain `t`.
+  const { t: translate } = useI18n()
   const tabs = applyDefault ? resolveDetailTabs(detailTabs) : (detailTabs ?? [])
   const visibleCount = applyDefault ? tabs.filter((t) => !t.hidden).length : Infinity
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -119,7 +127,7 @@ export function DetailPageConfigSection({ formId, detailTabs, onChange, applyDef
             type="button"
             className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-[hsl(var(--border))] py-2 text-[12px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:border-[hsl(var(--primary))]/40 hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
           >
-            <Plus size={13} /> Add Tab
+            <Plus size={13} /> {translate('detail_tab.section.add_tab')}
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="center" className="w-72">
@@ -162,6 +170,7 @@ function DetailTabRow({ formId, tab, onToggleHidden, onRemove, onPatch, canHide,
    *  for why. Hide/Show keeps using canHide regardless. */
   canRemove: boolean
 }) {
+  const t = useTranslation()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tab.id })
   const def = getDetailTab(tab.type)
   const style = { transform: CSS.Transform.toString(transform), transition }
@@ -185,7 +194,7 @@ function DetailTabRow({ formId, tab, onToggleHidden, onRemove, onPatch, canHide,
           {...attributes}
           {...listeners}
           className="cursor-grab touch-none rounded p-1.5 text-[hsl(var(--muted-foreground))]/60 hover:text-[hsl(var(--muted-foreground))] active:cursor-grabbing"
-          title="Drag to reorder"
+          title={t('detail_tab.section.drag_to_reorder')}
         >
           <GripVertical size={14} />
         </button>
@@ -199,20 +208,20 @@ function DetailTabRow({ formId, tab, onToggleHidden, onRemove, onPatch, canHide,
             <span className="flex shrink-0 items-center gap-1">
               {def?.builtin && (
                 <Badge variant="outline" className="h-5 gap-0.5 px-1.5 py-0 text-[9.5px] font-medium normal-case tracking-normal text-[hsl(var(--muted-foreground))]">
-                  <Lock size={9} /> Built-in
+                  <Lock size={9} /> {t('detail_tab.section.builtin_badge')}
                 </Badge>
               )}
               {tab.hidden && (
-                <Badge variant="secondary" className="h-5 px-1.5 py-0 text-[9.5px] font-medium normal-case tracking-normal">Hidden</Badge>
+                <Badge variant="secondary" className="h-5 px-1.5 py-0 text-[9.5px] font-medium normal-case tracking-normal">{t('detail_tab.section.hidden_badge')}</Badge>
               )}
               {hasCustomVisibility && (
                 <Badge variant="outline" className="h-5 gap-0.5 px-1.5 py-0 text-[9.5px] font-medium normal-case tracking-normal text-[hsl(var(--muted-foreground))]">
-                  <Users2 size={9} /> Restricted
+                  <Users2 size={9} /> {t('detail_tab.section.restricted_badge')}
                 </Badge>
               )}
               {isConditional && (
                 <Badge variant="outline" className="h-5 gap-0.5 px-1.5 py-0 text-[9.5px] font-medium normal-case tracking-normal text-[hsl(var(--muted-foreground))]">
-                  <GitBranch size={9} /> Conditional
+                  <GitBranch size={9} /> {t('detail_tab.section.conditional_badge')}
                 </Badge>
               )}
             </span>
@@ -224,7 +233,7 @@ function DetailTabRow({ formId, tab, onToggleHidden, onRemove, onPatch, canHide,
             type="button"
             onClick={onToggleHidden}
             disabled={!canHide}
-            title={tab.hidden ? 'Show tab' : canHide ? 'Hide tab' : 'At least one tab must stay visible'}
+            title={tab.hidden ? t('detail_tab.section.show_tab') : canHide ? t('detail_tab.section.hide_tab') : t('detail_tab.section.must_stay_visible')}
             className="rounded-md p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
           >
             {tab.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -233,7 +242,7 @@ function DetailTabRow({ formId, tab, onToggleHidden, onRemove, onPatch, canHide,
             type="button"
             onClick={onRemove}
             disabled={!canRemove}
-            title={!canHide ? 'At least one tab must stay visible' : canRemove ? 'Remove tab' : 'This tab is always shown — hide it instead'}
+            title={!canHide ? t('detail_tab.section.must_stay_visible') : canRemove ? t('detail_tab.section.remove_tab') : t('detail_tab.section.always_shown_hide_instead')}
             className="rounded-md p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
           >
             <Trash2 size={14} />

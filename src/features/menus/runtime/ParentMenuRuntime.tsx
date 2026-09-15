@@ -2,6 +2,7 @@ import { FolderTree, Search as SearchIcon, PlusSquare, LayoutTemplate, LayoutDas
 import type { LucideIcon } from 'lucide-react'
 import { buildMenuTree } from '../tree'
 import { MenuIcon } from '../MenuIcon'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { Menu, MenuType } from '../types'
 
 interface ParentMenuRuntimeProps {
@@ -40,12 +41,13 @@ const TYPE_ICONS: Record<MenuType, LucideIcon> = {
 // (rather than a child) shows a "choose a section" grid instead of a dead
 // page, so linking/bookmarking a Parent menu directly still has a purpose.
 export function ParentMenuRuntime({ menu, menus = [], onNavigate }: ParentMenuRuntimeProps) {
+  const t = useTranslation()
   const tree = buildMenuTree(menus)
   const node = findNode(tree, menu.id)
   const children = node?.children ?? []
 
   if (children.length === 0) {
-    return <div className="p-6 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>"{menu.name}" has no sections yet.</div>
+    return <div className="p-6 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('menus.runtime.parent.no_sections', { name: menu.name })}</div>
   }
 
   return (

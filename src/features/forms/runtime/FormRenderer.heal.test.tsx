@@ -12,6 +12,7 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { render, cleanup, screen } from '@testing-library/react'
 import { FormRenderer } from './FormRenderer'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import type { FieldDef } from '@/features/forms/types'
 
 // jsdom has no ResizeObserver; Radix's Select mounts one. Same stub every
@@ -40,11 +41,13 @@ describe('FormRenderer over a healed, API-created form', () => {
     const schema = resolveFormSchema(apiCreatedForm)
 
     render(
-      <FormRenderer
-        schema={schema}
-        fields={apiCreatedForm.fields}
-        onSubmit={() => {}}
-      />,
+      <I18nProvider>
+        <FormRenderer
+          schema={schema}
+          fields={apiCreatedForm.fields}
+          onSubmit={() => {}}
+        />
+      </I18nProvider>,
     )
 
     // Every field's label is on screen — the "nothing to see" bug is dead.

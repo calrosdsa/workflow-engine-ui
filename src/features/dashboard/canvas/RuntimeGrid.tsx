@@ -19,6 +19,7 @@ import type { Menu } from '@/features/menus/types'
 import type { DashboardSchema } from '../schema'
 import { getWidget } from '../widget-registry'
 import { useIsVisible } from './useIsVisible'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 const ResponsiveGridLayoutWithWidth = WidthProvider(Responsive)
 
@@ -94,8 +95,10 @@ function RuntimeTile({ instance, clientId, appId, menus, onNavigate, recordConte
   onNavigate?: (slug: string) => void
   recordContext?: { formId: string; recordId: string }
 }) {
+  const t = useTranslation()
   const def = getWidget(instance.type)
   const [tileRef, isVisible] = useIsVisible<HTMLDivElement>()
+  const tileName = instance.title || (def ? t(`builder.dashboard.${instance.type}.label`) : undefined)
 
   return (
     <div
@@ -108,13 +111,13 @@ function RuntimeTile({ instance, clientId, appId, menus, onNavigate, recordConte
     >
       {instance.chrome === 'card' && (instance.title || def) && (
         <div className="shrink-0 border-b border-[hsl(var(--border))] px-3 py-1.5">
-          <span className="truncate text-[11px] font-semibold text-[hsl(var(--card-foreground))]">{instance.title || def?.label}</span>
+          <span className="truncate text-[11px] font-semibold text-[hsl(var(--card-foreground))]">{tileName}</span>
         </div>
       )}
       <div className="min-h-0 flex-1 overflow-auto" style={{ scrollbarGutter: 'stable' }}>
         {!def ? (
           <div className="flex h-full items-center justify-center p-4 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
-            Widget type "{instance.type}" is unavailable.
+            {t('builder.dashboard.runtime_unavailable', { type: instance.type })}
           </div>
         ) : !isVisible ? (
           <div className="h-full animate-pulse p-3">

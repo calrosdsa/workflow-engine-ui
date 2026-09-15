@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { resolveRecordTitle } from '@/features/forms/runtime/record-title'
+import { useTranslation, type I18nContextValue } from '@/features/i18n/I18nProvider'
 import type { FieldDef, FormRecord } from '@/features/forms/types'
 import type { CalendarLayoutConfig } from '../types'
 
@@ -13,7 +14,17 @@ interface CalendarLayoutProps {
   loading?: boolean
 }
 
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+// The month/year header a few lines below (cursor.toLocaleDateString) is
+// browser-locale, not app-locale — Intl has no "follow this app's chosen
+// locale" mode, so an app set to Spanish with an English browser shows
+// "September" above these translated weekday abbreviations. Pre-existing
+// mismatch, not introduced here; translating the weekdays is still the
+// right in-scope move (they're static UI chrome the app CAN control).
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
+
+function weekdayLabel(t: I18nContextValue['t'], key: typeof WEEKDAY_KEYS[number]): string {
+  return t(`menus.saved_views.calendar.weekday_${key}`)
+}
 
 function startOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1) }
 function toDateKey(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`}
@@ -27,6 +38,7 @@ function toDateKey(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() +
 // existing record-detail drawer (FR-D2-007), unchanged — handled by the
 // caller via onOpenRecord.
 export function CalendarLayout({ records, fields, config, onOpenRecord, loading }: CalendarLayoutProps) {
+  const t = useTranslation()
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()))
 
   const byDay = useMemo(() => {
@@ -58,7 +70,7 @@ export function CalendarLayout({ records, fields, config, onOpenRecord, loading 
   const today = toDateKey(new Date())
 
   if (loading) {
-    return <div className="p-8 text-center text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading…</div>
+    return <div className="p-8 text-center text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('common.loading')}</div>
   }
 
   return (
@@ -71,7 +83,7 @@ export function CalendarLayout({ records, fields, config, onOpenRecord, loading 
           <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))}>
             <ChevronLeft size={14} />
           </Button>
-          <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setCursor(startOfMonth(new Date()))}>Today</Button>
+          <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setCursor(startOfMonth(new Date()))}>{t('menus.saved_views.calendar.today')}</Button>
           <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))}>
             <ChevronRight size={14} />
           </Button>
@@ -79,9 +91,9 @@ export function CalendarLayout({ records, fields, config, onOpenRecord, loading 
       </div>
 
       <div className="grid grid-cols-7 gap-px overflow-hidden rounded-lg border" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--border))' }}>
-        {WEEKDAY_LABELS.map((d) => (
+        {WEEKDAY_KEYS.map((d) => (
           <div key={d} className="px-2 py-1 text-center text-[10px] font-medium uppercase tracking-wide" style={{ backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}>
-            {d}
+            {weekdayLabel(t, d)}
           </div>
         ))}
         {cells.map((d, i) => {
@@ -113,7 +125,7 @@ export function CalendarLayout({ records, fields, config, onOpenRecord, loading 
                   </button>
                 ))}
                 {dayRecords.length > 3 && (
-                  <span className="px-1 text-[10px]" style={{ color: 'hsl(var(--muted-foreground))' }}>+{dayRecords.length - 3} more</span>
+                  <span className="px-1 text-[10px]" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('menus.saved_views.calendar.more_count', { count: dayRecords.length - 3 })}</span>
                 )}
               </div>
             </div>

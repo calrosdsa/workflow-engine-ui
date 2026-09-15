@@ -14,6 +14,7 @@ import { formsApi } from '@/features/forms/api'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { resolveReferenceLabel } from './record-title'
 import { PREVIEW_REFERENCE_SENTINEL } from './preview-sentinel'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 interface ReferenceValueLabelProps {
   /** The referenced form's id (element.formRef / FieldDef.reference_table). */
@@ -25,6 +26,7 @@ interface ReferenceValueLabelProps {
 }
 
 export function ReferenceValueLabel({ formId, recordId, displayField }: ReferenceValueLabelProps) {
+  const t = useTranslation()
   const id = typeof recordId === 'string' ? recordId : undefined
   // Detail Page Builder preview mode fabricates this exact sentinel for
   // every reference field (sample-data.ts) since it can't safely fake a
@@ -39,7 +41,7 @@ export function ReferenceValueLabel({ formId, recordId, displayField }: Referenc
     enabled: !isPreviewSample && !!formId && !!id,
   })
 
-  if (isPreviewSample) return <span className="text-[hsl(var(--muted-foreground))]">Sample Reference</span>
+  if (isPreviewSample) return <span className="text-[hsl(var(--muted-foreground))]">{t('reference_value_label.sample_reference')}</span>
   if (!id) return <>—</>
   if (isLoading) return <span className="text-[hsl(var(--muted-foreground))]">…</span>
   if (!record) return <>{id}</>

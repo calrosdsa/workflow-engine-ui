@@ -104,9 +104,11 @@ export function SearchMenuRuntime({ menu, menus, clientId, appId, onNavigate, ex
   // computes for the board itself; recomputed here rather than threaded
   // down as a prop since RecordsTable owns its own instance and there's no
   // existing plumbing to share one between this component and it.
-  const { tc } = useI18n()
+  const { t, tc } = useI18n()
   const enumLabels = buildEnumLabels(localizeFormSchema(resolveFormSchema(form), config.form_id, tc))
-  const createLabel = form?.name ? `Create ${localizeFormName(config.form_id, form.name, tc)}` : 'Create Record'
+  const createLabel = form?.name
+    ? t('menus.runtime.search.create_label', { form: localizeFormName(config.form_id, form.name, tc) })
+    : t('menus.runtime.search.create_record_fallback')
 
   const currentConfig: SavedViewConfig = liveActiveView
     ? liveActiveView.config
@@ -167,13 +169,13 @@ export function SearchMenuRuntime({ menu, menus, clientId, appId, onNavigate, ex
     <div className="p-6">
       {hasUnsavedChanges && liveActiveView.can_manage && (
         <div className="mb-3 flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-xs" style={{ borderColor: 'hsl(var(--primary) / 0.4)', backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--foreground))' }}>
-          <span>“{liveActiveView.name}” has unsaved changes.</span>
+          <span>{t('menus.saved_views.unsaved_changes', { name: liveActiveView.name })}</span>
           <div className="flex items-center gap-1.5">
             <Button variant="ghost" size="sm" className="h-7 gap-1 px-2" onClick={discardChanges} disabled={savingView}>
-              <X size={12} />Discard
+              <X size={12} />{t('common.discard')}
             </Button>
             <Button size="sm" className="h-7 gap-1 px-2" onClick={saveChanges} disabled={savingView}>
-              <Save size={12} />{savingView ? 'Saving…' : 'Save changes'}
+              <Save size={12} />{savingView ? t('menus.saved_views.saving') : t('menus.saved_views.dialog.save_changes')}
             </Button>
           </div>
         </div>

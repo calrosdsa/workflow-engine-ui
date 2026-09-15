@@ -8,6 +8,7 @@ import { ExpressionEditor } from '../ExpressionEditor'
 import { nanoid } from '../nanoid'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, DebugConfig, DebugWatch } from '../../types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 // debug — normalises the legacy shape (label only, no watches) forward;
 // re-attaches a local id to any watch missing one, same convention every
@@ -29,6 +30,7 @@ export interface DebugFormProps {
 }
 
 export function DebugForm({ config, variables, nodeContext, onChange }: DebugFormProps) {
+  const { t } = useI18n()
   const [editorOpen, setEditorOpen] = useState<string | null>(null) // watch id
 
   const watches = config.watches ?? []
@@ -50,7 +52,7 @@ export function DebugForm({ config, variables, nodeContext, onChange }: DebugFor
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Label (optional)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.label_optional')}</Label>
         <Input
           value={config.label ?? ''}
           onChange={(e) => onChange({ ...config, label: e.target.value })}
@@ -58,25 +60,25 @@ export function DebugForm({ config, variables, nodeContext, onChange }: DebugFor
           className="h-8 text-[12px]"
         />
         <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-          Shown alongside this node's captured snapshot when viewing a past execution — useful for telling multiple debug nodes apart.
+          {t('workflows.node_forms.debug_label_help')}
         </p>
       </div>
 
       <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="flex items-center justify-between">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Watches (optional)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.watches_optional')}</Label>
         <span className="rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))]">
           {watches.length}
         </span>
       </div>
       <p className="-mt-2 text-[10px] text-[hsl(var(--muted-foreground))]">
-        Each watch evaluates an expression at this point in the graph and captures the result — for narrowing in on one specific value instead of scanning the whole variable dump. Has no effect on control flow or variable state, and a bad expression is captured as its own error, never fails this node.
+        {t('workflows.node_forms.debug_watch_help')}
       </p>
 
       {watches.length === 0 && (
         <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-4 text-center text-xs text-[hsl(var(--muted-foreground))]">
-          No watches yet — click Add below.
+          {t('workflows.node_forms.no_watches')}
         </div>
       )}
 
@@ -100,7 +102,7 @@ export function DebugForm({ config, variables, nodeContext, onChange }: DebugFor
         className="w-full gap-1.5 border-dashed text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
       >
         <Plus size={13} />
-        Add Watch
+        {t('workflows.node_forms.add_watch')}
       </Button>
 
       {openingWatch && (
@@ -111,7 +113,7 @@ export function DebugForm({ config, variables, nodeContext, onChange }: DebugFor
           onChange={(expr) => update(openingWatch.id, { expression: expr })}
           variables={variables}
           nodeContext={nodeContext}
-          label={openingWatch.name || 'watch'}
+          label={openingWatch.name || t('workflows.node_forms.watches_optional')}
         />
       )}
     </div>
@@ -131,6 +133,7 @@ interface WatchRowProps {
 }
 
 function WatchRow({ index, watch, onChange, onDelete, onOpenEditor }: WatchRowProps) {
+  const { t } = useI18n()
   return (
     <div className="group relative rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-3 transition-shadow hover:shadow-sm">
       <div className="mb-2.5 flex items-center gap-2">
@@ -140,13 +143,13 @@ function WatchRow({ index, watch, onChange, onDelete, onOpenEditor }: WatchRowPr
         <input
           value={watch.name}
           onChange={(e) => onChange({ name: e.target.value })}
-          placeholder="Name (e.g. total)"
+          placeholder={t('workflows.node_forms.name_example')}
           className="flex-1 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2.5 py-1.5 text-[12px] font-medium text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/60 focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
         />
         <button
           onClick={onDelete}
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
-          title="Remove watch"
+          title={t('workflows.node_forms.remove_watch')}
         >
           <Trash2 size={12} />
         </button>
@@ -165,7 +168,7 @@ function WatchRow({ index, watch, onChange, onDelete, onOpenEditor }: WatchRowPr
         </div>
         <button
           onClick={onOpenEditor}
-          title="Open expression editor"
+          title={t('workflows.builder.open_expression')}
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] transition-colors hover:border-[hsl(var(--primary))]/50 hover:bg-[hsl(var(--primary))]/10 hover:text-[hsl(var(--primary))]"
         >
           <Code2 size={13} />

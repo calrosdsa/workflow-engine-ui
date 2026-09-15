@@ -9,16 +9,17 @@ import { EnvironmentLinkSection } from './sections/EnvironmentLinkSection'
 import { MarketplaceSection } from './sections/MarketplaceSection'
 import { useApplication } from '@/features/applications/hooks'
 import { Spinner } from '@/components/ui/spinner'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 export type ConfigTab = 'general' | 'settings' | 'reports' | 'versions' | 'environment' | 'marketplace'
 
-const TABS: { id: ConfigTab; label: string; icon: typeof Settings2 }[] = [
-  { id: 'general', label: 'General', icon: Settings2 },
-  { id: 'settings', label: 'Settings', icon: KeyRound },
-  { id: 'reports', label: 'Reports', icon: FileBarChart },
-  { id: 'versions', label: 'Version History', icon: History },
-  { id: 'environment', label: 'Environment Link', icon: GitBranch },
-  { id: 'marketplace', label: 'Marketplace', icon: Store },
+const TABS: { id: ConfigTab; labelKey: string; icon: typeof Settings2 }[] = [
+  { id: 'general', labelKey: 'app_config.general', icon: Settings2 },
+  { id: 'settings', labelKey: 'app_config.settings', icon: KeyRound },
+  { id: 'reports', labelKey: 'app_config.reports', icon: FileBarChart },
+  { id: 'versions', labelKey: 'app_config.version_history', icon: History },
+  { id: 'environment', labelKey: 'app_config.environment_link', icon: GitBranch },
+  { id: 'marketplace', labelKey: 'app_config.marketplace', icon: Store },
 ]
 
 /** App Configuration — everything about how an app is set up, released and
@@ -36,6 +37,7 @@ const TABS: { id: ConfigTab; label: string; icon: typeof Settings2 }[] = [
  *  Mirrors AppDesignPage's tab mechanics exactly — local state seeded from
  *  ?tab= so deep links land correctly, no URL entry per tab switch. */
 export function AppConfigurationPage({ appId }: { appId: string }) {
+  const t = useTranslation()
   const { data: app, isLoading } = useApplication()
   const search = useSearch({ from: '/shell/applications/$appId/configuration' })
   const [tab, setTab] = useState<ConfigTab>(search.tab ?? 'general')
@@ -46,7 +48,7 @@ export function AppConfigurationPage({ appId }: { appId: string }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-wrap items-center justify-center gap-1 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-2">
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {TABS.map(({ id, labelKey, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
@@ -58,7 +60,7 @@ export function AppConfigurationPage({ appId }: { appId: string }) {
             }`}
           >
             <Icon size={14} />
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>

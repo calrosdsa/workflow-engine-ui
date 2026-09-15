@@ -6,6 +6,7 @@ import { KnowledgeBaseSelect } from '@/features/knowledge/KnowledgeBaseSelect'
 import { cn } from '@/lib/utils'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, KnowledgeIngestConfig, ValueMode } from '../../types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 export function normaliseKnowledgeIngestConfig(raw: unknown): KnowledgeIngestConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<KnowledgeIngestConfig>
@@ -22,6 +23,7 @@ export function normaliseKnowledgeIngestConfig(raw: unknown): KnowledgeIngestCon
 }
 
 function ModeToggle({ mode, onChange, accent }: { mode: ValueMode; onChange: (m: ValueMode) => void; accent: string }) {
+  const { t } = useI18n()
   return (
     <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
       {(['static', 'expression'] as const).map((m) => (
@@ -34,7 +36,7 @@ function ModeToggle({ mode, onChange, accent }: { mode: ValueMode; onChange: (m:
             mode === m ? `${accent} shadow-sm` : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
           )}
         >
-          {m === 'static' ? 'Static' : 'Expression'}
+          {m === 'static' ? t('workflows.node_forms.static') : t('workflows.node_forms.expression')}
         </button>
       ))}
     </div>
@@ -49,19 +51,20 @@ export interface KnowledgeIngestFormProps {
 }
 
 export function KnowledgeIngestForm({ config, variables, nodeContext, onChange }: KnowledgeIngestFormProps) {
+  const { t } = useI18n()
   const set = (patch: Partial<KnowledgeIngestConfig>) => onChange({ ...config, ...patch })
 
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Knowledge Base</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.knowledge_base')}</Label>
         <KnowledgeBaseSelect value={config.kb_id || undefined} onChange={(id) => set({ kb_id: id ?? '' })} />
       </div>
 
       <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Content</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.content')}</Label>
         <ModeToggle mode={config.content_mode ?? 'static'} onChange={(m) => set({ content_mode: m })} accent="bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]" />
         {config.content_mode === 'expression' ? (
           <ExpressionField
@@ -70,24 +73,24 @@ export function KnowledgeIngestForm({ config, variables, nodeContext, onChange }
             variables={variables}
             nodeContext={nodeContext}
             placeholder="e.g. NodeOutputs.fetch1.records[0].body"
-            label="Content"
+            label={t('workflows.node_forms.content')}
           />
         ) : (
           <textarea
             value={config.content ?? ''}
             onChange={(e) => set({ content: e.target.value })}
             rows={5}
-            placeholder="Document text to add to the knowledge base…"
+            placeholder={t('workflows.node_forms.content_placeholder')}
             className="w-full resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-3 py-2 text-[12px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/60 focus:border-[hsl(var(--primary))] focus:bg-[hsl(var(--card))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
           />
         )}
         <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-          Ingestion is asynchronous — this node returns immediately with a pending doc_id; the document is chunked and indexed in the background.
+          {t('workflows.node_forms.knowledge_ingestion_help')}
         </p>
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">File Name (optional)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.file_name')}</Label>
         <ModeToggle mode={config.file_name_mode ?? 'static'} onChange={(m) => set({ file_name_mode: m })} accent="bg-[hsl(var(--foreground))]/70 text-[hsl(var(--background))]" />
         {config.file_name_mode === 'expression' ? (
           <ExpressionField
@@ -96,7 +99,7 @@ export function KnowledgeIngestForm({ config, variables, nodeContext, onChange }
             variables={variables}
             nodeContext={nodeContext}
             placeholder="e.g. Vars.record.title"
-            label="File Name"
+            label={t('workflows.node_forms.file_name')}
           />
         ) : (
           <Input
@@ -106,20 +109,20 @@ export function KnowledgeIngestForm({ config, variables, nodeContext, onChange }
             className="h-8 text-[12px]"
           />
         )}
-        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">A display/citation label — shown in query results and the documents list.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.citation_help')}</p>
       </div>
 
       <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Output Variable</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.output_variable')}</Label>
         <Input
           value={config.output_var}
           onChange={(e) => set({ output_var: e.target.value })}
           placeholder="ingest_result"
           className="h-8 font-mono text-[12px]"
         />
-        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Result published as {'{doc_id, status}'} — both on this node's output and on the named variable.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.result_help')}</p>
       </div>
     </div>
   )

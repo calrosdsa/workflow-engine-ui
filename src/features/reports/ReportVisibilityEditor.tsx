@@ -18,12 +18,15 @@ import { Label } from '@/components/ui/label'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { RoleMultiSelect } from '@/features/form-builder/config/RoleMultiSelect'
 import { UserMultiSelect } from '@/features/form-builder/config/UserMultiSelect'
+import { useTranslation, type I18nContextValue } from '@/features/i18n/I18nProvider'
 import type { ReportVisibility, VisibilityMode } from './types'
 
-const MODE_LABELS: Record<VisibilityMode, string> = {
-  public: 'Everyone with access to this app',
-  specific_roles: 'Specific roles',
-  specific_people: 'Specific people',
+function modeLabels(t: I18nContextValue['t']): Record<VisibilityMode, string> {
+  return {
+    public: t('reports.visibility.mode_public'),
+    specific_roles: t('reports.visibility.mode_specific_roles'),
+    specific_people: t('reports.visibility.mode_specific_people'),
+  }
 }
 
 interface ReportVisibilityEditorProps {
@@ -32,7 +35,9 @@ interface ReportVisibilityEditorProps {
 }
 
 export function ReportVisibilityEditor({ visibility, onChange }: ReportVisibilityEditorProps) {
+  const t = useTranslation()
   const mode = visibility.mode ?? 'public'
+  const labels = modeLabels(t)
 
   const handleModeChange = (nextMode: VisibilityMode) => {
     // Switching mode clears the other mode's own list rather than leaving a
@@ -46,23 +51,23 @@ export function ReportVisibilityEditor({ visibility, onChange }: ReportVisibilit
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
-        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Who can run/export this report</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.visibility.who_can_run')}</Label>
         <SelectMenu value={mode} onValueChange={(v) => handleModeChange(v as VisibilityMode)}>
           <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {(Object.keys(MODE_LABELS) as VisibilityMode[]).map((m) => (
-              <SelectItem key={m} value={m} className="text-xs">{MODE_LABELS[m]}</SelectItem>
+            {(Object.keys(labels) as VisibilityMode[]).map((m) => (
+              <SelectItem key={m} value={m} className="text-xs">{labels[m]}</SelectItem>
             ))}
           </SelectContent>
         </SelectMenu>
         <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-          Only narrows access below the current form's own view permission — never grants access beyond it.
+          {t('reports.visibility.narrows_access_hint')}
         </p>
       </div>
 
       {mode === 'specific_roles' && (
         <div className="flex flex-col gap-1.5">
-          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Roles</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.visibility.roles')}</Label>
           <RoleMultiSelect
             value={visibility.role_ids ?? []}
             onChange={(role_ids) => onChange({ ...visibility, role_ids })}
@@ -72,7 +77,7 @@ export function ReportVisibilityEditor({ visibility, onChange }: ReportVisibilit
 
       {mode === 'specific_people' && (
         <div className="flex flex-col gap-1.5">
-          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">People</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.visibility.people')}</Label>
           <UserMultiSelect
             value={visibility.user_ids ?? []}
             onChange={(user_ids) => onChange({ ...visibility, user_ids })}

@@ -1,4 +1,5 @@
 import { AlertTriangle } from 'lucide-react'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 /** Rendered in place of a menu's `runtimeRenderer` when its `menu_type` is not
  *  in MENU_TYPE_REGISTRY — the menu-level analog of the dashboard's
@@ -13,12 +14,13 @@ import { AlertTriangle } from 'lucide-react'
  *  render, not a throw, because there is no error boundary anywhere above it.
  *  See FR-D1-008. */
 export function UnavailableMenu({ type }: { type: string }) {
+  const t = useTranslation()
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
       <AlertTriangle size={22} className="text-[hsl(var(--muted-foreground))]/60" />
-      <p className="text-sm font-medium text-[hsl(var(--foreground))]">Menu unavailable</p>
+      <p className="text-sm font-medium text-[hsl(var(--foreground))]">{t('runtime.unavailable_menu.title')}</p>
       <p className="max-w-sm text-xs text-[hsl(var(--muted-foreground))]">
-        Type "{type}" is not registered in this version of the app. The rest of your navigation is unaffected.
+        {t('runtime.unavailable_menu.body', { type })}
       </p>
     </div>
   )

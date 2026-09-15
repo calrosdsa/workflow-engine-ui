@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils'
 import { nanoid } from '@/features/workflows/builder/nanoid'
 import { allDetailTabs, getDetailTab } from '@/features/forms/runtime/detail-tabs/registry'
 import { DetailTabConfigForm } from '@/features/forms/runtime/detail-tabs/DetailTabConfigForm'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { DetailPageCanvas } from './canvas/DetailPageCanvas'
 import { DetailPagePreview } from './preview/DetailPagePreview'
 import type { DetailTabConfig, DetailPageLayoutId, DetailTabOrientation, FormSchema } from '@/features/form-builder/schema'
@@ -47,16 +48,17 @@ interface DetailPageBuilderOverlayProps {
 export function DetailPageBuilderOverlay({
   open, onOpenChange, formId, fields, schema, onChangeTabs, onChangeOrientation,
 }: DetailPageBuilderOverlayProps) {
+  const t = useTranslation()
   const tabs = schema.settings?.detailTabs ?? []
   const layout = schema.settings?.detailLayout ?? 'single'
   const orientation = schema.settings?.tabOrientation ?? 'horizontal'
   const [selectedTabId, setSelectedTabId] = useState<string | null>(null)
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
 
-  const selectedTab = tabs.find((t) => t.id === selectedTabId) ?? null
+  const selectedTab = tabs.find((dt) => dt.id === selectedTabId) ?? null
 
   const patchTab = (id: string, patch: Partial<DetailTabConfig>) =>
-    onChangeTabs(tabs.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+    onChangeTabs(tabs.map((dt) => (dt.id === id ? { ...dt, ...patch } : dt)))
 
   const addTab = (type: string) => {
     const def = getDetailTab(type)
@@ -74,13 +76,13 @@ export function DetailPageBuilderOverlay({
         <div className="flex h-full flex-col">
           <DialogHeader className="flex-row items-center justify-between gap-4 space-y-0">
             <div>
-              <DialogTitle>Detail Page Builder</DialogTitle>
+              <DialogTitle>{t('detail_tab.canvas.overlay_title')}</DialogTitle>
               <DialogDescription className="sr-only">
-                Arrange this form's record-detail tabs, with a live preview.
+                {t('detail_tab.canvas.overlay_description')}
               </DialogDescription>
             </div>
             <div className="mr-8 flex items-center gap-2">
-              <div role="tablist" aria-label="Builder mode" className="flex items-center rounded-md border border-[hsl(var(--border))] p-0.5">
+              <div role="tablist" aria-label={t('detail_tab.canvas.mode_tablist_label')} className="flex items-center rounded-md border border-[hsl(var(--border))] p-0.5">
                 <button
                   type="button"
                   role="tab"
@@ -91,7 +93,7 @@ export function DetailPageBuilderOverlay({
                     mode === 'edit' ? 'bg-[hsl(var(--accent))] text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))]',
                   )}
                 >
-                  <Pencil size={12} /> Edit
+                  <Pencil size={12} /> {t('common.edit')}
                 </button>
                 <button
                   type="button"
@@ -103,37 +105,37 @@ export function DetailPageBuilderOverlay({
                     mode === 'preview' ? 'bg-[hsl(var(--accent))] text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))]',
                   )}
                 >
-                  <Eye size={12} /> Preview
+                  <Eye size={12} /> {t('common.preview')}
                 </button>
               </div>
 
               {mode === 'edit' && (
-                <div role="tablist" aria-label="Tab bar orientation" className="flex items-center rounded-md border border-[hsl(var(--border))] p-0.5">
+                <div role="tablist" aria-label={t('detail_tab.canvas.orientation_tablist_label')} className="flex items-center rounded-md border border-[hsl(var(--border))] p-0.5">
                   <button
                     type="button"
                     role="tab"
                     aria-selected={orientation === 'horizontal'}
                     onClick={() => onChangeOrientation('horizontal')}
-                    title="Horizontal tabs"
+                    title={t('detail_tab.canvas.horizontal_tabs_title')}
                     className={cn(
                       'flex items-center gap-1.5 rounded px-2.5 py-1 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 focus-visible:ring-offset-[hsl(var(--background))]',
                       orientation === 'horizontal' ? 'bg-[hsl(var(--accent))] text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))]',
                     )}
                   >
-                    <Rows3 size={12} /> Horizontal
+                    <Rows3 size={12} /> {t('detail_tab.canvas.horizontal')}
                   </button>
                   <button
                     type="button"
                     role="tab"
                     aria-selected={orientation === 'vertical'}
                     onClick={() => onChangeOrientation('vertical')}
-                    title="Vertical tabs"
+                    title={t('detail_tab.canvas.vertical_tabs_title')}
                     className={cn(
                       'flex items-center gap-1.5 rounded px-2.5 py-1 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 focus-visible:ring-offset-[hsl(var(--background))]',
                       orientation === 'vertical' ? 'bg-[hsl(var(--accent))] text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))]',
                     )}
                   >
-                    <Columns3 size={12} /> Vertical
+                    <Columns3 size={12} /> {t('detail_tab.canvas.vertical')}
                   </button>
                 </div>
               )}
@@ -147,7 +149,7 @@ export function DetailPageBuilderOverlay({
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button type="button" variant="outline" size="sm" className="gap-1.5">
-                        <Plus size={13} /> Add Tab
+                        <Plus size={13} /> {t('detail_tab.section.add_tab')}
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-72">
@@ -183,7 +185,7 @@ export function DetailPageBuilderOverlay({
                         onPatch={(patch) => patchTab(selectedTab.id, patch)}
                       />
                     ) : (
-                      <p className="text-[12px] text-[hsl(var(--muted-foreground))]">Select a tab or field on the canvas to configure it.</p>
+                      <p className="text-[12px] text-[hsl(var(--muted-foreground))]">{t('detail_tab.canvas.select_prompt')}</p>
                     )}
                   </div>
                 </ScrollArea>
@@ -199,9 +201,9 @@ export function DetailPageBuilderOverlay({
 
           <DialogFooter className="items-center justify-between sm:justify-between">
             <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-              Changes apply instantly — use the builder's Save to persist them.
+              {t('detail_tab.canvas.autosave_hint')}
             </p>
-            <Button type="button" onClick={() => onOpenChange(false)}>Done</Button>
+            <Button type="button" onClick={() => onOpenChange(false)}>{t('common.done')}</Button>
           </DialogFooter>
         </div>
       </DialogContent>

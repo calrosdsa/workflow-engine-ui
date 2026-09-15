@@ -6,6 +6,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
 import type { FormSchema } from './schema'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 interface FormPreviewDialogProps {
   open: boolean
@@ -29,6 +30,7 @@ interface FormPreviewDialogProps {
  *  a display-only reuse, not a destructive action, so no confirmation gate
  *  is needed the way that fix's mode-switch warning is.) */
 export function FormPreviewDialog({ open, onClose, name, schema, formId }: FormPreviewDialogProps) {
+  const t = useTranslation()
   const [justSubmitted, setJustSubmitted] = useState(false)
 
   // Fresh local state each time the dialog reopens, so a stale "Previewed
@@ -48,20 +50,20 @@ export function FormPreviewDialog({ open, onClose, name, schema, formId }: FormP
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[hsl(var(--primary))]/15">
               <Eye size={14} className="text-[hsl(var(--primary))]" />
             </div>
-            Preview — {name || 'Untitled Form'}
+            {t('form_builder.preview_title', { name: name || t('common.unsaved') })}
           </DialogTitle>
         </DialogHeader>
 
         <ScrollArea className="flex-1">
           <div className="mx-auto max-w-2xl space-y-6 p-6">
             {schema.sections.length === 0 ? (
-              <p className="py-12 text-center text-sm text-[hsl(var(--muted-foreground))]">This form has no fields yet.</p>
+              <p className="py-12 text-center text-sm text-[hsl(var(--muted-foreground))]">{t('form_builder.empty_fields')}</p>
             ) : (
               <>
                 {justSubmitted && (
                   <div className="flex items-center gap-2 rounded-md border border-[hsl(var(--success))]/40 bg-[hsl(var(--success))]/15 p-3 text-sm text-[hsl(var(--success))]">
                     <CheckCircle2 size={16} className="shrink-0" />
-                    Validation passed — this is a preview, so nothing was actually saved.
+                    {t('form_builder.preview_passed')}
                   </div>
                 )}
                 <FormRenderer
@@ -69,7 +71,7 @@ export function FormPreviewDialog({ open, onClose, name, schema, formId }: FormP
                   fields={[]}
                   formId={formId}
                   onSubmit={() => setJustSubmitted(true)}
-                  submitLabel="Test submit"
+                  submitLabel={t('form_builder.test_submit')}
                 />
               </>
             )}

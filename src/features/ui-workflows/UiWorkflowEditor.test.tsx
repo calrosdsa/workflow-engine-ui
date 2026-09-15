@@ -5,10 +5,19 @@
 // childStepLabels/setChildStepList rather than any knowledge of `condition`.
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { render, cleanup, screen, fireEvent } from '@testing-library/react'
+import type { ReactElement } from 'react'
 import './nodes'
 import { UiWorkflowEditor } from './UiWorkflowEditor'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import { getUiWorkflowNode } from './node-registry'
 import { UI_WORKFLOW_VERSION, type ConditionStepConfig, type UiWorkflow } from './types'
+
+// UiWorkflowEditor calls useTranslation, which throws outside an
+// I18nProvider ancestor — real provider, no props, same as
+// InsertDataMenu.test.tsx.
+function renderEditor(ui: ReactElement) {
+  return render(<I18nProvider>{ui}</I18nProvider>)
+}
 
 class ResizeObserverStub {
   observe() {}
@@ -43,26 +52,26 @@ const step = (id: string, type: string, config?: unknown) => ({
 
 describe('the step list', () => {
   it('says so when there are no steps', () => {
-    render(<UiWorkflowEditor value={wf([])} onChange={() => {}} />)
+    renderEditor(<UiWorkflowEditor value={wf([])} onChange={() => {}} />)
     expect(screen.getByText(/no steps yet/i)).toBeTruthy()
   })
 
   it('renders a card per step, labelled by the registry', () => {
-    render(<UiWorkflowEditor value={wf([step('a', 'show_message'), step('b', 'navigate')])} onChange={() => {}} />)
+    renderEditor(<UiWorkflowEditor value={wf([step('a', 'show_message'), step('b', 'navigate')])} onChange={() => {}} />)
     expect(screen.getByText('Show Message')).toBeTruthy()
     expect(screen.getByText('Go To')).toBeTruthy()
   })
 
   it('removes a step', () => {
     const onChange = vi.fn()
-    render(<UiWorkflowEditor value={wf([step('a', 'show_message')])} onChange={onChange} />)
+    renderEditor(<UiWorkflowEditor value={wf([step('a', 'show_message')])} onChange={onChange} />)
     fireEvent.click(screen.getAllByLabelText('Remove step')[0])
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ steps: [] }))
   })
 
   it('reorders with the up/down controls', () => {
     const onChange = vi.fn()
-    render(<UiWorkflowEditor value={wf([step('a', 'show_message'), step('b', 'navigate')])} onChange={onChange} />)
+    renderEditor(<UiWorkflowEditor value={wf([step('a', 'show_message'), step('b', 'navigate')])} onChange={onChange} />)
 
     // The first step's "up" is disabled and the last step's "down" is too —
     // the ends of the list have nowhere to go.
@@ -80,7 +89,7 @@ describe('a step type this build does not know', () => {
   const unknown = wf([{ id: 'x', type: 'from_the_future', config: { keep: 'me' } }])
 
   it('is shown rather than hidden, and explains itself', () => {
-    render(<UiWorkflowEditor value={unknown} onChange={() => {}} />)
+    renderEditor(<UiWorkflowEditor value={unknown} onChange={() => {}} />)
     // Announced twice on purpose: the card says it, and the problem list
     // below repeats it as a warning about the workflow as a whole.
     expect(screen.getAllByText(/unknown step/i).length).toBeGreaterThanOrEqual(1)
@@ -90,9 +99,9 @@ describe('a step type this build does not know', () => {
   it('offers no editing, so its config cannot be clobbered', () => {
     // Preserving it verbatim is the point: someone on an older client must be
     // able to save without silently dropping steps they cannot render.
-    render(<UiWorkflowEditor value={unknown} onChange={() => {}} />)
+    renderEditor(<UiWorkflowEditor value={unknown} onChange={() => {}} />)
     expect(screen.queryByLabelText('Move up')).toBeNull()
-    expect(screen.getByText(/Remove/)).toBeTruthy()
+    expect(screen.getByText(/Delete/)).toBeTruthy()
   })
 })
 
@@ -100,7 +109,7 @@ describe('nested branches', () => {
   const branching = wf([step('if', 'condition')])
 
   it('renders a list per branch, labelled from the registry', () => {
-    render(<UiWorkflowEditor value={branching} onChange={() => {}} />)
+    renderEditor(<UiWorkflowEditor value={branching} onChange={() => {}} />)
     expect(screen.getByText('If true')).toBeTruthy()
     expect(screen.getByText('Otherwise')).toBeTruthy()
   })
@@ -110,7 +119,7 @@ describe('nested branches', () => {
     // childStepLists and writes them via setChildStepList, so this is what
     // makes a future branching node editable for free.
     const onChange = vi.fn()
-    render(<UiWorkflowEditor value={branching} onChange={onChange} />)
+    renderEditor(<UiWorkflowEditor value={branching} onChange={onChange} />)
 
     // Three "Add step" buttons, in DOM order: the two branch lists (which are
     // nested inside the card) and then the top-level list's own, since
@@ -130,7 +139,7 @@ describe('nested branches', () => {
 describe('adding a step', () => {
   it('seeds it from the node type’s own default config', () => {
     const onChange = vi.fn()
-    render(<UiWorkflowEditor value={wf([])} onChange={onChange} />)
+    renderEditor(<UiWorkflowEditor value={wf([])} onChange={onChange} />)
 
     addStep(0, 'Show Message')
 
@@ -141,7 +150,7 @@ describe('adding a step', () => {
   })
 
   it('groups the palette by what a step is allowed to touch', () => {
-    render(<UiWorkflowEditor value={wf([])} onChange={() => {}} />)
+    renderEditor(<UiWorkflowEditor value={wf([])} onChange={() => {}} />)
     fireEvent.pointerDown(screen.getByText('Add step'), { button: 0, ctrlKey: false, pointerType: 'mouse' })
     for (const group of ['Interface', 'Data', 'Flow']) {
       expect(screen.getByText(group)).toBeTruthy()
@@ -151,7 +160,7 @@ describe('adding a step', () => {
 
 describe('platform reporting', () => {
   it('names where the whole graph can run', () => {
-    render(<UiWorkflowEditor value={wf([step('a', 'show_message')])} onChange={() => {}} />)
+    renderEditor(<UiWorkflowEditor value={wf([step('a', 'show_message')])} onChange={() => {}} />)
     expect(screen.getByText(/Runs on:/)).toBeTruthy()
   })
 })

@@ -6,6 +6,7 @@
 import {
   SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select-menu'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useAuthStore } from '@/stores/auth'
 import { useRoles } from '@/features/roles/hooks'
 
@@ -25,6 +26,7 @@ interface RoleSelectProps {
 }
 
 export function RoleSelect({ value, onChange, appId: appIdProp }: RoleSelectProps) {
+  const t = useTranslation()
   const activeAppId = useAuthStore((s) => s.activeMembership?.app_id) ?? ''
   const appId = appIdProp ?? activeAppId
   const { data: roles, isLoading } = useRoles(appId)
@@ -32,7 +34,7 @@ export function RoleSelect({ value, onChange, appId: appIdProp }: RoleSelectProp
   if (!appId) {
     return (
       <SelectMenu disabled>
-        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="No active app" /></SelectTrigger>
+        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('form_config.no_active_app')} /></SelectTrigger>
         <SelectContent />
       </SelectMenu>
     )
@@ -41,10 +43,10 @@ export function RoleSelect({ value, onChange, appId: appIdProp }: RoleSelectProp
   return (
     <SelectMenu value={value ?? NONE} onValueChange={(v) => onChange(v === NONE ? undefined : v)} disabled={isLoading}>
       <SelectTrigger className="h-8 text-sm">
-        <SelectValue placeholder={isLoading ? 'Loading roles…' : 'Select a role'} />
+        <SelectValue placeholder={isLoading ? t('form_config.loading_roles') : t('form_config.select_a_role')} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={NONE} className="text-xs">None</SelectItem>
+        <SelectItem value={NONE} className="text-xs">{t('form_config.none')}</SelectItem>
         {(roles ?? []).map((r) => (
           <SelectItem key={r.id} value={r.id} className="text-xs">{r.name}</SelectItem>
         ))}

@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
 import { useAgents } from '@/features/agents/hooks'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 interface AgentSelectProps {
   /** The currently referenced Agent id (or undefined when none). */
@@ -22,6 +23,7 @@ interface AgentSelectProps {
 }
 
 export function AgentSelect({ value, onChange, placeholder }: AgentSelectProps) {
+  const t = useTranslation()
   const { data: agents, isLoading } = useAgents()
   const [open, setOpen] = useState(false)
 
@@ -47,12 +49,12 @@ export function AgentSelect({ value, onChange, placeholder }: AgentSelectProps) 
               <Bot size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
               <span className="truncate">
                 {isLoading && !selected
-                  ? 'Loading agents…'
+                  ? t('workflows.builder.loading_agents')
                   : selected
                     ? selected.name
                     : isBroken
-                      ? 'Unavailable agent'
-                      : (placeholder ?? 'Select an agent…')}
+                      ? t('workflows.builder.unavailable_agent')
+                      : (placeholder ?? t('workflows.builder.select_agent_placeholder'))}
               </span>
             </span>
             <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
@@ -60,14 +62,14 @@ export function AgentSelect({ value, onChange, placeholder }: AgentSelectProps) 
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
           <Command filter={(itemValue, search) => (itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0)}>
-            <CommandInput placeholder="Search agents…" />
+            <CommandInput placeholder={t('workflows.builder.search_agents_placeholder')} />
             <CommandList>
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
-                  <Loader2 size={13} className="animate-spin" /> Loading agents…
+                  <Loader2 size={13} className="animate-spin" /> {t('workflows.builder.loading_agents')}
                 </div>
               ) : options.length === 0 ? (
-                <CommandEmpty>No agents configured — create one in App Design → Agents.</CommandEmpty>
+                <CommandEmpty>{t('workflows.builder.no_agents')}</CommandEmpty>
               ) : (
                 <CommandGroup>
                   {options.map((a) => (
@@ -96,7 +98,7 @@ export function AgentSelect({ value, onChange, placeholder }: AgentSelectProps) 
             {isBroken ? (
               <>
                 <AlertTriangle size={12} className="shrink-0 text-[hsl(var(--warning))]" />
-                <span className="text-[hsl(var(--warning))]">Referenced agent is unavailable</span>
+                <span className="text-[hsl(var(--warning))]">{t('workflows.builder.agent_unavailable_warning')}</span>
               </>
             ) : (
               <>
@@ -109,7 +111,7 @@ export function AgentSelect({ value, onChange, placeholder }: AgentSelectProps) 
             type="button"
             onClick={() => onChange(undefined)}
             className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
-            title="Clear selection"
+            title={t('workflows.builder.clear_selection')}
           >
             <X size={12} />
           </button>
@@ -117,8 +119,7 @@ export function AgentSelect({ value, onChange, placeholder }: AgentSelectProps) 
       )}
       {isBroken && (
         <p className="text-[10px] text-[hsl(var(--warning))]">
-          The stored reference (<span className="font-mono">{value}</span>) no longer matches an existing
-          agent. It's preserved until you pick a new one.
+          {t('workflows.builder.stored_reference_prefix')}<span className="font-mono">{value}</span>{t('workflows.builder.stored_reference_agent_suffix')}
         </p>
       )}
     </div>

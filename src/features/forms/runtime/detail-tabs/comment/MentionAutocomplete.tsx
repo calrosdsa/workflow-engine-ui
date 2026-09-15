@@ -12,6 +12,7 @@ import { useEffect } from 'react'
 import { Loader2, User } from 'lucide-react'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { useMentionableUsers } from '@/features/users/hooks'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { BasicUser } from '@/features/users/types'
 
 function userLabel(u: BasicUser): string {
@@ -33,6 +34,7 @@ interface MentionAutocompleteProps {
 }
 
 export function MentionAutocomplete({ open, query, anchor, highlightedIndex, onResultsChange, onSelect, container }: MentionAutocompleteProps) {
+  const t = useTranslation()
   const { data: results, isLoading } = useMentionableUsers(open ? query : '')
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -55,11 +57,11 @@ export function MentionAutocomplete({ open, query, anchor, highlightedIndex, onR
       >
         {isLoading ? (
           <div className="flex items-center justify-center gap-2 py-4 text-[12px]" style={{ color: 'hsl(var(--muted-foreground))' }}>
-            <Loader2 size={13} className="animate-spin" /> Searching…
+            <Loader2 size={13} className="animate-spin" /> {t('comment.tab.mention_searching')}
           </div>
         ) : !results || results.length === 0 ? (
           <div className="py-4 text-center text-[12px]" style={{ color: 'hsl(var(--muted-foreground))' }}>
-            {query ? 'No matching people.' : 'Type a name…'}
+            {query ? t('comment.tab.mention_no_results') : t('comment.tab.mention_type_hint')}
           </div>
         ) : (
           <div className="space-y-0.5">

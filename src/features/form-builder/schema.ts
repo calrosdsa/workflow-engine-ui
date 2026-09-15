@@ -382,7 +382,17 @@ const ACTIVITY_ZONE: DetailPageZoneDef = { id: 'activity', label: 'Activity', wi
  *
  *  Which tabs land in the sidebar/activity zones isn't left to each form's
  *  saved config either — detail-tabs/registry.ts's resolveDetailTabs pins
- *  the four chrome types into their zones on every resolve. */
+ *  the four chrome types into their zones on every resolve.
+ *
+ *  `.label` stays an untranslated registry seed, like COLUMN_LAYOUTS above
+ *  it — the one runtime-UI consumer (detail-page-builder/canvas/
+ *  LayoutPicker.tsx) reconstructs via t(`detail_tab.canvas.layout.${id}.
+ *  label`); the other consumer (lib/ui-catalog.ts's detail_layouts entry)
+ *  is confirmed build-time catalog metadata (that file's own top comment:
+ *  generated via `npm run gen:ui-catalog`, embedded into and served by the
+ *  Go backend as workflow-engine/api/meta/ui-catalog.json, snapshot-tested
+ *  against the committed output) — not runtime app UI, so it stays raw like
+ *  every other catalog description in that file. */
 export const DETAIL_PAGE_LAYOUTS: Record<DetailPageLayoutId, DetailPageLayoutDef> = {
   'single':             { label: 'Sidebar on the right', zones: [MAIN_ZONE, SIDEBAR_ZONE, ACTIVITY_ZONE] },
   'main-right-sidebar': { label: 'Sidebar on the right', zones: [MAIN_ZONE, SIDEBAR_ZONE, ACTIVITY_ZONE] },

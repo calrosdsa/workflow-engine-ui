@@ -15,6 +15,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { runUiWorkflow } from '@/features/ui-workflows/interpreter'
 import { useUiWorkflowHost } from '@/features/ui-workflows/useUiWorkflowHost'
 import { emptyRunContext } from '@/features/ui-workflows/host'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { CustomActionMenuItemProps } from '../contract'
 import type { RunUiWorkflowActionConfig } from './schema'
 
@@ -26,6 +27,7 @@ export function RunUiWorkflowMenuItem({
   label,
   onDone,
 }: CustomActionMenuItemProps<RunUiWorkflowActionConfig>) {
+  const t = useTranslation()
   const [pending, setPending] = useState(false)
   const qc = useQueryClient()
   const abortRef = useRef<AbortController | null>(null)
@@ -61,12 +63,12 @@ export function RunUiWorkflowMenuItem({
       // say through its own show_message steps, and adding a generic "done"
       // on top would talk over the author.
       if (result.status === 'failed') {
-        toast.error(`"${label}" couldn't finish`, { description: result.error })
+        toast.error(t('run_ui_workflow.menu.failed', { label }), { description: result.error })
       }
     } catch (e) {
       // runUiWorkflow is contractually total; this is the belt to that braces,
       // because an unhandled rejection in a click handler is invisible.
-      toast.error(`"${label}" couldn't finish`, {
+      toast.error(t('run_ui_workflow.menu.failed', { label }), {
         description: e instanceof Error ? e.message : undefined,
       })
     } finally {

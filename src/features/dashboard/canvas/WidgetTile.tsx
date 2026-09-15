@@ -1,5 +1,6 @@
 import { AlertTriangle, Copy, Settings2, Trash2 } from 'lucide-react'
 import { cn, onKeyboardActivate } from '@/lib/utils'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { getWidget } from '../widget-registry'
 import { useIsVisible } from './useIsVisible'
 import { resolveLayoutKeyAction, type LayoutKeyAction } from './keyboardLayout'
@@ -43,6 +44,7 @@ interface WidgetTileProps {
 // saving, and the tile can still be moved/resized/deleted even though its
 // content can't render.
 export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDuplicate, onDelete, onKeyboardLayoutAction }: WidgetTileProps) {
+  const t = useTranslation()
   const def = getWidget(instance.type)
   // Defers mounting the widget's real Renderer (and therefore any data
   // query it fires) until the tile is at least near the viewport — see
@@ -81,11 +83,13 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
     onKeyboardLayoutAction(action)
   }
 
+  const tileName = instance.title || (def ? t(`builder.dashboard.${instance.type}.label`) : instance.type)
+
   return (
     <div
       ref={tileRef}
       role="group"
-      aria-label={`${instance.title || def?.label || instance.type} widget${selected ? ' — selected. Use arrow keys to move, Shift+arrow keys to resize.' : ''}`}
+      aria-label={`${tileName} ${t('builder.dashboard.tile_aria_widget')}${selected ? ` — ${t('builder.dashboard.tile_aria_selected')}` : ''}`}
       tabIndex={0}
       className={cn(
         'group relative flex h-full flex-col overflow-hidden rounded-lg transition-shadow',
@@ -99,7 +103,7 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
       {(instance.chrome === 'card' && (instance.title || def)) && (
         <div className="widget-drag-handle flex shrink-0 cursor-grab items-center justify-between border-b border-[hsl(var(--border))] px-3 py-1.5 active:cursor-grabbing">
           <span className="truncate text-[11px] font-semibold text-[hsl(var(--foreground))]/80">
-            {instance.title || def?.label}
+            {tileName}
           </span>
         </div>
       )}
@@ -131,7 +135,7 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
       >
         <button
           type="button"
-          title="Configure"
+          title={t('common.configure')}
           onClick={(e) => { e.stopPropagation(); onSelect() }}
           className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
         >
@@ -139,7 +143,7 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
         </button>
         <button
           type="button"
-          title="Duplicate"
+          title={t('common.duplicate')}
           onClick={(e) => { e.stopPropagation(); onDuplicate() }}
           className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
         >
@@ -147,7 +151,7 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
         </button>
         <button
           type="button"
-          title="Delete"
+          title={t('common.delete')}
           onClick={(e) => { e.stopPropagation(); onDelete() }}
           className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
         >
@@ -159,11 +163,12 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
 }
 
 function UnavailableWidget({ type }: { type: string }) {
+  const t = useTranslation()
   return (
     <div className="flex h-full flex-col items-center justify-center gap-1.5 bg-[hsl(var(--muted))] p-4 text-center">
       <AlertTriangle size={18} className="text-[hsl(var(--muted-foreground))]/60" />
-      <p className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Unavailable widget</p>
-      <p className="text-[10px] text-[hsl(var(--muted-foreground))]/70">Type "{type}" is not registered. Your layout is preserved.</p>
+      <p className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('builder.dashboard.unavailable')}</p>
+      <p className="text-[10px] text-[hsl(var(--muted-foreground))]/70">{t('builder.dashboard.unavailable_detail', { type })}</p>
     </div>
   )
 }

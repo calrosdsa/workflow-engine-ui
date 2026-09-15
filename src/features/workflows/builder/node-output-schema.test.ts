@@ -151,3 +151,12 @@ describe('outputFieldPath roots', () => {
       .toBe('NodeOutputs["http1"]["body"]')
   })
 })
+
+describe('buildNodeOutputSchema — knowledge_retrieval output keys', () => {
+  it("lists answer/context/query/chunks/references, matching KnowledgeRetrievalActivity's output map", () => {
+    const kbNode = node('kb1', 'knowledge_retrieval', {})
+    const schemas = buildNodeOutputSchema(kbNode, emptyFormsById, [kbNode])
+    expect(schemas).toHaveLength(1)
+    expect(schemas[0].fields.map((f) => f.key)).toEqual(['answer', 'context', 'query', 'chunks', 'references'])
+  })
+})

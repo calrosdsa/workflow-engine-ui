@@ -1,3 +1,4 @@
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { ReportBlockRendererProps } from '../../report-block-contract'
 import type { TextBlockConfig } from './schema'
 
@@ -14,8 +15,9 @@ const SIZES: Record<NonNullable<TextBlockConfig['level']>, string> = {
 // resolution step separates "preview" from "real content" the way a query
 // does for other block types).
 export function TextBlockPreview({ config }: ReportBlockRendererProps<TextBlockConfig>) {
+  const t = useTranslation()
   if (!config.text) {
-    return <p className="p-3 text-xs italic text-[hsl(var(--muted-foreground))]">Empty text block — click to add content</p>
+    return <p className="p-3 text-xs italic text-[hsl(var(--muted-foreground))]">{t('reports.blocks.text.empty_placeholder')}</p>
   }
   const level = config.level ?? 'paragraph'
   return (

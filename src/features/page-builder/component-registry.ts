@@ -19,6 +19,18 @@ import {
 
 export interface PageComponentRegistryEntry {
   type: PageComponentType
+  /** Display-only reads (the toolbox, ComponentCard's badge/aria-label,
+   *  ComponentPropertiesPanel's header, PageBuilderDnd's drag previews) go
+   *  through `t(\`builder.pages.${type}.label\`)` instead of reading this
+   *  directly — see Toolbox.tsx, the original call site this pattern is
+   *  copied from. ONE exception: factory.ts's `createComponent('button')`
+   *  reads `reg.label` directly to seed the new component's own PERSISTED
+   *  `label` field — that seed must stay reading this untranslated literal
+   *  (same reasoning as menu-registry.ts's `entry.label`; see that file's
+   *  comment). Heading/paragraph's OWN persisted seeds (factory.ts's
+   *  `base.text = 'Heading'`/`'Paragraph text...'`) are separate literals
+   *  in factory.ts's switch, not derived from this registry at all — don't
+   *  conflate the two when reasoning about what's safe to translate. */
   label: string
   icon: LucideIcon
   category: PageComponentCategory

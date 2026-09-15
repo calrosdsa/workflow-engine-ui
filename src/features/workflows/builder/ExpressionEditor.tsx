@@ -18,6 +18,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { validateExpression, type ExpressionValidateResult } from '@/lib/api'
+import { useI18n } from '@/features/i18n/I18nProvider'
 import { exprAssist } from './expr-autocomplete'
 import {
   EXPR_FUNCTIONS, FUNCTION_CATEGORIES, EXPR_ROOTS, CONTEXT_ENTRIES, CURRENT_USER_ENTRIES, type ExprFunction,
@@ -219,6 +220,7 @@ interface ExpressionEditorProps {
 }
 
 export function ExpressionEditor({ open, onClose, value, onChange, variables, nodeContext = [], label }: ExpressionEditorProps) {
+  const { t } = useI18n()
   const [draft, setDraft]       = useState(value)
   const [varSearch, setVarSearch]   = useState('')
   const [fnSearch, setFnSearch]     = useState('')
@@ -284,7 +286,7 @@ export function ExpressionEditor({ open, onClose, value, onChange, variables, no
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[hsl(var(--primary))]/10">
               <Braces size={14} className="text-[hsl(var(--primary))]" />
             </div>
-            Expression Editor
+            {t('workflows.expression.title')}
             {label && <span className="text-sm font-normal text-[hsl(var(--muted-foreground))]">— {label}</span>}
           </DialogTitle>
         </DialogHeader>
@@ -293,8 +295,8 @@ export function ExpressionEditor({ open, onClose, value, onChange, variables, no
           {/* Left: editor + status + preview */}
           <div className="flex min-h-0 flex-1 flex-col gap-3 border-r border-[hsl(var(--border))] p-4">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Expression</span>
-              <StatusBadge state={validation} />
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.expression.expression')}</span>
+              <StatusBadge state={validation} t={t} />
             </div>
 
             <div className="flex-1 overflow-auto">
@@ -320,14 +322,14 @@ export function ExpressionEditor({ open, onClose, value, onChange, variables, no
             )}
 
             {/* Live preview */}
-            <PreviewPanel state={validation} />
+            <PreviewPanel state={validation} t={t} />
 
             <div className="rounded-lg bg-[hsl(var(--muted))] p-3 text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]">
-              <p className="mb-1 font-semibold text-[hsl(var(--foreground))]">Quick reference</p>
-              <p><code className="text-[hsl(var(--primary))]">Vars["name"]</code> — workflow variable · <code className="text-[hsl(var(--primary))]">Times["name"]</code> — date variable</p>
-              <p><code className="text-[hsl(var(--primary))]">NodeOutputs["id"]["field"]</code> — previous node output</p>
-              <p><code className="text-[hsl(var(--primary))]">TriggerRecord["field_name"]</code> — the triggering record's field (record-triggered runs; nil otherwise)</p>
-              <p className="mt-1 text-[hsl(var(--muted-foreground))]">Type to autocomplete · <kbd className="rounded border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-1">Ctrl</kbd>+<kbd className="rounded border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-1">Space</kbd> to trigger</p>
+              <p className="mb-1 font-semibold text-[hsl(var(--foreground))]">{t('workflows.expression.quick_reference')}</p>
+              <p><code className="text-[hsl(var(--primary))]">Vars["name"]</code> — {t('workflows.expression.workflow_variable')} · <code className="text-[hsl(var(--primary))]">Times["name"]</code> — {t('workflows.expression.date_variable')}</p>
+              <p><code className="text-[hsl(var(--primary))]">NodeOutputs["id"]["field"]</code> — {t('workflows.expression.previous_output')}</p>
+              <p><code className="text-[hsl(var(--primary))]">TriggerRecord["field_name"]</code> — {t('workflows.expression.trigger_record')}</p>
+              <p className="mt-1 text-[hsl(var(--muted-foreground))]">{t('workflows.expression.autocomplete_hint')}</p>
             </div>
           </div>
 
@@ -336,19 +338,19 @@ export function ExpressionEditor({ open, onClose, value, onChange, variables, no
             <Tabs defaultValue="variables" className="flex min-h-0 flex-1 flex-col">
               <div className="border-b border-[hsl(var(--border))] px-3 pb-2 pt-3">
                 <TabsList className="w-full">
-                  <TabsTrigger value="variables" className="flex-1 gap-1.5"><Braces size={12} />Variables</TabsTrigger>
-                  <TabsTrigger value="functions" className="flex-1 gap-1.5"><FunctionSquare size={12} />Functions</TabsTrigger>
+                  <TabsTrigger value="variables" className="flex-1 gap-1.5"><Braces size={12} />{t('workflows.expression.variables')}</TabsTrigger>
+                  <TabsTrigger value="functions" className="flex-1 gap-1.5"><FunctionSquare size={12} />{t('workflows.expression.functions')}</TabsTrigger>
                 </TabsList>
               </div>
 
               {/* Variables tab — categorized */}
               <TabsContent value="variables" className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-2">
-                <SearchBox value={varSearch} onChange={setVarSearch} placeholder="Search variables…" />
+                <SearchBox value={varSearch} onChange={setVarSearch} placeholder={t('workflows.expression.search_variables')} />
                 <ScrollArea className="mt-2 flex-1">
                   <div className="space-y-4 pr-2">
                     {/* Upstream node outputs (context-aware) */}
                     {nodeContext.length > 0 && (
-                      <VarGroup icon={<Database size={11} />} title="Workflow Context" count={nodeContext.length}>
+                      <VarGroup icon={<Database size={11} />} title={t('workflows.expression.workflow_context')} count={nodeContext.length}>
                         {nodeContext.map((schema, i) => (
                           <NodeContextTree
                             key={`${schema.nodeId}-${i}`}
@@ -361,9 +363,9 @@ export function ExpressionEditor({ open, onClose, value, onChange, variables, no
                     )}
 
                     {/* Workflow variables */}
-                    <VarGroup icon={<Workflow size={11} />} title="Workflow Variables" count={filteredVars.length}>
+                    <VarGroup icon={<Workflow size={11} />} title={t('workflows.expression.workflow_variables')} count={filteredVars.length}>
                       {filteredVars.length === 0 ? (
-                        <EmptyHint>{variables.length === 0 ? 'No variables declared' : 'No matches'}</EmptyHint>
+                        <EmptyHint>{variables.length === 0 ? t('workflows.expression.no_variables') : t('workflows.expression.no_matches')}</EmptyHint>
                       ) : (
                         filteredVars.map((v) => (
                           <InsertRow
@@ -379,7 +381,7 @@ export function ExpressionEditor({ open, onClose, value, onChange, variables, no
 
                     {/* Date/time typed access */}
                     {timeVars.length > 0 && (
-                      <VarGroup icon={<VariableIcon size={11} />} title="Dates (typed)" count={timeVars.length}>
+                      <VarGroup icon={<VariableIcon size={11} />} title={t('workflows.expression.dates_typed')} count={timeVars.length}>
                         {timeVars.map((v) => (
                           <InsertRow
                             key={v.name}
@@ -393,21 +395,21 @@ export function ExpressionEditor({ open, onClose, value, onChange, variables, no
                     )}
 
                     {/* Context roots */}
-                    <VarGroup icon={<Database size={11} />} title="Context" count={CONTEXT_ENTRIES!.length}>
+                    <VarGroup icon={<Database size={11} />} title={t('workflows.expression.context')} count={CONTEXT_ENTRIES!.length}>
                       {CONTEXT_ENTRIES!.map((e) => (
                         <InsertRow key={e.insert} mono={e.label} sub={e.insert} onClick={() => insert(e.insert)} />
                       ))}
                     </VarGroup>
 
                     {/* Current user (Search-menu filters only, FR-D2-013) */}
-                    <VarGroup icon={<Database size={11} />} title="Current User (Search filters)" count={CURRENT_USER_ENTRIES!.length}>
+                    <VarGroup icon={<Database size={11} />} title={t('workflows.expression.current_user_filters')} count={CURRENT_USER_ENTRIES!.length}>
                       {CURRENT_USER_ENTRIES!.map((e) => (
                         <InsertRow key={e.insert} mono={e.label} sub={e.insert} onClick={() => insert(e.insert)} />
                       ))}
                     </VarGroup>
 
                     {/* Environment roots reference */}
-                    <VarGroup icon={<Database size={11} />} title="Environment Roots" count={EXPR_ROOTS.length}>
+                    <VarGroup icon={<Database size={11} />} title={t('workflows.expression.environment_roots')} count={EXPR_ROOTS.length}>
                       {EXPR_ROOTS.map((r) => (
                         <InsertRow key={r.name} mono={r.name} sub={r.description} onClick={() => insert(`${r.name}[""]`)} />
                       ))}
@@ -418,7 +420,7 @@ export function ExpressionEditor({ open, onClose, value, onChange, variables, no
 
               {/* Functions tab */}
               <TabsContent value="functions" className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-2">
-                <SearchBox value={fnSearch} onChange={setFnSearch} placeholder="Search functions…" />
+                <SearchBox value={fnSearch} onChange={setFnSearch} placeholder={t('workflows.expression.search_functions')} />
                 <div className="my-2 flex flex-wrap gap-1">
                   {['All', ...FUNCTION_CATEGORIES].map((cat) => (
                     <button
@@ -429,7 +431,7 @@ export function ExpressionEditor({ open, onClose, value, onChange, variables, no
                         fnCategory === cat ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]' : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/70',
                       )}
                     >
-                      {cat}
+                      {cat === 'All' ? t('common.all') : cat}
                     </button>
                   ))}
                 </div>
@@ -446,7 +448,7 @@ export function ExpressionEditor({ open, onClose, value, onChange, variables, no
         </div>
 
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" size="sm" onClick={onClose}>{t('workflows.expression.cancel')}</Button>
           <Button
             size="sm"
             onClick={handleSave}
@@ -454,7 +456,7 @@ export function ExpressionEditor({ open, onClose, value, onChange, variables, no
             className="gap-1.5 disabled:opacity-50"
           >
             <Check size={14} />
-            Apply Expression
+            {t('workflows.expression.apply')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -466,26 +468,26 @@ export function ExpressionEditor({ open, onClose, value, onChange, variables, no
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function StatusBadge({ state }: { state: ValidationState }) {
+function StatusBadge({ state, t }: { state: ValidationState; t: (key: string, vars?: Record<string, string | number>) => string }) {
   if (state.status === 'checking') {
-    return <span className="flex items-center gap-1 text-[11px] text-[hsl(var(--muted-foreground))]"><Loader2 size={11} className="animate-spin" />Checking…</span>
+    return <span className="flex items-center gap-1 text-[11px] text-[hsl(var(--muted-foreground))]"><Loader2 size={11} className="animate-spin" />{t('workflows.expression.checking')}</span>
   }
   if (state.status === 'valid') {
-    return <span className="flex items-center gap-1 text-[11px] font-medium text-[hsl(var(--success))]"><CircleCheck size={11} />Valid</span>
+    return <span className="flex items-center gap-1 text-[11px] font-medium text-[hsl(var(--success))]"><CircleCheck size={11} />{t('workflows.expression.valid')}</span>
   }
   if (state.status === 'invalid') {
-    return <span className="flex items-center gap-1 text-[11px] font-medium text-[hsl(var(--destructive))]"><CircleAlert size={11} />Invalid</span>
+    return <span className="flex items-center gap-1 text-[11px] font-medium text-[hsl(var(--destructive))]"><CircleAlert size={11} />{t('workflows.expression.invalid')}</span>
   }
   return null
 }
 
-function PreviewPanel({ state }: { state: ValidationState }) {
+function PreviewPanel({ state, t }: { state: ValidationState; t: (key: string, vars?: Record<string, string | number>) => string }) {
   const preview = state.result?.preview
   if (state.status !== 'valid' || !preview) return null
   return (
     <div className="flex items-center gap-2 rounded-lg border border-[hsl(var(--success))]/30 bg-[hsl(var(--success))]/10 px-3 py-2">
       <Eye size={13} className="shrink-0 text-[hsl(var(--success))]" />
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--success))]">Preview</span>
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--success))]">{t('workflows.expression.preview')}</span>
       <code className="min-w-0 flex-1 truncate font-mono text-[12px] text-[hsl(var(--foreground))]">{formatPreviewValue(preview.value)}</code>
       <span className={cn('shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium', TYPE_COLORS[preview.type] ?? 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]')}>
         {preview.type}

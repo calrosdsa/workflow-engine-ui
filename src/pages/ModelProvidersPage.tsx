@@ -6,8 +6,10 @@ import { AddedModelsList } from '@/features/model-providers/AddedModelsList'
 import { AvailableModelsPanel } from '@/features/model-providers/AvailableModelsPanel'
 import { AddProviderDialog } from '@/features/model-providers/AddProviderDialog'
 import type { ProviderType } from '@/features/model-providers/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 export function ModelProvidersPage() {
+  const t = useTranslation()
   const canWrite = usePermission('providers:write')
   const [addingProvider, setAddingProvider] = useState<ProviderType | null>(null)
 
@@ -15,7 +17,7 @@ export function ModelProvidersPage() {
     <div className="flex h-full flex-col">
       <header className="flex h-14 shrink-0 items-center gap-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4">
         <Cpu size={16} className="text-[hsl(var(--primary))]" />
-        <h1 className="text-sm font-semibold text-[hsl(var(--foreground))]">Model Providers</h1>
+        <h1 className="text-sm font-semibold text-[hsl(var(--foreground))]">{t('model_providers.title')}</h1>
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 overflow-y-auto p-6 lg:grid-cols-[1fr_360px]">

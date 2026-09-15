@@ -7,6 +7,7 @@
 // ever one edit/validation path for a given field.
 import { useRecordDetail } from '../../record-detail-hooks'
 import { FieldValueDisplay } from '../../FieldValueDisplay'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { DetailTabRendererProps } from '../contract'
 import type { FieldRefTabConfig } from './schema'
 import type { FormElement } from '@/features/form-builder/schema'
@@ -23,21 +24,22 @@ function findElementByKey(schema: DetailTabRendererProps<FieldRefTabConfig>['sch
 }
 
 export function FieldRefRenderer({ formId, recordId, schema, config }: DetailTabRendererProps<FieldRefTabConfig>) {
+  const t = useTranslation()
   const { data: record } = useRecordDetail(formId, recordId)
   const el = config.fieldKey ? findElementByKey(schema, config.fieldKey) : null
 
   if (!config.fieldKey) {
-    return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>No field selected.</p>
+    return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('field_ref.tab.no_field_selected')}</p>
   }
   // Stale reference — the field was renamed/deleted on the Form Builder
   // canvas since this mirror was created. Degrade gracefully (same
   // defensive posture ReferenceValueLabel already has for a broken form
   // reference) rather than crash.
   if (!el) {
-    return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Field no longer exists.</p>
+    return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('field_ref.tab.field_missing')}</p>
   }
   if (!record) {
-    return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading…</p>
+    return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('common.loading')}</p>
   }
 
   return (

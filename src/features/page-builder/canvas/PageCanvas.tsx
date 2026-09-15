@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { usePageBuilderStore } from '../store'
 import { SectionCard } from './SectionCard'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 /**
  * The droppable canvas. Must be rendered inside <PageBuilderDnd> so its
@@ -11,6 +12,7 @@ import { SectionCard } from './SectionCard'
  * mirror of features/form-builder/canvas/FormCanvas.tsx.
  */
 export function PageCanvas() {
+  const t = useTranslation()
   const schema = usePageBuilderStore((s) => s.schema)
   const addSection = usePageBuilderStore((s) => s.addSection)
   const selectComponent = usePageBuilderStore((s) => s.selectItem)
@@ -44,7 +46,7 @@ export function PageCanvas() {
               onClick={(e) => { e.stopPropagation(); addSection() }}
               className="w-full gap-2 border-dashed border-slate-300 py-6 text-slate-500 hover:border-indigo-300 hover:bg-indigo-50/40 hover:text-indigo-600"
             >
-              <Plus size={16} /> Add Section
+              <Plus size={16} /> {t('builder.pages.canvas.add_section')}
             </Button>
           )}
         </div>
@@ -56,17 +58,18 @@ export function PageCanvas() {
 // ---------------------------------------------------------------------------
 
 function EmptyCanvas({ onAddSection }: { onAddSection: () => void }) {
+  const t = useTranslation()
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 bg-white/60 py-20 text-center">
       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
         <LayoutGrid size={26} className="text-slate-300" />
       </div>
       <div>
-        <p className="text-sm font-medium text-slate-600">Start building your page</p>
-        <p className="mt-1 text-xs text-slate-400">Add a section, then drag components from the left.</p>
+        <p className="text-sm font-medium text-slate-600">{t('builder.pages.canvas.empty_title')}</p>
+        <p className="mt-1 text-xs text-slate-400">{t('builder.pages.canvas.empty_hint')}</p>
       </div>
       <Button onClick={(e) => { e.stopPropagation(); onAddSection() }} className="mt-1 gap-2 bg-indigo-600 text-white hover:bg-indigo-700">
-        <Plus size={15} /> Add Section
+        <Plus size={15} /> {t('builder.pages.canvas.add_section')}
       </Button>
     </div>
   )

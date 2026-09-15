@@ -9,7 +9,9 @@
 // which is where a generated Line Items grid's childFormId actually lives.
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import type { ReactElement } from 'react'
 import { RelatedBlockConfigPanel } from './ConfigPanel'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import type { RelatedBlockConfig } from './schema'
 import type { FormDefinition } from '@/features/forms/types'
 import type { FormElement, FormSection } from '@/features/form-builder/schema'
@@ -95,6 +97,13 @@ vi.mock('@/features/forms/hooks', () => ({
   useForm: (id: string) => ({ data: formsById[id], isLoading: false }),
 }))
 
+// RelatedBlockConfigPanel calls useTranslation, which throws outside an
+// I18nProvider ancestor — real provider, no props, same pattern as
+// InsertDataMenu.test.tsx.
+function renderPanel(ui: ReactElement) {
+  return render(<I18nProvider>{ui}</I18nProvider>)
+}
+
 function openChildPicker() {
   // Two comboboxes render once a parent is selected: "Parent form" then
   // "Line Items child" -- the second is the one under test.
@@ -104,7 +113,7 @@ function openChildPicker() {
 describe('RelatedBlockConfigPanel eligible children', () => {
   it('offers a generated Line Items grid found on the parent form layout', () => {
     const config: RelatedBlockConfig = { parent_form_id: 'parent-with-grid', child_form_id: '', columns: [] }
-    render(<RelatedBlockConfigPanel config={config} onChange={() => {}} />)
+    renderPanel(<RelatedBlockConfigPanel config={config} onChange={() => {}} />)
 
     openChildPicker()
 
@@ -115,7 +124,7 @@ describe('RelatedBlockConfigPanel eligible children', () => {
   it('selecting the option reports the real child form id back through onChange', () => {
     const config: RelatedBlockConfig = { parent_form_id: 'parent-with-grid', child_form_id: '', columns: [] }
     const onChange = vi.fn()
-    render(<RelatedBlockConfigPanel config={config} onChange={onChange} />)
+    renderPanel(<RelatedBlockConfigPanel config={config} onChange={onChange} />)
 
     openChildPicker()
     fireEvent.click(screen.getByRole('option', { name: 'Order lines' }))
@@ -125,7 +134,7 @@ describe('RelatedBlockConfigPanel eligible children', () => {
 
   it('still reports no children when the parent form has no Line Items grid', () => {
     const config: RelatedBlockConfig = { parent_form_id: 'parent-without-grid', child_form_id: '', columns: [] }
-    render(<RelatedBlockConfigPanel config={config} onChange={() => {}} />)
+    renderPanel(<RelatedBlockConfigPanel config={config} onChange={() => {}} />)
 
     openChildPicker()
 

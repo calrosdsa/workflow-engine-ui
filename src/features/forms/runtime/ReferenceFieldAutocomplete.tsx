@@ -28,6 +28,7 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { formsApi } from '@/features/forms/api'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { resolveReferenceLabel } from './record-title'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { FormElement } from '@/features/form-builder/schema'
 import type { FilterGroup } from '@/features/workflows/types'
 
@@ -73,6 +74,7 @@ interface ReferenceFieldAutocompleteProps<TFieldValues extends FieldValues = Fie
 }
 
 export function ReferenceFieldAutocomplete<TFieldValues extends FieldValues = FieldValues>({ el, field, disabled, id, sourceFormId, control, refDraft }: ReferenceFieldAutocompleteProps<TFieldValues>) {
+  const t = useTranslation()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search, 300)
@@ -158,7 +160,7 @@ export function ReferenceFieldAutocomplete<TFieldValues extends FieldValues = Fi
     enabled: !!el.formRef && !!currentValue,
   })
 
-  if (!el.formRef) return <p className="text-xs text-amber-600">No form configured for this reference.</p>
+  if (!el.formRef) return <p className="text-xs text-amber-600">{t('reference_field_autocomplete.no_form_configured')}</p>
 
   const options = results?.records ?? []
   const selectedLabel = currentRecord ? resolveReferenceLabel(targetForm?.fields, currentRecord, el.displayField) : currentValue || undefined
@@ -177,7 +179,7 @@ export function ReferenceFieldAutocomplete<TFieldValues extends FieldValues = Fi
         >
           <span className="flex min-w-0 items-center gap-1.5">
             <FileText size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
-            <span className="truncate">{selectedLabel ?? 'Search…'}</span>
+            <span className="truncate">{selectedLabel ?? t('common.search_placeholder')}</span>
           </span>
           <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
         </Button>
@@ -189,7 +191,7 @@ export function ReferenceFieldAutocomplete<TFieldValues extends FieldValues = Fi
       >
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder={searchField ? 'Type to search…' : 'Search unavailable — showing first page'}
+            placeholder={searchField ? t('reference_field_autocomplete.type_to_search') : t('reference_field_autocomplete.search_unavailable')}
             value={search}
             onValueChange={setSearch}
             disabled={!searchField}
@@ -197,7 +199,7 @@ export function ReferenceFieldAutocomplete<TFieldValues extends FieldValues = Fi
           <CommandList>
             {isLoading ? (
               <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
-                <Loader2 size={13} className="animate-spin" /> Searching…
+                <Loader2 size={13} className="animate-spin" /> {t('reference_field_autocomplete.searching')}
               </div>
             ) : (
               <>
@@ -207,8 +209,8 @@ export function ReferenceFieldAutocomplete<TFieldValues extends FieldValues = Fi
                       // this viewer/draft — say why ("choose a manager first",
                       // "no account record matches…") instead of a blank
                       // "no records" that reads as broken data.
-                      `No options available: ${results.unresolved_reason}`
-                    : 'No records found.'}
+                      t('reference_field_autocomplete.no_options_with_reason', { reason: results.unresolved_reason })
+                    : t('reference_field_autocomplete.no_records_found')}
                 </CommandEmpty>
                 <CommandGroup>
                   {options.map((r) => {
@@ -239,7 +241,7 @@ export function ReferenceFieldAutocomplete<TFieldValues extends FieldValues = Fi
               type="button"
               onClick={() => field.onChange(null)}
               className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))]"
-              title="Clear selection"
+              title={t('common.clear_selection')}
             >
               <X size={12} />
             </button>

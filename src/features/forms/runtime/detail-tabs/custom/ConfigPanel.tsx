@@ -12,10 +12,12 @@ import { useState } from 'react'
 import { LayoutDashboard, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CustomTabEditorOverlay } from './CustomTabEditorOverlay'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { DetailTabConfigPanelProps } from '../contract'
 import type { CustomTabConfig } from './schema'
 
 export function CustomTabConfigPanel({ config, onChange }: DetailTabConfigPanelProps<CustomTabConfig>) {
+  const t = useTranslation()
   const [editorOpen, setEditorOpen] = useState(false)
   const widgetCount = config.schema.widgets.length
 
@@ -27,21 +29,21 @@ export function CustomTabConfigPanel({ config, onChange }: DetailTabConfigPanelP
         </div>
         <div>
           <p className="text-sm font-medium text-[hsl(var(--foreground))]">
-            {widgetCount === 0 ? 'This tab is empty' : `${widgetCount} widget${widgetCount === 1 ? '' : 's'} configured`}
+            {widgetCount === 0 ? t('custom.config.empty_state') : t(widgetCount === 1 ? 'custom.config.widget_count_one' : 'custom.config.widget_count_many', { count: widgetCount })}
           </p>
           <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
-            The same Table/Chart/etc. widgets a Dashboard menu uses — arrange them in the full-screen editor.
+            {t('custom.config.hint')}
           </p>
         </div>
         <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => setEditorOpen(true)}>
-          <Pencil size={13} /> Open Editor
+          <Pencil size={13} /> {t('custom.config.open_editor')}
         </Button>
       </div>
 
       <CustomTabEditorOverlay
         open={editorOpen}
         onOpenChange={setEditorOpen}
-        tabLabel="Custom Tab"
+        tabLabel={t('custom.config.tab_label')}
         schema={config.schema}
         onChange={(schema) => onChange({ ...config, schema })}
       />

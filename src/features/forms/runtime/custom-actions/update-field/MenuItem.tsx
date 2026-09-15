@@ -19,10 +19,12 @@ import { useUpdateRecord } from '@/features/forms/hooks'
 import { fieldSchema } from '@/features/forms/runtime/schema-to-zod'
 import { schemaToVariableDecls } from '@/features/forms/runtime/expression-context'
 import { iterElements } from '@/features/form-builder/projection'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { CustomActionMenuItemProps } from '../contract'
 import type { UpdateFieldActionConfig } from './schema'
 
 export function UpdateFieldMenuItem({ formId, recordId, record, schema, config, label, onDone }: CustomActionMenuItemProps<UpdateFieldActionConfig>) {
+  const t = useTranslation()
   const [pending, setPending] = useState(false)
   const updateRecord = useUpdateRecord(formId)
   const targetField = schema ? Array.from(iterElements(schema)).find((el) => el.key === config.fieldKey) : undefined
@@ -41,7 +43,7 @@ export function UpdateFieldMenuItem({ formId, recordId, record, schema, config, 
       let rawValue: unknown = config.staticValue
       if (config.valueMode === 'expression') {
         if (!config.expressionValue) {
-          toast.error('Save failed', { description: 'This action has no expression configured.' })
+          toast.error(t('update_field.menu.save_failed'), { description: t('update_field.menu.no_expression') })
           return
         }
         const variables = schema ? schemaToVariableDecls(schema) : []
@@ -52,7 +54,7 @@ export function UpdateFieldMenuItem({ formId, recordId, record, schema, config, 
           sample_values: record,
         })
         if (!result.valid) {
-          toast.error('Save failed', { description: result.error ?? 'Could not evaluate the configured expression.' })
+          toast.error(t('update_field.menu.save_failed'), { description: result.error ?? t('update_field.menu.eval_failed') })
           return
         }
         rawValue = result.preview?.value
@@ -60,15 +62,15 @@ export function UpdateFieldMenuItem({ formId, recordId, record, schema, config, 
 
       const parsed = fieldSchema(targetField).safeParse(rawValue)
       if (!parsed.success) {
-        toast.error('Save failed', { description: parsed.error.issues[0]?.message || 'Invalid value' })
+        toast.error(t('update_field.menu.save_failed'), { description: parsed.error.issues[0]?.message || t('update_field.menu.invalid_value') })
         return
       }
 
       await updateRecord.mutateAsync({ recordId, data: { [config.fieldKey]: parsed.data } })
-      toast.success('Saved', { description: `${targetField.label} was updated.` })
+      toast.success(t('common.saved'), { description: t('update_field.menu.field_updated', { field: targetField.label }) })
       onDone?.()
     } catch (e) {
-      toast.error('Save failed', { description: e instanceof Error ? e.message : undefined })
+      toast.error(t('update_field.menu.save_failed'), { description: e instanceof Error ? e.message : undefined })
     } finally {
       setPending(false)
     }

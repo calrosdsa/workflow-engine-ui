@@ -12,6 +12,7 @@ import { testHttpRequest } from '@/lib/api'
 import { inferSchemaFromResponse, inferredSchemaToResponseSchema } from './schema-inference'
 import type { InferredField, InferredSchema } from './schema-inference'
 import type { HttpRequestConfig, ResponseSchema, VariableDecl, ResponseFieldType } from '../../types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 type PanelState =
   | { phase: 'idle' }
@@ -35,6 +36,7 @@ export function AutoMapPanel({ config, variables, onAddSchema }: {
   variables: VariableDecl[]
   onAddSchema: (schema: ResponseSchema) => void
 }) {
+  const t = useTranslation()
   const [state, setState] = useState<PanelState>({ phase: 'idle' })
 
   const send = async () => {
@@ -50,21 +52,21 @@ export function AutoMapPanel({ config, variables, onAddSchema }: {
         setState({
           phase: 'error',
           message: result.is_json
-            ? "The response doesn't look like an object or a list of objects — nothing to map."
-            : "The response isn't JSON, so there's nothing to auto-map. Build the schema by hand instead.",
+            ? t('workflows.auto_map.response_not_mappable')
+            : t('workflows.auto_map.response_not_json'),
         })
         return
       }
       setState({
         phase: 'reviewing',
         schemaName: '',
-        statusLine: `${result.status} · ${result.duration_ms}ms${inferred.kind === 'list' ? ` · ${describeCount(inferred.count)}` : ''}`,
+        statusLine: `${result.status} · ${result.duration_ms}ms${inferred.kind === 'list' ? ` · ${describeCount(inferred.count, t)}` : ''}`,
         durationMs: result.duration_ms,
         fields: inferred.fields,
         inferred,
       })
     } catch (e) {
-      setState({ phase: 'error', message: e instanceof Error ? e.message : 'Request failed' })
+      setState({ phase: 'error', message: e instanceof Error ? e.message : t('workflows.auto_map.request_failed') })
     }
   }
 
@@ -78,7 +80,7 @@ export function AutoMapPanel({ config, variables, onAddSchema }: {
         className="h-8 w-full gap-1.5 border-dashed text-[11.5px] text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]"
       >
         {state.phase === 'loading' ? <Loader2 size={13} className="animate-spin" /> : <Play size={12} />}
-        {state.phase === 'loading' ? 'Sending…' : 'Send request and auto-map'}
+        {state.phase === 'loading' ? t('workflows.auto_map.sending') : t('workflows.auto_map.send_request')}
       </Button>
     )
   }
@@ -96,7 +98,7 @@ export function AutoMapPanel({ config, variables, onAddSchema }: {
           onClick={send}
           className="mt-2.5 h-7 gap-1.5 text-[11px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
         >
-          <RefreshCw size={11} /> Retry
+          <RefreshCw size={11} /> {t('workflows.auto_map.retry')}
         </Button>
       </div>
     )
@@ -133,14 +135,14 @@ export function AutoMapPanel({ config, variables, onAddSchema }: {
         <Input
           value={state.schemaName}
           onChange={(e) => setState({ ...state, schemaName: e.target.value })}
-          placeholder="Schema name, e.g. Users"
+          placeholder={t('workflows.auto_map.schema_name')}
           className="h-7 text-[12px] font-semibold"
         />
-        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Review the fields below, then add them as a schema.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.auto_map.review_fields')}</p>
 
         {state.fields.length === 0 ? (
           <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
-            No mappable fields found in the response.
+            {t('workflows.auto_map.no_fields')}
           </p>
         ) : (
           <div className="space-y-1">
@@ -158,11 +160,11 @@ export function AutoMapPanel({ config, variables, onAddSchema }: {
 
       <div className="flex items-center justify-between px-3 py-2.5">
         <span className="text-[10.5px] text-[hsl(var(--muted-foreground))]">
-          {selectedCount} of {state.fields.length} field{state.fields.length === 1 ? '' : 's'} selected
+          {t('workflows.auto_map.selected_summary', { selected: selectedCount, total: state.fields.length, suffix: state.fields.length === 1 ? '' : 's' })}
         </span>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setState({ phase: 'idle' })} className="h-7 text-[11px]">
-            Discard
+            {t('common.discard')}
           </Button>
           <Button
             size="sm"
@@ -170,7 +172,7 @@ export function AutoMapPanel({ config, variables, onAddSchema }: {
             disabled={selectedCount === 0}
             className="h-7 text-[11px]"
           >
-            Add to schema
+            {t('workflows.auto_map.add_to_schema')}
           </Button>
         </div>
       </div>
@@ -178,9 +180,9 @@ export function AutoMapPanel({ config, variables, onAddSchema }: {
   )
 }
 
-function describeCount(count: number | undefined): string {
+function describeCount(count: number | undefined, t: ReturnType<typeof useTranslation>): string {
   if (count === undefined) return ''
-  return `Array of ${count} item${count === 1 ? '' : 's'}`
+  return t('workflows.auto_map.array_summary', { count, suffix: count === 1 ? '' : 's' })
 }
 
 function FieldReviewRow({ field, depth = 0, onChange, onChangeNested }: {
@@ -189,6 +191,7 @@ function FieldReviewRow({ field, depth = 0, onChange, onChangeNested }: {
   onChange: (patch: Partial<InferredField>) => void
   onChangeNested: (nestedId: string, patch: Partial<InferredField>) => void
 }) {
+  const t = useTranslation()
   const isList = field.type === 'list'
   return (
     <div className={depth > 0 ? 'border-l-2 border-[hsl(var(--primary))]/20 pl-2.5' : undefined}>
@@ -219,7 +222,7 @@ function FieldReviewRow({ field, depth = 0, onChange, onChangeNested }: {
       {isList && (
         <div className="space-y-0.5 pb-1 pl-3">
           {(field.fields ?? []).length === 0 ? (
-            <p className="text-[10px] text-[hsl(var(--muted-foreground))]/70">No fields found on this list's items.</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]/70">{t('workflows.auto_map.no_list_fields')}</p>
           ) : (
             (field.fields ?? []).map((nf) => (
               <FieldReviewRow

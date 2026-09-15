@@ -8,6 +8,7 @@
 // this test must NOT affect).
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import { FormReferenceSelect } from './FormReferenceSelect'
 
 Element.prototype.hasPointerCapture = () => false
@@ -44,7 +45,7 @@ function openPicker() {
 
 describe('FormReferenceSelect — requireDependentOf', () => {
   it('lists only forms whose parent_form_id matches, excluding one with a merely-matching reference field', () => {
-    render(<FormReferenceSelect value={undefined} onChange={() => {}} requireDependentOf="parent-1" />)
+    render(<I18nProvider><FormReferenceSelect value={undefined} onChange={() => {}} requireDependentOf="parent-1" /></I18nProvider>)
     openPicker()
 
     expect(screen.getByRole('option', { name: /Order Item/i })).toBeTruthy()
@@ -53,7 +54,7 @@ describe('FormReferenceSelect — requireDependentOf', () => {
   })
 
   it('shows a "no dependents yet" empty state pointing at Add Dependent Form', () => {
-    render(<FormReferenceSelect value={undefined} onChange={() => {}} requireDependentOf="parent-with-no-dependents" />)
+    render(<I18nProvider><FormReferenceSelect value={undefined} onChange={() => {}} requireDependentOf="parent-with-no-dependents" /></I18nProvider>)
     openPicker()
 
     expect(screen.getByText(/nested as dependents of this form yet/i)).toBeTruthy()
@@ -61,7 +62,7 @@ describe('FormReferenceSelect — requireDependentOf', () => {
   })
 
   it('requireReferenceTo alone (no requireDependentOf) keeps its original looser behavior', () => {
-    render(<FormReferenceSelect value={undefined} onChange={() => {}} requireReferenceTo="parent-1" />)
+    render(<I18nProvider><FormReferenceSelect value={undefined} onChange={() => {}} requireReferenceTo="parent-1" /></I18nProvider>)
     openPicker()
 
     // Both forms with a matching reference field are listed, dependent or not.
@@ -70,7 +71,7 @@ describe('FormReferenceSelect — requireDependentOf', () => {
   })
 
   it('combining both props requires each candidate to satisfy both', () => {
-    render(<FormReferenceSelect value={undefined} onChange={() => {}} requireReferenceTo="parent-1" requireDependentOf="parent-1" />)
+    render(<I18nProvider><FormReferenceSelect value={undefined} onChange={() => {}} requireReferenceTo="parent-1" requireDependentOf="parent-1" /></I18nProvider>)
     openPicker()
 
     expect(screen.getByRole('option', { name: /Order Item/i })).toBeTruthy()

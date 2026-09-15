@@ -15,6 +15,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select-menu'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { RoleMultiSelect } from './RoleMultiSelect'
 import { UserMultiSelect } from './UserMultiSelect'
 import { AdvancedSettingConditionBuilder } from './AdvancedSettingConditionBuilder'
@@ -24,6 +25,10 @@ import {
   emptyAdvancedSetting, emptyAdvancedSettingGroup,
 } from '../schema'
 
+// Registry-shaped constants — .value stays the lookup key, DISPLAY
+// consumers reconstruct the label via t(`form_config.audience_${value}`) /
+// t(`form_config.action_${value}`), same pattern as every other registry
+// this migration has touched.
 const AUDIENCE_OPTIONS: { value: AdvancedSettingAudience; label: string }[] = [
   { value: 'everyone', label: 'Everyone' },
   { value: 'specific_people', label: 'Specific People' },
@@ -54,6 +59,7 @@ interface AddAdvancedSettingDialogProps {
 export function AddAdvancedSettingDialog({
   open, onOpenChange, setting, fields, onSave,
 }: AddAdvancedSettingDialogProps) {
+  const t = useTranslation()
   const [draft, setDraft] = useState<AdvancedSetting>(() => setting ?? emptyAdvancedSetting())
 
   // Re-seed the draft whenever the dialog opens (new "Add" click, or a
@@ -91,24 +97,24 @@ export function AddAdvancedSettingDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] w-full max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add new Advanced Settings</DialogTitle>
+          <DialogTitle>{t('form_config.add_advanced_setting_title')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5 px-6 py-4">
           <div className="space-y-1.5">
             <Label className="text-[13px] font-medium text-[hsl(var(--foreground))]">
-              Settings Name<span className="text-[hsl(var(--destructive))]"> *</span>
+              {t('form_config.settings_name')}<span className="text-[hsl(var(--destructive))]"> *</span>
             </Label>
             <Input
               value={draft.name}
               onChange={(e) => patch({ name: e.target.value })}
-              placeholder="Enter a name to identify this settings"
+              placeholder={t('form_config.settings_name_placeholder')}
               className="h-9 text-sm"
             />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[13px] font-medium text-[hsl(var(--foreground))]">Applies To</Label>
+            <Label className="text-[13px] font-medium text-[hsl(var(--foreground))]">{t('form_config.applies_to')}</Label>
             <RadioGroup
               value={draft.appliesTo}
               onValueChange={(v) => setAudience(v as AdvancedSettingAudience)}
@@ -117,7 +123,7 @@ export function AddAdvancedSettingDialog({
               {AUDIENCE_OPTIONS.map((opt) => (
                 <label key={opt.value} className="flex items-center gap-2 text-[13px] text-[hsl(var(--muted-foreground))]">
                   <RadioGroupItem value={opt.value} />
-                  {opt.label}
+                  {t(`form_config.audience_${opt.value}`)}
                 </label>
               ))}
             </RadioGroup>
@@ -130,7 +136,7 @@ export function AddAdvancedSettingDialog({
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[13px] font-medium text-[hsl(var(--foreground))]">Apply These Settings When</Label>
+            <Label className="text-[13px] font-medium text-[hsl(var(--foreground))]">{t('form_config.apply_when')}</Label>
             <AdvancedSettingConditionBuilder
               group={draft.when ?? emptyAdvancedSettingGroup()}
               fields={fields}
@@ -139,10 +145,10 @@ export function AddAdvancedSettingDialog({
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[13px] font-medium text-[hsl(var(--foreground))]">Actions</Label>
+            <Label className="text-[13px] font-medium text-[hsl(var(--foreground))]">{t('form_config.actions_label')}</Label>
             {draft.actions.length === 0 && (
               <p className="rounded-lg border border-dashed border-[hsl(var(--border))] px-3 py-4 text-center text-[12px] text-[hsl(var(--muted-foreground))]">
-                No actions yet — add at least one below.
+                {t('form_config.no_actions_yet')}
               </p>
             )}
             <div className="space-y-2">
@@ -151,8 +157,8 @@ export function AddAdvancedSettingDialog({
                   <SelectMenu value={action.type} onValueChange={(v) => updateAction(action.id, v as AdvancedSettingActionType)}>
                     <SelectTrigger className="h-8 flex-1 bg-[hsl(var(--card))] text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {(Object.keys(ACTION_LABELS) as AdvancedSettingActionType[]).map((t) => (
-                        <SelectItem key={t} value={t} className="text-xs">{ACTION_LABELS[t]}</SelectItem>
+                      {(Object.keys(ACTION_LABELS) as AdvancedSettingActionType[]).map((actionType) => (
+                        <SelectItem key={actionType} value={actionType} className="text-xs">{t(`form_config.action_${actionType}`)}</SelectItem>
                       ))}
                     </SelectContent>
                   </SelectMenu>
@@ -160,7 +166,7 @@ export function AddAdvancedSettingDialog({
                     type="button"
                     onClick={() => removeAction(action.id)}
                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
-                    title="Remove action"
+                    title={t('form_config.remove_action')}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -168,17 +174,17 @@ export function AddAdvancedSettingDialog({
               ))}
             </div>
             <Button variant="default" size="sm" onClick={addAction} className="mt-1 gap-1.5">
-              <Plus size={14} /> Add Another Actions
+              <Plus size={14} /> {t('form_config.add_another_action')}
             </Button>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} className="gap-1.5">
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button size="sm" onClick={handleSave} disabled={!canSave} className="gap-1.5">
-            <Save size={14} /> Done
+            <Save size={14} /> {t('common.done')}
           </Button>
         </DialogFooter>
       </DialogContent>

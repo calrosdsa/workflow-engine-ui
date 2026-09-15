@@ -3,6 +3,7 @@ import { useExecutions, useExecutionCount } from '@/features/executions/hooks'
 import { useForms } from '@/features/forms/hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Workflow, Play, FileText, CheckCircle } from 'lucide-react'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 // The "Recent Executions" card only ever shows 5 rows, so a small page_size
 // is enough — the "Total"/"Completed" stat tiles read .total from their own
@@ -12,6 +13,7 @@ import { Workflow, Play, FileText, CheckCircle } from 'lucide-react'
 const RECENT_EXECUTIONS_PAGE_SIZE = 5
 
 export function DashboardPage() {
+  const { t, locale } = useI18n()
   const { data: workflows } = useWorkflows()
   const { data: recent } = useExecutions({ pageSize: RECENT_EXECUTIONS_PAGE_SIZE })
   const { data: totalExecutions } = useExecutionCount()
@@ -19,17 +21,17 @@ export function DashboardPage() {
   const { data: forms } = useForms()
 
   const stats = [
-    { label: 'Workflow Definitions', value: workflows?.length ?? 0,   icon: Workflow,    color: 'text-[hsl(var(--primary))]',   bg: 'bg-[hsl(var(--primary))]/10' },
-    { label: 'Total Executions',     value: totalExecutions ?? 0,     icon: Play,        color: 'text-[hsl(var(--primary))]', bg: 'bg-[hsl(var(--primary))]/10' },
-    { label: 'Completed',            value: completed ?? 0,           icon: CheckCircle, color: 'text-[hsl(var(--success))]',  bg: 'bg-[hsl(var(--success))]/10' },
-    { label: 'Form Definitions',     value: forms?.length ?? 0,       icon: FileText,    color: 'text-[hsl(var(--warning))]', bg: 'bg-[hsl(var(--warning))]/10' },
+    { label: t('dashboard.workflow_definitions'), value: workflows?.length ?? 0,   icon: Workflow,    color: 'text-[hsl(var(--primary))]',   bg: 'bg-[hsl(var(--primary))]/10' },
+    { label: t('dashboard.total_executions'),     value: totalExecutions ?? 0,     icon: Play,        color: 'text-[hsl(var(--primary))]', bg: 'bg-[hsl(var(--primary))]/10' },
+    { label: t('dashboard.completed'),            value: completed ?? 0,           icon: CheckCircle, color: 'text-[hsl(var(--success))]',  bg: 'bg-[hsl(var(--success))]/10' },
+    { label: t('dashboard.form_definitions'),     value: forms?.length ?? 0,       icon: FileText,    color: 'text-[hsl(var(--warning))]', bg: 'bg-[hsl(var(--warning))]/10' },
   ]
 
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Dashboard</h1>
-        <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">Overview of your workflow engine</p>
+        <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">{t('dashboard.title')}</h1>
+        <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">{t('dashboard.subtitle')}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -53,7 +55,7 @@ export function DashboardPage() {
       {recent && recent.executions.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Recent Executions</CardTitle>
+            <CardTitle>{t('dashboard.recent_executions')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -61,7 +63,7 @@ export function DashboardPage() {
                 <div key={ex.execution_id} className="flex items-center justify-between rounded-md border border-[hsl(var(--border))] p-3 text-sm">
                   <span className="font-mono text-xs text-[hsl(var(--muted-foreground))]">{ex.execution_id.slice(0, 8)}…</span>
                   <StatusBadge status={ex.status} />
-                  <span className="text-[hsl(var(--muted-foreground))]">{new Date(ex.created_at).toLocaleString()}</span>
+                  <span className="text-[hsl(var(--muted-foreground))]">{new Date(ex.created_at).toLocaleString(locale)}</span>
                 </div>
               ))}
             </div>

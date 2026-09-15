@@ -17,6 +17,7 @@
 // onKeyDown, which would also block their OWN native Enter-activation.
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import { TabCard } from './TabCard'
 import type { DetailTabConfig } from '@/features/form-builder/schema'
 
@@ -33,17 +34,23 @@ function renderCard(overrides: Partial<React.ComponentProps<typeof TabCard>> = {
   const onSelect = vi.fn()
   const onToggleHidden = vi.fn()
   const onRemove = vi.fn()
+  // I18nProvider is real (not mocked), same as RecordDetailPanel.advanced.
+  // test.tsx's own reasoning — TabCard now resolves its titles/aria-label
+  // through it, and the base English dictionary (a bare provider's default
+  // locale, no overrides passed) is all these assertions need.
   render(
-    <TabCard
-      tab={tab}
-      zoneId="main"
-      selected={false}
-      canHide
-      onSelect={onSelect}
-      onToggleHidden={onToggleHidden}
-      onRemove={onRemove}
-      {...overrides}
-    />,
+    <I18nProvider>
+      <TabCard
+        tab={tab}
+        zoneId="main"
+        selected={false}
+        canHide
+        onSelect={onSelect}
+        onToggleHidden={onToggleHidden}
+        onRemove={onRemove}
+        {...overrides}
+      />
+    </I18nProvider>,
   )
   return { onSelect, onToggleHidden, onRemove }
 }

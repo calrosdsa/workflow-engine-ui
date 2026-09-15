@@ -6,6 +6,7 @@
 import { DetailTabList } from '../DetailTabList'
 import { useRecordDetail } from '../../record-detail-hooks'
 import { MAX_GROUP_DEPTH } from '../contract'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { DetailTabRendererProps } from '../contract'
 import type { GroupTabConfig } from './schema'
 
@@ -19,6 +20,7 @@ import type { GroupTabConfig } from './schema'
 export function GroupTabRenderer({
   formId, recordId, fields, schema, config, onNavigateToRecord, groupDepth = 0,
 }: DetailTabRendererProps<GroupTabConfig>) {
+  const t = useTranslation()
   // Re-reads the same React Query cache entry RecordDetailPanel's own
   // useRecordDetail call already populated — no extra network request, just
   // needed here too so a grouped child's renderIf expression (evaluated
@@ -29,7 +31,7 @@ export function GroupTabRenderer({
   if (groupDepth >= MAX_GROUP_DEPTH) {
     return (
       <p className="text-sm" style={{ color: 'hsl(var(--destructive))' }}>
-        This group is nested too deeply (possibly a group containing itself) — stopped rendering further.
+        {t('group.tab.too_deep')}
       </p>
     )
   }
@@ -37,7 +39,7 @@ export function GroupTabRenderer({
   if (config.tabs.length === 0) {
     return (
       <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
-        This group has no tabs yet — add some in the Form Builder's Detail Page settings.
+        {t('group.tab.empty')}
       </p>
     )
   }

@@ -1,5 +1,6 @@
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { Menu, ParentMenuConfig } from '../types'
 
 interface ParentMenuConfigPanelProps {
@@ -8,6 +9,7 @@ interface ParentMenuConfigPanelProps {
 }
 
 export function ParentMenuConfigPanel({ menu, onChange }: ParentMenuConfigPanelProps) {
+  const t = useTranslation()
   const config = menu.config as ParentMenuConfig
 
   return (
@@ -17,10 +19,10 @@ export function ParentMenuConfigPanel({ menu, onChange }: ParentMenuConfigPanelP
           checked={config.collapsed_by_default ?? false}
           onCheckedChange={(checked) => onChange({ ...config, collapsed_by_default: checked === true })}
         />
-        Collapsed by default in the sidebar
+        {t('menus.config_panels.parent.collapsed_label')}
       </Label>
       <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-        This menu is a pure navigation container — it has no data of its own, just child menus.
+        {t('menus.config_panels.parent.hint')}
       </p>
     </div>
   )

@@ -47,11 +47,11 @@ export function normaliseTriggerConfig(raw: unknown): TriggerConfig {
   }
 }
 
-const EVENT_TYPES: { value: TriggerEventType; label: string }[] = [
-  { value: 'create', label: 'Create' },
-  { value: 'update', label: 'Update' },
-  { value: 'delete', label: 'Delete' },
-  { value: 'create_or_update', label: 'Create or Update' },
+const EVENT_TYPES: { value: TriggerEventType; labelKey: string }[] = [
+  { value: 'create', labelKey: 'workflows.trigger.event.create' },
+  { value: 'update', labelKey: 'workflows.trigger.event.update' },
+  { value: 'delete', labelKey: 'workflows.trigger.event.delete' },
+  { value: 'create_or_update', labelKey: 'workflows.trigger.event.create_or_update' },
 ]
 
 // WEBHOOK_PROVIDERS mirrors internal/webhookprovider's registered Providers
@@ -166,8 +166,8 @@ export function TriggerForm({ config, variables, onChange, triggerPresets = [] }
       {/* Enabled toggle */}
       <div className="flex items-center justify-between rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 px-3 py-2">
         <div>
-          <Label className="text-[12px] font-semibold text-[hsl(var(--foreground))]">Enabled</Label>
-          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Disabled triggers never fire (workflow can still be run on demand from the editor).</p>
+          <Label className="text-[12px] font-semibold text-[hsl(var(--foreground))]">{t('workflows.trigger.enabled')}</Label>
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.trigger.disabled_help')}</p>
         </div>
         <button
           type="button"
@@ -239,10 +239,10 @@ export function TriggerForm({ config, variables, onChange, triggerPresets = [] }
       {/* On Demand (data-driven) mode fields — FR-B3-007 */}
       {config.mode === 'on_demand_data_driven' && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Restrict to Form (optional)</Label>
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.restrict_form')}</Label>
           <FormReferenceSelect value={config.source_form_id || undefined} onChange={(id) => set({ source_form_id: id ?? '' })} />
           <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-            Leave blank to allow this workflow to be triggered against a record from any form. When set, only that form's own record-detail custom actions can dispatch this workflow.
+            {t('workflows.trigger.restrict_form_help')}
           </p>
         </div>
       )}
@@ -251,7 +251,7 @@ export function TriggerForm({ config, variables, onChange, triggerPresets = [] }
       {config.mode === 'scheduled' && (
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Cron Expression</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.cron_expression')}</Label>
             <Input
               value={config.cron ?? ''}
               onChange={(e) => set({ cron: e.target.value })}
@@ -259,11 +259,11 @@ export function TriggerForm({ config, variables, onChange, triggerPresets = [] }
               className="h-8 font-mono text-[12px]"
             />
             <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-              Standard 5-field crontab syntax, or shorthands like <code className="font-mono">@daily</code>, <code className="font-mono">@hourly</code>, <code className="font-mono">@every 1h30m</code>.
+              {t('workflows.trigger.cron_help')}
             </p>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Timezone</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.trigger.timezone')}</Label>
             <Input
               value={config.timezone ?? ''}
               onChange={(e) => set({ timezone: e.target.value })}
@@ -272,7 +272,7 @@ export function TriggerForm({ config, variables, onChange, triggerPresets = [] }
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Description</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.trigger.description')}</Label>
             <Input
               value={config.description ?? ''}
               onChange={(e) => set({ description: e.target.value })}
@@ -287,12 +287,12 @@ export function TriggerForm({ config, variables, onChange, triggerPresets = [] }
       {isDataDriven && (
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Form / Table</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.form_table')}</Label>
             <FormReferenceSelect value={config.form_id || undefined} onChange={(id) => set({ form_id: id ?? '' })} />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">On Event</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.trigger.on_event')}</Label>
             <div className="grid grid-cols-2 gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
               {EVENT_TYPES.map((e) => (
                 <button
@@ -304,7 +304,7 @@ export function TriggerForm({ config, variables, onChange, triggerPresets = [] }
                     config.event_type === e.value ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
                   )}
                 >
-                  {e.label}
+                  {t(e.labelKey)}
                 </button>
               ))}
             </div>
@@ -315,10 +315,10 @@ export function TriggerForm({ config, variables, onChange, triggerPresets = [] }
           <div className="space-y-2">
             <div className="flex items-center gap-1.5">
               <FilterIcon size={12} className="text-[hsl(var(--muted-foreground))]" />
-              <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Filter (optional)</Label>
+              <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.filter_optional')}</Label>
             </div>
             {!config.form_id ? (
-              <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">Select a form to add filters.</p>
+              <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.select_form_filters')}</p>
             ) : (
               <FilterBuilder
                 group={config.filter ?? newGroup()}
@@ -334,17 +334,17 @@ export function TriggerForm({ config, variables, onChange, triggerPresets = [] }
 
           <p className="rounded-lg border border-dashed border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-2.5 text-[10px] text-[hsl(var(--warning))]">
             {config.mode === 'before'
-              ? 'Runs synchronously before the write. A Show Message node with type "error" here blocks the write and returns the message to the caller.'
+              ? t('workflows.trigger.before_help')
               : config.mode === 'after'
-                ? 'Runs synchronously after the write commits. A Show Message node with type "error" here becomes a non-fatal warning on the response (the write already happened).'
-                : 'Runs after the write commits, without waiting. Failures are logged only — nothing is left to report them to the caller.'}
+                ? t('workflows.trigger.after_help')
+                : t('workflows.trigger.after_async_help')}
           </p>
         </div>
       )}
 
       {config.mode === 'on_demand' && (
         <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
-          No additional configuration. Run this workflow manually or via the executions API.
+          {t('workflows.trigger.on_demand_help')}
         </p>
       )}
 
@@ -354,24 +354,21 @@ export function TriggerForm({ config, variables, onChange, triggerPresets = [] }
       {/* Executed-by-workflow mode */}
       {config.mode === 'executed_by_workflow' && (
         <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
-          No additional configuration. Add an <span className="font-semibold text-[hsl(var(--muted-foreground))]">Execute Workflow</span> node
-          in another workflow and point it at this one — this trigger only accepts calls made that way, never a plain
-          on-demand run or the executions API.
+          {t('workflows.trigger.executed_by_workflow_help')}
         </p>
       )}
 
       {/* Error trigger mode */}
       {config.mode === 'on_error' && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Watch Workflow (optional)</Label>
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.watch_workflow')}</Label>
           <WorkflowReferenceSelect
             value={config.source_definition_id || undefined}
             onChange={(id) => set({ source_definition_id: id ?? '' })}
-            placeholder="Any workflow in this app…"
+            placeholder={t('workflows.trigger.any_workflow')}
           />
           <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-            Leave blank to react to any workflow's failed execution in this app. When set, only that workflow's
-            failures dispatch this trigger.
+            {t('workflows.trigger.watch_workflow_help')}
           </p>
         </div>
       )}
@@ -395,6 +392,7 @@ function ExposeAsToolFields({
   variables: VariableDecl[]
   set: (patch: Partial<TriggerConfig>) => void
 }) {
+  const t = useTranslation()
   const parameters = config.tool_parameters ?? []
   const selectedNames = new Set(parameters.map((p) => p.variable_name))
 
@@ -414,8 +412,8 @@ function ExposeAsToolFields({
     <div className="space-y-3">
       <div className="flex items-center justify-between rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 px-3 py-2">
         <div>
-          <Label className="text-[12px] font-semibold text-[hsl(var(--foreground))]">Expose as Tool</Label>
-          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Let an Agent call this workflow directly, in addition to however it's normally triggered above.</p>
+          <Label className="text-[12px] font-semibold text-[hsl(var(--foreground))]">{t('workflows.trigger.expose_as_tool')}</Label>
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.trigger.expose_as_tool_help')}</p>
         </div>
         <button
           type="button"
@@ -435,7 +433,7 @@ function ExposeAsToolFields({
       {config.expose_as_tool && (
         <div className="space-y-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3">
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Tool Name</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.trigger.tool_name')}</Label>
             <Input
               value={config.tool_name ?? ''}
               onChange={(e) => set({ tool_name: e.target.value })}
@@ -444,20 +442,20 @@ function ExposeAsToolFields({
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Tool Description</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.trigger.tool_description')}</Label>
             <textarea
               value={config.tool_description ?? ''}
               onChange={(e) => set({ tool_description: e.target.value })}
               rows={3}
-              placeholder="What this tool does and when an Agent should call it…"
+              placeholder={t('workflows.trigger.tool_description_placeholder')}
               className="w-full resize-y rounded-lg border border-[hsl(var(--border))] px-2.5 py-1.5 text-[12px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Parameters</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.parameters')}</Label>
             {variables.length === 0 ? (
               <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
-                This workflow has no declared Variables yet — add one in the Variables panel to expose it as a tool parameter.
+                {t('workflows.trigger.no_tool_variables')}
               </p>
             ) : (
               <div className="space-y-2">
@@ -475,7 +473,7 @@ function ExposeAsToolFields({
                         <Input
                           value={param?.description ?? ''}
                           onChange={(e) => updateParamDescription(v.name, e.target.value)}
-                          placeholder="What should the model fill in here?"
+                          placeholder={t('workflows.trigger.parameter_description_placeholder')}
                           className="mt-1.5 h-7 text-[11px]"
                         />
                       )}
@@ -484,7 +482,7 @@ function ExposeAsToolFields({
                 })}
               </div>
             )}
-            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Leave every Variable unchecked for a tool that needs no input.</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.trigger.no_input_help')}</p>
           </div>
         </div>
       )}
@@ -570,7 +568,7 @@ function WebhookModeFields({ config, set }: { config: TriggerConfig; set: (patch
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Webhook URL</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.trigger.webhook.url_label')}</Label>
         {url ? (
           <>
             <div className="flex items-center gap-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-2.5 py-1.5">
@@ -579,21 +577,19 @@ function WebhookModeFields({ config, set }: { config: TriggerConfig; set: (patch
                 type="button"
                 onClick={copy}
                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted-foreground))]/20 hover:text-[hsl(var(--foreground))]"
-                title="Copy URL"
+                title={t('workflows.trigger.webhook.copy_url')}
               >
                 {copied ? <Check size={12} className="text-[hsl(var(--success))]" /> : <Copy size={12} />}
               </button>
             </div>
             <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-              Send a <span className="font-mono">POST</span> request here with a JSON object body — its fields are
-              available to every node as <span className="font-mono">Vars["fieldKey"]</span>, the same way a
-              triggering record's fields are. A body-less call is treated as an empty payload.
+              {t('workflows.trigger.webhook.url_help')}
             </p>
           </>
         ) : (
           <p className="flex items-center gap-1.5 rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-[11px] text-[hsl(var(--muted-foreground))]">
             <RefreshCw size={12} className="shrink-0" />
-            Save this workflow once to generate its webhook URL.
+            {t('workflows.trigger.webhook.save_first_url')}
           </p>
         )}
       </div>

@@ -5,6 +5,7 @@
 // off function-name prefix, which cannot express "this source's columns".
 // See formula-autocomplete.ts for the full finding.
 import { Database, Table2 } from 'lucide-react'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { ReferenceSuggestion } from './formula-autocomplete'
 
 export interface FormulaSuggestionsProps {
@@ -15,6 +16,7 @@ export interface FormulaSuggestionsProps {
 }
 
 export function FormulaSuggestions({ suggestions, anchor, onAccept }: FormulaSuggestionsProps) {
+  const t = useTranslation()
   if (suggestions.length === 0) return null
 
   // Univer shows its OWN function popup for the same keystrokes (typing
@@ -40,10 +42,10 @@ export function FormulaSuggestions({ suggestions, anchor, onAccept }: FormulaSug
       className="fixed max-h-72 w-64 overflow-y-auto rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--popover))] shadow-lg"
       style={style}
       role="listbox"
-      aria-label="Report data references"
+      aria-label={t('reports.formula_suggestions.aria_label')}
     >
       <div className="sticky top-0 border-b border-[hsl(var(--border))] bg-[hsl(var(--popover))] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-        Report data
+        {t('reports.formula_suggestions.header')}
       </div>
       {suggestions.map((suggestion) => (
         <button

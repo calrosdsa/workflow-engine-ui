@@ -8,16 +8,18 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
-const schema = z.object({
-  credential: z.string().min(1, 'Email is required'),
-  password: z.string().min(1, 'Password is required'),
-})
-type FormValues = z.infer<typeof schema>
+type FormValues = { credential: string; password: string }
 
 export function LoginPage() {
   const navigate = useNavigate()
   const login = useLogin()
+  const t = useTranslation()
+  const schema = z.object({
+    credential: z.string().min(1, t('auth.email_required')),
+    password: z.string().min(1, t('auth.password_required')),
+  })
 
   const {
     register,
@@ -42,26 +44,26 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
-          <CardDescription>Sign in to your workflow engine account</CardDescription>
+          <CardTitle>{t('auth.sign_in')}</CardTitle>
+          <CardDescription>{t('auth.sign_in_description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1">
-              <Label htmlFor="credential">Email</Label>
+              <Label htmlFor="credential">{t('auth.email')}</Label>
               <Input id="credential" type="email" {...register('credential')} autoComplete="email" />
               {errors.credential && <p className="text-xs text-destructive">{errors.credential.message}</p>}
             </div>
             <div className="space-y-1">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('auth.password')}</Label>
               <Input id="password" type="password" {...register('password')} autoComplete="current-password" />
               {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
             </div>
             {login.isError && (
-              <p className="text-xs text-destructive">Invalid credentials. Please try again.</p>
+              <p className="text-xs text-destructive">{t('auth.invalid_credentials')}</p>
             )}
             <Button type="submit" className="w-full" disabled={login.isPending}>
-              {login.isPending ? 'Signing in…' : 'Sign in'}
+              {login.isPending ? t('auth.signing_in') : t('auth.sign_in')}
             </Button>
           </form>
           <div className="relative">
@@ -69,11 +71,11 @@ export function LoginPage() {
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or</span>
+              <span className="bg-background px-2 text-muted-foreground">{t('auth.or')}</span>
             </div>
           </div>
           <Button variant="outline" type="button" className="w-full" onClick={signInWithGoogle}>
-            Sign in with Google
+            {t('auth.sign_in_google')}
           </Button>
         </CardContent>
       </Card>

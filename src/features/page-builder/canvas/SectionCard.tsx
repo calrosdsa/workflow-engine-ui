@@ -15,6 +15,7 @@ import {
 import { usePageBuilderStore } from '../store'
 import { COLUMN_LAYOUTS, type ColumnLayout, type PageSection } from '../schema'
 import { ColumnDropZone } from './ColumnDropZone'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 // Direct mirror of features/form-builder/canvas/SectionCard.tsx, including
 // its memo() — `section` keeps a stable reference across store mutations
@@ -24,6 +25,7 @@ import { ColumnDropZone } from './ColumnDropZone'
 // its own selectedSectionId store subscription regardless of props, which
 // is correct — a card needs to know if it's the one that's selected.
 export const SectionCard = memo(function SectionCard({ section }: { section: PageSection }) {
+  const t = useTranslation()
   const updateSection = usePageBuilderStore((s) => s.updateSection)
   const setLayout = usePageBuilderStore((s) => s.setSectionLayout)
   const duplicate = usePageBuilderStore((s) => s.duplicateSectionById)
@@ -53,7 +55,9 @@ export const SectionCard = memo(function SectionCard({ section }: { section: Pag
       // onClick below (and the two stopPropagation shims further down)
       // exist on the mouse side.
       role="group"
-      aria-label={`${section.title || 'Untitled'} section${selected ? ' — selected' : ''}`}
+      // {{name}} named slot, not JS-concatenated bare noun — same reasoning
+      // as ComponentCard.tsx's identical aria-label fix.
+      aria-label={`${t('builder.pages.canvas.section_aria', { name: section.title || t('builder.pages.canvas.untitled_section') })}${selected ? ` — ${t('builder.pages.canvas.section_aria_selected')}` : ''}`}
       tabIndex={0}
       onClick={(e) => { e.stopPropagation(); selectSection(section.id) }}
       onKeyDown={onKeyboardActivate(() => selectSection(section.id))}
@@ -71,7 +75,7 @@ export const SectionCard = memo(function SectionCard({ section }: { section: Pag
           {...listeners}
           onClick={(e) => e.stopPropagation()}
           className="flex h-6 w-5 cursor-grab items-center justify-center rounded text-slate-300 hover:bg-slate-100 hover:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 active:cursor-grabbing"
-          title="Drag to reorder section"
+          title={t('builder.pages.canvas.drag_reorder_section')}
         >
           <GripVertical size={14} />
         </button>
@@ -79,7 +83,7 @@ export const SectionCard = memo(function SectionCard({ section }: { section: Pag
         <button
           onClick={(e) => { e.stopPropagation(); toggleCollapsed(section.id) }}
           className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
-          title={section.collapsed ? 'Expand' : 'Collapse'}
+          title={section.collapsed ? t('common.expand') : t('common.collapse')}
         >
           {section.collapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
         </button>
@@ -98,7 +102,10 @@ export const SectionCard = memo(function SectionCard({ section }: { section: Pag
             surface and are already independently keyboard-operable. */}
         {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
         <div className="ml-auto flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-          {/* Layout picker */}
+          {/* Layout picker — COLUMN_LAYOUTS is form-builder/schema.ts's,
+              re-exported here rather than duplicated, so its translation
+              keys live under form-builder's builder.canvas.* namespace too;
+              see the en.ts comment at those keys. */}
           <SelectMenu value={section.layout} onValueChange={(v) => setLayout(section.id, v as ColumnLayout)}>
             <SelectTrigger className="h-7 w-auto gap-1.5 border-slate-200 px-2 text-[11px]">
               <Columns3 size={12} className="text-slate-400" />
@@ -106,7 +113,7 @@ export const SectionCard = memo(function SectionCard({ section }: { section: Pag
             </SelectTrigger>
             <SelectContent>
               {(Object.keys(COLUMN_LAYOUTS) as ColumnLayout[]).map((key) => (
-                <SelectItem key={key} value={key} className="text-xs">{COLUMN_LAYOUTS[key].label}</SelectItem>
+                <SelectItem key={key} value={key} className="text-xs">{t(`builder.canvas.column_layout.${key}.label`)}</SelectItem>
               ))}
             </SelectContent>
           </SelectMenu>
@@ -118,11 +125,11 @@ export const SectionCard = memo(function SectionCard({ section }: { section: Pag
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => duplicate(section.id)}>
-                <Copy size={13} /> Duplicate section
+                <Copy size={13} /> {t('builder.pages.canvas.duplicate_section')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem destructive onClick={() => remove(section.id)}>
-                <Trash2 size={13} /> Delete section
+                <Trash2 size={13} /> {t('builder.pages.canvas.delete_section')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

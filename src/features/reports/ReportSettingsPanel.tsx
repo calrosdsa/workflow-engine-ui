@@ -9,14 +9,16 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useReportStore } from './store'
 import { StyleEditor } from './StyleEditor'
 import { ReportVisibilityEditor } from './ReportVisibilityEditor'
-import { ALL_FORMATS, FORMAT_LABELS } from './types'
+import { ALL_FORMATS } from './types'
 import type { ExportFormat, ReportSettings } from './types'
 
 
 export function ReportSettingsPanel({ onBeforeChange }: { onBeforeChange?: () => void }) {
+  const t = useTranslation()
   const settings = useReportStore((s) => s.definition.settings)
   const visibility = useReportStore((s) => s.definition.visibility)
   const updateSettings = useReportStore((s) => s.updateSettings)
@@ -52,7 +54,7 @@ export function ReportSettingsPanel({ onBeforeChange }: { onBeforeChange?: () =>
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]" title="Report settings" aria-label="Report settings">
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]" title={t('reports.settings.title')} aria-label={t('reports.settings.title')}>
           <Settings2 size={16} />
         </Button>
       </PopoverTrigger>
@@ -60,24 +62,24 @@ export function ReportSettingsPanel({ onBeforeChange }: { onBeforeChange?: () =>
         <ScrollArea className="max-h-[70vh]">
           <div className="space-y-4 p-4">
             <div>
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Visibility</p>
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('reports.settings.visibility')}</p>
               <ReportVisibilityEditor visibility={visibility} onChange={(next) => changeSettings(() => updateVisibility(next))} />
             </div>
 
             <div className="border-t border-[hsl(var(--border))] pt-3">
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Export formats</p>
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('reports.settings.export_formats')}</p>
 
               <div className="flex flex-col gap-1.5">
-                <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Default format</Label>
+                <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.settings.default_format')}</Label>
                 <SelectMenu
                   value={settings.default_format ?? ''}
                   onValueChange={(v) => setDefaultFormat((v || undefined) as ExportFormat | undefined)}
                 >
-                  <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="None set" /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('reports.settings.none_set')} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="" className="text-xs">None set</SelectItem>
+                    <SelectItem value="" className="text-xs">{t('reports.settings.none_set')}</SelectItem>
                     {ALL_FORMATS.map((f) => (
-                      <SelectItem key={f} value={f} className="text-xs">{FORMAT_LABELS[f]}</SelectItem>
+                      <SelectItem key={f} value={f} className="text-xs">{t(`reports.format.${f}.label`)}</SelectItem>
                     ))}
                   </SelectContent>
                 </SelectMenu>
@@ -85,7 +87,7 @@ export function ReportSettingsPanel({ onBeforeChange }: { onBeforeChange?: () =>
 
               <div className="mt-3 flex flex-col gap-1.5">
                 <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-                  Allowed formats <span className="font-normal">(none checked = every format allowed)</span>
+                  {t('reports.settings.allowed_formats')} <span className="font-normal">({t('reports.settings.allowed_formats_hint')})</span>
                 </Label>
                 <div className="flex flex-col gap-1 rounded-md border border-[hsl(var(--border))] p-2">
                   {ALL_FORMATS.map((f) => (
@@ -94,7 +96,7 @@ export function ReportSettingsPanel({ onBeforeChange }: { onBeforeChange?: () =>
                         checked={restrictingFormats ? allowedFormats.includes(f) : false}
                         onCheckedChange={(checked) => toggleFormat(f, checked === true)}
                       />
-                      {FORMAT_LABELS[f]}
+                      {t(`reports.format.${f}.label`)}
                     </label>
                   ))}
                 </div>
@@ -103,7 +105,7 @@ export function ReportSettingsPanel({ onBeforeChange }: { onBeforeChange?: () =>
 
             <div className="border-t border-[hsl(var(--border))] pt-3">
               <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-                Style defaults <span className="font-normal normal-case">(inherited by every block unless a block overrides it)</span>
+                {t('reports.settings.style_defaults')} <span className="font-normal normal-case">({t('reports.settings.style_defaults_hint')})</span>
               </p>
               <StyleEditor style={settings.style_defaults ?? {}} onChange={(style) => changeSettings(() => updateStyleDefaults(Object.keys(style).length === 0 ? undefined : style))} />
             </div>

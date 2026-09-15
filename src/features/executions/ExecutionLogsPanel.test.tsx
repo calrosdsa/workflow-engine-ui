@@ -7,6 +7,7 @@
 // nothing, and (3) step labels resolving to the canvas's own node names.
 // The trigger-pinned-first / step-list rendering is exercised incidentally
 // by every test here reading row labels.
+import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -34,9 +35,11 @@ function baseLog(overrides: Partial<ExecutionNodeLog>): ExecutionNodeLog {
   }
 }
 
+// The real producer's shape (trigger_log.go): the trigger's payload is
+// logged as its INPUT, with no output.
 const TRIGGER_LOG = baseLog({
   id: 'log-trigger', node_id: 'trigger-1', node_type: 'trigger', kind: 'trigger',
-  started_at: '2026-09-12T10:00:00Z', output: { source: 'webhook' },
+  started_at: '2026-09-12T10:00:00Z', input: { variables: {}, trigger_record: { id: 'rec-1' } }, output: null,
 })
 const TABLE_LOG = baseLog({
   id: 'log-fetch', node_id: 'fetch-1', node_type: 'fetch_records', kind: 'node',
@@ -53,12 +56,17 @@ function respond(logs: ExecutionNodeLog[]): ExecutionLogsResponse {
   return { logs, total: logs.length, page: 1, page_size: 50 }
 }
 
-function renderPanel(props: { nodeLabels?: Record<string, string> } = {}) {
+// A fresh execution id per render: useExecutionLogs remembers each run's
+// first terminal sighting module-wide (see hooks.ts), so reusing one id
+// across tests would leak settle-window state between them.
+let runSeq = 0
+
+function renderPanel(props: Partial<ComponentProps<typeof ExecutionLogsPanel>> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
       <I18nProvider>
-        <ExecutionLogsPanel executionId="exec-1" executionStatus="COMPLETED" {...props} />
+        <ExecutionLogsPanel executionId={`exec-${++runSeq}`} executionStatus="COMPLETED" {...props} />
       </I18nProvider>
     </QueryClientProvider>,
   )
@@ -69,22 +77,22 @@ function renderPanel(props: { nodeLabels?: Record<string, string> } = {}) {
 const stepRow = (name: RegExp) => screen.getByRole('button', { name })
 
 describe('ExecutionLogsPanel', () => {
-  it('selects the trigger row first, opens on Output, and falls back to a raw JSON dump for a bare-object payload', async () => {
+  it('selects the trigger row first and shows its payload under Output, as the data the first step receives', async () => {
     getLogsMock.mockResolvedValue(respond([TRIGGER_LOG, TABLE_LOG]))
     renderPanel()
 
     await waitFor(() => expect(stepRow(/Trigger/)).toBeTruthy())
     expect(stepRow(/Trigger/).getAttribute('aria-current')).toBe('true')
-    // { source: 'webhook' } is a bare object, not an array of records — must
-    // stay a <pre> dump, never a DataTable.
-    await waitFor(() => expect(screen.getByText(/"source"/)).toBeTruthy())
+    // The engine logs it as the row's input; the panel opens on Output and
+    // must show it there — never "No data captured" on every run's first step.
+    // A bare object, not an array of records, so a <pre> dump, not a table.
+    await waitFor(() => expect(screen.getByText(/"trigger_record"/)).toBeTruthy())
     expect(document.querySelector('table')).toBeNull()
 
     // Radix's TabsTrigger activates on mousedown (see its own source), not
     // on click — fireEvent.click alone leaves the tab inactive in jsdom.
     fireEvent.mouseDown(screen.getByRole('tab', { name: 'Input' }))
-    // Trigger's Input is null -> the "no data" message, not a crash or blank.
-    expect(screen.getByText('No data captured for this step.')).toBeTruthy()
+    expect(screen.getByText('A trigger starts the run, so it has no input. Its data is under Output.')).toBeTruthy()
   })
 
   it('renders a DataTable with an item count for an array-of-uniform-objects output', async () => {
@@ -127,32 +135,51 @@ describe('ExecutionLogsPanel', () => {
 
   it('keeps polling briefly after a run turns terminal so its last rows can land', async () => {
     getLogsMock.mockResolvedValue(respond([TRIGGER_LOG]))
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    render(
-      <QueryClientProvider client={client}>
-        <I18nProvider>
-          <ExecutionLogsPanel executionId="exec-1" executionStatus="COMPLETED" executionFinishedAt={new Date().toISOString()} />
-        </I18nProvider>
-      </QueryClientProvider>,
-    )
+    renderPanel({ executionFinishedAt: new Date().toISOString() })
 
     await waitFor(() => expect(getLogsMock.mock.calls.length).toBeGreaterThanOrEqual(2), { timeout: 3000 })
   })
 
   it('fetches a long-finished run once and never polls it', async () => {
     getLogsMock.mockResolvedValue(respond([TRIGGER_LOG]))
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    render(
-      <QueryClientProvider client={client}>
-        <I18nProvider>
-          <ExecutionLogsPanel executionId="exec-1" executionStatus="COMPLETED" executionFinishedAt="2026-01-01T00:00:00.000Z" />
-        </I18nProvider>
-      </QueryClientProvider>,
-    )
+    renderPanel({ executionFinishedAt: '2026-01-01T00:00:00.000Z' })
 
     await waitFor(() => expect(getLogsMock).toHaveBeenCalledTimes(1))
     await new Promise((resolve) => setTimeout(resolve, 1500))
     expect(getLogsMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the pager (and a way back) while a page loads, and when its fetch fails', async () => {
+    const rows = [TRIGGER_LOG, TABLE_LOG, DROPPED_LOG]
+    let rejectPage2: (reason: Error) => void = () => {}
+    getLogsMock.mockImplementation((_id: string, params: { page?: number }) =>
+      params.page === 2
+        ? new Promise((_, reject) => { rejectPage2 = reject })
+        : Promise.resolve({ logs: rows.slice(0, 2), total: 3, page: 1, page_size: 2 }))
+    renderPanel({ pageSize: 2 })
+
+    await waitFor(() => expect(screen.getByText('Page 1 of 2')).toBeTruthy())
+    fireEvent.click(screen.getByRole('button', { name: /Next/ }))
+    // Page 2 is in flight: `data` is undefined, but the pager must not vanish.
+    await waitFor(() => expect(screen.getByText('Page 2 of 2')).toBeTruthy())
+
+    rejectPage2(new Error('boom'))
+    await waitFor(() => expect(screen.getByText('Couldn’t load these steps.')).toBeTruthy())
+    const prev = screen.getByRole('button', { name: /Prev/ }) as HTMLButtonElement
+    expect(prev.disabled).toBe(false)
+    fireEvent.click(prev)
+    await waitFor(() => expect(screen.getByText('Page 1 of 2')).toBeTruthy())
+  })
+
+  it('shows a boolean cell as its literal value, not a relabelled Yes/No', async () => {
+    const flags = baseLog({ id: 'log-flags', node_id: 'fetch-3', node_type: 'fetch_records', output: [{ id: '1', active: true }, { id: '2', active: false }] })
+    getLogsMock.mockResolvedValue(respond([flags]))
+    renderPanel()
+
+    await waitFor(() => expect(document.querySelector('table')).not.toBeNull())
+    expect(screen.getByText('true')).toBeTruthy()
+    expect(screen.getByText('false')).toBeTruthy()
+    expect(screen.queryByText('Yes')).toBeNull()
   })
 
   it('labels steps with the canvas node names when the host passes them', async () => {
@@ -246,5 +273,43 @@ describe('ExecutionLogsPanel', () => {
     await waitFor(() =>
       expect(stepRow(/Loop body — items 501–1000 \(500 items, 3 failed\)/)).toBeTruthy(),
     )
+  })
+
+  it("names a loop chunk after its Iterator's canvas label, so two iterators' chunks stay apart", async () => {
+    const chunkOf = (id: string, nodeId: string) => baseLog({
+      id, node_id: nodeId, node_type: 'iterator', kind: 'loop_chunk', chunk_index: 0, item_count: 3,
+    })
+    getLogsMock.mockResolvedValue(respond([chunkOf('c1', 'iter-a'), chunkOf('c2', 'iter-b')]))
+    renderPanel({ nodeLabels: { 'iter-a': 'For each invoice', 'iter-b': 'For each recipient' } })
+
+    await waitFor(() => expect(stepRow(/For each invoice — items 1–3 \(3 items\)/)).toBeTruthy())
+    expect(stepRow(/For each recipient — items 1–3 \(3 items\)/)).toBeTruthy()
+  })
+
+  it('falls back to "Loop body" when the Iterator\'s canvas name was cleared', async () => {
+    const chunk = baseLog({ id: 'c3', node_id: 'iter-c', node_type: 'iterator', kind: 'loop_chunk', chunk_index: 0, item_count: 3 })
+    getLogsMock.mockResolvedValue(respond([chunk]))
+    renderPanel({ nodeLabels: { 'iter-c': '' } })
+
+    await waitFor(() => expect(stepRow(/^Loop body — items 1–3 \(3 items\)/)).toBeTruthy())
+  })
+
+  it("tables a large chunk's sampled first/last items and says it's a sample", async () => {
+    // loop_chunk.go's real sampleChunkItems shape for a chunk over 6 items.
+    const item = (n: number) => ({ id: String(n), name: `Customer ${n}` })
+    const sampled = baseLog({
+      id: 'log-sample', node_id: 'iter-1', node_type: 'iterator', kind: 'loop_chunk', chunk_index: 0, item_count: 500,
+      input: { _note: 'sampled input items', item_count: 500, first_items: [item(1), item(2), item(3)], last_items: [item(498), item(499), item(500)] },
+    })
+    getLogsMock.mockResolvedValue(respond([sampled]))
+    renderPanel()
+
+    await waitFor(() => expect(stepRow(/Loop body/)).toBeTruthy())
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Input' }))
+    // Says WHICH items: rows 4–6 of the table are the chunk's last three.
+    await waitFor(() => expect(screen.getByText('Showing the first 3 and last 3 of 500 items')).toBeTruthy())
+    expect(document.querySelectorAll('tbody tr')).toHaveLength(6)
+    expect(screen.getByText('Customer 1')).toBeTruthy()
+    expect(screen.getByText('Customer 500')).toBeTruthy()
   })
 })

@@ -10,6 +10,7 @@ import { useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { formsApi } from '@/features/forms/api'
 import { RecordsTable } from '../../RecordsTable'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { DetailTabRendererProps } from '../contract'
 import type { RelatedFormTabConfig } from './schema'
 import type { FilterGroup } from '@/features/workflows/types'
@@ -42,6 +43,7 @@ function buildLinkFilter(fieldName: string, recordId: string, additional: Filter
 }
 
 export function RelatedFormTabRenderer({ recordId, config, onNavigateToRecord, onEmptyResolved }: DetailTabRendererProps<RelatedFormTabConfig>) {
+  const t = useTranslation()
   const filter = useMemo(
     () => config.targetFormId && config.targetFieldName
       ? buildLinkFilter(config.targetFieldName, recordId, config.additionalFilter)
@@ -75,7 +77,7 @@ export function RelatedFormTabRenderer({ recordId, config, onNavigateToRecord, o
   if (!config.targetFormId || !config.targetFieldName) {
     return (
       <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
-        This tab isn't configured yet — pick a related form in the Form Builder's Detail Page settings.
+        {t('related_form.tab.not_configured')}
       </p>
     )
   }

@@ -1,5 +1,6 @@
 import Markdown from 'react-markdown'
 import type { Components } from 'react-markdown'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { WidgetRendererProps } from '../../widget-contract'
 import type { RichTextWidgetConfig } from './schema'
 
@@ -30,11 +31,12 @@ const MARKDOWN_COMPONENTS: Components = {
 }
 
 export function RichTextRenderer({ config, mode }: WidgetRendererProps<RichTextWidgetConfig>) {
+  const t = useTranslation()
   // Same builder-only empty-state reasoning as HeadingRenderer/ParagraphRenderer
   // — empty markdown renders zero visible pixels ('plain' chrome), which is
   // fine at runtime but leaves a builder tile impossible to locate by eye.
   if (!config.markdown.trim() && mode === 'builder') {
-    return <p className="p-3 text-sm italic text-[hsl(var(--muted-foreground))]">Empty — click to add Markdown</p>
+    return <p className="p-3 text-sm italic text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_richtext.empty_hint')}</p>
   }
   return (
     <div className="p-3 text-sm">

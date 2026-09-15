@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, AlertTriangle, ArrowLeft, Braces, Check, History, Play, Save, Workflow, X } from 'lucide-react'
+import { AlertCircle, AlertTriangle, ArrowLeft, Check, GitCommitHorizontal, Play, Save, Settings2, Workflow, X } from 'lucide-react'
 import { useWorkflow, useCreateWorkflow, useUpdateWorkflow } from '@/features/workflows/hooks'
 import { useTriggerExecution, useExecution, useExecutionLogs } from '@/features/executions/hooks'
 import { useBuilderStore } from '@/features/workflows/builder/store'
@@ -12,14 +12,21 @@ import { VariablesPanel } from '@/features/workflows/builder/VariablesPanel'
 import { OutlinePanel } from '@/features/workflows/builder/OutlinePanel'
 import { NodeConfigPanel } from '@/features/workflows/builder/NodeConfigPanel'
 import { ExecutionsSidebar, statusDot } from '@/features/workflows/builder/ExecutionsSidebar'
+import { EvaluationsSidebar } from '@/features/workflows/builder/EvaluationsSidebar'
 import { ExecutionLogsDock, DOCK_LOGS_PAGE_SIZE } from '@/features/workflows/builder/ExecutionLogsDock'
+import { CanvasOverlayContext } from '@/features/workflows/builder/canvas-overlay'
+import { WorkflowSetupDrawer } from '@/features/workflows/builder/WorkflowSetupDrawer'
+import { WorkflowLifecycleDrawer } from '@/features/workflows/builder/WorkflowLifecycleDrawer'
 import { TriggerOnboardingModal } from '@/features/workflows/builder/TriggerOnboardingModal'
+import { WORKFLOW_COMMAND_EVENT, type WorkflowCommandId } from '@/features/workflows/builder/workflow-command-model'
 import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
+import { useApplication } from '@/features/applications/hooks'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { FlowLayout } from '../test/Layout'
+import './workflow-builder.css'
 
 // True when the event originates inside a text-entry control.
 function isEditableTarget(t: EventTarget | null): boolean {
@@ -46,14 +53,17 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   const id       = mode === 'edit' ? (params.workflowId ?? '') : ''
 
   const { data: existing, isLoading } = useWorkflow(id)
+  const { data: application } = useApplication()
   const { data: envStatus } = useEnvironmentLinkStatus()
   const isLockedProduction = envStatus?.linked && envStatus.role === 'production'
 
   const {
     loadDefinition, seedNew, toDefinition, name, setName,
-    isDirty, markSaved, nodes, selectNode,
+    isDirty, markSaved, nodes,
+    outlinePanelOpen, toggleOutlinePanel,
     executionsPanelOpen, toggleExecutionsPanel,
-    varsPanelOpen, toggleVarsPanel,
+    evaluationsPanelOpen, toggleEvaluationsPanel,
+    varsPanelOpen, toggleVarsPanel, closeActiveSidebar,
   } = useBuilderStore()
 
   const createMutation  = useCreateWorkflow()
@@ -64,7 +74,8 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   const [triggeredId, setTriggeredId] = useState<string | null>(null)
   const [initialised, setInitialised] = useState(false)
   const [justSaved,   setJustSaved]   = useState(false)
-  const [outlineOpen, setOutlineOpen] = useState(true)
+  const [setupOpen, setSetupOpen] = useState(false)
+  const [lifecycleOpen, setLifecycleOpen] = useState(false)
   // Shown once for a brand-new workflow only — never for an existing one
   // reopened via mode 'edit'. seedNew() below leaves the canvas genuinely
   // empty; this modal's own choice is what creates the singleton Trigger
@@ -139,6 +150,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
 
   // The bottom Logs dock only ever shows a run confirmed to belong to this
   // workflow (same FR-C5-007 guard as the overlay above).
+  const [canvasOverlay, setCanvasOverlay] = useState<HTMLDivElement | null>(null)
   const dockExecution = overlayLogsEnabled ? overlayExecution ?? null : null
   const dockLoading = !!selectedExecutionId && !overlayExecution
   const nodeLabels = useMemo(
@@ -253,10 +265,6 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
     return () => clearTimeout(t)
   }, [justSaved])
 
-  if (mode === 'edit' && isLoading) {
-    return <div className="flex h-screen items-center justify-center"><Spinner /></div>
-  }
-
   // Run executes the SAVED definition, so unsaved edits are saved first.
   const handleRun = async () => {
     if (!id) return
@@ -266,16 +274,38 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
     }
     triggerMutation.mutate(id, { onSuccess: (r) => setTriggeredId(r.execution_id) })
   }
+  const runRef = useRef(handleRun)
+  runRef.current = handleRun
 
   const handleBack = () => {
     if (isDirty && !window.confirm('You have unsaved changes. Leave without saving?')) return
     navigate({ to: '/applications/$appId/workflows', params: { appId } })
   }
 
+  // Canvas-level commands are registered in FlowLayout, while workflow
+  // mutations live here with the real save/run lifecycle. A small DOM event
+  // bridge keeps one searchable command vocabulary without prop-drilling page
+  // mutations through React Flow's renderer.
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const id = (event as CustomEvent<WorkflowCommandId>).detail
+      if (id === 'save-workflow') void saveRef.current()
+      if (id === 'run-workflow') void runRef.current()
+      if (id === 'open-setup') setSetupOpen(true)
+      if (id === 'open-lifecycle' || id === 'checkpoint') setLifecycleOpen(true)
+    }
+    window.addEventListener(WORKFLOW_COMMAND_EVENT, handler)
+    return () => window.removeEventListener(WORKFLOW_COMMAND_EVENT, handler)
+  }, [])
+
+  if (mode === 'edit' && isLoading) {
+    return <div className="flex h-screen items-center justify-center"><Spinner /></div>
+  }
+
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[hsl(var(--background))]">
+    <div className="workflow-builder-shell flex h-screen flex-col overflow-hidden bg-[hsl(var(--background))]">
       {/* ── Header ───────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3">
+      <header className="workflow-builder-header sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b border-[hsl(var(--border))] px-3">
         <Button
           variant="ghost" size="icon"
           className="h-8 w-8 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
@@ -295,7 +325,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="h-8 w-60 border-0 bg-transparent px-1.5 text-[15px] font-semibold text-[hsl(var(--foreground))] shadow-none focus-visible:bg-[hsl(var(--muted))] focus-visible:ring-0"
+            className="workflow-builder-name-input h-8 border-0 bg-transparent px-1.5 text-[15px] font-semibold text-[hsl(var(--foreground))] shadow-none focus-visible:bg-[hsl(var(--muted))] focus-visible:ring-0"
             placeholder="Workflow name…"
           />
           {isDirty && (
@@ -306,7 +336,55 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
           )}
         </div>
 
-        <div className="flex-1" />
+        <nav className="workflow-builder-tabs" aria-label="Workflow views">
+          <button
+            type="button"
+            className="workflow-builder-tab"
+            data-active={!outlinePanelOpen && !executionsPanelOpen && !varsPanelOpen && !evaluationsPanelOpen}
+            onClick={closeActiveSidebar}
+          >
+            Editor
+          </button>
+          <button
+            type="button"
+            className="workflow-builder-tab"
+            data-active={outlinePanelOpen}
+            onClick={toggleOutlinePanel}
+            title="View the workflow as a step tree"
+          >
+            Outline
+          </button>
+          <button
+            type="button"
+            className="workflow-builder-tab"
+            data-active={executionsPanelOpen}
+            onClick={toggleExecutionsPanel}
+            disabled={mode !== 'edit'}
+            title={mode === 'edit' ? 'Open execution history' : 'Save the workflow to view executions'}
+          >
+            Executions
+          </button>
+          <button
+            type="button"
+            className="workflow-builder-tab"
+            data-active={varsPanelOpen}
+            onClick={toggleVarsPanel}
+          >
+            Variables
+          </button>
+          <button
+            type="button"
+            className="workflow-builder-tab"
+            data-active={evaluationsPanelOpen}
+            onClick={toggleEvaluationsPanel}
+            disabled={mode !== 'edit'}
+            title={mode === 'edit' ? 'Test this workflow against a dataset of sample inputs' : 'Save the workflow to add evaluations'}
+          >
+            Evaluations
+          </button>
+        </nav>
+
+        <div className="workflow-builder-header-actions flex min-w-0 flex-1 items-center justify-end gap-2">
 
         {saveError && (
           <span className="flex items-center gap-1 rounded-md bg-[hsl(var(--destructive))]/10 px-2 py-1 text-xs text-[hsl(var(--destructive))]">
@@ -314,10 +392,24 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
           </span>
         )}
 
+        {mode === 'edit' && (
+          <Button variant="outline" size="sm" onClick={() => setSetupOpen(true)} title="Open workflow setup">
+            <Settings2 size={13} />
+            <span className="hidden xl:inline">Setup</span>
+          </Button>
+        )}
+
+        {mode === 'edit' && (
+          <Button variant="outline" size="sm" onClick={() => setLifecycleOpen(true)} title="Review versions and publish this app">
+            <GitCommitHorizontal size={13} />
+            <span className="hidden xl:inline">{isDirty ? 'Draft' : application?.published_version != null ? `Live v${application.published_version}` : 'Lifecycle'}</span>
+          </Button>
+        )}
+
         {setupIssues.length > 0 && (
           <button
-            onClick={() => selectNode(setupIssues[0].id)}
-            className="flex items-center gap-1.5 rounded-full bg-[hsl(var(--warning))]/10 px-2.5 py-1 text-xs font-semibold text-[hsl(var(--warning))] ring-1 ring-[hsl(var(--warning))]/30 transition-colors hover:bg-[hsl(var(--warning))]/15"
+            onClick={() => setSetupOpen(true)}
+            className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[hsl(var(--warning))]/10 px-2.5 py-1 text-xs font-semibold text-[hsl(var(--warning))] ring-1 ring-[hsl(var(--warning))]/30 transition-colors hover:bg-[hsl(var(--warning))]/15"
             title={`${setupIssues[0].label}: ${setupIssues[0].issue} — click to open`}
           >
             <AlertTriangle size={12} />
@@ -331,7 +423,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
             dock at that point instead), so this chip only shows for
             genuinely in-progress runs, not finished ones. */}
         {isTriggeredRunning && (
-          <span className="flex items-center gap-1.5 rounded-md bg-[hsl(var(--primary))]/10 py-1.5 pl-2.5 pr-1.5 text-xs font-medium text-[hsl(var(--primary))]">
+          <span className="flex items-center gap-1.5 whitespace-nowrap rounded-md bg-[hsl(var(--primary))]/10 py-1.5 pl-2.5 pr-1.5 text-xs font-medium text-[hsl(var(--primary))]">
             <Spinner className="h-3 w-3" />Running…
             <button
               onClick={() => setTriggeredId(null)}
@@ -350,26 +442,8 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
           </Button>
         )}
 
-        <Button
-          variant={varsPanelOpen ? "default" : 'outline'}
-          size="sm"
-          onClick={toggleVarsPanel}
-          title="View workflow variables"
-        >
-          <Braces size={13} />Variables
-        </Button>
-
         {mode === 'edit' && (
           <div className="flex items-center gap-1">
-            <Button
-              variant={executionsPanelOpen ? "default" : 'outline'}
-              size="sm"
-              onClick={toggleExecutionsPanel}
-              title="View execution history"
-            >
-              <History size={13} />Executions
-            </Button>
-
             {/* Selected-execution chip — shows which run is overlaid on the
                 canvas even while the Executions sidebar itself is closed
                 (FR-C5-007's overlay deliberately survives the sidebar
@@ -400,6 +474,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
           {isSaving ? <Spinner className="h-4 w-4" /> : justSaved ? <Check size={13} /> : <Save size={13} />}
           {mode === 'new' ? 'Create' : justSaved ? 'Saved' : 'Save'}
         </Button>
+        </div>
       </header>
 
       {/* ── Main layout ──────────────────────────────────────────────── */}
@@ -407,19 +482,39 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
           the Logs dock sits under the canvas only (not under the side
           panels). Every level of the canvas column carries min-h-0 so React
           Flow gets a definite, shrinkable height as the dock grows. */}
-      <div className="relative flex flex-1 overflow-hidden">
-        <OutlinePanel open={outlineOpen} onToggle={() => setOutlineOpen((o) => !o)} />
+      <div className="workflow-builder-main relative flex flex-1 overflow-hidden">
+        <OutlinePanel open={outlinePanelOpen} onToggle={toggleOutlinePanel} />
         <VariablesPanel />
         {mode === 'edit' && <ExecutionsSidebar workflowId={id} />}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="relative flex min-h-0 flex-1">
-            <FlowLayout />
-          </div>
+        {mode === 'edit' && <EvaluationsSidebar workflowId={id} />}
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+          <CanvasOverlayContext.Provider value={canvasOverlay}>
+            <div className="relative flex min-h-0 flex-1">
+              <FlowLayout />
+            </div>
+          </CanvasOverlayContext.Provider>
           {mode === 'edit' && <ExecutionLogsDock execution={dockExecution} loading={dockLoading} nodeLabels={nodeLabels} />}
+          {/* Where the canvas's own overlays (node picker, Ctrl+K command bar)
+              mount, spanning canvas AND dock. z-[15]: above the dock, still
+              under the page header (z-20) — where those overlays sat before
+              the dock existed. Click-through while empty. */}
+          <div ref={setCanvasOverlay} className="pointer-events-none absolute inset-0 z-[15] [&>*]:pointer-events-auto" />
         </div>
         <NodeConfigPanel />
         {onboardingOpen && <TriggerOnboardingModal onClose={() => setOnboardingOpen(false)} />}
       </div>
+      <WorkflowSetupDrawer open={setupOpen} onClose={() => setSetupOpen(false)} issues={setupIssues} environment={envStatus} />
+      {mode === 'edit' && (
+        <WorkflowLifecycleDrawer
+          open={lifecycleOpen}
+          onClose={() => setLifecycleOpen(false)}
+          workflowName={name}
+          isDirty={isDirty}
+          savedDefinition={existing?.definition}
+          currentDefinition={toDefinition()}
+          onSaveWorkflow={handleSave}
+        />
+      )}
     </div>
   )
 }

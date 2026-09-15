@@ -40,7 +40,7 @@ export function AddMenuRuntime({ menu, onNavigate }: AddMenuRuntimeProps) {
   const runAfterSubmit = useAfterSubmitWorkflow(form?.id, schema?.settings?.afterSubmitWorkflow)
 
   if (isLoading) return null
-  if (!form) return <div className="p-6 text-sm" style={{ color: 'hsl(var(--destructive))' }}>The form this menu points to is unavailable.</div>
+  if (!form) return <div className="p-6 text-sm" style={{ color: 'hsl(var(--destructive))' }}>{t('menus.runtime.add.form_unavailable')}</div>
 
   const handleSubmit = async (values: Record<string, unknown>) => {
     setSubmitting(true)
@@ -98,7 +98,7 @@ export function AddMenuRuntime({ menu, onNavigate }: AddMenuRuntimeProps) {
         formId={form.id}
         onSubmit={handleSubmit}
         submitting={submitting}
-        submitLabel="Save"
+        submitLabel={t('common.save')}
       />
     </div>
   )

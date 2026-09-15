@@ -6,6 +6,7 @@ import { ValuesEditor } from '../ValuesEditor'
 import { ensureMappingIds } from './id-helpers'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, TransformConfig, TransformFieldMap } from '../../types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 export function normaliseTransformConfig(raw: unknown): TransformConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<TransformConfig>
@@ -31,6 +32,7 @@ export interface TransformFormProps {
 }
 
 export function TransformForm({ config, variables, nodeContext, onChange }: TransformFormProps) {
+  const { t } = useI18n()
   const { data: form } = useForm(config.form_id || '')
   const fields = form?.fields ?? []
 
@@ -40,31 +42,31 @@ export function TransformForm({ config, variables, nodeContext, onChange }: Tran
     <div className="space-y-4">
       {/* Source list */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Source List</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.source_list')}</Label>
         <ExpressionField
           value={config.source_expr ?? ''}
           onChange={(v) => set({ source_expr: v })}
           variables={variables}
           nodeContext={nodeContext}
           placeholder='e.g. NodeOutputs["fetch1"]["records"]'
-          label="source list"
+          label={t('workflows.node_forms.source_list')}
         />
-        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Must resolve to a list of records. Runs once per item.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.source_help')}</p>
       </div>
 
       <div className="h-px bg-[hsl(var(--border))]" />
 
       {/* Target form */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Target Form / Table</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.target_form')}</Label>
         <FormReferenceSelect value={config.form_id || undefined} onChange={(id) => set({ form_id: id ?? '' })} />
       </div>
 
       {/* Field mappings */}
       <div className="space-y-2">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Field mappings</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.field_mappings')}</Label>
         {!config.form_id ? (
-          <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">Select a target form to map fields.</p>
+          <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.select_target_map')}</p>
         ) : (
           <ValuesEditor
             values={config.mappings}
@@ -75,12 +77,12 @@ export function TransformForm({ config, variables, nodeContext, onChange }: Tran
           />
         )}
         <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-          Expressions evaluate per source item — reference the item's own fields directly (e.g. <span className="font-mono">Email</span>), not through <span className="font-mono">Vars</span>.
+          {t('workflows.node_forms.transform_help')}
         </p>
       </div>
 
       <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-        Outputs <span className="font-mono">records</span> (mapped to the target schema) and <span className="font-mono">count</span> to downstream nodes — chain into a Save Records node to write them.
+        {t('workflows.node_forms.outputs_records')}
       </p>
     </div>
   )

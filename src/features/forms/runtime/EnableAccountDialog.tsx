@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RoleSelect } from '@/features/form-builder/config/RoleSelect'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 interface EnableAccountDialogProps {
   open: boolean
@@ -22,6 +23,7 @@ interface EnableAccountDialogProps {
 }
 
 export function EnableAccountDialog({ open, onOpenChange, defaultEmail, loading, onConfirm, container }: EnableAccountDialogProps) {
+  const t = useTranslation()
   const [email, setEmail] = useState(defaultEmail ?? '')
   const [roleId, setRoleId] = useState<string | undefined>(undefined)
 
@@ -37,21 +39,21 @@ export function EnableAccountDialog({ open, onOpenChange, defaultEmail, loading,
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent container={container} className="w-full max-w-sm">
         <DialogHeader>
-          <DialogTitle>Enable account</DialogTitle>
-          <DialogDescription>Re-grant login access for this record, optionally with a different email or role.</DialogDescription>
+          <DialogTitle>{t('enable_account_dialog.title')}</DialogTitle>
+          <DialogDescription>{t('enable_account_dialog.description')}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 px-6 py-4">
           <div>
-            <Label className="mb-1 block text-xs font-medium text-gray-600">Email address</Label>
+            <Label className="mb-1 block text-xs font-medium text-gray-600">{t('enable_account_dialog.email_label')}</Label>
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@example.com" />
           </div>
           <div>
-            <Label className="mb-1 block text-xs font-medium text-gray-600">Role</Label>
+            <Label className="mb-1 block text-xs font-medium text-gray-600">{t('enable_account_dialog.role_label')}</Label>
             <RoleSelect value={roleId} onChange={setRoleId} />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={loading}>Cancel</Button>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={loading}>{t('common.cancel')}</Button>
           <Button
             size="sm"
             className="gap-1.5"
@@ -59,7 +61,7 @@ export function EnableAccountDialog({ open, onOpenChange, defaultEmail, loading,
             onClick={() => onConfirm({ email: email.trim(), role_id: roleId! })}
           >
             {loading && <Loader2 size={13} className="animate-spin" />}
-            Enable
+            {t('enable_account_dialog.enable_button')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  groupByCategory, categoryLabel, findTriggerPreset, groupNodesByApp, groupTriggerPresetsByApp, searchApps,
+  groupByCategory, groupByPaletteCategory, groupBySource, categoryLabel, findTriggerPreset, groupNodesByApp, groupTriggerPresetsByApp, searchApps,
   type PaletteEntry, type CategoryInfo, type NodeTaxonomy, type TriggerPresetInfo, type NodeTaxonomyEntry, type AppInfo,
 } from './node-taxonomy'
 import { PALETTE_NODES, NODE_REGISTRY } from './node-registry'
@@ -89,6 +89,64 @@ describe('categoryLabel', () => {
 
   it('falls back to the compiled-in label when the server has not answered', () => {
     expect(categoryLabel('integration', [])).toBe('Integration')
+  })
+})
+
+describe('groupByPaletteCategory', () => {
+  it('merges Flow and Core presentation buckets while keeping the backend ids intact', () => {
+    const groups = groupByPaletteCategory([
+      entry('iterator', 'structure'),
+      entry('condition', 'logic'),
+      entry('http_request', 'integration'),
+      entry('notification', 'notify'),
+      entry('format_reference', 'utility', 'package'),
+      entry('knowledge', 'ai'),
+    ], [
+      ...cats,
+      { id: 'structure', label: 'Structure', description: '', order: 10 },
+      { id: 'notify', label: 'Notify', description: '', order: 60 },
+      { id: 'ai', label: 'AI', description: '', order: 50 },
+    ])
+
+    expect(groups.map((group) => group.id)).toEqual(['ai', 'flow', 'core'])
+    expect(groups.find((group) => group.id === 'flow')?.entries.map((item) => item.type)).toEqual(['iterator', 'condition'])
+    expect(groups.find((group) => group.id === 'core')?.entries.map((item) => item.type)).toEqual([
+      'http_request', 'notification',
+    ])
+    expect(groups.flatMap((group) => group.entries).map((item) => item.type)).not.toContain('format_reference')
+  })
+
+  it('keeps an unknown server category visible as its own fallback group', () => {
+    const groups = groupByPaletteCategory([entry('novel', 'quantum')], cats)
+
+    expect(groups).toEqual([
+      expect.objectContaining({ id: 'quantum', label: 'quantum' }),
+    ])
+  })
+})
+
+describe('groupBySource', () => {
+  it('keeps built-ins first and groups package actions by app', () => {
+    const groups = groupBySource([
+      { ...entry('whatsapp_send', 'integration', 'package'), appName: 'whatsapp', appLabel: 'WhatsApp' },
+      entry('http_request', 'integration'),
+      { ...entry('slack_post', 'integration', 'package'), appName: 'slack', appLabel: 'Slack' },
+    ])
+
+    expect(groups.map((group) => group.label)).toEqual(['Built-in', 'WhatsApp', 'Slack'])
+    expect(groups.map((group) => group.entries.map((item) => item.type))).toEqual([
+      ['http_request'],
+      ['whatsapp_send'],
+      ['slack_post'],
+    ])
+  })
+
+  it('gives package entries without app metadata a visible fallback group', () => {
+    const groups = groupBySource([entry('unknown_package', 'integration', 'package')])
+
+    expect(groups).toEqual([
+      expect.objectContaining({ label: 'Other apps', kind: 'app' }),
+    ])
   })
 })
 

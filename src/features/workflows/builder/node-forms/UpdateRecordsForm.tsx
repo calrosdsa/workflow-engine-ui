@@ -8,6 +8,7 @@ import { ValuesEditor } from '../ValuesEditor'
 import { ensureGroupIds, ensureValueIds } from './id-helpers'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, UpdateRecordsConfig, RecordMatchMode } from '../../types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 export function normaliseUpdateRecordsConfig(raw: unknown): UpdateRecordsConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<UpdateRecordsConfig>
@@ -23,6 +24,7 @@ export function normaliseUpdateRecordsConfig(raw: unknown): UpdateRecordsConfig 
 
 // Shared by update_records and delete_records.
 export function MatchModeToggle({ mode, onChange, accent = 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]' }: { mode: RecordMatchMode; onChange: (m: RecordMatchMode) => void; accent?: string }) {
+  const { t } = useI18n()
   return (
     <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
       {(['one', 'many'] as const).map((m) => (
@@ -35,7 +37,7 @@ export function MatchModeToggle({ mode, onChange, accent = 'bg-[hsl(var(--primar
             mode === m ? `${accent} shadow-sm` : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
           )}
         >
-          {m === 'one' ? 'Single record' : 'Multiple records'}
+          {m === 'one' ? t('workflows.node_forms.single_record') : t('workflows.node_forms.multiple_records')}
         </button>
       ))}
     </div>
@@ -50,6 +52,7 @@ export interface UpdateRecordsFormProps {
 }
 
 export function UpdateRecordsForm({ config, variables, nodeContext, onChange }: UpdateRecordsFormProps) {
+  const { t } = useI18n()
   const { data: form } = useForm(config.form_id || '')
   const fields = form?.fields ?? []
 
@@ -59,18 +62,18 @@ export function UpdateRecordsForm({ config, variables, nodeContext, onChange }: 
     <div className="space-y-4">
       {/* Form picker */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Form / Table</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.form_table')}</Label>
         <FormReferenceSelect value={config.form_id || undefined} onChange={(id) => set({ form_id: id ?? '' })} />
       </div>
 
       {/* Mode */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Match</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.match')}</Label>
         <MatchModeToggle mode={config.mode} onChange={(mode) => set({ mode })} />
         {config.mode === 'one' ? (
-          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Fails if the filter matches more than one record.</p>
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.multiple_match_warning')}</p>
         ) : (
-          <p className="text-[10px] text-[hsl(var(--warning))]">Every record matching the filter below will be updated — double-check it isn't broader than intended.</p>
+          <p className="text-[10px] text-[hsl(var(--warning))]">{t('workflows.node_forms.update_warning')}</p>
         )}
       </div>
 
@@ -80,10 +83,10 @@ export function UpdateRecordsForm({ config, variables, nodeContext, onChange }: 
       <div className="space-y-2">
         <div className="flex items-center gap-1.5">
           <FilterIcon size={12} className="text-[hsl(var(--muted-foreground))]" />
-          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Filter</Label>
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.filter')}</Label>
         </div>
         {!config.form_id ? (
-          <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">Select a form to add filters.</p>
+          <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.select_form_filters')}</p>
         ) : (
           <FilterBuilder
             group={config.filter ?? newGroup()}
@@ -99,9 +102,9 @@ export function UpdateRecordsForm({ config, variables, nodeContext, onChange }: 
 
       {/* Values */}
       <div className="space-y-2">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Field values</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.field_values')}</Label>
         {!config.form_id ? (
-          <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">Select a form to set field values.</p>
+          <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.select_form_values')}</p>
         ) : (
           <ValuesEditor
             values={config.values}
@@ -112,7 +115,7 @@ export function UpdateRecordsForm({ config, variables, nodeContext, onChange }: 
           />
         )}
         <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-          Outputs <span className="font-mono">records</span> and <span className="font-mono">count</span> to downstream nodes.
+          {t('workflows.node_forms.outputs_update')}
         </p>
       </div>
     </div>

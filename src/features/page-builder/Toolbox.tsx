@@ -7,11 +7,13 @@ import { cn } from '@/lib/utils'
 import {
   PAGE_COMPONENT_REGISTRY, PAGE_COMPONENT_CATEGORIES, type PageComponentRegistryEntry,
 } from './component-registry'
-import type { PageComponentType, PageComponentCategory } from './schema'
+import type { PageComponentType } from './schema'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 // Direct mirror of features/form-builder/Toolbox.tsx.
 
 function ToolboxItem({ entry }: { entry: PageComponentRegistryEntry }) {
+  const t = useTranslation()
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `page-toolbox:${entry.type}`,
     data: { kind: 'new-component', component: entry.type as PageComponentType },
@@ -29,37 +31,31 @@ function ToolboxItem({ entry }: { entry: PageComponentRegistryEntry }) {
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
         isDragging && 'opacity-40',
       )}
-      title={entry.description}
+      title={t(`builder.pages.${entry.type}.description`)}
     >
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-500 transition-colors group-hover:bg-indigo-100 group-hover:text-indigo-600">
         <Icon size={15} strokeWidth={2} />
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-[12px] font-medium text-slate-700">{entry.label}</span>
-        <span className="block truncate text-[10px] text-slate-400">{entry.description}</span>
+        <span className="block truncate text-[12px] font-medium text-slate-700">{t(`builder.pages.${entry.type}.label`)}</span>
+        <span className="block truncate text-[10px] text-slate-400">{t(`builder.pages.${entry.type}.description`)}</span>
       </span>
     </button>
   )
 }
 
-const CATEGORY_LABELS: Record<PageComponentCategory, string> = {
-  Text: 'Text',
-  Media: 'Media',
-  Layout: 'Layout',
-  Action: 'Action',
-}
-
 export function PageToolbox() {
+  const t = useTranslation()
   const [search, setSearch] = useState('')
   const q = search.trim().toLowerCase()
 
   return (
     <div className="flex h-full w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
       <div className="border-b border-slate-100 p-3">
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Components</p>
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{t('builder.pages.title')}</p>
         <div className="relative">
           <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search components…" className="h-8 pl-7 text-xs" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('builder.pages.search')} className="h-8 pl-7 text-xs" />
         </div>
       </div>
 
@@ -67,12 +63,12 @@ export function PageToolbox() {
         <div className="space-y-4 p-3">
           {PAGE_COMPONENT_CATEGORIES.map((cat) => {
             const items = Object.values(PAGE_COMPONENT_REGISTRY).filter(
-              (c) => c.category === cat && (!q || c.label.toLowerCase().includes(q) || c.description.toLowerCase().includes(q)),
+              (c) => c.category === cat && (!q || t(`builder.pages.${c.type}.label`).toLowerCase().includes(q) || t(`builder.pages.${c.type}.description`).toLowerCase().includes(q)),
             )
             if (items.length === 0) return null
             return (
               <div key={cat}>
-                <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">{CATEGORY_LABELS[cat]}</p>
+                <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">{t(`builder.pages.${cat.toLowerCase()}`)}</p>
                 <div className="space-y-1.5">
                   {items.map((entry) => <ToolboxItem key={entry.type} entry={entry} />)}
                 </div>

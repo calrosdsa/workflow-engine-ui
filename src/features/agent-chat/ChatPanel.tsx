@@ -19,6 +19,7 @@ import {
 } from './hooks'
 import { useAgentChatSocket } from './useAgentChatSocket'
 import type { ChatSession, ChatMessage, PendingConfirmation } from './types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 function asPendingConfirmation(message: ChatMessage): PendingConfirmation | null {
   if (!Array.isArray(message.tool_calls) || message.tool_calls.length === 0) return null
@@ -32,6 +33,7 @@ function timeLabel(iso: string): string {
 }
 
 export function ChatPanel() {
+  const t = useTranslation()
   const { data: sessions, isLoading: sessionsLoading } = useChatSessions(true)
   const createSession = useCreateChatSession()
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -91,7 +93,7 @@ export function ChatPanel() {
       {connectionStatus === 'disconnected' && sessionId && (
         <div className="flex items-center gap-1.5 border-b border-[hsl(var(--border))] bg-amber-500/10 px-3 py-1.5 text-[11px] text-amber-600 dark:text-amber-400">
           <AlertTriangle size={12} className="shrink-0" />
-          Live updates unavailable — messages still send normally.
+          {t('agent_chat.live_unavailable')}
         </div>
       )}
 
@@ -101,10 +103,10 @@ export function ChatPanel() {
             <Loader2 size={18} className="animate-spin" />
           ) : (
             <>
-              <p>Start a conversation with your assistant.</p>
+              <p>{t('agent_chat.start')}</p>
               <Button size="sm" onClick={handleCreateSession} disabled={createSession.isPending}>
                 <Plus size={14} />
-                New chat
+                {t('agent_chat.new_chat')}
               </Button>
             </>
           )}
@@ -119,7 +121,7 @@ export function ChatPanel() {
                 </div>
               ) : !messages || messages.length === 0 ? (
                 <p className="py-6 text-center text-xs text-[hsl(var(--muted-foreground))]">
-                  Send a message to get started.
+                  {t('agent_chat.send_to_start')}
                 </p>
               ) : (
                 messages.map((m) => (
@@ -147,7 +149,7 @@ export function ChatPanel() {
                   handleSend()
                 }
               }}
-              placeholder="Message the assistant…"
+              placeholder={t('agent_chat.message_placeholder')}
               rows={1}
               className="min-h-9 flex-1 resize-none py-2 text-sm"
             />
@@ -155,7 +157,7 @@ export function ChatPanel() {
               size="icon"
               onClick={handleSend}
               disabled={!draft.trim() || sendMessage.isPending}
-              aria-label="Send message"
+              aria-label={t('agent_chat.send')}
             >
               {sendMessage.isPending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
             </Button>
@@ -178,6 +180,7 @@ interface ChatHeaderProps {
 }
 
 function ChatHeader({ activeSession, sessions, sessionsLoading, open, onOpenChange, onSelect, onCreate, creating }: ChatHeaderProps) {
+  const t = useTranslation()
   return (
     <div className="flex items-center justify-between gap-2 border-b border-[hsl(var(--border))] px-3 py-2.5">
       <Popover open={open} onOpenChange={onOpenChange}>
@@ -186,16 +189,16 @@ function ChatHeader({ activeSession, sessions, sessionsLoading, open, onOpenChan
             type="button"
             className="flex min-w-0 flex-1 items-center gap-1 rounded-md px-1.5 py-1 text-left text-sm font-medium transition-colors hover:bg-[hsl(var(--accent))]"
           >
-            <span className="truncate">{activeSession?.title || 'New chat'}</span>
+            <span className="truncate">{activeSession?.title || t('agent_chat.new_chat')}</span>
             <ChevronDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
           </button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-64 border-[hsl(var(--border))] bg-[hsl(var(--popover))] p-0 text-[hsl(var(--popover-foreground))]">
           <div className="max-h-64 overflow-y-auto py-1">
             {sessionsLoading ? (
-              <p className="px-3 py-2 text-xs text-[hsl(var(--muted-foreground))]">Loading…</p>
+              <p className="px-3 py-2 text-xs text-[hsl(var(--muted-foreground))]">{t('common.loading')}</p>
             ) : sessions.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-[hsl(var(--muted-foreground))]">No conversations yet.</p>
+              <p className="px-3 py-2 text-xs text-[hsl(var(--muted-foreground))]">{t('agent_chat.no_conversations')}</p>
             ) : (
               sessions.map((s) => (
                 <button
@@ -206,14 +209,14 @@ function ChatHeader({ activeSession, sessions, sessionsLoading, open, onOpenChan
                     s.id === activeSession?.id && 'bg-[hsl(var(--accent))] font-medium',
                   )}
                 >
-                  {s.title || 'Untitled chat'}
+                  {s.title || t('agent_chat.untitled')}
                 </button>
               ))
             )}
           </div>
         </PopoverContent>
       </Popover>
-      <Button size="icon" variant="ghost" onClick={onCreate} disabled={creating} aria-label="New chat">
+      <Button size="icon" variant="ghost" onClick={onCreate} disabled={creating} aria-label={t('agent_chat.new_chat')}>
         {creating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
       </Button>
     </div>

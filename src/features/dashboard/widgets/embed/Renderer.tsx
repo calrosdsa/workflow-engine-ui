@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { checkEmbeddable } from '@/lib/api'
 import { useIntegrationRuntimeInfo } from '@/features/integrations/hooks'
 import { integrationsApi } from '@/features/integrations/api'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { IntegrationHandshakeInfo } from '@/features/integrations/types'
 import type { WidgetRendererProps } from '../../widget-contract'
 import type { EmbedWidgetConfig } from './schema'
@@ -36,10 +37,11 @@ import { useOidcHandshake } from './useOidcHandshake'
 type EmbedStatus = 'checking' | 'embeddable' | 'blocked'
 
 export function EmbedRenderer({ config, mode }: WidgetRendererProps<EmbedWidgetConfig>) {
+  const t = useTranslation()
   const { data: integration } = useIntegrationRuntimeInfo(config.integrationId)
 
   if (!config.url) {
-    return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No webpage URL has been configured yet.</div>
+    return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('builder.dashboard_embed.no_url')}</div>
   }
 
   return (
@@ -52,6 +54,7 @@ export function EmbedRenderer({ config, mode }: WidgetRendererProps<EmbedWidgetC
 }
 
 function EmbedFrame({ url, integration, builderMode }: { url: string; integration: IntegrationHandshakeInfo | undefined; builderMode: boolean }) {
+  const t = useTranslation()
   const [status, setStatus] = useState<EmbedStatus>('checking')
   const [reason, setReason] = useState<string | undefined>()
   const [launchUrl, setLaunchUrl] = useState(url)
@@ -103,7 +106,7 @@ function EmbedFrame({ url, integration, builderMode }: { url: string; integratio
       .catch(() => {
         if (cancelled) return
         setStatus('blocked')
-        setReason('could not verify whether this page can be embedded')
+        setReason(t('builder.dashboard_embed.check_failed'))
       })
 
     return () => { cancelled = true }
@@ -157,11 +160,11 @@ function EmbedFrame({ url, integration, builderMode }: { url: string; integratio
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-center" style={{ backgroundColor: 'hsl(var(--card))' }}>
         <ExternalLink size={32} style={{ color: 'hsl(var(--muted-foreground))' }} />
-        <p className="text-sm font-medium" style={{ color: 'hsl(var(--foreground))' }}>This page can't be displayed here</p>
+        <p className="text-sm font-medium" style={{ color: 'hsl(var(--foreground))' }}>{t('builder.dashboard_embed.blocked_title')}</p>
         {reason && <p className="max-w-sm text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{reason}</p>}
         <a href={url} target="_blank" rel="noopener noreferrer">
           <Button type="button" size="sm" className="gap-1.5">
-            <ExternalLink size={13} /> Open in a new tab
+            <ExternalLink size={13} /> {t('builder.dashboard_embed.open_new_tab')}
           </Button>
         </a>
       </div>
@@ -174,11 +177,11 @@ function EmbedFrame({ url, integration, builderMode }: { url: string; integratio
         <div className="flex shrink-0 items-center gap-1.5 border-b px-3 py-1.5 text-[11px]" style={{ borderColor: 'hsl(var(--warning) / 0.3)', backgroundColor: 'hsl(var(--warning) / 0.1)', color: 'hsl(var(--warning))' }}>
           <AlertTriangle size={12} className="shrink-0" />
           {integration?.auth_mode === 'oidc'
-            ? "Couldn't sign in automatically — loaded without SSO. Check the integration's OIDC configuration, or the user may not have an active session with the identity provider."
-            : "Couldn't sign in automatically — loaded without SSO. Check the integration's shared secret."}
+            ? t('builder.dashboard_embed.sso_failed_oidc')
+            : t('builder.dashboard_embed.sso_failed_secret')}
         </div>
       )}
-      <iframe ref={iframeRef} key={launchUrl} src={launchUrl} title="Embedded page" className="h-full w-full flex-1 border-0" />
+      <iframe ref={iframeRef} key={launchUrl} src={launchUrl} title={t('builder.dashboard_embed.iframe_title')} className="h-full w-full flex-1 border-0" />
     </div>
   )
 }

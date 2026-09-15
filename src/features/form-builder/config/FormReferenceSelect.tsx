@@ -14,6 +14,7 @@ import {
   Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
 } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useForms } from '@/features/forms/hooks'
 
 interface FormReferenceSelectProps {
@@ -43,6 +44,7 @@ interface FormReferenceSelectProps {
 }
 
 export function FormReferenceSelect({ value, onChange, excludeId, requireReferenceTo, requireDependentOf }: FormReferenceSelectProps) {
+  const t = useTranslation()
   const { data: forms, isLoading } = useForms()
   const [open, setOpen] = useState(false)
 
@@ -83,12 +85,12 @@ export function FormReferenceSelect({ value, onChange, excludeId, requireReferen
               <FileText size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
               <span className="truncate">
                 {isLoading && !selected
-                  ? 'Loading forms…'
+                  ? t('form_config.loading_forms')
                   : selected
                     ? selected.name
                     : isBroken
-                      ? 'Unavailable form'
-                      : 'Select a form…'}
+                      ? t('form_config.unavailable_form')
+                      : t('form_config.select_a_form')}
               </span>
             </span>
             <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
@@ -100,20 +102,20 @@ export function FormReferenceSelect({ value, onChange, excludeId, requireReferen
               itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
             }
           >
-            <CommandInput placeholder="Search forms…" />
+            <CommandInput placeholder={t('form_config.search_forms_placeholder')} />
             <CommandList>
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
-                  <Loader2 size={13} className="animate-spin" /> Loading forms…
+                  <Loader2 size={13} className="animate-spin" /> {t('form_config.loading_forms')}
                 </div>
               ) : (
                 <>
                   <CommandEmpty>
                     {requireDependentOf
-                      ? 'No forms are nested as dependents of this form yet. Use "Add Dependent Form" from the Forms list first, then come back here to pick it.'
+                      ? t('form_config.no_dependent_forms')
                       : requireReferenceTo
-                        ? 'No forms with a reference field pointing back at this form. Add one on the target form first.'
-                        : 'No forms found.'}
+                        ? t('form_config.no_reference_forms')
+                        : t('form_config.no_forms_found')}
                   </CommandEmpty>
                   <CommandGroup>
                     {options.map((f) => (
@@ -151,7 +153,7 @@ export function FormReferenceSelect({ value, onChange, excludeId, requireReferen
             {isBroken ? (
               <>
                 <AlertTriangle size={12} className="shrink-0 text-[hsl(var(--warning))]" />
-                <span className="text-[hsl(var(--warning))]">Referenced form is unavailable</span>
+                <span className="text-[hsl(var(--warning))]">{t('form_config.referenced_form_unavailable')}</span>
               </>
             ) : (
               <>
@@ -164,7 +166,7 @@ export function FormReferenceSelect({ value, onChange, excludeId, requireReferen
             type="button"
             onClick={() => onChange(undefined)}
             className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
-            title="Clear selection"
+            title={t('form_config.clear_selection')}
           >
             <X size={12} />
           </button>
@@ -172,8 +174,7 @@ export function FormReferenceSelect({ value, onChange, excludeId, requireReferen
       )}
       {isBroken && (
         <p className="text-[10px] text-[hsl(var(--warning))]">
-          The stored reference (<span className="font-mono">{value}</span>) no longer matches an existing
-          form. It's preserved until you pick a new one.
+          {t('form_config.stale_reference_prefix')}<span className="font-mono">{value}</span>{t('form_config.stale_reference_suffix')}
         </p>
       )}
     </div>

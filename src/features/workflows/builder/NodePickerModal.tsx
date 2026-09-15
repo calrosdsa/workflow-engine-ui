@@ -1,29 +1,51 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Search, X } from 'lucide-react'
+import { Search, X, ChevronLeft, ChevronRight, Bell, Bot, Box, Database, FileBarChart, GitBranch, Globe, Pencil } from 'lucide-react'
 import { NODE_REGISTRY, PALETTE_NODES, fallbackCategory } from './node-registry'
-import { useNodeTaxonomy, groupByCategory, type PaletteEntry } from './node-taxonomy'
-import { iconFor } from './icon-hints'
+import { useNodeTaxonomy, groupByPaletteCategory, groupBySource, type PaletteEntry } from './node-taxonomy'
+import { iconFor, iconForHint } from './icon-hints'
 import { AppPickerPanel, type PickerSelection } from './AppPickerPanel'
-import { useTranslation } from '@/features/i18n/I18nProvider'
 import { cn } from '@/lib/utils'
 import type { NodeType } from '../types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
+
+const CATEGORY_LABEL_IDS = new Set(['ai', 'core', 'data', 'flow', 'integration', 'notify', 'output', 'structure', 'utility', 'logic'])
 
 interface NodePickerModalProps {
   onSelect: (selection: PickerSelection) => void
   onClose:  () => void
 }
 
+type PickerView = number | 'home' | 'apps'
+
+function actionLabel(entry: PaletteEntry) {
+  if (entry.kind !== 'package' || !entry.appLabel) return entry.label
+  const prefix = `${entry.appLabel} — `
+  return entry.label.startsWith(prefix) ? entry.label.slice(prefix.length) : entry.label
+}
+
+function categoryIcon(id: string) {
+  switch (id) {
+    case 'ai': return Bot
+    case 'core': return Box
+    case 'data': return Database
+    case 'flow': return GitBranch
+    case 'integration': return Globe
+    case 'notify': return Bell
+    case 'output': return FileBarChart
+    case 'structure': return GitBranch
+    case 'utility': return Pencil
+    default: return Globe
+  }
+}
+
 export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
   const t = useTranslation()
   const [search,    setSearch]    = useState('')
-  // 'apps' is a distinct, additive browsing mode alongside the numeric
-  // category tabs — NOT a replacement for them. A package node still also
-  // appears under its own functional-category tab exactly as today;
-  // nothing is removed from those tabs by adding this one, unlike the old
-  // per-source "Connectors" tab this file's own tests guard against
-  // reintroducing (see NodePickerModal.test.tsx's "has no Connectors tab
-  // any more").
-  const [activeTab, setActiveTab] = useState<number | 'apps'>(0)
+  // The landing view asks for intent first. Numeric views still preserve the
+  // served functional taxonomy, while the app view remains a separate
+  // cross-category browse path. A package action is therefore discoverable
+  // both by what it does and by the provider that owns it.
+  const [activeTab, setActiveTab] = useState<PickerView>('home')
   const searchRef = useRef<HTMLInputElement>(null)
   const { data: taxonomy } = useNodeTaxonomy()
 
@@ -39,9 +61,8 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
   }, [onClose])
 
   // Every addable node type, whatever its provenance, in ONE list — built-in
-  // and package alike. Grouping happens downstream on `category`, so this
-  // file no longer needs to know which source an entry came from except to
-  // badge and colour it.
+  // and package alike. Functional grouping happens downstream on `category`,
+  // then each visible category is subdivided by source/app for quick scanning.
   //
   // A core entry's category comes from the served taxonomy when it has
   // arrived, falling back to the compiled-in one — that is what lets the
@@ -50,16 +71,25 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
   // at all; it exists here only because the taxonomy served it.
   const entries: PaletteEntry[] = useMemo(() => {
     const servedCategory = new Map((taxonomy?.nodes ?? []).map((n) => [n.type, n.category]))
+    const appsByName = new Map((taxonomy?.apps ?? []).map((app) => [app.name, app]))
     const builtins: PaletteEntry[] = PALETTE_NODES.map((type) => ({
       type,
       kind: 'core',
       category: servedCategory.get(type) ?? fallbackCategory(type),
-      label: NODE_REGISTRY[type].label,
-      description: NODE_REGISTRY[type].description,
+      label: t(`workflows.node.${type}.label`) === `workflows.node.${type}.label` ? NODE_REGISTRY[type].label : t(`workflows.node.${type}.label`),
+      description: t(`workflows.node.${type}.description`) === `workflows.node.${type}.description` ? NODE_REGISTRY[type].description : t(`workflows.node.${type}.description`),
     }))
     const runtime: PaletteEntry[] = (taxonomy?.nodes ?? [])
       .filter((n) => n.kind === 'package')
       .map((n) => ({
+        ...(() => {
+          const app = n.package ? appsByName.get(n.package) : undefined
+          return {
+            appName: n.package,
+            appLabel: app?.display_name,
+            appIconHint: app?.icon_hint,
+          }
+        })(),
         type: n.type,
         kind: 'package' as const,
         category: n.category,
@@ -70,20 +100,28 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
     return [...builtins, ...runtime]
   }, [taxonomy])
 
-  // "All" first, then one tab per OCCUPIED category. A category with no
-  // members never renders, which is what lets the vocabulary reserve a name
-  // ahead of the nodes that will fill it.
+  // Keep "All" internally so search and category indexing share one stable
+  // structure, then expose only the occupied category choices on the landing
+  // view. A category with no members never renders.
   const tabs = useMemo(() => {
-    const groups = groupByCategory(entries, taxonomy?.categories ?? [])
-    return [{ id: 'all', label: 'All', entries }, ...groups]
-  }, [entries, taxonomy])
+    const groups = groupByPaletteCategory(entries, taxonomy?.categories ?? [])
+    return [{ id: 'all', label: t('common.all'), entries }, ...groups.map((group) => ({
+      ...group,
+      label: CATEGORY_LABEL_IDS.has(group.id) ? t(`workflows.category.${group.id}`) : group.label,
+    }))]
+  }, [entries, taxonomy, t])
+  const categoryTabs = tabs.slice(1)
+  const selectedCategory = typeof activeTab === 'number' ? tabs[activeTab] : undefined
 
   const candidates = search
-    ? entries.filter((c) =>
-        c.label.toLowerCase().includes(search.toLowerCase()) ||
-        c.description.toLowerCase().includes(search.toLowerCase())
-      )
-    : (typeof activeTab === 'number' ? (tabs[activeTab]?.entries ?? []) : [])
+    ? entries.filter((c) => {
+        const needle = search.toLowerCase()
+        return c.label.toLowerCase().includes(needle) ||
+          c.description.toLowerCase().includes(needle) ||
+          (c.appLabel ?? c.appName ?? '').toLowerCase().includes(needle)
+      })
+    : (selectedCategory?.entries ?? [])
+  const sourceGroups = groupBySource(candidates)
 
   return (
     // Backdrop. Click-to-close is a supplementary pointer gesture — Escape
@@ -101,10 +139,10 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
         <div className="border-b border-[hsl(var(--border))] px-5 py-4">
           <div className="mb-3 flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-[hsl(var(--foreground))]">Add a workflow step</p>
-              <p className="mt-0.5 text-xs text-[hsl(var(--muted-foreground))]">Search by capability, service, or node type.</p>
+              <p className="text-sm font-semibold text-[hsl(var(--foreground))]">{t('workflows.node_picker.what_next')}</p>
+              <p className="mt-0.5 text-xs text-[hsl(var(--muted-foreground))]">{t('workflows.node_picker.choose_category')}</p>
             </div>
-            <button onClick={onClose} className="rounded-md p-1 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1" title="Close node picker">
+            <button onClick={onClose} className="rounded-md p-1 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1" title={t('workflows.node_picker.close')}>
               <X size={15} />
             </button>
           </div>
@@ -118,7 +156,7 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
             <input
               ref={searchRef}
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setActiveTab(0) }}
+              onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => {
                 // Enter picks the top match — type a few letters and hit Enter.
                 if (e.key === 'Enter' && candidates.length > 0) {
@@ -126,7 +164,7 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
                   onSelect({ kind: 'node', type: candidates[0].type })
                 }
               }}
-              placeholder="Search nodes…"
+              placeholder={t('workflows.node_picker.search')}
               className="h-9 flex-1 bg-transparent text-sm text-[hsl(var(--foreground))] outline-none placeholder:text-[hsl(var(--muted-foreground))]"
             />
             {search && candidates.length > 0 && (
@@ -136,95 +174,147 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
           )}
         </div>
 
-        {/* Category tabs — only show when not searching. "Apps" is always
-            last, after every occupied category — an additional browsing
-            mode, not competing for the front-of-list position with the
-            function-based tabs a node is normally found under. */}
-        {!search && (
-          <div className="flex gap-1 overflow-x-auto px-5 pt-3">
-            {tabs.map((tab, i) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(i)}
-                className={cn(
-                  'rounded-lg px-3 py-1.5 text-xs font-semibold transition-[background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
-                  activeTab === i
-                    ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm'
-                    : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]',
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
-            <button
-              onClick={() => setActiveTab('apps')}
-              className={cn(
-                'rounded-lg px-3 py-1.5 text-xs font-semibold transition-[background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
-                activeTab === 'apps'
-                  ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm'
-                  : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]',
-              )}
-            >
-              {t('workflows.node_picker.apps_tab')}
-            </button>
-          </div>
-        )}
-
-        {/* Body: the Apps tab swaps in its own two-screen browsing panel
-            (which has its own search box) in place of the flat node grid
-            below — not a second modal, just a different body for the same
-            frame. */}
-        {!search && activeTab === 'apps' ? (
-          <AppPickerPanel scope="triggers-and-actions" onSelect={onSelect} />
-        ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto p-5">
-          {candidates.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-12 text-center">
-              <Search size={24} className="text-[hsl(var(--muted-foreground))]" />
-              <p className="text-sm text-[hsl(var(--muted-foreground))]">No nodes match "{search}"</p>
-            </div>
-          ) : (
+        {/* Body: the landing view makes the user's intent the first decision.
+            Selecting a category opens its action list; Apps is a separate
+            browse-by-provider path with its own trigger/action split. */}
+        {!search && activeTab === 'home' ? (
+          <div className="min-h-0 flex-1 overflow-y-auto p-5">
             <div className="flex flex-col gap-1.5">
-              {candidates.map((c) => {
-                const builtin = c.kind === 'core' ? NODE_REGISTRY[c.type as NodeType] : undefined
-                const label = c.label
-                const description = c.description
-                const Icon = iconFor(c.type, c.iconHint)
-                const gradient = builtin?.gradient ?? 'bg-[hsl(var(--foreground))]/70'
+              {categoryTabs.map((tab, index) => {
+                const Icon = categoryIcon(tab.id)
+                const description = tab.description ?? taxonomy?.categories.find((category) => category.id === tab.id)?.description
                 return (
                   <button
-                    key={c.type}
-                    onClick={() => onSelect({ kind: 'node', type: c.type })}
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(index + 1)}
                     className={cn(
-                      'group flex items-center gap-3 rounded-lg border border-[hsl(var(--border))] p-3 text-left',
-                      'transition-[border-color,background-color,box-shadow,transform] hover:border-[hsl(var(--muted-foreground))]/40 hover:bg-[hsl(var(--muted))] hover:shadow-md hover:-translate-y-0.5',
+                      'group flex items-center gap-3 rounded-xl border border-transparent px-3 py-3 text-left',
+                      'transition-[border-color,background-color,box-shadow,transform] hover:border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] hover:shadow-sm hover:-translate-y-0.5',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
                     )}
                   >
-                    <div className={cn(
-                      'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white shadow-sm transition-transform group-hover:scale-105',
-                      gradient,
-                    )}>
-                      <Icon size={18} strokeWidth={2.25} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[hsl(var(--foreground))]">
-                        {label}
-                        {/* Provenance, shown only when it is not the default.
-                            Grouping by function means a package node now
-                            shares a tab with built-ins, so the badge is what
-                            still answers "where does this one come from?". */}
-                        {c.kind !== 'core' && (
-                          <span className="rounded-full border border-[hsl(var(--border))] px-1.5 py-px text-[9px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
-                            {c.kind}
-                          </span>
-                        )}
-                      </p>
-                      <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[hsl(var(--muted-foreground))]">{description}</p>
-                    </div>
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] transition-colors group-hover:bg-[hsl(var(--primary))]/15 group-hover:text-[hsl(var(--primary))]">
+                      <Icon size={18} strokeWidth={2} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-semibold text-[hsl(var(--foreground))]">{tab.label}</span>
+                      {description && (
+                        <span className="mt-0.5 block text-[11px] leading-snug text-[hsl(var(--muted-foreground))]">{description}</span>
+                      )}
+                    </span>
+                    <ChevronRight size={16} className="shrink-0 text-[hsl(var(--muted-foreground))] transition-transform group-hover:translate-x-0.5" />
                   </button>
                 )
               })}
+            </div>
+
+            <div className="mt-4 border-t border-[hsl(var(--border))] pt-3">
+              <button
+                type="button"
+                onClick={() => setActiveTab('apps')}
+                className={cn(
+                  'group flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-3 text-left',
+                  'transition-[border-color,background-color,box-shadow,transform] hover:border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] hover:shadow-sm hover:-translate-y-0.5',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
+                )}
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] transition-colors group-hover:bg-[hsl(var(--primary))]/15 group-hover:text-[hsl(var(--primary))]">
+                  <Globe size={18} strokeWidth={2} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] font-semibold text-[hsl(var(--foreground))]">Action in an app</span>
+                  <span className="mt-0.5 block text-[11px] leading-snug text-[hsl(var(--muted-foreground))]">Do something in Slack, WhatsApp, or another connected app.</span>
+                </span>
+                <ChevronRight size={16} className="shrink-0 text-[hsl(var(--muted-foreground))] transition-transform group-hover:translate-x-0.5" />
+              </button>
+            </div>
+          </div>
+        ) : !search && activeTab === 'apps' ? (
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="border-b border-[hsl(var(--border))] px-5 py-2.5">
+              <button
+                type="button"
+                onClick={() => setActiveTab('home')}
+                className="flex items-center gap-1.5 rounded-md px-1 py-1 text-xs font-semibold text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+              >
+                <ChevronLeft size={14} />
+                {t('workflows.node_picker.categories')}
+              </button>
+            </div>
+            <div className="min-h-0 flex-1">
+              <AppPickerPanel scope="triggers-and-actions" onSelect={onSelect} />
+            </div>
+          </div>
+        ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+          {!search && typeof activeTab === 'number' && selectedCategory && (
+            <div className="mb-3 flex items-center gap-2 border-b border-[hsl(var(--border))] pb-3">
+              <button
+                type="button"
+                onClick={() => setActiveTab('home')}
+                className="rounded-md p-1 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+                aria-label={t('workflows.node_picker.back_categories')}
+                title={t('workflows.node_picker.back_categories')}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-[hsl(var(--foreground))]">{selectedCategory.label}</p>
+                <p className="mt-0.5 text-[11px] text-[hsl(var(--muted-foreground))]">
+                  {selectedCategory.description ?? t('workflows.node_picker.available_steps', { count: selectedCategory.entries.length })}
+                </p>
+              </div>
+            </div>
+          )}
+          {candidates.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-12 text-center">
+              <Search size={24} className="text-[hsl(var(--muted-foreground))]" />
+              <p className="text-sm text-[hsl(var(--muted-foreground))]">{t('workflows.node_picker.no_match', { query: search })}</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+            {sourceGroups.map((group) => {
+              const SectionIcon = group.iconHint ? iconForHint(group.iconHint) : undefined
+              return (
+                <section key={group.id} className="space-y-1.5">
+                  <h3 className="flex items-center gap-2 px-1 pb-0.5 pt-3 first:pt-0">
+                    {SectionIcon && <SectionIcon size={12} className="text-[hsl(var(--muted-foreground))]" />}
+                    <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[hsl(var(--muted-foreground))]">
+                      {group.label} {t('workflows.node_picker.actions')}
+                    </span>
+                    <span className="h-px flex-1 bg-[hsl(var(--border))]" />
+                  </h3>
+                  {group.entries.map((c) => {
+                    const builtin = c.kind === 'core' ? NODE_REGISTRY[c.type as NodeType] : undefined
+                    const Icon = iconFor(c.type, c.iconHint)
+                    const gradient = builtin?.gradient ?? 'bg-[hsl(var(--foreground))]/70'
+                    return (
+                      <button
+                        key={c.type}
+                        onClick={() => onSelect({ kind: 'node', type: c.type })}
+                        className={cn(
+                          'group flex w-full min-w-0 items-center gap-3 rounded-lg border border-[hsl(var(--border))] p-3 text-left',
+                          'transition-[border-color,background-color,box-shadow,transform] hover:border-[hsl(var(--muted-foreground))]/40 hover:bg-[hsl(var(--muted))] hover:shadow-md hover:-translate-y-0.5',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
+                        )}
+                      >
+                        <div className={cn(
+                          'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white shadow-sm transition-transform group-hover:scale-105',
+                          gradient,
+                        )}>
+                          <Icon size={18} strokeWidth={2.25} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-[hsl(var(--foreground))]">{actionLabel(c)}</p>
+                          <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[hsl(var(--muted-foreground))]">{c.description}</p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </section>
+              )
+            })}
             </div>
           )}
         </div>

@@ -9,6 +9,7 @@ import { MentionEditor, type MentionEditorHandle } from './MentionEditor'
 import { MentionAutocomplete } from './MentionAutocomplete'
 import { useMentionEditor } from './useMentionEditor'
 import { splitMentionSegments } from './mentions'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { CommentEntry } from '@/features/forms/types'
 import type { BasicUser } from '@/features/users/types'
 
@@ -38,6 +39,7 @@ export function CommentRow({
    *  v0.6) — the same batched GET /users/basic map CommentTabRenderer builds. */
   usersById: Map<string, BasicUser>
 }) {
+  const t = useTranslation()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.body)
   const editorHandleRef = useRef<MentionEditorHandle>(null)
@@ -78,7 +80,7 @@ export function CommentRow({
           <span className="truncate text-[13px] font-medium" style={{ color: 'hsl(var(--foreground))' }}>{name}</span>
           <span className="shrink-0 text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>
             {new Date(entry.created_at).toLocaleString()}
-            {entry.edited && ' (edited)'}
+            {entry.edited && t('comment.tab.edited_suffix')}
           </span>
         </div>
         {editing ? (
@@ -87,7 +89,7 @@ export function CommentRow({
               ref={editorHandleRef}
               onInput={mention.onEditorInput}
               onKeyDown={(e) => { mention.onEditorKeyDown(e) }}
-              placeholder="Write a comment…"
+              placeholder={t('comment.tab.edit_placeholder')}
               className="text-sm"
             />
             <MentionAutocomplete
@@ -101,10 +103,10 @@ export function CommentRow({
             />
             <div className="flex items-center gap-1.5">
               <Button size="sm" className="h-7 gap-1 px-2" onClick={submitEdit} disabled={saving || !draft.trim()}>
-                <Check size={12} />Save
+                <Check size={12} />{t('common.save')}
               </Button>
               <Button variant="ghost" size="sm" className="h-7 gap-1 px-2" onClick={cancelEdit} disabled={saving}>
-                <X size={12} />Cancel
+                <X size={12} />{t('common.cancel')}
               </Button>
             </div>
           </div>
@@ -129,7 +131,7 @@ export function CommentRow({
               className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] hover:bg-[hsl(var(--accent))]"
               style={{ color: 'hsl(var(--muted-foreground))' }}
             >
-              <Pencil size={11} />Edit
+              <Pencil size={11} />{t('common.edit')}
             </button>
             <button
               type="button"
@@ -137,7 +139,7 @@ export function CommentRow({
               className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] hover:bg-[hsl(var(--destructive)/0.1)] hover:text-[hsl(var(--destructive))]"
               style={{ color: 'hsl(var(--muted-foreground))' }}
             >
-              <Trash2 size={11} />Delete
+              <Trash2 size={11} />{t('common.delete')}
             </button>
           </div>
         )}

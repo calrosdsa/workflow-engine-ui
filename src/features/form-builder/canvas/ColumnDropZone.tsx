@@ -2,6 +2,7 @@ import { memo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { ElementCard } from './ElementCard'
 import type { FormColumn } from '../schema'
 
@@ -18,6 +19,7 @@ interface ColumnDropZoneProps {
 // (only useDroppable's per-drag-session isOver), so a skipped render here
 // is a genuinely full skip, not just a props-only one.
 export const ColumnDropZone = memo(function ColumnDropZone({ column, sectionId }: ColumnDropZoneProps) {
+  const t = useTranslation()
   const { setNodeRef, isOver } = useDroppable({
     id: `column:${column.id}`,
     data: { kind: 'column', columnId: column.id, sectionId },
@@ -47,7 +49,7 @@ export const ColumnDropZone = memo(function ColumnDropZone({ column, sectionId }
           'flex min-h-[72px] items-center justify-center rounded-md text-center text-[11px] transition-colors motion-reduce:transition-none',
           isOver ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--muted-foreground))]',
         )}>
-          {isOver ? 'Drop here' : 'Drag components here'}
+          {isOver ? t('builder.canvas.drop_here') : t('builder.canvas.drag_components_here')}
         </div>
       )}
     </div>

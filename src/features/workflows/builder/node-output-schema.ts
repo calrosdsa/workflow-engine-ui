@@ -439,6 +439,7 @@ export function buildNodeOutputSchema(
         fields: [
           { key: 'answer', type: 'string' },
           { key: 'context', type: 'string' },
+          { key: 'query', type: 'string' },
           {
             key: 'chunks', type: 'array', isArray: true,
             children: [

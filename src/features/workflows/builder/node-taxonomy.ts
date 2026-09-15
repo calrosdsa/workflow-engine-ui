@@ -215,11 +215,24 @@ export interface PaletteEntry {
   label: string
   description: string
   iconHint?: string
+  /** User-facing app identity for package nodes in a functional palette. */
+  appName?: string
+  appLabel?: string
+  appIconHint?: string
 }
 
 export interface PaletteGroup {
   id: string
   label: string
+  entries: PaletteEntry[]
+  description?: string
+}
+
+export interface PaletteSourceGroup {
+  id: string
+  label: string
+  kind: 'core' | 'app'
+  iconHint?: string
   entries: PaletteEntry[]
 }
 
@@ -254,6 +267,146 @@ export function groupByCategory(entries: PaletteEntry[], categories: CategoryInf
       entries: [...list].sort((a, b) => kindRank(a.kind) - kindRank(b.kind)),
     }))
     .sort((a, b) => categoryOrder(a.id, categories) - categoryOrder(b.id, categories))
+}
+
+const PALETTE_CATEGORY_MERGES: Record<string, { id: string; label: string; description: string }> = {
+  structure: {
+    id: 'flow',
+    label: 'Flow',
+    description: 'Branch, merge, or loop the flow.',
+  },
+  logic: {
+    id: 'flow',
+    label: 'Flow',
+    description: 'Branch, merge, or loop the flow.',
+  },
+  integration: {
+    id: 'core',
+    label: 'Core',
+    description: 'Make HTTP requests, send notifications, and run platform utilities.',
+  },
+  notify: {
+    id: 'core',
+    label: 'Core',
+    description: 'Make HTTP requests, send notifications, and run platform utilities.',
+  },
+  utility: {
+    id: 'core',
+    label: 'Core',
+    description: 'Make HTTP requests, send notifications, and run platform utilities.',
+  },
+  ai: {
+    id: 'ai',
+    label: 'AI',
+    description: 'Use knowledge bases and agents.',
+  },
+  data: {
+    id: 'data',
+    label: 'Data',
+    description: 'Read and write records on this app’s forms.',
+  },
+  output: {
+    id: 'output',
+    label: 'Output',
+    description: 'Produce an artifact, such as a generated report.',
+  },
+}
+
+const PALETTE_GROUP_ORDER: Record<string, number> = {
+  ai: 10,
+  data: 20,
+  flow: 30,
+  core: 40,
+  output: 50,
+}
+
+/** Groups the backend taxonomy into the smaller set of choices users see in
+ *  the add-step UI. This is intentionally a presentation layer: persisted
+ *  node categories remain the server's `structure/data/logic/integration/`
+ *  vocabulary, while the picker answers the more useful question of what a
+ *  person wants to do next.
+ *
+ *  Current product buckets:
+ *    Flow = structure + logic
+ *    Core = integration + notify + utility
+ *    AI, Data, and Output stay distinct
+ *
+ *  Package-contributed actions are intentionally excluded from these
+ *  category groups. They belong in the separate app browse path, where the
+ *  provider identity and its Triggers/Actions split are explicit. Search
+ *  still receives the full entry list, so this is not a discoverability
+ *  loss — it is a hierarchy decision.
+ *
+ *  Unknown server categories remain visible as their own group so a backend
+ *  addition cannot silently disappear from an older frontend. */
+export function groupByPaletteCategory(entries: PaletteEntry[], categories: CategoryInfo[]): PaletteGroup[] {
+  const sourceGroups = groupByCategory(
+    entries.filter((entry) => entry.kind === 'core'),
+    categories,
+  )
+  const merged = new Map<string, PaletteGroup>()
+
+  for (const source of sourceGroups) {
+    const merge = PALETTE_CATEGORY_MERGES[source.id]
+    const id = merge?.id ?? source.id
+    const existing = merged.get(id)
+    if (existing) {
+      existing.entries.push(...source.entries)
+      continue
+    }
+
+    merged.set(id, {
+      id,
+      label: merge?.label ?? source.label,
+      description: merge?.description,
+      entries: [...source.entries],
+    })
+  }
+
+  const kindRank = (kind: NodeKind) => (kind === 'core' ? 0 : 1)
+  return [...merged.values()]
+    .map((group) => ({
+      ...group,
+      entries: [...group.entries].sort((a, b) => kindRank(a.kind) - kindRank(b.kind)),
+    }))
+    .sort((a, b) => {
+      const aOrder = PALETTE_GROUP_ORDER[a.id] ?? Number.MAX_SAFE_INTEGER
+      const bOrder = PALETTE_GROUP_ORDER[b.id] ?? Number.MAX_SAFE_INTEGER
+      return aOrder - bOrder
+    })
+}
+
+/** Groups one functional-category result by the user's mental model of
+ *  ownership: built-in actions first, then actions from each app. This is a
+ *  display-only subdivision inside a category — it does not create a second
+ *  taxonomy or move a node out of its functional category. */
+export function groupBySource(entries: PaletteEntry[]): PaletteSourceGroup[] {
+  const core = entries.filter((entry) => entry.kind === 'core')
+  const appGroups = new Map<string, PaletteSourceGroup>()
+
+  for (const entry of entries) {
+    if (entry.kind !== 'package') continue
+
+    const id = entry.appName ?? '__other__'
+    const existing = appGroups.get(id)
+    if (existing) {
+      existing.entries.push(entry)
+      continue
+    }
+
+    appGroups.set(id, {
+      id: `app:${id}`,
+      label: entry.appLabel ?? entry.appName ?? 'Other apps',
+      kind: 'app',
+      iconHint: entry.appIconHint,
+      entries: [entry],
+    })
+  }
+
+  return [
+    ...(core.length > 0 ? [{ id: 'core', label: 'Built-in', kind: 'core' as const, entries: core }] : []),
+    ...appGroups.values(),
+  ]
 }
 
 /** Package nodes grouped by their declaring app, keyed by AppInfo.name.

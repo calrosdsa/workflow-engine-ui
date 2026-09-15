@@ -42,6 +42,7 @@ import { ReferenceFilterSection } from './ReferenceFilterSection'
 import type { LineItemsConfig } from '../schema'
 import type { VariableDecl } from '@/features/workflows/types'
 import type { NumberFormat, NumberFormatStyle, NumberFormatCurrencyPosition, NumberFormatNegativeStyle } from '@/features/forms/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 // ---------------------------------------------------------------------------
 // Small layout helpers
@@ -74,11 +75,12 @@ function ToggleRow({ label, checked, onCheckedChange }: { label: string; checked
 // from the external value when it changes for a reason other than this
 // input's own edits (e.g. switching selected elements).
 function AllowedMimeTypesField({ value, onCommit }: { value: string[] | undefined; onCommit: (types: string[]) => void }) {
+  const t = useTranslation()
   const [text, setText] = useState((value ?? []).join(', '))
   useEffect(() => setText((value ?? []).join(', ')), [value])
 
   return (
-    <Field label="Allowed File Types" hint="Comma-separated MIME types, e.g. image/jpeg, image/png — leave blank to allow any type">
+    <Field label={t('form_config.allowed_file_types')} hint={t('form_config.allowed_file_types_hint')}>
       <Input
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -99,6 +101,7 @@ function NumberFormatSection({ value, onChange }: {
   value: NumberFormat | undefined
   onChange: (v: NumberFormat | undefined) => void
 }) {
+  const t = useTranslation()
   const fmt = value ?? {}
   const set = (patch: Partial<NumberFormat>) => onChange({ ...fmt, ...patch })
   const isCurrency = fmt.style === 'currency'
@@ -106,20 +109,20 @@ function NumberFormatSection({ value, onChange }: {
 
   return (
     <div className="space-y-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 p-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Number Format</p>
-      <Field label="Style" hint="How this field's value reads wherever a record is displayed.">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('form_config.number_format')}</p>
+      <Field label={t('form_config.style')} hint={t('form_config.number_format_hint')}>
         <SelectMenu value={fmt.style ?? 'number'} onValueChange={(style) => set({ style: style as NumberFormatStyle })}>
           <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="number">Plain Number</SelectItem>
-            <SelectItem value="currency">Currency</SelectItem>
-            <SelectItem value="percent">Percent</SelectItem>
+            <SelectItem value="number">{t('form_config.plain_number')}</SelectItem>
+            <SelectItem value="currency">{t('form_config.currency')}</SelectItem>
+            <SelectItem value="percent">{t('form_config.percent')}</SelectItem>
           </SelectContent>
         </SelectMenu>
       </Field>
       {isCurrency && (
         <div className="grid grid-cols-2 gap-2">
-          <Field label="Symbol" hint="Shown exactly as typed.">
+          <Field label={t('form_config.symbol')} hint={t('form_config.symbol_hint')}>
             <Input
               value={fmt.currency_symbol ?? ''}
               onChange={(e) => set({ currency_symbol: e.target.value })}
@@ -127,21 +130,21 @@ function NumberFormatSection({ value, onChange }: {
               className="h-8 text-sm"
             />
           </Field>
-          <Field label="Position">
+          <Field label={t('form_config.position')}>
             <SelectMenu
               value={fmt.currency_position ?? 'prefix'}
               onValueChange={(currency_position) => set({ currency_position: currency_position as NumberFormatCurrencyPosition })}
             >
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="prefix">Before ($1)</SelectItem>
-                <SelectItem value="suffix">After (1$)</SelectItem>
+                <SelectItem value="prefix">{t('form_config.before_currency')}</SelectItem>
+                <SelectItem value="suffix">{t('form_config.after_currency')}</SelectItem>
               </SelectContent>
             </SelectMenu>
           </Field>
         </div>
       )}
-      <Field label="Decimals" hint="0–10 places. Leave blank for 2.">
+      <Field label={t('form_config.decimals')} hint={t('form_config.decimals_hint')}>
         <Input
           type="number"
           min={0}
@@ -157,12 +160,12 @@ function NumberFormatSection({ value, onChange }: {
         onClick={() => setAdvancedOpen((o) => !o)}
         className="text-[11px] font-medium text-[hsl(var(--muted-foreground))] underline-offset-2 hover:underline"
       >
-        {advancedOpen ? 'Hide' : 'Show'} separator &amp; negative-value options
+        {advancedOpen ? t('form_config.hide_advanced') : t('form_config.show_advanced')}
       </button>
       {advancedOpen && (
         <>
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Thousands Separator" hint='Default ",". Blank turns grouping off.'>
+            <Field label={t('form_config.thousands_separator')} hint={t('form_config.thousands_separator_hint')}>
               <Input
                 value={fmt.thousands_separator ?? ''}
                 onChange={(e) => set({ thousands_separator: e.target.value })}
@@ -171,7 +174,7 @@ function NumberFormatSection({ value, onChange }: {
                 className="h-8 text-sm"
               />
             </Field>
-            <Field label="Decimal Separator" hint='Default "."'>
+            <Field label={t('form_config.decimal_separator')} hint={t('form_config.decimal_separator_hint')}>
               <Input
                 value={fmt.decimal_separator ?? ''}
                 onChange={(e) => set({ decimal_separator: e.target.value })}
@@ -181,7 +184,7 @@ function NumberFormatSection({ value, onChange }: {
               />
             </Field>
           </div>
-          <Field label="Negative Values">
+          <Field label={t('form_config.negative_values')}>
             <SelectMenu
               value={fmt.negative_style ?? 'minus'}
               onValueChange={(negative_style) => set({ negative_style: negative_style as NumberFormatNegativeStyle })}
@@ -245,6 +248,7 @@ export function ConfigPanel({ variables }: { variables: VariableDecl[] }) {
 // ---------------------------------------------------------------------------
 
 function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | null }) {
+  const t = useTranslation()
   const formName = useFormMetaStore((s) => s.name)
   const cfg: CreateUserSettings = schema.settings?.createUser ?? emptyCreateUserSettings()
   const [detailPageOpen, setDetailPageOpen] = useState(false)
@@ -267,31 +271,30 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
           <SlidersHorizontal size={17} className="text-[hsl(var(--background))]" />
         </div>
         <div>
-          <p className="text-[13px] font-semibold text-[hsl(var(--background))]">Form Settings</p>
-          <p className="text-[10px] text-[hsl(var(--background))]/60">Additional configuration</p>
+          <p className="text-[13px] font-semibold text-[hsl(var(--background))]">{t('form_config.form_settings')}</p>
+          <p className="text-[10px] text-[hsl(var(--background))]/60">{t('form_config.additional_configuration')}</p>
         </div>
       </div>
       <ScrollArea className="flex-1">
         <div className="space-y-4 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Additional Form Settings</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('form_config.additional_form_settings')}</p>
           <ToggleRow
-            label={`Do you want to create a user with each ${formName} enrollment?`}
+            label={t('form_config.create_user_question', { name: formName })}
             checked={cfg.enabled}
             onCheckedChange={(enabled) => (enabled ? insertAccountSection() : removeAccountSection())}
           />
           {cfg.enabled && (
             <div className="space-y-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Create User</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('form_config.create_user')}</p>
               <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-                An "Account" section was added to the canvas with Name, Email, and Role fields.
-                Edit those fields directly on the canvas — they behave like any other field.
+                {t('form_config.create_user_help')}
               </p>
               <div className="space-y-1.5 pt-1">
-                <p className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">View-only columns</p>
+                <p className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('form_config.view_only_columns')}</p>
                 {cfg.viewOnlyColumns.map((col) => (
                   <div key={col.id} className="flex items-center justify-between rounded-md bg-[hsl(var(--card))] px-2.5 py-1.5 text-[12px] text-[hsl(var(--muted-foreground))] ring-1 ring-[hsl(var(--border))]">
                     {col.label}
-                    <span className="text-[10px] uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Read only</span>
+                    <span className="text-[10px] uppercase tracking-wide text-[hsl(var(--muted-foreground))]">{t('form_config.read_only')}</span>
                   </div>
                 ))}
               </div>
@@ -300,10 +303,8 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
 
           <div className="h-px bg-[hsl(var(--border))]" />
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Detail Page</p>
-            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-              Which tabs show on this form's record detail page, in what order, and who can see each one.
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('form_config.detail_page')}</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('form_config.detail_page_help')}</p>
             {formId ? (
               <div className="space-y-1.5">
                 <Button
@@ -314,9 +315,9 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
                 >
                   <span className="flex items-center gap-2">
                     <LayoutPanelTop size={14} className="text-[hsl(var(--muted-foreground))]" />
-                    Configure Detail Page
+                    {t('form_config.configure_detail_page')}
                   </span>
-                  <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{tabCount} tab{tabCount === 1 ? '' : 's'}</span>
+                  <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{t(tabCount === 1 ? 'form_config.tab_one' : 'form_config.tab_many', { count: tabCount })}</span>
                 </Button>
                 <Button
                   type="button"
@@ -325,20 +326,18 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
                   className="flex w-full items-center gap-2 text-[12px]"
                 >
                   <LayoutGrid size={14} className="text-[hsl(var(--muted-foreground))]" />
-                  Open Canvas Editor
+                  {t('form_config.open_canvas_editor')}
                 </Button>
               </div>
             ) : (
-              <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Save this form first to configure its Detail Page tabs.</p>
+              <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('form_config.save_first_detail')}</p>
             )}
           </div>
 
           <div className="h-px bg-[hsl(var(--border))]" />
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Custom Actions</p>
-            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-              Menu items in the record detail's "..." menu that update a field, gated by who can see them and when.
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('form_config.custom_actions')}</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('form_config.custom_actions_help')}</p>
             {formId ? (
               <Button
                 type="button"
@@ -348,22 +347,19 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
               >
                 <span className="flex items-center gap-2">
                   <Zap size={14} className="text-[hsl(var(--muted-foreground))]" />
-                  Configure Custom Actions
+                  {t('form_config.configure_custom_actions')}
                 </span>
-                <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{actionCount} action{actionCount === 1 ? '' : 's'}</span>
+                <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{t(actionCount === 1 ? 'form_config.action_one' : 'form_config.action_many', { count: actionCount })}</span>
               </Button>
             ) : (
-              <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Save this form first to configure its custom actions.</p>
+              <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('form_config.save_first_actions')}</p>
             )}
           </div>
 
           <div className="h-px bg-[hsl(var(--border))]" />
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Access Scope</p>
-            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-              Row-level security: which of this form's records each viewer may see and edit. Enforced server-side —
-              this is a real access boundary, not just what the UI shows.
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('form_config.access_scope')}</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('form_config.access_scope_help')}</p>
             <Button
               type="button"
               variant="outline"
@@ -372,20 +368,18 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
             >
               <span className="flex items-center gap-2">
                 <ShieldCheck size={14} className="text-[hsl(var(--muted-foreground))]" />
-                Configure Access Scope
+                {t('form_config.configure_access_scope')}
               </span>
               <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
-                {accessScopeRules.length === 0 ? 'Unrestricted' : `${accessScopeRules.length} rule${accessScopeRules.length === 1 ? '' : 's'}`}
+                {accessScopeRules.length === 0 ? t('form_config.unrestricted') : t(accessScopeRules.length === 1 ? 'form_config.rule_one' : 'form_config.rule_many', { count: accessScopeRules.length })}
               </span>
             </Button>
           </div>
 
           <div className="h-px bg-[hsl(var(--border))]" />
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">While Filling In</p>
-            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-              Steps that run as someone fills this form in, when a watched field changes.
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('form_config.while_filling_in')}</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('form_config.while_filling_help')}</p>
             <Button
               type="button"
               variant="outline"
@@ -394,20 +388,18 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
             >
               <span className="flex items-center gap-2">
                 <Zap size={14} className="text-[hsl(var(--muted-foreground))]" />
-                Configure While Filling In
+                {t('form_config.configure_while_filling')}
               </span>
               <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
-                {fieldChange.workflow.steps.length} step{fieldChange.workflow.steps.length === 1 ? '' : 's'}
+                {t(fieldChange.workflow.steps.length === 1 ? 'form_config.step_one' : 'form_config.step_many', { count: fieldChange.workflow.steps.length })}
               </span>
             </Button>
           </div>
 
           <div className="h-px bg-[hsl(var(--border))]" />
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">After Submit</p>
-            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-              Steps that run in the browser once a record is saved from this form. They run after the save and can’t stop it.
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('form_config.after_submit')}</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('form_config.after_submit_help')}</p>
             <Button
               type="button"
               variant="outline"
@@ -416,9 +408,9 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
             >
               <span className="flex items-center gap-2">
                 <Zap size={14} className="text-[hsl(var(--muted-foreground))]" />
-                Configure After Submit
+                {t('form_config.configure_after_submit')}
               </span>
-              <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{afterSubmitCount} step{afterSubmitCount === 1 ? '' : 's'}</span>
+              <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{t(afterSubmitCount === 1 ? 'form_config.step_one' : 'form_config.step_many', { count: afterSubmitCount })}</span>
             </Button>
           </div>
         </div>
@@ -427,18 +419,14 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
       <Drawer open={whileFillingOpen} onOpenChange={setWhileFillingOpen}>
         <DrawerContent size="lg">
           <DrawerHeader>
-            <DrawerTitle>While Filling In</DrawerTitle>
-            <DrawerDescription>
-              Runs in the viewer’s browser while they fill this form in, whenever one of the watched fields changes —
-              cascading defaults, dependent pickers, revealing a section once an option is picked. Nothing is saved by
-              these steps; they act on the form on screen.
-            </DrawerDescription>
+            <DrawerTitle>{t('form_config.while_filling_in')}</DrawerTitle>
+            <DrawerDescription>{t('form_config.while_filling_drawer_help')}</DrawerDescription>
           </DrawerHeader>
           <ScrollArea className="flex-1">
             <div className="space-y-4 p-6">
               <Field
-                label="Watch these fields"
-                hint="Only a change to one of these starts a run. Naming them is also what stops a Set Field step from re-triggering the workflow that wrote it."
+                label={t('form_config.watch_fields')}
+                hint={t('form_config.watch_fields_hint')}
               >
                 <div className="grid grid-cols-2 gap-1.5">
                   {fields.map((f) => (
@@ -464,17 +452,17 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
                 value={fieldChange.workflow}
                 onChange={(workflow) => updateFieldChangeWorkflow({ ...fieldChange, workflow })}
                 fields={fields}
-                help="The form’s current values are in context, and the variable “changed_field” holds which field triggered the run."
+                help={t('form_config.field_change_help')}
               />
             </div>
           </ScrollArea>
           <DrawerFooter className="items-center justify-between sm:justify-between">
             <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
               {fieldChange.watch.length === 0 && fieldChange.workflow.steps.length > 0
-                ? 'No fields watched yet — these steps will never run.'
-                : `${fieldChange.workflow.steps.length} step${fieldChange.workflow.steps.length === 1 ? '' : 's'}, ${fieldChange.watch.length} watched`}
+                ? t('form_config.no_fields_watched')
+                : t('form_config.watched_summary', { steps: fieldChange.workflow.steps.length, fields: fieldChange.watch.length })}
             </p>
-            <Button type="button" onClick={() => setWhileFillingOpen(false)}>Done</Button>
+            <Button type="button" onClick={() => setWhileFillingOpen(false)}>{t('common.done')}</Button>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
@@ -482,12 +470,8 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
       <Drawer open={accessScopeOpen} onOpenChange={setAccessScopeOpen}>
         <DrawerContent size="lg">
           <DrawerHeader>
-            <DrawerTitle>Access Scope</DrawerTitle>
-            <DrawerDescription>
-              Row-level security rules, enforced server-side wherever this form's records are read or written — not
-              just what the app's UI shows. A viewer matched by more than one rule sees the union of what each
-              allows; a viewer matched by NO rule sees every record, same as a form with no rules configured at all.
-            </DrawerDescription>
+            <DrawerTitle>{t('form_config.access_scope')}</DrawerTitle>
+            <DrawerDescription>{t('form_config.access_scope_drawer_help')}</DrawerDescription>
           </DrawerHeader>
           <ScrollArea className="flex-1">
             <div className="p-6">
@@ -500,9 +484,9 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
           </ScrollArea>
           <DrawerFooter className="items-center justify-between sm:justify-between">
             <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-              {accessScopeRules.length === 0 ? 'Unrestricted' : `${accessScopeRules.length} rule${accessScopeRules.length === 1 ? '' : 's'}`} — changes apply instantly, use the builder's Save to persist them.
+              {t('form_config.access_scope_footer', { summary: accessScopeRules.length === 0 ? t('form_config.unrestricted') : t(accessScopeRules.length === 1 ? 'form_config.rule_one' : 'form_config.rule_many', { count: accessScopeRules.length }) })}
             </p>
-            <Button type="button" onClick={() => setAccessScopeOpen(false)}>Done</Button>
+            <Button type="button" onClick={() => setAccessScopeOpen(false)}>{t('common.done')}</Button>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
@@ -510,12 +494,8 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
       <Drawer open={afterSubmitOpen} onOpenChange={setAfterSubmitOpen}>
         <DrawerContent size="lg">
           <DrawerHeader>
-            <DrawerTitle>After Submit</DrawerTitle>
-            <DrawerDescription>
-              Runs in the viewer’s browser once a record is saved from this form — show a message, branch on what
-              was entered, write another record, or hand off to a server workflow. It runs <em>after</em> the save,
-              so it can’t prevent one; put a genuine veto in the form’s Before trigger instead.
-            </DrawerDescription>
+            <DrawerTitle>{t('form_config.after_submit')}</DrawerTitle>
+            <DrawerDescription>{t('form_config.after_submit_drawer_help')}</DrawerDescription>
           </DrawerHeader>
           <ScrollArea className="flex-1">
             <div className="p-6">
@@ -523,15 +503,15 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
                 value={schema.settings?.afterSubmitWorkflow ?? emptyUiWorkflow()}
                 onChange={updateAfterSubmitWorkflow}
                 fields={fields}
-                help="The saved record is in context: conditions can branch on what was entered, and an update step addresses it with no extra configuration."
+                help={t('form_config.after_submit_workflow_help')}
               />
             </div>
           </ScrollArea>
           <DrawerFooter className="items-center justify-between sm:justify-between">
             <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-              {afterSubmitCount} step{afterSubmitCount === 1 ? '' : 's'} — changes apply instantly, use the builder's Save to persist them.
+              {t('form_config.workflow_footer', { count: afterSubmitCount })}
             </p>
-            <Button type="button" onClick={() => setAfterSubmitOpen(false)}>Done</Button>
+            <Button type="button" onClick={() => setAfterSubmitOpen(false)}>{t('common.done')}</Button>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
@@ -540,10 +520,8 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
         <Drawer open={detailPageOpen} onOpenChange={setDetailPageOpen}>
           <DrawerContent size="lg">
             <DrawerHeader>
-              <DrawerTitle>Detail Page</DrawerTitle>
-              <DrawerDescription>
-                Which tabs show on this form's record detail page, in what order, and who can see each one.
-              </DrawerDescription>
+              <DrawerTitle>{t('form_config.detail_page')}</DrawerTitle>
+              <DrawerDescription>{t('form_config.detail_page_help')}</DrawerDescription>
             </DrawerHeader>
             <ScrollArea className="flex-1">
               <div className="p-6">
@@ -556,9 +534,9 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
             </ScrollArea>
             <DrawerFooter className="items-center justify-between sm:justify-between">
               <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-                {tabCount} tab{tabCount === 1 ? '' : 's'} visible — changes apply instantly, use the builder's Save to persist them.
+                {t('form_config.detail_footer', { count: tabCount })}
               </p>
-              <Button type="button" onClick={() => setDetailPageOpen(false)}>Done</Button>
+              <Button type="button" onClick={() => setDetailPageOpen(false)}>{t('common.done')}</Button>
             </DrawerFooter>
           </DrawerContent>
         </Drawer>
@@ -568,10 +546,8 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
         <Drawer open={customActionsOpen} onOpenChange={setCustomActionsOpen}>
           <DrawerContent size="lg">
             <DrawerHeader>
-              <DrawerTitle>Custom Actions</DrawerTitle>
-              <DrawerDescription>
-                Menu items in the record detail's "..." menu that update a field, gated by who can see them and when.
-              </DrawerDescription>
+              <DrawerTitle>{t('form_config.custom_actions')}</DrawerTitle>
+              <DrawerDescription>{t('form_config.custom_actions_help')}</DrawerDescription>
             </DrawerHeader>
             <ScrollArea className="flex-1">
               <div className="p-6">
@@ -585,9 +561,9 @@ function FormConfig({ schema, formId }: { schema: FormSchema; formId: string | n
             </ScrollArea>
             <DrawerFooter className="items-center justify-between sm:justify-between">
               <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-                {actionCount} action{actionCount === 1 ? '' : 's'} — changes apply instantly, use the builder's Save to persist them.
+                {t('form_config.custom_actions_footer', { count: actionCount })}
               </p>
-              <Button type="button" onClick={() => setCustomActionsOpen(false)}>Done</Button>
+              <Button type="button" onClick={() => setCustomActionsOpen(false)}>{t('common.done')}</Button>
             </DrawerFooter>
           </DrawerContent>
         </Drawer>
@@ -617,6 +593,7 @@ function SectionConfig({ title, description, onChange }: {
   title: string; description: string
   onChange: (p: { title?: string; description?: string }) => void
 }) {
+  const t = useTranslation()
   return (
     <>
       <div className="flex items-center gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--foreground))] px-4 py-3.5">
@@ -624,15 +601,15 @@ function SectionConfig({ title, description, onChange }: {
           <Layers size={17} className="text-[hsl(var(--background))]" />
         </div>
         <div>
-          <p className="text-[13px] font-semibold text-[hsl(var(--background))]">Section</p>
-          <p className="text-[10px] text-[hsl(var(--background))]/60">Layout container</p>
+          <p className="text-[13px] font-semibold text-[hsl(var(--background))]">{t('form_config.section')}</p>
+          <p className="text-[10px] text-[hsl(var(--background))]/60">{t('form_config.layout_container')}</p>
         </div>
       </div>
       <div className="space-y-4 p-4">
-        <Field label="Section Title">
+        <Field label={t('form_config.section_title')}>
           <Input value={title} onChange={(e) => onChange({ title: e.target.value })} className="h-8 text-sm" />
         </Field>
-        <Field label="Description" hint="Optional helper text shown under the title.">
+        <Field label={t('form_config.description')} hint={t('form_config.section_description_hint')}>
           <Textarea value={description} onChange={(e) => onChange({ description: e.target.value })} rows={2} className="text-sm" />
         </Field>
       </div>
@@ -651,6 +628,7 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
   schema: FormSchema
   onChange: (patch: Partial<FormElement>) => void
 }) {
+  const t = useTranslation()
   const reg = COMPONENT_REGISTRY[element.component]
   const Icon = reg.icon
 
@@ -727,10 +705,10 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
       <Tabs defaultValue="general" className="flex min-h-0 flex-1 flex-col">
         <div className="border-b border-[hsl(var(--border))] px-3 pb-2 pt-2.5">
           <TabsList className="w-full">
-            <TabsTrigger value="general" className="flex-1 text-[11px]">General</TabsTrigger>
-            {!isPresentational && <TabsTrigger value="validation" className="flex-1 text-[11px]">Rules</TabsTrigger>}
-            {!isPresentational && <TabsTrigger value="behavior" className="flex-1 text-[11px]">Logic</TabsTrigger>}
-            <TabsTrigger value="appearance" className="flex-1 text-[11px]">Style</TabsTrigger>
+            <TabsTrigger value="general" className="flex-1 text-[11px]">{t('form_config.general')}</TabsTrigger>
+            {!isPresentational && <TabsTrigger value="validation" className="flex-1 text-[11px]">{t('form_config.rules')}</TabsTrigger>}
+            {!isPresentational && <TabsTrigger value="behavior" className="flex-1 text-[11px]">{t('form_config.logic')}</TabsTrigger>}
+            <TabsTrigger value="appearance" className="flex-1 text-[11px]">{t('form_config.appearance')}</TabsTrigger>
           </TabsList>
         </div>
 
@@ -742,55 +720,55 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                 <reg.configPanel element={element} onChange={onChange} />
               ) : (
                 <>
-                  <Field label="Label">
+                  <Field label={t('form_config.label')}>
                     <Input value={element.label} onChange={(e) => onChange({ label: e.target.value })} className="h-8 text-sm" />
                   </Field>
-                  <Field label="Field Name / Key" hint="Machine name — becomes the data column.">
+                  <Field label={t('form_config.field_name_key')} hint={t('form_config.field_name_hint')}>
                     <Input
                       value={element.key}
                       onChange={(e) => onChange({ key: slugifyKey(e.target.value) })}
                       className="h-8 font-mono text-[12px]"
                     />
                   </Field>
-                  <Field label="Description">
-                    <Input value={element.description ?? ''} onChange={(e) => onChange({ description: e.target.value })} placeholder="Shown under the label" className="h-8 text-sm" />
+                  <Field label={t('form_config.description')}>
+                    <Input value={element.description ?? ''} onChange={(e) => onChange({ description: e.target.value })} placeholder={t('form_config.shown_under_label')} className="h-8 text-sm" />
                   </Field>
                   {canBeRecordTitle && (
                     <div className="space-y-1">
                       <ToggleRow
-                        label="Use in Record Title"
+                        label={t('form_config.use_record_title')}
                         checked={!!element.isRecordTitle}
                         onCheckedChange={(v) => onChange({ isRecordTitle: v })}
                       />
                       <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-                        Shown instead of the record ID on the Detail page and wherever another form links to this record. Combine with other title fields to build a composite title.
+                        {t('form_config.record_title_help')}
                       </p>
                     </div>
                   )}
                   {!hasOptions && !isFormRef && !isLineItemCount && element.component !== 'checkbox' && element.component !== 'switch' && (
-                    <Field label="Placeholder">
+                    <Field label={t('form_config.placeholder')}>
                       <Input value={element.placeholder ?? ''} onChange={(e) => onChange({ placeholder: e.target.value })} className="h-8 text-sm" />
                     </Field>
                   )}
-                  <Field label="Help Text" hint="Hint shown below the field.">
+                  <Field label={t('form_config.help_text')} hint={t('form_config.help_text_hint')}>
                     <Input value={element.helpText ?? ''} onChange={(e) => onChange({ helpText: e.target.value })} className="h-8 text-sm" />
                   </Field>
                   {hasOptions && (
-                    <Field label="Options">
+                    <Field label={t('form_config.options')}>
                       <OptionsEditor options={element.options ?? []} onChange={(options) => onChange({ options })} />
                     </Field>
                   )}
                   {isFormRef && (
                     <div className="space-y-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 p-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Form Reference</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('form_config.form_reference')}</p>
                       {isParentLink ? (
-                        <Field label="Referenced Form" hint="This field links the form to its parent — use “Unlink Dependent Form” from the form list to change or remove this relationship.">
+                        <Field label={t('form_config.referenced_form')} hint={t('form_config.parent_form_hint')}>
                           <div className="flex h-8 items-center gap-1.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-2.5 text-[13px] text-[hsl(var(--muted-foreground))]">
                             <ParentFormName formId={element.formRef} />
                           </div>
                         </Field>
                       ) : (
-                        <Field label="Referenced Form" hint="Stores the form's id; displays its name.">
+                        <Field label={t('form_config.referenced_form')} hint={t('form_config.referenced_form_hint')}>
                           <FormReferenceSelect
                             value={element.formRef}
                             excludeId={formId ?? undefined}
@@ -798,7 +776,7 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                           />
                         </Field>
                       )}
-                      <Field label="Display Field" hint="Which field of the referenced form to show in the dropdown and use for search.">
+                      <Field label={t('form_config.display_field')} hint={t('form_config.display_field_hint')}>
                         <DisplayFieldSelect
                           formId={element.formRef}
                           value={element.displayField}
@@ -809,14 +787,14 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                   )}
                   {isLineItemCount && (
                     <div className="space-y-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 p-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Line Item Aggregate</p>
-                      <Field label="Grid" hint="Which Line Items grid on this form to aggregate. Only grids that have been saved at least once are shown.">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('form_config.line_item_aggregate')}</p>
+                      <Field label={t('form_config.grid')} hint={t('form_config.grid_hint')}>
                         <SelectMenu
                           value={element.formRef ?? ''}
                           onValueChange={(formRef) => onChange({ formRef, aggregateField: undefined })}
                         >
                           <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder={lineItemsElements.length ? 'Select a grid…' : 'Save the form first to add a grid'} />
+                            <SelectValue placeholder={lineItemsElements.length ? t('form_config.select_grid') : t('form_config.save_form_first_grid')} />
                           </SelectTrigger>
                           <SelectContent>
                             {lineItemsElements.map((el) => (
@@ -825,7 +803,7 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                           </SelectContent>
                         </SelectMenu>
                       </Field>
-                      <Field label="Function">
+                      <Field label={t('form_config.function')}>
                         <SelectMenu
                           value={element.aggregateFn ?? 'count'}
                           onValueChange={(aggregateFn) => onChange({ aggregateFn: aggregateFn as LineItemAggregateFn, aggregateField: undefined })}
@@ -834,19 +812,19 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="count">Count</SelectItem>
-                            <SelectItem value="sum">Sum</SelectItem>
-                            <SelectItem value="avg">Average</SelectItem>
-                            <SelectItem value="min">Min</SelectItem>
-                            <SelectItem value="max">Max</SelectItem>
+                            <SelectItem value="count">{t('form_config.count')}</SelectItem>
+                            <SelectItem value="sum">{t('form_config.sum')}</SelectItem>
+                            <SelectItem value="avg">{t('form_config.average')}</SelectItem>
+                            <SelectItem value="min">{t('form_config.min')}</SelectItem>
+                            <SelectItem value="max">{t('form_config.max')}</SelectItem>
                           </SelectContent>
                         </SelectMenu>
                       </Field>
                       {element.aggregateFn && element.aggregateFn !== 'count' && (
-                        <Field label="Column" hint="Which numeric column on that grid to aggregate.">
+                        <Field label={t('form_config.column')} hint={t('form_config.column_hint')}>
                           <SelectMenu value={element.aggregateField ?? ''} onValueChange={(aggregateField) => onChange({ aggregateField })}>
                             <SelectTrigger className="h-8 text-sm">
-                              <SelectValue placeholder={numericColumnsOfTargetGrid.length ? 'Select a column…' : 'Grid has no Number columns'} />
+                              <SelectValue placeholder={numericColumnsOfTargetGrid.length ? t('form_config.select_column') : t('form_config.no_number_columns')} />
                             </SelectTrigger>
                             <SelectContent>
                               {numericColumnsOfTargetGrid.map((col) => (
@@ -859,11 +837,11 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                     </div>
                   )}
                   {!isFormRef && !isLineItemCount && (
-                    <Field label="Default Value">
+                    <Field label={t('form_config.default_value')}>
                       <Input
                         value={element.defaultValue == null ? '' : String(element.defaultValue)}
                         onChange={(e) => onChange({ defaultValue: e.target.value })}
-                        placeholder="Static default"
+                        placeholder={t('form_config.static_default')}
                         className="h-8 text-sm"
                       />
                     </Field>
@@ -882,66 +860,66 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
             {!isPresentational && (
               <TabsContent value="validation" className="mt-0 space-y-4">
                 <ToggleRow
-                  label="Required"
+                  label={t('form_config.required')}
                   checked={element.behavior.required === 'always'}
                   onCheckedChange={(v) => setBehavior({ required: v ? 'always' : 'optional' })}
                 />
                 {canBeUnique && (
                   <div className="space-y-1">
                     <ToggleRow
-                      label="Unique"
+                      label={t('form_config.unique')}
                       checked={!!element.unique}
                       onCheckedChange={(v) => onChange({ unique: v })}
                     />
-                    <p className="text-[10px] text-[hsl(var(--muted-foreground))]">No two records may share this value.</p>
+                    <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('form_config.no_duplicates')}</p>
                   </div>
                 )}
                 {canBeSearchable && (
                   <div className="space-y-1">
                     <ToggleRow
-                      label="Include in Search"
+                      label={t('form_config.include_in_search')}
                       checked={!!element.searchable}
                       onCheckedChange={(v) => onChange({ searchable: v })}
                     />
-                    <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Included when users search this form's records.</p>
+                    <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('form_config.included_in_search')}</p>
                   </div>
                 )}
                 <div className="space-y-1">
                   <ToggleRow
-                    label="Index"
+                    label={t('form_config.index')}
                     checked={!!element.index}
                     onCheckedChange={(v) => onChange({ index: v })}
                   />
-                  <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Speeds up queries and sorts on this field.</p>
+                  <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('form_config.index_help')}</p>
                 </div>
                 {isTextual && (
                   <div className="grid grid-cols-2 gap-2">
-                    <Field label="Min Length">
+                    <Field label={t('form_config.min_length')}>
                       <Input type="number" value={element.validation.minLength ?? ''} onChange={(e) => setValidation({ minLength: e.target.value === '' ? undefined : Number(e.target.value) })} className="h-8 text-sm" />
                     </Field>
-                    <Field label="Max Length">
+                    <Field label={t('form_config.max_length')}>
                       <Input type="number" value={element.validation.maxLength ?? ''} onChange={(e) => setValidation({ maxLength: e.target.value === '' ? undefined : Number(e.target.value) })} className="h-8 text-sm" />
                     </Field>
                   </div>
                 )}
                 {isNumeric && (
                   <div className="grid grid-cols-2 gap-2">
-                    <Field label="Min Value">
+                    <Field label={t('form_config.min_value')}>
                       <Input type="number" value={element.validation.min ?? ''} onChange={(e) => setValidation({ min: e.target.value === '' ? undefined : Number(e.target.value) })} className="h-8 text-sm" />
                     </Field>
-                    <Field label="Max Value">
+                    <Field label={t('form_config.max_value')}>
                       <Input type="number" value={element.validation.max ?? ''} onChange={(e) => setValidation({ max: e.target.value === '' ? undefined : Number(e.target.value) })} className="h-8 text-sm" />
                     </Field>
                   </div>
                 )}
                 {isTextual && (
-                  <Field label="Regex Pattern" hint="e.g. ^[A-Z]{2}\d{4}$">
+                  <Field label={t('form_config.regex_pattern')} hint="e.g. ^[A-Z]{2}\d{4}$">
                     <Input value={element.validation.pattern ?? ''} onChange={(e) => setValidation({ pattern: e.target.value })} className="h-8 font-mono text-[11px]" />
                   </Field>
                 )}
                 {isFileUpload && (
                   <>
-                    <Field label="Max File Size (MB)" hint="Leave blank for no per-field limit">
+                    <Field label={t('form_config.max_file_size')} hint={t('form_config.no_file_limit')}>
                       <Input
                         type="number"
                         min={0}
@@ -958,8 +936,8 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
                     />
                   </>
                 )}
-                <Field label="Custom Validation Message">
-                  <Input value={element.validation.customMessage ?? ''} onChange={(e) => setValidation({ customMessage: e.target.value })} placeholder="Shown when invalid" className="h-8 text-sm" />
+                <Field label={t('form_config.custom_validation_message')}>
+                  <Input value={element.validation.customMessage ?? ''} onChange={(e) => setValidation({ customMessage: e.target.value })} placeholder={t('form_config.shown_when_invalid')} className="h-8 text-sm" />
                 </Field>
               </TabsContent>
             )}
@@ -969,79 +947,79 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
               <TabsContent value="behavior" className="mt-0 space-y-5">
                 {/* Visibility */}
                 <RuleGroup
-                  title="Visibility"
+                  title={t('form_config.visibility')}
                   mode={element.behavior.visibility}
-                  options={[['always', 'Always Visible'], ['hidden', 'Hidden'], ['expression', 'Visible When']]}
+                  options={[['always', t('form_config.always_visible')], ['hidden', t('form_config.hidden')], ['expression', t('form_config.visible_when')]]}
                   onModeChange={(m) => setBehavior({ visibility: m as VisibilityMode })}
                   expression={element.behavior.visibleWhen ?? ''}
                   onExpressionChange={(v) => setBehavior({ visibleWhen: v })}
                   showExpression={element.behavior.visibility === 'expression'}
                   variables={variables}
-                  exprLabel="visible when"
+                  exprLabel={t('form_config.visible_when')}
                 />
                 {/* Required */}
                 <RuleGroup
-                  title="Mandatory"
+                  title={t('form_config.mandatory')}
                   mode={element.behavior.required}
-                  options={[['always', 'Always Required'], ['optional', 'Optional'], ['expression', 'Required When']]}
+                  options={[['always', t('form_config.always_required')], ['optional', t('form_config.optional')], ['expression', t('form_config.required_when')]]}
                   onModeChange={(m) => setBehavior({ required: m as RequiredMode })}
                   expression={element.behavior.requiredWhen ?? ''}
                   onExpressionChange={(v) => setBehavior({ requiredWhen: v })}
                   showExpression={element.behavior.required === 'expression'}
                   variables={variables}
-                  exprLabel="required when"
+                  exprLabel={t('form_config.required_when')}
                 />
                 {/* Read Only */}
                 <RuleGroup
-                  title="Read Only"
+                  title={t('form_config.read_only')}
                   mode={element.behavior.readOnly}
-                  options={[['editable', 'Editable'], ['always', 'Always Read Only'], ['expression', 'Read Only When']]}
+                  options={[['editable', t('form_config.editable')], ['always', t('form_config.always_read_only')], ['expression', t('form_config.read_only_when')]]}
                   onModeChange={(m) => setBehavior({ readOnly: m as ReadOnlyMode })}
                   expression={element.behavior.readOnlyWhen ?? ''}
                   onExpressionChange={(v) => setBehavior({ readOnlyWhen: v })}
                   showExpression={element.behavior.readOnly === 'expression'}
                   variables={variables}
-                  exprLabel="read-only when"
+                  exprLabel={t('form_config.read_only_when')}
                 />
 
                 <div className="h-px bg-[hsl(var(--border))]" />
-                <ToggleRow label="Disabled" checked={!!element.behavior.disabled} onCheckedChange={(v) => setBehavior({ disabled: v })} />
-                <Field label="Dynamic Default Value" hint="Expression computed when the form loads.">
+                <ToggleRow label={t('form_config.disabled')} checked={!!element.behavior.disabled} onCheckedChange={(v) => setBehavior({ disabled: v })} />
+                <Field label={t('form_config.dynamic_default')} hint={t('form_config.dynamic_default_hint')}>
                   <ExpressionField
                     value={element.behavior.dynamicDefault ?? ''}
                     onChange={(v) => setBehavior({ dynamicDefault: v })}
                     variables={variables}
                     placeholder='e.g. now()'
-                    label="dynamic default"
+                    label={t('form_config.dynamic_default')}
                   />
                 </Field>
 
                 <div className="h-px bg-[hsl(var(--border))]" />
                 {/* Data binding */}
-                <Field label="Data Binding" hint="Where this field's value comes from.">
+                  <Field label={t('form_config.data_binding')} hint={t('form_config.data_binding_hint')}>
                   <SelectMenu value={element.binding.source} onValueChange={(v) => setBinding({ source: v as BindingSource })}>
                     <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none" className="text-xs">None (user input)</SelectItem>
-                      <SelectItem value="form_field" className="text-xs">Form Field</SelectItem>
-                      <SelectItem value="workflow_variable" className="text-xs">Workflow Variable</SelectItem>
-                      <SelectItem value="expression" className="text-xs">Computed (Expression)</SelectItem>
-                      <SelectItem value="option_source" className="text-xs">Dynamic Option Source</SelectItem>
+                      <SelectItem value="none" className="text-xs">{t('form_config.none_user_input')}</SelectItem>
+                      <SelectItem value="form_field" className="text-xs">{t('form_config.form_field')}</SelectItem>
+                      <SelectItem value="workflow_variable" className="text-xs">{t('form_config.workflow_variable')}</SelectItem>
+                      <SelectItem value="expression" className="text-xs">{t('form_config.computed_expression')}</SelectItem>
+                      <SelectItem value="option_source" className="text-xs">{t('form_config.dynamic_option_source')}</SelectItem>
                     </SelectContent>
                   </SelectMenu>
                 </Field>
                 {(element.binding.source === 'form_field' || element.binding.source === 'workflow_variable') && (
-                  <Field label="Reference">
+                  <Field label={t('form_config.reference')}>
                     <Input value={element.binding.ref ?? ''} onChange={(e) => setBinding({ ref: e.target.value })} placeholder="name" className="h-8 font-mono text-[12px]" />
                   </Field>
                 )}
                 {element.binding.source === 'expression' && (
-                  <Field label="Computed Value">
-                    <ExpressionField value={element.binding.expression ?? ''} onChange={(v) => setBinding({ expression: v })} variables={variables} label="computed value" />
+                  <Field label={t('form_config.computed_value')}>
+                    <ExpressionField value={element.binding.expression ?? ''} onChange={(v) => setBinding({ expression: v })} variables={variables} label={t('form_config.computed_value')} />
                   </Field>
                 )}
                 {element.binding.source === 'option_source' && (
-                  <Field label="Option Source" hint="Named source (future API-backed).">
+                  <Field label={t('form_config.option_source')} hint={t('form_config.option_source_hint')}>
                     <Input value={element.binding.optionSource ?? ''} onChange={(e) => setBinding({ optionSource: e.target.value })} placeholder="e.g. countries" className="h-8 text-sm" />
                   </Field>
                 )}
@@ -1064,31 +1042,31 @@ function ElementConfig({ element, variables, formId, schema, onChange }: {
 
             {/* APPEARANCE */}
             <TabsContent value="appearance" className="mt-0 space-y-4">
-              <Field label="Width">
+              <Field label={t('form_config.width')}>
                 <SelectMenu value={element.appearance.width ?? 'full'} onValueChange={(v) => setAppearance({ width: v as ElementAppearance['width'] })}>
                   <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="full" className="text-xs">Full width</SelectItem>
-                    <SelectItem value="half" className="text-xs">Half (50%)</SelectItem>
-                    <SelectItem value="third" className="text-xs">Third (33%)</SelectItem>
-                    <SelectItem value="quarter" className="text-xs">Quarter (25%)</SelectItem>
-                    <SelectItem value="auto" className="text-xs">Auto</SelectItem>
+                    <SelectItem value="full" className="text-xs">{t('form_config.full_width')}</SelectItem>
+                    <SelectItem value="half" className="text-xs">{t('form_config.half_width')}</SelectItem>
+                    <SelectItem value="third" className="text-xs">{t('form_config.third_width')}</SelectItem>
+                    <SelectItem value="quarter" className="text-xs">{t('form_config.quarter_width')}</SelectItem>
+                    <SelectItem value="auto" className="text-xs">{t('form_config.auto')}</SelectItem>
                   </SelectContent>
                 </SelectMenu>
               </Field>
-              <Field label="Responsive Column Span" hint="1–12 grid columns.">
+              <Field label={t('form_config.responsive_span')} hint={t('form_config.responsive_span_hint')}>
                 <Input type="number" min={1} max={12} value={element.appearance.colSpan ?? ''} onChange={(e) => setAppearance({ colSpan: e.target.value === '' ? undefined : Number(e.target.value) })} className="h-8 text-sm" />
               </Field>
               {!isPresentational && (
                 <div className="grid grid-cols-2 gap-2">
-                  <Field label="Prefix"><Input value={element.appearance.prefix ?? ''} onChange={(e) => setAppearance({ prefix: e.target.value })} placeholder="$" className="h-8 text-sm" /></Field>
-                  <Field label="Suffix"><Input value={element.appearance.suffix ?? ''} onChange={(e) => setAppearance({ suffix: e.target.value })} placeholder=".00" className="h-8 text-sm" /></Field>
+                  <Field label={t('form_config.prefix')}><Input value={element.appearance.prefix ?? ''} onChange={(e) => setAppearance({ prefix: e.target.value })} placeholder="$" className="h-8 text-sm" /></Field>
+                  <Field label={t('form_config.suffix')}><Input value={element.appearance.suffix ?? ''} onChange={(e) => setAppearance({ suffix: e.target.value })} placeholder=".00" className="h-8 text-sm" /></Field>
                 </div>
               )}
-              <Field label="Tooltip">
+              <Field label={t('form_config.tooltip')}>
                 <Input value={element.appearance.tooltip ?? ''} onChange={(e) => setAppearance({ tooltip: e.target.value })} className="h-8 text-sm" />
               </Field>
-              <Field label="CSS Class" hint="Optional custom class names.">
+              <Field label={t('form_config.css_class')} hint={t('form_config.css_class_hint')}>
                 <Input value={element.appearance.cssClass ?? ''} onChange={(e) => setAppearance({ cssClass: e.target.value })} className="h-8 font-mono text-[11px]" />
               </Field>
             </TabsContent>
@@ -1108,6 +1086,7 @@ export function LineItemsConfigTabs({ element, formId, onChange }: {
   formId: string | null
   onChange: (patch: Partial<FormElement>) => void
 }) {
+  const t = useTranslation()
   const cfg: LineItemsConfig = element.lineItemConfig ?? {}
   const setConfig = (patch: Partial<LineItemsConfig>) => onChange({ lineItemConfig: { ...cfg, ...patch } })
 
@@ -1135,10 +1114,10 @@ export function LineItemsConfigTabs({ element, formId, onChange }: {
     <Tabs defaultValue="general" className="flex min-h-0 flex-1 flex-col">
       <div className="border-b border-[hsl(var(--border))] px-3 pb-2 pt-2.5">
         <TabsList className="w-full">
-          <TabsTrigger value="general" className="flex-1 text-[11px]">General</TabsTrigger>
-          <TabsTrigger value="layout" className="flex-1 text-[11px]">Layout</TabsTrigger>
-          <TabsTrigger value="behavior" className="flex-1 text-[11px]">Behavior</TabsTrigger>
-          <TabsTrigger value="columns" className="flex-1 text-[11px]">Columns</TabsTrigger>
+          <TabsTrigger value="general" className="flex-1 text-[11px]">{t('form_config.general')}</TabsTrigger>
+          <TabsTrigger value="layout" className="flex-1 text-[11px]">{t('form_config.layout')}</TabsTrigger>
+          <TabsTrigger value="behavior" className="flex-1 text-[11px]">{t('form_config.behavior')}</TabsTrigger>
+          <TabsTrigger value="columns" className="flex-1 text-[11px]">{t('form_config.columns')}</TabsTrigger>
         </TabsList>
       </div>
 
@@ -1146,19 +1125,19 @@ export function LineItemsConfigTabs({ element, formId, onChange }: {
         <div className="p-4">
           {/* GENERAL */}
           <TabsContent value="general" className="mt-0 space-y-4">
-            <Field label="Label">
+            <Field label={t('form_config.label')}>
               <Input value={element.label} onChange={(e) => onChange({ label: e.target.value })} className="h-8 text-sm" />
             </Field>
-            <Field label="Internal Name / Key" hint="Machine name — becomes the nested records key.">
+            <Field label={t('form_config.internal_name_key')} hint={t('form_config.nested_records_hint')}>
               <Input value={element.key} onChange={(e) => onChange({ key: slugifyKey(e.target.value) })} className="h-8 font-mono text-[12px]" />
             </Field>
-            <Field label="Description">
-              <Input value={element.description ?? ''} onChange={(e) => onChange({ description: e.target.value })} placeholder="Shown under the label" className="h-8 text-sm" />
+            <Field label={t('form_config.description')}>
+              <Input value={element.description ?? ''} onChange={(e) => onChange({ description: e.target.value })} placeholder={t('form_config.shown_under_label')} className="h-8 text-sm" />
             </Field>
 
             <div className="space-y-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Data Source</p>
-              <Field label="Source" hint="Existing form: the grid becomes a filtered view into a normal, independently-visible form — it keeps its own workflows/permissions/standalone page. Generated: the original behavior — a hidden child form owned entirely by this grid.">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('form_config.data_source')}</p>
+              <Field label={t('form_config.source')} hint={t('form_config.data_source_hint')}>
                 <SelectMenu
                   value={currentMode}
                   onValueChange={(sourceMode) => applySourceMode(sourceMode as 'generated' | 'existing')}
@@ -1174,15 +1153,15 @@ export function LineItemsConfigTabs({ element, formId, onChange }: {
                         sees this option at all. Only ever adopting an
                         EXISTING form going forward. */}
                     {currentMode === 'generated' && (
-                      <SelectItem value="generated">Generated (auto-create a child form)</SelectItem>
+                      <SelectItem value="generated">{t('form_config.generated_form')}</SelectItem>
                     )}
-                    <SelectItem value="existing">Existing form</SelectItem>
+                    <SelectItem value="existing">{t('form_config.existing_form')}</SelectItem>
                   </SelectContent>
                 </SelectMenu>
               </Field>
               {element.sourceMode === 'existing' && (
                 <>
-                  <Field label="Form" hint="Only forms already nested as a dependent of this one (Add Dependent Form) are eligible — that relationship is what lets this grid adopt it as a Line Items source.">
+                  <Field label={t('form_config.form')} hint={t('form_config.adopted_form_hint')}>
                     <FormReferenceSelect
                       value={element.adoptedFormRef}
                       excludeId={formId ?? undefined}
@@ -1191,7 +1170,7 @@ export function LineItemsConfigTabs({ element, formId, onChange }: {
                       onChange={(adoptedFormRef) => onChange({ adoptedFormRef, adoptedReferenceField: undefined })}
                     />
                   </Field>
-                  <Field label="Reference Field" hint="Which field on that form points back at this one. The adopted form must already have this field — adoption never creates or changes fields on a form it doesn't own.">
+                  <Field label={t('form_config.reference_field')} hint={t('form_config.reference_field_hint')}>
                     <AdoptedReferenceFieldSelect
                       formId={element.adoptedFormRef}
                       parentFormId={formId ?? undefined}
@@ -1204,17 +1183,17 @@ export function LineItemsConfigTabs({ element, formId, onChange }: {
             </div>
 
             <ToggleRow
-              label="Required"
+              label={t('form_config.required')}
               checked={element.behavior.required === 'always'}
               onCheckedChange={(v) => onChange({ behavior: { ...element.behavior, required: v ? 'always' : 'optional' } })}
             />
             <ToggleRow
-              label="Read Only"
+              label={t('form_config.read_only')}
               checked={element.behavior.readOnly === 'always'}
               onCheckedChange={(v) => onChange({ behavior: { ...element.behavior, readOnly: v ? 'always' : 'editable' } })}
             />
             <ToggleRow
-              label="Hidden"
+              label={t('form_config.hidden')}
               checked={element.behavior.visibility === 'hidden'}
               onCheckedChange={(v) => onChange({ behavior: { ...element.behavior, visibility: v ? 'hidden' : 'always' } })}
             />
@@ -1222,20 +1201,20 @@ export function LineItemsConfigTabs({ element, formId, onChange }: {
 
           {/* LAYOUT */}
           <TabsContent value="layout" className="mt-0 space-y-4">
-            <Field label="Display Mode" hint="Cards works better on narrow screens or grids with many columns.">
+            <Field label={t('form_config.display_mode')} hint={t('form_config.display_mode_hint')}>
               <SelectMenu value={cfg.displayMode ?? 'table'} onValueChange={(displayMode) => setConfig({ displayMode: displayMode as 'table' | 'cards' })}>
                 <SelectTrigger className="h-8 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="table">Table</SelectItem>
-                  <SelectItem value="cards">Cards</SelectItem>
+                  <SelectItem value="table">{t('form_config.table')}</SelectItem>
+                  <SelectItem value="cards">{t('form_config.cards')}</SelectItem>
                 </SelectContent>
               </SelectMenu>
             </Field>
             {(cfg.displayMode ?? 'table') === 'table' && (
               <>
-                <Field label="Table Height (px)" hint="Leave blank to grow with content.">
+                <Field label={t('form_config.table_height')} hint={t('form_config.grow_with_content')}>
                   <Input
                     type="number"
                     value={cfg.tableHeight ?? ''}
@@ -1243,45 +1222,45 @@ export function LineItemsConfigTabs({ element, formId, onChange }: {
                     className="h-8 text-sm"
                   />
                 </Field>
-                <ToggleRow label="Allow Column Resize" checked={cfg.allowResize !== false} onCheckedChange={(v) => setConfig({ allowResize: v })} />
-                <ToggleRow label="Sticky Header" checked={cfg.stickyHeader !== false} onCheckedChange={(v) => setConfig({ stickyHeader: v })} />
-                <ToggleRow label="Alternate Row Colors" checked={cfg.alternateRowColors !== false} onCheckedChange={(v) => setConfig({ alternateRowColors: v })} />
+                <ToggleRow label={t('form_config.allow_resize')} checked={cfg.allowResize !== false} onCheckedChange={(v) => setConfig({ allowResize: v })} />
+                <ToggleRow label={t('form_config.sticky_header')} checked={cfg.stickyHeader !== false} onCheckedChange={(v) => setConfig({ stickyHeader: v })} />
+                <ToggleRow label={t('form_config.alternate_row_colors')} checked={cfg.alternateRowColors !== false} onCheckedChange={(v) => setConfig({ alternateRowColors: v })} />
               </>
             )}
-            <ToggleRow label="Compact Mode" checked={!!cfg.compactMode} onCheckedChange={(v) => setConfig({ compactMode: v })} />
+            <ToggleRow label={t('form_config.compact_mode')} checked={!!cfg.compactMode} onCheckedChange={(v) => setConfig({ compactMode: v })} />
           </TabsContent>
 
           {/* BEHAVIOR */}
           <TabsContent value="behavior" className="mt-0 space-y-4">
-            <Field label="Row Editing" hint="Inline edits fields directly in the grid, with no separate row-open step. A column that is itself a nested Line Items grid always opens the sidebar regardless of this setting.">
+            <Field label={t('form_config.row_editing')} hint={t('form_config.row_editing_hint')}>
               <SelectMenu value={cfg.rowEditMode ?? 'sidebar'} onValueChange={(rowEditMode) => setConfig({ rowEditMode: rowEditMode as 'sidebar' | 'inline' })}>
                 <SelectTrigger className="h-8 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sidebar">Sidebar (open row to edit)</SelectItem>
-                  <SelectItem value="inline">Inline (edit directly in grid)</SelectItem>
+                  <SelectItem value="sidebar">{t('form_config.sidebar_edit')}</SelectItem>
+                  <SelectItem value="inline">{t('form_config.inline_edit')}</SelectItem>
                 </SelectContent>
               </SelectMenu>
             </Field>
-            <ToggleRow label="Allow Add Rows" checked={cfg.allowAddRows !== false} onCheckedChange={(v) => setConfig({ allowAddRows: v })} />
-            <ToggleRow label="Allow Delete Rows" checked={cfg.allowDeleteRows !== false} onCheckedChange={(v) => setConfig({ allowDeleteRows: v })} />
-            <ToggleRow label="Allow Duplicate Rows" checked={cfg.allowDuplicateRows !== false} onCheckedChange={(v) => setConfig({ allowDuplicateRows: v })} />
+            <ToggleRow label={t('form_config.allow_add_rows')} checked={cfg.allowAddRows !== false} onCheckedChange={(v) => setConfig({ allowAddRows: v })} />
+            <ToggleRow label={t('form_config.allow_delete_rows')} checked={cfg.allowDeleteRows !== false} onCheckedChange={(v) => setConfig({ allowDeleteRows: v })} />
+            <ToggleRow label={t('form_config.allow_duplicate_rows')} checked={cfg.allowDuplicateRows !== false} onCheckedChange={(v) => setConfig({ allowDuplicateRows: v })} />
             {/* Adopted/existing-form grids have no persisted row order (they
                 sort by created_at) — showing this toggle would imply an
                 effect it doesn't have. Only generated grids (their own
                 _row_order system column) actually honor it. */}
             {element.sourceMode !== 'existing' && (
-              <ToggleRow label="Allow Reorder Rows" checked={cfg.allowReorderRows !== false} onCheckedChange={(v) => setConfig({ allowReorderRows: v })} />
+              <ToggleRow label={t('form_config.allow_reorder_rows')} checked={cfg.allowReorderRows !== false} onCheckedChange={(v) => setConfig({ allowReorderRows: v })} />
             )}
             <div className="grid grid-cols-3 gap-2">
-              <Field label="Min Rows">
+              <Field label={t('form_config.min_rows')}>
                 <Input type="number" min={0} value={cfg.minRows ?? ''} onChange={(e) => setConfig({ minRows: e.target.value === '' ? undefined : Number(e.target.value) })} className="h-8 text-sm" />
               </Field>
-              <Field label="Max Rows">
+              <Field label={t('form_config.max_rows')}>
                 <Input type="number" min={0} value={cfg.maxRows ?? ''} onChange={(e) => setConfig({ maxRows: e.target.value === '' ? undefined : Number(e.target.value) })} className="h-8 text-sm" />
               </Field>
-              <Field label="Default Rows">
+              <Field label={t('form_config.default_rows')}>
                 <Input type="number" min={0} value={cfg.defaultRows ?? ''} onChange={(e) => setConfig({ defaultRows: e.target.value === '' ? undefined : Number(e.target.value) })} className="h-8 text-sm" />
               </Field>
             </div>
@@ -1305,13 +1284,13 @@ export function LineItemsConfigTabs({ element, formId, onChange }: {
     <ConfirmDialog
       open={pendingSourceMode !== null}
       onOpenChange={(open) => { if (!open) setPendingSourceMode(null) }}
-      title={pendingSourceMode === 'existing' ? 'Switch to an existing form?' : 'Switch to a generated form?'}
+      title={pendingSourceMode === 'existing' ? t('form_config.switch_existing_title') : t('form_config.switch_generated_title')}
       description={
         pendingSourceMode === 'existing'
-          ? 'This grid currently owns an auto-generated child form. Switching to an existing form will NOT delete or migrate it — the generated form (and any rows already in it) will stay behind, no longer linked to this field. You can find and manage it directly from the Forms list.'
-          : 'This grid was previously linked to a generated child form (from before it was switched to an existing form). Switching back to Generated will reuse and OVERWRITE that old form\'s columns rather than creating a fresh one — if it still holds rows from that earlier configuration, they\'ll remain, now under the new column layout.'
+          ? t('form_config.switch_existing_description')
+          : t('form_config.switch_generated_description')
       }
-      confirmLabel="Switch anyway"
+      confirmLabel={t('form_config.switch_anyway')}
       destructive
       onConfirm={() => {
         if (pendingSourceMode) onChange({ sourceMode: pendingSourceMode })
@@ -1328,19 +1307,18 @@ export function LineItemsConfigTabs({ element, formId, onChange }: {
  *  Shown instead of hiding the tab outright so it's clear the tab isn't
  *  broken/empty, just not the place to configure columns for this grid. */
 function AdoptedColumnsPreview({ formId }: { formId?: string }) {
+  const t = useTranslation()
   const { data: targetForm, isLoading } = useFormDef(formId ?? '')
 
   if (!formId) {
-    return <p className="p-3 text-[12px] text-[hsl(var(--muted-foreground))]">Select a form in the General tab first.</p>
+    return <p className="p-3 text-[12px] text-[hsl(var(--muted-foreground))]">{t('form_config.select_form_first')}</p>
   }
   if (isLoading) {
-    return <p className="p-3 text-[12px] text-[hsl(var(--muted-foreground))]">Loading fields…</p>
+    return <p className="p-3 text-[12px] text-[hsl(var(--muted-foreground))]">{t('form_config.loading_fields')}</p>
   }
   return (
     <div className="space-y-1 p-1">
-      <p className="mb-2 text-[11px] text-[hsl(var(--muted-foreground))]">
-        Columns come from this form's own fields. Edit them on its own page in the Forms list.
-      </p>
+      <p className="mb-2 text-[11px] text-[hsl(var(--muted-foreground))]">{t('form_config.adopted_columns_help')}</p>
       {(targetForm?.fields ?? []).map((f) => (
         <div key={f.name} className="flex items-center justify-between rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 px-2.5 py-1.5 text-[12px]">
           <span className="text-[hsl(var(--foreground))]">{f.label || f.name}</span>
@@ -1356,11 +1334,12 @@ function AdoptedColumnsPreview({ formId }: { formId?: string }) {
  *  combobox isn't rendered there at all, just this label, so there's no
  *  affordance to repoint the reference away from the parent. */
 function ParentFormName({ formId }: { formId?: string }) {
+  const t = useTranslation()
   const { data: form, isLoading } = useFormDef(formId ?? '')
   return (
     <>
       <FileText size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
-      <span className="truncate">{isLoading ? 'Loading…' : form?.name ?? formId}</span>
+      <span className="truncate">{isLoading ? t('form_config.loading') : form?.name ?? formId}</span>
     </>
   )
 }

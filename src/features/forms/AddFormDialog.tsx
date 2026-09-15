@@ -5,6 +5,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { LinkSharedFormDialog } from './LinkSharedFormDialog'
 import { ImportFormJsonDialog } from './ImportFormJsonDialog'
 
@@ -16,26 +17,31 @@ interface AddFormDialogProps {
 
 type Choice = 'scratch' | 'shared' | 'json'
 
-const CHOICES: { id: Choice; icon: LucideIcon; title: string; description: string }[] = [
-  {
-    id: 'scratch',
-    icon: PencilRuler,
-    title: 'Form from scratch',
-    description: 'Open the blank builder and drag fields onto the canvas.',
-  },
-  {
-    id: 'shared',
-    icon: Share2,
-    title: 'Shared from another app',
-    description: 'Use a form another app in this workspace has shared. It stays owned by that app.',
-  },
-  {
-    id: 'json',
-    icon: Braces,
-    title: 'JSON specification',
-    description: 'Paste a form definition as JSON — the shape an AI agent writes.',
-  },
-]
+// Local to this one component (never imported elsewhere), so a t()-taking
+// factory is simpler than dynamic-key reconstruction — same shape as
+// fnLabels(t)/operatorLabel(value, t) elsewhere in this migration.
+function buildChoices(t: ReturnType<typeof useTranslation>): { id: Choice; icon: LucideIcon; title: string; description: string }[] {
+  return [
+    {
+      id: 'scratch',
+      icon: PencilRuler,
+      title: t('forms.add_dialog.scratch_title'),
+      description: t('forms.add_dialog.scratch_description'),
+    },
+    {
+      id: 'shared',
+      icon: Share2,
+      title: t('forms.add_dialog.shared_title'),
+      description: t('forms.add_dialog.shared_description'),
+    },
+    {
+      id: 'json',
+      icon: Braces,
+      title: t('forms.add_dialog.json_title'),
+      description: t('forms.add_dialog.json_description'),
+    },
+  ]
+}
 
 /** The "Add Form" entry point. Replaces the direct link to the blank builder
  *  that used to sit behind this button, which was the only way to create a
@@ -46,9 +52,11 @@ const CHOICES: { id: Choice; icon: LucideIcon; title: string; description: strin
  *  the page already carries a floating action button plus a help button
  *  without room for more. */
 export function AddFormDialog({ appId, open, onOpenChange }: AddFormDialogProps) {
+  const t = useTranslation()
   const navigate = useNavigate()
   const [sharedOpen, setSharedOpen] = useState(false)
   const [jsonOpen, setJsonOpen] = useState(false)
+  const choices = buildChoices(t)
 
   const choose = (choice: Choice) => {
     onOpenChange(false)
@@ -65,12 +73,12 @@ export function AddFormDialog({ appId, open, onOpenChange }: AddFormDialogProps)
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="w-full max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add a form</DialogTitle>
-            <DialogDescription>How would you like to start?</DialogDescription>
+            <DialogTitle>{t('forms.add_dialog.title')}</DialogTitle>
+            <DialogDescription>{t('forms.add_dialog.description')}</DialogDescription>
           </DialogHeader>
 
           <div className="mt-2 flex flex-col gap-2">
-            {CHOICES.map(({ id, icon: Icon, title, description }) => (
+            {choices.map(({ id, icon: Icon, title, description }) => (
               <button
                 key={id}
                 type="button"

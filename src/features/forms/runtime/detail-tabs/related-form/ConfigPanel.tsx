@@ -15,6 +15,7 @@ import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuil
 import { SortRuleList } from '@/components/ui/sort-rule-list'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { nanoid } from '@/features/workflows/builder/nanoid'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { DetailTabConfigPanelProps } from '../contract'
 import type { RelatedFormTabConfig } from './schema'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
@@ -34,6 +35,7 @@ function ensureSortIds(sort: SortRule[] | undefined): SortRule[] {
 }
 
 export function RelatedFormConfigPanel({ config, onChange, formId }: DetailTabConfigPanelProps<RelatedFormTabConfig>) {
+  const t = useTranslation()
   const { data: targetForm } = useFormDef(config.targetFormId)
 
   // Only reference fields on the target form that actually point back at
@@ -52,7 +54,7 @@ export function RelatedFormConfigPanel({ config, onChange, formId }: DetailTabCo
 
   return (
     <div className="space-y-4">
-      <Field label="Show records from" hint="Only forms with a field that references this form are listed.">
+      <Field label={t('related_form.config.show_records_from')} hint={t('related_form.config.show_records_hint')}>
         <FormReferenceSelect
           value={config.targetFormId || undefined}
           excludeId={formId}
@@ -62,15 +64,15 @@ export function RelatedFormConfigPanel({ config, onChange, formId }: DetailTabCo
       </Field>
 
       {config.targetFormId && (
-        <Field label="Linked via field" hint="Which reference field on that form points back at this one.">
+        <Field label={t('related_form.config.linked_via_field')} hint={t('related_form.config.linked_via_hint')}>
           {validTargetFields.length === 0 ? (
-            <p className="text-[11px] text-slate-400">This form has no field referencing back — pick a different target form.</p>
+            <p className="text-[11px] text-slate-400">{t('related_form.config.no_reference_field')}</p>
           ) : (
             <SelectMenu
               value={config.targetFieldName || undefined}
               onValueChange={(targetFieldName) => onChange({ ...config, targetFieldName })}
             >
-              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select a field…" /></SelectTrigger>
+              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('related_form.config.select_a_field_placeholder')} /></SelectTrigger>
               <SelectContent>
                 {validTargetFields.map((f) => (
                   <SelectItem key={f.name} value={f.name} className="text-xs">{f.label || f.name}</SelectItem>
@@ -83,7 +85,7 @@ export function RelatedFormConfigPanel({ config, onChange, formId }: DetailTabCo
 
       {config.targetFormId && config.targetFieldName && (
         <>
-          <Field label="Additional filter" hint="Composed with the relationship link — narrows which linked records show, never widens past it.">
+          <Field label={t('related_form.config.additional_filter')} hint={t('related_form.config.additional_filter_hint')}>
             <div className="overflow-x-auto">
               <FilterBuilder
                 group={filter}
@@ -95,7 +97,7 @@ export function RelatedFormConfigPanel({ config, onChange, formId }: DetailTabCo
             </div>
           </Field>
 
-          <Field label="Sort">
+          <Field label={t('related_form.config.sort')}>
             <SortRuleList
               rules={sort}
               fields={fieldsWithSystem.map((f) => ({ name: f.name, label: f.label }))}
@@ -108,7 +110,7 @@ export function RelatedFormConfigPanel({ config, onChange, formId }: DetailTabCo
               checked={!!config.hideWhenEmpty}
               onCheckedChange={(v) => onChange({ ...config, hideWhenEmpty: !!v })}
             />
-            <Label className="cursor-pointer text-[12px] font-normal text-slate-600">Hide this tab when there are no linked records</Label>
+            <Label className="cursor-pointer text-[12px] font-normal text-slate-600">{t('related_form.config.hide_when_empty')}</Label>
           </label>
         </>
       )}

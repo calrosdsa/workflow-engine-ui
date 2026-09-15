@@ -1,10 +1,11 @@
 import { useMemo } from 'react'
-import { ChevronLeft, ChevronRight, ListTree, Zap } from 'lucide-react'
+import { ListTree, X, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBuilderStore } from './store'
 import { NODE_REGISTRY } from './node-registry'
 import { deriveOutline, type OutlineRow } from './outline'
 import type { NodeType } from '../types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 // OutlinePanel is the flow reading of the canvas: the same workflow as a
 // step tree — trigger, steps top to bottom, branches and loop bodies
@@ -30,85 +31,76 @@ interface OutlinePanelProps {
   onToggle: () => void
 }
 
+// Surfaced only through the header's "Outline" tab (WorkflowBuilderPage) —
+// no left-edge collapsed rail of its own. Renders nothing while closed, so
+// there is never a thin always-there strip cluttering the canvas edge.
 export function OutlinePanel({ open, onToggle }: OutlinePanelProps) {
+  const t = useTranslation()
   const { nodes, edges, selectedNodeId, selectNode } = useBuilderStore()
   const outline = useMemo(() => deriveOutline(nodes, edges), [nodes, edges])
 
+  if (!open) return null
+
   return (
-    <aside
-      className={cn(
-        'relative flex shrink-0 flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] transition-[width] duration-200',
-        open ? 'w-64' : 'w-10',
-      )}
-    >
-      <button
-        onClick={onToggle}
-        className="absolute -right-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] shadow-sm transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
-        title={open ? 'Collapse outline' : 'Expand outline'}
-      >
-        {open ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}
-      </button>
-
-      {!open && (
-        <div className="flex flex-1 flex-col items-center gap-2 pt-4">
-          <ListTree size={15} className="text-[hsl(var(--muted-foreground))]" />
-          <span className="rotate-90 select-none whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-            Outline
-          </span>
-        </div>
-      )}
-
-      {open && (
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className="flex items-center gap-2 border-b border-[hsl(var(--border))] px-3 py-2.5">
+    <aside className="relative flex w-64 shrink-0 flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex items-center justify-between gap-2 border-b border-[hsl(var(--border))] px-3 py-2.5">
+          <div className="flex items-center gap-2">
             <ListTree size={14} className="text-[hsl(var(--muted-foreground))]" />
             <span className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-              Outline
+              {t('workflows.outline.title')}
             </span>
           </div>
+          <button
+            onClick={onToggle}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+            title={t('workflows.outline.close')}
+          >
+            <X size={13} />
+          </button>
+        </div>
 
-          {!outline.structured && (
-            <p className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 px-3 py-2 text-[11px] leading-snug text-[hsl(var(--muted-foreground))]">
-              Free-form graph — showing every node in run order instead of a
-              step tree.
+        {!outline.structured && (
+          <p className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 px-3 py-2 text-[11px] leading-snug text-[hsl(var(--muted-foreground))]">
+            {t('workflows.outline.free_form')}
+          </p>
+        )}
+
+        <div className="min-h-0 flex-1 overflow-y-auto py-1.5">
+          {outline.rows.length === 0 && (
+            <p className="px-3 py-2 text-xs text-[hsl(var(--muted-foreground))]">
+              {t('workflows.outline.empty')}
             </p>
           )}
-
-          <div className="min-h-0 flex-1 overflow-y-auto py-1.5">
-            {outline.rows.length === 0 && (
-              <p className="px-3 py-2 text-xs text-[hsl(var(--muted-foreground))]">
-                No steps yet — add nodes on the canvas.
-              </p>
-            )}
-            {outline.rows.map((row, i) =>
-              row.kind === 'tag' ? (
-                <div
-                  key={`tag-${i}`}
-                  className={cn(
-                    'select-none px-3 pb-0.5 pt-1.5 font-mono text-[10px] font-bold uppercase tracking-wider',
-                    TAG_STYLES[row.text!] ?? 'text-[hsl(var(--muted-foreground))]',
-                  )}
-                  style={{ paddingLeft: 12 + row.depth * 14 }}
-                >
-                  {row.text}
-                </div>
-              ) : (
-                <OutlineStepRow
-                  key={row.id}
-                  row={row}
-                  selected={selectedNodeId === row.id}
-                  onSelect={() => selectNode(row.id ?? null)}
-                />
-              ),
-            )}
-          </div>
+          {outline.rows.map((row, i) =>
+            row.kind === 'tag' ? (
+              <div
+                key={`tag-${i}`}
+                className={cn(
+                  'select-none px-3 pb-0.5 pt-1.5 font-mono text-[10px] font-bold uppercase tracking-wider',
+                  TAG_STYLES[row.text!] ?? 'text-[hsl(var(--muted-foreground))]',
+                )}
+                style={{ paddingLeft: 12 + row.depth * 14 }}
+              >
+                {row.text}
+              </div>
+            ) : (
+              <OutlineStepRow
+                key={row.id}
+                row={row}
+                selected={selectedNodeId === row.id}
+                onSelect={() => selectNode(row.id ?? null)}
+              />
+            ),
+          )}
         </div>
-      )}
+      </div>
     </aside>
   )
 }
 
 function OutlineStepRow({ row, selected, onSelect }: { row: OutlineRow; selected: boolean; onSelect: () => void }) {
+  const t = useTranslation()
   const entry = NODE_REGISTRY[row.type as NodeType]
   const Icon = entry?.icon ?? Zap
   return (
@@ -133,7 +125,7 @@ function OutlineStepRow({ row, selected, onSelect }: { row: OutlineRow; selected
       </span>
       <span className="min-w-0 flex-1 truncate font-medium">{row.label}</span>
       <span className="shrink-0 font-mono text-[10px] text-[hsl(var(--muted-foreground))]">
-        {FLOW_NAMES[row.type ?? ''] ?? row.type}
+        {row.type === 'condition' ? t('workflows.outline.if') : row.type === 'iterator' ? t('workflows.outline.for_each') : FLOW_NAMES[row.type ?? ''] ?? row.type}
       </span>
     </button>
   )

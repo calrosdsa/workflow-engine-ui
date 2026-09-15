@@ -9,6 +9,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MENU_TYPE_REGISTRY, getMenuType, type MenuTypeRegistryEntry } from '@/features/menus/menu-registry'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import { UnavailableMenu } from './UnavailableMenu'
 
 const UNREGISTERED = 'timeline'
@@ -34,7 +35,7 @@ describe('FR-D1-008 — unregistered menu_type', () => {
   })
 
   it('renders the fallback rather than crashing, naming the offending type', () => {
-    render(<UnavailableMenu type={UNREGISTERED} />)
+    render(<I18nProvider><UnavailableMenu type={UNREGISTERED} /></I18nProvider>)
     expect(screen.getByText('Menu unavailable')).toBeTruthy()
     expect(screen.getByText(new RegExp(UNREGISTERED))).toBeTruthy()
   })

@@ -6,6 +6,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useCreateSavedView, useUpdateSavedView, useDeleteSavedView } from './hooks'
 import { SaveViewDialog } from './SaveViewDialog'
 import type { SavedView, SavedViewConfig, ViewLayout } from './types'
@@ -44,6 +45,7 @@ interface ViewSwitcherProps {
 // SearchMenuRuntime's toolbar alongside the existing Filter toggle/Create
 // button (RecordsTable.tsx's headerActions region).
 export function ViewSwitcher({ appId, menuId, formId, fields, enumLabels, views, activeView, onSelect, currentConfig }: ViewSwitcherProps) {
+  const t = useTranslation()
   const [dialogMode, setDialogMode] = useState<'closed' | 'create' | 'edit'>('closed')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const create = useCreateSavedView(menuId)
@@ -54,6 +56,7 @@ export function ViewSwitcher({ appId, menuId, formId, fields, enumLabels, views,
   const sharedViews = views.filter((v) => v.visibility !== 'private')
 
   const ActiveIcon = activeView ? LAYOUT_ICON[activeView.config.layout] : LayoutList
+  const defaultViewLabel = t('menus.saved_views.switcher.default_view')
 
   const closeDialog = () => setDialogMode('closed')
 
@@ -63,20 +66,20 @@ export function ViewSwitcher({ appId, menuId, formId, fields, enumLabels, views,
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="gap-1.5">
             <ActiveIcon size={14} className="shrink-0" />
-            <span className="max-w-[14rem] truncate" title={activeView?.name ?? 'Default view'}>{activeView?.name ?? 'Default view'}</span>
+            <span className="max-w-[14rem] truncate" title={activeView?.name ?? defaultViewLabel}>{activeView?.name ?? defaultViewLabel}</span>
             <ChevronDown size={12} className="shrink-0 opacity-60" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64" container={document.getElementById('runtime-root')}>
           <DropdownMenuItem onSelect={() => onSelect(undefined)}>
-            <LayoutList size={13} />Default view
-            {!activeView && <span className="text-[10px] text-[hsl(var(--muted-foreground))]">(current)</span>}
+            <LayoutList size={13} />{defaultViewLabel}
+            {!activeView && <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('menus.saved_views.current')}</span>}
           </DropdownMenuItem>
 
           {myViews.length > 0 && (
             <>
               <DropdownMenuSeparator />
-              <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">My Views</div>
+              <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">{t('menus.saved_views.switcher.my_views')}</div>
               <DropdownMenuGroup>
                 {myViews.map((v) => (
                   <ViewRow key={v.id} view={v} active={activeView?.id === v.id} onSelect={() => onSelect(v)}
@@ -90,7 +93,7 @@ export function ViewSwitcher({ appId, menuId, formId, fields, enumLabels, views,
           {sharedViews.length > 0 && (
             <>
               <DropdownMenuSeparator />
-              <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Shared Views</div>
+              <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">{t('menus.saved_views.switcher.shared_views')}</div>
               <DropdownMenuGroup>
                 {sharedViews.map((v) => (
                   <ViewRow key={v.id} view={v} active={activeView?.id === v.id} onSelect={() => onSelect(v)}
@@ -103,7 +106,7 @@ export function ViewSwitcher({ appId, menuId, formId, fields, enumLabels, views,
 
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => setDialogMode('create')}>
-            <Plus size={13} />Save current as new view
+            <Plus size={13} />{t('menus.saved_views.save_as_new')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -132,9 +135,9 @@ export function ViewSwitcher({ appId, menuId, formId, fields, enumLabels, views,
       <ConfirmDialog
         open={!!confirmDeleteId}
         onOpenChange={(o) => !o && setConfirmDeleteId(null)}
-        title="Delete this view?"
-        description="This can't be undone. Anyone this view is shared with will lose access to it."
-        confirmLabel="Delete"
+        title={t('menus.saved_views.switcher.delete_title')}
+        description={t('menus.saved_views.switcher.delete_description')}
+        confirmLabel={t('common.delete')}
         destructive
         loading={del.isPending}
         container={document.getElementById('runtime-root')}
@@ -159,6 +162,7 @@ function ViewRow({ view, active, onSelect, onEdit, onDelete }: {
   onEdit: () => void
   onDelete: () => void
 }) {
+  const t = useTranslation()
   const Icon = LAYOUT_ICON[view.config.layout]
   return (
     <div className="group flex items-center gap-1 rounded-md px-1 hover:bg-[hsl(var(--accent))]">
@@ -166,7 +170,7 @@ function ViewRow({ view, active, onSelect, onEdit, onDelete }: {
         <span className="flex items-center gap-2 truncate">
           <Icon size={13} className="shrink-0" />
           <span className="truncate">{view.name}</span>
-          {active && <span className="text-[10px] text-[hsl(var(--muted-foreground))]">(current)</span>}
+          {active && <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('menus.saved_views.current')}</span>}
         </span>
         {view.is_default && <Star size={11} className="shrink-0 fill-current text-[hsl(var(--warning))]" />}
       </DropdownMenuItem>
@@ -178,10 +182,10 @@ function ViewRow({ view, active, onSelect, onEdit, onDelete }: {
         // button's own focus-visible both force the pair visible the same
         // way hover already does, so Tab reveals them instead of hiding them.
         <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">
-          <button onClick={(e) => { e.stopPropagation(); onEdit() }} className="rounded p-1 hover:bg-[hsl(var(--muted))] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1" title="Edit view">
+          <button onClick={(e) => { e.stopPropagation(); onEdit() }} className="rounded p-1 hover:bg-[hsl(var(--muted))] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1" title={t('menus.saved_views.edit_view')}>
             <Pencil size={11} />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); onDelete() }} className="rounded p-1 text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1" title="Delete view">
+          <button onClick={(e) => { e.stopPropagation(); onDelete() }} className="rounded p-1 text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1" title={t('menus.saved_views.switcher.delete_view_title')}>
             <Trash2 size={11} />
           </button>
         </div>

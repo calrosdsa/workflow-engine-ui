@@ -16,12 +16,14 @@ import { MentionAutocomplete } from './MentionAutocomplete'
 import { useMentionEditor } from './useMentionEditor'
 import { parseMentionedUserIds } from './mentions'
 import { useAuthStore } from '@/stores/auth'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { DetailTabRendererProps } from '../contract'
 import type { CommentTabConfig } from './schema'
 
 const PAGE_SIZE = 25
 
 export function CommentTabRenderer({ formId, recordId }: DetailTabRendererProps<CommentTabConfig>) {
+  const t = useTranslation()
   const [page, setPage] = useState(1)
   const { data, isLoading } = useComments(formId, recordId, page, PAGE_SIZE)
   const currentUserId = useAuthStore((s) => s.session?.user_id)
@@ -63,7 +65,7 @@ export function CommentTabRenderer({ formId, recordId }: DetailTabRendererProps<
           ref={editorHandleRef}
           onInput={mention.onEditorInput}
           onKeyDown={(e) => { mention.onEditorKeyDown(e) }}
-          placeholder={canComment ? 'Write a comment… (type @ to mention someone)' : 'You do not have permission to comment on this record.'}
+          placeholder={canComment ? t('comment.tab.write_placeholder') : t('comment.tab.no_permission')}
           disabled={!canComment || createComment.isPending}
           className="text-sm"
         />
@@ -82,10 +84,10 @@ export function CommentTabRenderer({ formId, recordId }: DetailTabRendererProps<
             className="gap-1.5"
             onClick={submit}
             disabled={!canComment || createComment.isPending || !draft.trim()}
-            title={canComment ? undefined : 'You do not have permission to comment on this record.'}
+            title={canComment ? undefined : t('comment.tab.no_permission')}
           >
             <Send size={12} />
-            {createComment.isPending ? 'Posting…' : 'Comment'}
+            {createComment.isPending ? t('comment.tab.posting') : t('comment.tab.comment_button')}
           </Button>
         </div>
       </div>
@@ -99,7 +101,7 @@ export function CommentTabRenderer({ formId, recordId }: DetailTabRendererProps<
       ) : entries.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-10 text-center" style={{ borderColor: 'hsl(var(--border))' }}>
           <MessageSquare size={20} style={{ color: 'hsl(var(--muted-foreground))' }} />
-          <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>No comments yet.</p>
+          <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('comment.tab.no_comments')}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -122,10 +124,10 @@ export function CommentTabRenderer({ formId, recordId }: DetailTabRendererProps<
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
-          <span>Page {page} of {totalPages}</span>
+          <span>{t('common.page_of', { page, totalPages })}</span>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="h-7 px-2">Prev</Button>
-            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="h-7 px-2">Next</Button>
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="h-7 px-2">{t('common.prev')}</Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="h-7 px-2">{t('common.next')}</Button>
           </div>
         </div>
       )}
@@ -133,9 +135,9 @@ export function CommentTabRenderer({ formId, recordId }: DetailTabRendererProps<
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Delete this comment?"
-        description="This action can't be undone."
-        confirmLabel="Delete"
+        title={t('comment.tab.delete_confirm_title')}
+        description={t('comment.tab.delete_confirm_description')}
+        confirmLabel={t('common.delete')}
         destructive
         loading={deleteComment.isPending}
         onConfirm={async () => {

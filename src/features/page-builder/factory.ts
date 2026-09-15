@@ -31,6 +31,12 @@ export function createComponent(component: PageComponentType): PageComponent {
       base.height = 24
       break
     case 'button':
+      // reg.label, not a t() lookup: this seeds PageComponent.label, which
+      // is persisted the moment this component is created — a button
+      // created under the Spanish UI would otherwise be permanently
+      // labeled "Botón/Enlace" and render that way for English viewers
+      // too. Same exclusion class as menu-registry.ts's entry.label — see
+      // component-registry.ts's own comment on this field.
       base.label = reg.label
       base.linkType = 'external'
       base.variant = 'primary'

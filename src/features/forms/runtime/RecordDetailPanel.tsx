@@ -31,6 +31,7 @@ import { DetailTabList } from './detail-tabs/DetailTabList'
 import { ZonedDetailTabList } from './detail-tabs/ZonedDetailTabList'
 import { MAX_GROUP_DEPTH } from './detail-tabs/contract'
 import { FormSectionShell, shouldChromeSections } from './FormSectionShell'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import './detail-tabs'
 import type { FormSchema, DetailTabConfig } from '@/features/form-builder/schema'
 import type { FieldDef, AuditLogEntry, AuditFieldChange, LinkedRecordGroup } from '@/features/forms/types'
@@ -108,6 +109,7 @@ export function DetailsTab({
   onNavigateToRecord?: (formId: string, recordId: string) => void
   groupDepth?: number
 }) {
+  const t = useTranslation()
   const { data: record, isLoading } = useRecordDetail(formId, recordId)
   const viewer = useCurrentViewer()
   // Only one field can be in edit mode at a time across this whole record —
@@ -117,8 +119,8 @@ export function DetailsTab({
   // unlike el.key which theoretically could collide across sections) so an
   // editor knows whether IT is the one currently open.
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null)
-  if (isLoading) return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading…</p>
-  if (!record) return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Record not found.</p>
+  if (isLoading) return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('common.loading')}</p>
+  if (!record) return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('record_detail_panel.record_not_found')}</p>
 
   // Same cycle-protection as GroupTabRenderer — 'details' is itself pickable
   // inside a Tab Group (or another Details' own childTabs), so nothing stops
@@ -127,7 +129,7 @@ export function DetailsTab({
   const childTabList = childTabs && childTabs.length > 0 ? (
     (groupDepth ?? 0) >= MAX_GROUP_DEPTH ? (
       <p className="mt-6 border-t pt-4 text-sm" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--destructive))' }}>
-        Nested too deeply (possibly a group containing itself) — stopped rendering further.
+        {t('record_detail_panel.tabs_too_deep')}
       </p>
     ) : (
       <div className="mt-6 border-t pt-4" style={{ borderColor: 'hsl(var(--border))' }}>
@@ -255,20 +257,36 @@ function userDisplayName(u: TeamUser): string {
 function actorLabel(
   entry: AuditLogEntry,
   users: TeamUser[] | undefined,
+  t: ReturnType<typeof useTranslation>,
 ): { icon: typeof UserIcon; label: string; sublabel?: string } {
-  if (entry.actor_workflow_execution_id) return { icon: WorkflowIcon, label: 'Automation', sublabel: 'Workflow' }
+  if (entry.actor_workflow_execution_id) {
+    return { icon: WorkflowIcon, label: t('record_detail_panel.audit.actor_automation'), sublabel: t('record_detail_panel.audit.actor_automation_sublabel') }
+  }
   if (entry.actor_user_id) {
     const user = users?.find((u) => u.id === entry.actor_user_id)
     if (user) return { icon: UserIcon, label: userDisplayName(user), sublabel: user.email }
-    return { icon: UserIcon, label: `User ${entry.actor_user_id.slice(0, 8)}` }
+    return { icon: UserIcon, label: t('record_detail_panel.audit.actor_user_fallback', { id: entry.actor_user_id.slice(0, 8) }) }
   }
-  return { icon: UserIcon, label: 'System' }
+  return { icon: UserIcon, label: t('common.system') }
 }
 
-const ACTION_BADGE: Record<AuditLogEntry['action'], { variant: 'success' | 'default' | 'destructive'; label: string }> = {
-  create: { variant: 'success', label: 'Created' },
-  update: { variant: 'default', label: 'Updated' },
-  delete: { variant: 'destructive', label: 'Deleted' },
+// A 3-entry local const, not a registry — its only consumer is this file, so
+// (unlike custom-actions/detail-tabs' registerX calls, which run at module
+// load in a DIFFERENT file from any t()) there's no reason to keep the label
+// raw here. Variant only; the label itself is resolved via actionLabel below,
+// called from within AuditLogTab where t() is in scope.
+const ACTION_BADGE: Record<AuditLogEntry['action'], { variant: 'success' | 'default' | 'destructive' }> = {
+  create: { variant: 'success' },
+  update: { variant: 'default' },
+  delete: { variant: 'destructive' },
+}
+
+function actionLabel(action: AuditLogEntry['action'], t: ReturnType<typeof useTranslation>): string {
+  switch (action) {
+    case 'create': return t('record_detail_panel.audit.action_create')
+    case 'update': return t('record_detail_panel.audit.action_update')
+    case 'delete': return t('record_detail_panel.audit.action_delete')
+  }
 }
 
 /** id/created_at/updated_at ride along in every field_changes payload
@@ -286,6 +304,7 @@ function realFieldChanges(entry: AuditLogEntry): [string, AuditFieldChange][] {
 }
 
 export function AuditLogTab({ formId, recordId, fields, schema }: { formId: string; recordId: string; fields: FieldDef[]; schema?: FormSchema }) {
+  const t = useTranslation()
   const [page, setPage] = useState(1)
   const pageSize = 25
   const { data, isLoading } = useAuditLog(formId, recordId, page, pageSize)
@@ -318,7 +337,7 @@ export function AuditLogTab({ formId, recordId, fields, schema }: { formId: stri
     return (
       <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-10 text-center" style={{ borderColor: 'hsl(var(--border))' }}>
         <History size={20} style={{ color: 'hsl(var(--muted-foreground))' }} />
-        <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>No audit history yet.</p>
+        <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('record_detail_panel.audit.empty')}</p>
       </div>
     )
   }
@@ -326,7 +345,7 @@ export function AuditLogTab({ formId, recordId, fields, schema }: { formId: stri
   return (
     <div className="space-y-2">
       {entries.map((entry) => {
-        const actor = actorLabel(entry, users)
+        const actor = actorLabel(entry, users, t)
         const Icon = actor.icon
         const isOpen = expanded === entry.id
         const changes = realFieldChanges(entry)
@@ -344,7 +363,7 @@ export function AuditLogTab({ formId, recordId, fields, schema }: { formId: stri
                 <span className="flex min-w-0 flex-col">
                   <span className="flex items-center gap-1.5">
                     <span className="truncate text-[13px] font-medium" style={{ color: 'hsl(var(--foreground))' }}>{actor.label}</span>
-                    <Badge variant={badge.variant} className="shrink-0 px-1.5 py-0 text-[10px]">{badge.label}</Badge>
+                    <Badge variant={badge.variant} className="shrink-0 px-1.5 py-0 text-[10px]">{actionLabel(entry.action, t)}</Badge>
                   </span>
                   {actor.sublabel && (
                     <span className="flex items-center gap-1 truncate text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>
@@ -377,13 +396,13 @@ export function AuditLogTab({ formId, recordId, fields, schema }: { formId: stri
       })}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
-          <span>Page {page} of {totalPages}</span>
+          <span>{t('common.page_of', { page, totalPages })}</span>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="h-7 gap-1 px-2">
-              <ChevronLeft size={12} />Prev
+              <ChevronLeft size={12} />{t('common.prev')}
             </Button>
             <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="h-7 gap-1 px-2">
-              Next<ChevronRight size={12} />
+              {t('common.next')}<ChevronRight size={12} />
             </Button>
           </div>
         </div>
@@ -397,17 +416,18 @@ export function LinkedRecordsTab({ formId, recordId, onNavigateToRecord }: {
   recordId: string
   onNavigateToRecord?: (formId: string, recordId: string) => void
 }) {
+  const t = useTranslation()
   const [page, setPage] = useState(1)
   const pageSize = 10
   const { data, isLoading } = useLinkedRecords(formId, recordId, page, pageSize)
 
   const groups = data?.groups ?? []
-  if (!isLoading && groups.length === 0) return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>No linked records.</p>
+  if (!isLoading && groups.length === 0) return <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('record_detail_panel.linked.empty')}</p>
 
   if (isLoading) {
     return (
       <div className="rounded-lg border" style={{ borderColor: 'hsl(var(--border))' }}>
-        <DataTable columns={[{ key: '__preview', label: 'Linked records', sortable: false }]} rows={[]} getRowId={() => ''} loading />
+        <DataTable columns={[{ key: '__preview', label: t('record_detail_panel.linked.column_label'), sortable: false }]} rows={[]} getRowId={() => ''} loading />
       </div>
     )
   }
@@ -437,6 +457,7 @@ function LinkedRecordGroupCard({ group, page, onPageChange, onNavigateToRecord }
   // fields (see resolveRecordTitle) instead of just falling back to
   // name/label/id. group.records already carry full field values (not just
   // ids), so no per-row fetch is needed, just this one query per group.
+  const t = useTranslation()
   const { data: targetForm } = useFormDef(group.form_id)
 
   const totalPages = Math.max(1, Math.ceil(group.total / group.page_size))
@@ -446,18 +467,18 @@ function LinkedRecordGroupCard({ group, page, onPageChange, onNavigateToRecord }
   return (
     <div className="rounded-lg border" style={{ borderColor: 'hsl(var(--border))' }}>
       <div className="border-b px-3 py-2 text-xs font-medium" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
-        {group.form_name} <span style={{ color: 'hsl(var(--muted-foreground))' }}>via {group.field_label}</span>
+        {group.form_name} <span style={{ color: 'hsl(var(--muted-foreground))' }}>{t('record_detail_panel.linked.via_field', { field: group.field_label })}</span>
       </div>
       <DataTable
         columns={columns}
         rows={rows}
         getRowId={(r) => r.id as string}
         onRowClick={onNavigateToRecord ? (r) => onNavigateToRecord(group.form_id, r.id as string) : undefined}
-        emptyMessage="No records."
+        emptyMessage={t('record_detail_panel.linked.no_records')}
       />
       {totalPages > 1 && (
         <div className="flex items-center justify-between border-t px-3 py-1.5 text-[11px]" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}>
-          <span>Page {group.page} of {totalPages}</span>
+          <span>{t('common.page_of', { page: group.page, totalPages })}</span>
           <div className="flex gap-1.5">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)} className="h-6 gap-1 px-1.5">
               <ChevronLeft size={11} />

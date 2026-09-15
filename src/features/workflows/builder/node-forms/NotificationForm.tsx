@@ -7,6 +7,7 @@ import { UserSelect } from '@/features/form-builder/config/UserSelect'
 import { cn } from '@/lib/utils'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, NotificationConfig, NotificationSeverity, ValueMode } from '../../types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 export function normaliseNotificationConfig(raw: unknown): NotificationConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<NotificationConfig>
@@ -30,6 +31,7 @@ const SEVERITIES: { value: NotificationSeverity; label: string; activeClass: str
 
 // Same visual language as HttpRequestForm's ModeToggle/StaticOrExprField.
 function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMode) => void }) {
+  const { t } = useI18n()
   return (
     <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
       {(['static', 'expression'] as const).map((m) => (
@@ -42,7 +44,7 @@ function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMo
             mode === m ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
           )}
         >
-          {m === 'static' ? 'Static' : 'Expression'}
+          {m === 'static' ? t('workflows.node_forms.static') : t('workflows.node_forms.expression')}
         </button>
       ))}
     </div>
@@ -57,13 +59,14 @@ export interface NotificationFormProps {
 }
 
 export function NotificationForm({ config, variables, nodeContext, onChange }: NotificationFormProps) {
+  const { t } = useI18n()
   const set = (patch: Partial<NotificationConfig>) => onChange({ ...config, ...patch })
 
   return (
     <div className="space-y-4">
       {/* Recipient */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Recipient</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.recipient')}</Label>
         <ModeToggle mode={config.recipient_mode} onChange={(m) => set({ recipient_mode: m })} />
         {config.recipient_mode === 'expression' ? (
           <ExpressionField
@@ -72,7 +75,7 @@ export function NotificationForm({ config, variables, nodeContext, onChange }: N
             variables={variables}
             nodeContext={nodeContext}
             placeholder='e.g. record.assigned_to_user_id'
-            label="Recipient"
+            label={t('workflows.node_forms.recipient')}
           />
         ) : (
           <UserSelect
@@ -81,7 +84,7 @@ export function NotificationForm({ config, variables, nodeContext, onChange }: N
           />
         )}
         <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-          Who receives this notification — a specific person, or an expression resolving to a user id (e.g. a record's assigned user).
+          {t('workflows.node_forms.notification_help')}
         </p>
       </div>
 
@@ -89,7 +92,7 @@ export function NotificationForm({ config, variables, nodeContext, onChange }: N
 
       {/* Severity */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Severity</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.severity')}</Label>
         <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
           {SEVERITIES.map((s) => (
             <button
@@ -101,7 +104,7 @@ export function NotificationForm({ config, variables, nodeContext, onChange }: N
                 config.severity === s.value ? `${s.activeClass} shadow-sm` : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
               )}
             >
-              {s.label}
+              {s.value === 'success' ? t('common.success') : s.value === 'error' ? t('common.error') : s.value === 'warning' ? t('common.warning') : t('common.info')}
             </button>
           ))}
         </div>
@@ -109,7 +112,7 @@ export function NotificationForm({ config, variables, nodeContext, onChange }: N
 
       {/* Title */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Title</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.title')}</Label>
         <Input
           value={config.title}
           onChange={(e) => set({ title: e.target.value })}
@@ -120,7 +123,7 @@ export function NotificationForm({ config, variables, nodeContext, onChange }: N
 
       {/* Body */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Body (optional)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.body')}</Label>
         <div className="relative">
           <Bell size={11} className="absolute left-2.5 top-2.5 text-[hsl(var(--primary))]" />
           <textarea
@@ -135,7 +138,7 @@ export function NotificationForm({ config, variables, nodeContext, onChange }: N
 
       {/* Link URL */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Link URL (optional)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.link_url')}</Label>
         <Input
           value={config.link_url ?? ''}
           onChange={(e) => set({ link_url: e.target.value })}
@@ -143,7 +146,7 @@ export function NotificationForm({ config, variables, nodeContext, onChange }: N
           className="h-8 font-mono text-[12px]"
         />
         <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-          In-app path opened when the recipient clicks this notification.
+          {t('workflows.node_forms.notification_path_help')}
         </p>
       </div>
     </div>

@@ -35,6 +35,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Loader2 } from 'lucide-react'
 import { useQueryClient, type InfiniteData } from '@tanstack/react-query'
 import { resolveRecordTitle } from '@/features/forms/runtime/record-title'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { formatFieldValue, formatSystemDatetime } from '@/features/forms/runtime/format-value'
 import { RoleValueLabel } from '@/features/forms/runtime/RoleValueLabel'
 import { resolveEnumLabel } from '@/features/forms/runtime/enum-labels'
@@ -86,6 +87,7 @@ function kanbanColumnQueryKey(formId: string, groupField: string, columnValue: s
 }
 
 export function KanbanLayout({ formId, fields, config, filter, sort, columns, roleField, enumLabels, onOpenRecord, onColumnOrderChange }: KanbanLayoutProps) {
+  const t = useTranslation()
   const groupField = fields.find((f) => f.name === config.groupField)
   const bodyFields = columns.map((name) => fields.find((f) => f.name === name)).filter((f): f is FieldDef => !!f)
 
@@ -137,10 +139,10 @@ export function KanbanLayout({ formId, fields, config, filter, sort, columns, ro
   const registerColumn = (key: string, handle: ColumnHandle) => { registryRef.current.set(key, handle) }
 
   if (!groupField) {
-    return <div className="p-8 text-center text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>This view's Kanban field no longer exists on this form.</div>
+    return <div className="p-8 text-center text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('menus.saved_views.kanban.field_missing')}</div>
   }
   if (groupField.type !== 'enum') {
-    return <div className="p-8 text-center text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Kanban only supports Select fields — this view's field is no longer one.</div>
+    return <div className="p-8 text-center text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('menus.saved_views.kanban.field_invalid')}</div>
   }
 
   function findRecord(id: string): { record: FormRecord; columnKey: string } | undefined {
@@ -377,6 +379,7 @@ function KanbanColumn({ formId, groupFieldName, columnKey, label, filter, sort, 
    *  header drag. */
   draggable: boolean
 }) {
+  const t = useTranslation()
   const { records, total, hasNextPage, isFetchingNextPage, fetchNextPage } = useKanbanColumn(formId, filter, sort, groupFieldName, columnKey, true)
   registerColumn(columnKey, { records, total })
 
@@ -443,7 +446,7 @@ function KanbanColumn({ formId, groupFieldName, columnKey, label, filter, sort, 
           ))}
         </SortableContext>
         {records.length === 0 && !isFetchingNextPage && (
-          <div className="px-1 py-2 text-center text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>No records</div>
+          <div className="px-1 py-2 text-center text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('menus.saved_views.kanban.column_empty')}</div>
         )}
         <div ref={sentinelRef} />
         {isFetchingNextPage && (

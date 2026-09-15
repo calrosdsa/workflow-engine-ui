@@ -38,6 +38,7 @@ interface MenusSectionProps {
 }
 
 export function MenusSection({ appId }: MenusSectionProps) {
+  const t = useTranslation()
   const { data: menus, isLoading } = useMenus()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -73,9 +74,9 @@ export function MenusSection({ appId }: MenusSectionProps) {
         )}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">Menus</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">{t('menus.section.tree.heading')}</h3>
           <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => { setPickerParentId(null); setPickerOpen(true) }}>
-            <Plus size={12} />Add
+            <Plus size={12} />{t('common.add')}
           </Button>
         </div>
 
@@ -93,7 +94,7 @@ export function MenusSection({ appId }: MenusSectionProps) {
         {selected ? (
           <MenuDetail key={selected.id} menu={selected} appId={appId} onDeleted={() => setSelectedId(null)} onBack={() => setSelectedId(null)} />
         ) : (
-          <div className="p-6 text-sm text-[hsl(var(--muted-foreground))]">Select a menu to configure it.</div>
+          <div className="p-6 text-sm text-[hsl(var(--muted-foreground))]">{t('menus.section.select_prompt')}</div>
         )}
       </div>
 
@@ -387,7 +388,7 @@ export function MenuTree({ tree, hiddenMenus, allMenus, selectedId, onSelect, on
         <div className="space-y-0.5">
           {tree.length === 0 ? (
             <p className="rounded-md border border-dashed border-[hsl(var(--border))] p-4 text-center text-xs text-[hsl(var(--muted-foreground))]">
-              No menus yet. Add one to build your navigation.
+              {t('menus.section.tree.empty')}
             </p>
           ) : (
             rows.map(({ node, depth, hasChildren }) => {
@@ -435,6 +436,7 @@ export function MenuTree({ tree, hiddenMenus, allMenus, selectedId, onSelect, on
  *  child-of-that-parent result, so root-level placement needs its own
  *  always-present target rather than being inferred from row geometry. */
 function RootDropZone() {
+  const t = useTranslation()
   const { setNodeRef, isOver } = useDroppable({ id: ROOT_DROP_ZONE_ID })
   return (
     <div
@@ -444,7 +446,7 @@ function RootDropZone() {
         isOver ? 'border-[hsl(var(--primary))]/60 bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]' : 'border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]',
       )}
     >
-      Drop here to move to top level
+      {t('menus.section.tree.drop_to_root')}
     </div>
   )
 }
@@ -464,6 +466,7 @@ function HiddenTray({ menus, selectedId, onSelect, onRestore }: {
   onSelect: (id: string) => void
   onRestore: (menu: Menu) => void
 }) {
+  const t = useTranslation()
   const [open, setOpen] = useState(false)
   const { setNodeRef, isOver } = useDroppable({ id: HIDDEN_ZONE_ID })
 
@@ -476,7 +479,7 @@ function HiddenTray({ menus, selectedId, onSelect, onRestore }: {
       >
         {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         <EyeOff size={12} />
-        Hidden
+        {t('menus.section.tree.hidden_header')}
         {menus.length > 0 && <span className="font-normal normal-case text-[hsl(var(--muted-foreground))]/70">({menus.length})</span>}
       </button>
 
@@ -489,7 +492,7 @@ function HiddenTray({ menus, selectedId, onSelect, onRestore }: {
           )}
         >
           {menus.length === 0 ? (
-            <p className="p-2 text-center text-[11px] text-[hsl(var(--muted-foreground))]/70">Drag a menu here to hide it from the sidebar.</p>
+            <p className="p-2 text-center text-[11px] text-[hsl(var(--muted-foreground))]/70">{t('menus.section.tree.hidden_empty_hint')}</p>
           ) : (
             menus.map((menu) => (
               <HiddenMenuRow
@@ -513,6 +516,7 @@ function HiddenMenuRow({ menu, selected, onSelect, onRestore }: {
   onSelect: () => void
   onRestore: () => void
 }) {
+  const t = useTranslation()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: menu.id })
 
   const style = { transform: CSS.Translate.toString(transform), transition }
@@ -530,8 +534,8 @@ function HiddenMenuRow({ menu, selected, onSelect, onRestore }: {
       <button
         {...attributes}
         {...listeners}
-        aria-label="Drag back onto the tree to restore"
-        title="Drag back onto the tree to restore"
+        aria-label={t('menus.section.tree.drag_restore_title')}
+        title={t('menus.section.tree.drag_restore_title')}
         className="shrink-0 cursor-grab touch-none rounded p-0.5 text-[hsl(var(--muted-foreground))]/60 hover:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] active:cursor-grabbing"
       >
         <GripVertical size={12} />
@@ -542,8 +546,8 @@ function HiddenMenuRow({ menu, selected, onSelect, onRestore }: {
         <span className="truncate">{menu.name}</span>
       </button>
       <button
-        aria-label="Restore to the sidebar"
-        title="Restore to the sidebar"
+        aria-label={t('menus.section.tree.restore_title')}
+        title={t('menus.section.tree.restore_title')}
         onClick={onRestore}
         className="hidden shrink-0 rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] group-hover:block group-focus-within:block"
       >
@@ -566,6 +570,7 @@ function MenuRow({ node, depth, index, siblingCount, selected, hasChildren, isCo
   onMove: (dir: -1 | 1) => void
   onAddChild: () => void
 }) {
+  const t = useTranslation()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver, active } = useSortable({ id: node.id, data: { menuType: node.menu_type } })
 
   const style = {
@@ -598,8 +603,8 @@ function MenuRow({ node, depth, index, siblingCount, selected, hasChildren, isCo
       <button
         {...attributes}
         {...listeners}
-        aria-label="Drag to reorder or move to another group"
-        title="Drag to reorder or move to another group"
+        aria-label={t('menus.section.tree.drag_reorder_title')}
+        title={t('menus.section.tree.drag_reorder_title')}
         className="shrink-0 cursor-grab touch-none rounded p-0.5 text-[hsl(var(--muted-foreground))]/60 hover:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] active:cursor-grabbing"
       >
         <GripVertical size={12} />
@@ -607,7 +612,7 @@ function MenuRow({ node, depth, index, siblingCount, selected, hasChildren, isCo
       {hasChildren ? (
         <button
           onClick={onToggleCollapsed}
-          aria-label={isCollapsed ? 'Expand' : 'Collapse'}
+          aria-label={isCollapsed ? t('common.expand') : t('common.collapse')}
           aria-expanded={!isCollapsed}
           className="shrink-0 rounded text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
         >
@@ -621,14 +626,14 @@ function MenuRow({ node, depth, index, siblingCount, selected, hasChildren, isCo
         <span className="truncate">{node.name}</span>
       </button>
       <span className="hidden shrink-0 items-center gap-0.5 group-hover:flex group-focus-within:flex">
-        <button title="Move up" aria-label="Move up" disabled={index === 0} onClick={() => onMove(-1)} className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-30">
+        <button title={t('menus.section.tree.move_up')} aria-label={t('menus.section.tree.move_up')} disabled={index === 0} onClick={() => onMove(-1)} className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-30">
           <ArrowUp size={11} />
         </button>
-        <button title="Move down" aria-label="Move down" disabled={index === siblingCount - 1} onClick={() => onMove(1)} className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-30">
+        <button title={t('menus.section.tree.move_down')} aria-label={t('menus.section.tree.move_down')} disabled={index === siblingCount - 1} onClick={() => onMove(1)} className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-30">
           <ArrowDown size={11} />
         </button>
         {(node.menu_type === 'parent' || node.menu_type === 'module') && (
-          <button title="Add child menu" aria-label="Add child menu" onClick={onAddChild} className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]">
+          <button title={t('menus.section.tree.add_child')} aria-label={t('menus.section.tree.add_child')} onClick={onAddChild} className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]">
             <Plus size={11} />
           </button>
         )}
@@ -666,6 +671,13 @@ function MenuTypePickerDialog({ open, onClose, parentId, parentMenuType, onCreat
         parent_id: parentId,
         menu_type: type,
         slug: `${type}-${Date.now().toString(36)}`,
+        // entry.label, not a t() lookup: this becomes Menu.name, persisted
+        // data — a menu created under the Spanish UI would otherwise be
+        // permanently named "Nuevo Búsqueda" and render that way for
+        // English-locale viewers too. Same exclusion class as
+        // ensurePairedAddMenu's `Add ${searchMenu.name}` below, and as
+        // ReportsSection's reverted 'Untitled Report' key (see memory). See
+        // menu-registry.ts's own comment on why entry.label stays populated.
         name: `New ${entry.label}`,
         sort_order: 0,
         config: entry.createDefaultConfig(),
@@ -675,7 +687,7 @@ function MenuTypePickerDialog({ open, onClose, parentId, parentMenuType, onCreat
       })
       onCreated(menu.id)
     } catch {
-      setError('Could not create menu — slug may already exist.')
+      setError(t('menus.section.type_picker.create_error'))
     }
   }
 
@@ -683,8 +695,8 @@ function MenuTypePickerDialog({ open, onClose, parentId, parentMenuType, onCreat
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="w-full max-w-md">
         <DialogHeader>
-          <DialogTitle>Add a menu</DialogTitle>
-          <DialogDescription>Choose what kind of menu to add.</DialogDescription>
+          <DialogTitle>{t('menus.section.type_picker.dialog_title')}</DialogTitle>
+          <DialogDescription>{t('menus.section.type_picker.dialog_description')}</DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-2 p-4">
           {/* A retired type keeps rendering the menus that already use it,
@@ -706,8 +718,8 @@ function MenuTypePickerDialog({ open, onClose, parentId, parentMenuType, onCreat
                   <Icon size={16} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-[hsl(var(--foreground))]">{entry.label}</p>
-                  <p className="truncate text-xs text-[hsl(var(--muted-foreground))]">{entry.description}</p>
+                  <p className="text-sm font-medium text-[hsl(var(--foreground))]">{t(`menus.types.${entry.type}.label`)}</p>
+                  <p className="truncate text-xs text-[hsl(var(--muted-foreground))]">{t(`menus.types.${entry.type}.description`)}</p>
                   {moduleDisabledHere && (
                     <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('menus.module.requires_module_parent')}</p>
                   )}
@@ -763,6 +775,8 @@ export async function ensurePairedAddMenu({ allMenus, searchMenu, formId, permis
     parent_id: searchMenu.parent_id,
     menu_type: 'add',
     slug: `${searchMenu.slug}-add`,
+    // Not translated: this becomes Menu.name, persisted data, same
+    // exclusion class as MenuTypePickerDialog's `New ${entry.label}` above.
     name: `Add ${searchMenu.name}`,
     sort_order: searchMenu.sort_order,
     config: { ...addDefaults, form_id: formId },
@@ -778,6 +792,7 @@ export async function ensurePairedAddMenu({ allMenus, searchMenu, formId, permis
 // ---------------------------------------------------------------------------
 
 function MenuDetail({ menu, appId, onDeleted, onBack }: { menu: Menu; appId: string; onDeleted: () => void; onBack: () => void }) {
+  const t = useTranslation()
   const updateMutation = useUpdateMenu(menu.id)
   const createMutation = useCreateMenu()
   const deleteMutation = useDeleteMenu()
@@ -812,11 +827,15 @@ function MenuDetail({ menu, appId, onDeleted, onBack }: { menu: Menu; appId: str
     setError(null)
     setSaved(false)
     if (permissionMode === 'role' && requiredRoleIds.length === 0) {
-      setError('Select at least one role, or switch back to "For All".')
+      // Interpolates the SAME translated label the "For All" radio option
+      // itself renders (permission_all below), so the quoted phrase in this
+      // error always matches what's actually on the button — not a second,
+      // independently-translated copy of "For All" that could drift.
+      setError(t('menus.section.detail.role_required_error', { allLabel: t('menus.section.detail.permission_all') }))
       return
     }
     if (isResourceBacked && !resourceFormId) {
-      setError('Select a form before saving.')
+      setError(t('menus.section.detail.form_required_error'))
       return
     }
     try {
@@ -861,7 +880,7 @@ function MenuDetail({ menu, appId, onDeleted, onBack }: { menu: Menu; appId: str
       }
       setSaved(true)
     } catch {
-      setError('Could not save — slug may already exist.')
+      setError(t('menus.section.detail.save_error'))
     }
   }
 
@@ -871,7 +890,7 @@ function MenuDetail({ menu, appId, onDeleted, onBack }: { menu: Menu; appId: str
       await deleteMutation.mutateAsync(menu.id)
       onDeleted()
     } catch {
-      setError('Could not delete — remove or reparent child menus first.')
+      setError(t('menus.section.detail.delete_error'))
     }
   }
 
@@ -882,20 +901,25 @@ function MenuDetail({ menu, appId, onDeleted, onBack }: { menu: Menu; appId: str
         className="-ml-1 flex items-center gap-1 rounded text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] lg:hidden"
       >
         <ChevronLeft size={16} />
-        Menus
+        {/* Same key as the sidebar's own "Menus" heading, not a separate
+            back_to_menus key — this button and that heading both mean "the
+            menus list," in the same file, same audience (unlike e.g.
+            WidgetTile/RuntimeGrid's deliberately-separate unavailable-widget
+            strings, where the audiences actually differ). */}
+        {t('menus.section.tree.heading')}
       </button>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name</label>
+          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('common.name')}</label>
           <Input value={name} onChange={(e) => { setName(e.target.value); setSaved(false) }} disabled={!canWrite} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Slug</label>
+          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('menus.section.detail.slug_label')}</label>
           <Input value={slug} onChange={(e) => { setSlug(e.target.value); setSaved(false) }} className="font-mono text-xs" disabled={!canWrite} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Icon</label>
+          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('menus.section.detail.icon_label')}</label>
           <MenuIconPicker
             value={icon}
             onChange={(next) => { setIcon(next); setSaved(false) }}
@@ -903,13 +927,13 @@ function MenuDetail({ menu, appId, onDeleted, onBack }: { menu: Menu; appId: str
             disabled={!canWrite}
           />
           <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
-            Shown in the menu tree here and in the app&apos;s runtime sidebar.
+            {t('menus.section.detail.icon_hint')}
           </p>
         </div>
       </div>
 
       <div>
-        <label className="mb-2 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Permission</label>
+        <label className="mb-2 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('menus.section.detail.permission_label')}</label>
         <RadioGroup
           value={permissionMode}
           onValueChange={(v) => { setPermissionMode(v as PermissionMode); setSaved(false) }}
@@ -919,7 +943,7 @@ function MenuDetail({ menu, appId, onDeleted, onBack }: { menu: Menu; appId: str
           {(['all', 'role'] as const).map((mode) => (
             <label key={mode} className="flex items-center gap-1.5 text-sm text-[hsl(var(--foreground))]">
               <RadioGroupItem value={mode} />
-              {mode === 'all' ? 'For All' : 'Specific Role'}
+              {mode === 'all' ? t('menus.section.detail.permission_all') : t('menus.section.detail.permission_role')}
             </label>
           ))}
         </RadioGroup>
@@ -937,40 +961,42 @@ function MenuDetail({ menu, appId, onDeleted, onBack }: { menu: Menu; appId: str
               </label>
             ))}
             {(roles ?? []).length === 0 && (
-              <p className="text-[11px] text-[hsl(var(--muted-foreground))]">No roles defined for this app yet.</p>
+              <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('menus.section.detail.no_roles')}</p>
             )}
           </div>
         )}
         <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
           {permissionMode === 'all'
-            ? 'Visible to anyone who can view the app.'
-            : "Only visible to members whose current role is checked above."}
+            ? t('menus.section.detail.visibility_all_hint')
+            : t('menus.section.detail.visibility_role_hint')}
         </p>
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Required permission (optional)</label>
+        <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('menus.section.detail.required_permission_label')}</label>
         <select
           value={requiredPermission}
           onChange={(e) => { setRequiredPermission(e.target.value); setSaved(false) }}
           disabled={!canWrite}
           className="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1.5 text-sm text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <option value="">No additional permission required</option>
+          <option value="">{t('menus.section.detail.no_permission_required')}</option>
           {(permissionsCatalog ?? []).map((p) => <option key={p.key} value={p.key}>{p.label} ({p.key})</option>)}
         </select>
         {isResourceBacked && (
           <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
-            {MENU_TYPE_REGISTRY[menu.menu_type].label} menus also require the viewer to have{' '}
-            {menu.menu_type === 'add' ? 'Create' : 'View'} access on{' '}
-            {resourceForm ? `"${resourceForm.name}"` : 'this form'} — enforced automatically on top of the settings above.
+            {t('menus.section.detail.resource_permission_note', {
+              type: t(`menus.types.${menu.menu_type}.label`),
+              access: menu.menu_type === 'add' ? t('common.create') : t('common.view'),
+              form: resourceForm ? `"${resourceForm.name}"` : t('menus.section.detail.this_form'),
+            })}
           </p>
         )}
       </div>
 
       <div>
         <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
-          {MENU_TYPE_REGISTRY[menu.menu_type].label} settings
+          {t('menus.section.detail.settings_header', { type: t(`menus.types.${menu.menu_type}.label`) })}
         </h4>
         <ConfigPanel menu={{ ...menu, config }} onChange={(c) => { setConfig(c); setSaved(false) }} appId={appId} />
       </div>
@@ -981,11 +1007,11 @@ function MenuDetail({ menu, appId, onDeleted, onBack }: { menu: Menu; appId: str
         <div className="flex items-center gap-3 border-t border-[hsl(var(--border))] pt-4">
           <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-1.5">
             {updateMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : null}
-            Save
+            {t('common.save')}
           </Button>
-          {saved && !updateMutation.isPending && <span className="text-xs text-[hsl(var(--success))]">Saved</span>}
+          {saved && !updateMutation.isPending && <span className="text-xs text-[hsl(var(--success))]">{t('common.saved')}</span>}
           <Button variant="outline" onClick={handleDelete} disabled={deleteMutation.isPending} className="ml-auto gap-1.5 text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10">
-            <Trash2 size={13} />Delete
+            <Trash2 size={13} />{t('common.delete')}
           </Button>
         </div>
       )}

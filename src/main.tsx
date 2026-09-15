@@ -25,7 +25,7 @@ createRoot(document.getElementById('root')!).render(
       {/* No `overrides` — the builder shell has no single app in scope on
           most routes (client list, app list, login), so it always gets the
           bundled base dictionary. See I18nProvider's own doc comment. */}
-      <I18nProvider>
+      <I18nProvider storageKey="system-locale">
         <RouterProvider router={router} />
         {/* The builder shell's own toast host — a plain sonner Toaster, not
             components/ui/sonner.tsx's wrapper, since that one calls

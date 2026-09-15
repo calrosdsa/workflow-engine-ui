@@ -1,9 +1,17 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
+import type { ReactElement } from 'react'
 import { OutlinePanel } from './OutlinePanel'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import { useBuilderStore } from './store'
 import type { WorkflowDefinitionGraph } from '../types'
+
+// OutlinePanel calls useTranslation, which throws outside an I18nProvider
+// ancestor — real provider, no props, same as InsertDataMenu.test.tsx.
+function renderPanel(ui: ReactElement) {
+  return render(<I18nProvider>{ui}</I18nProvider>)
+}
 
 // Rendered against the REAL builder store: loadDefinition seeds the same
 // state the canvas uses, so this pins the whole chain — store → outline
@@ -36,7 +44,7 @@ describe('OutlinePanel', () => {
 
   it('renders the loaded graph as a step tree and selects on click', () => {
     useBuilderStore.getState().loadDefinition('wf-1', 'Convert Lead', branchDefinition)
-    render(<OutlinePanel open onToggle={() => {}} />)
+    renderPanel(<OutlinePanel open onToggle={() => {}} />)
 
     // Steps show; structural nodes don't.
     expect(screen.getByText('Convert Lead (button)')).toBeTruthy()
@@ -67,9 +75,15 @@ describe('OutlinePanel', () => {
       ],
     } as unknown as WorkflowDefinitionGraph
     useBuilderStore.getState().loadDefinition('wf-2', 'Tangle', freeForm)
-    render(<OutlinePanel open onToggle={() => {}} />)
+    renderPanel(<OutlinePanel open onToggle={() => {}} />)
 
     expect(screen.getByText(/Free-form graph/)).toBeTruthy()
     expect(screen.getByText('Use existing Company')).toBeTruthy()
+  })
+
+  it('renders nothing while closed — no collapsed rail on the canvas edge', () => {
+    useBuilderStore.getState().loadDefinition('wf-1', 'Convert Lead', branchDefinition)
+    const { container } = renderPanel(<OutlinePanel open={false} onToggle={() => {}} />)
+    expect(container.firstChild).toBeNull()
   })
 })

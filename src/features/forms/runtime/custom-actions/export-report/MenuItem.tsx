@@ -25,8 +25,10 @@ import { partitionArguments, type ExportReportActionConfig } from './schema'
 import { declaredArguments } from '@/features/reports/arguments'
 import { ReportArgumentsDialog } from '@/features/reports/ReportArgumentsDialog'
 import { useReports } from '@/features/reports/hooks'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 export function ExportReportMenuItem({ formId, recordId, config, label, onDone }: CustomActionMenuItemProps<ExportReportActionConfig>) {
+  const t = useTranslation()
   const [pending, setPending] = useState(false)
   const [promptOpen, setPromptOpen] = useState(false)
   const { data: reports } = useReports()
@@ -45,7 +47,7 @@ export function ExportReportMenuItem({ formId, recordId, config, label, onDone }
   const run = async (promptedValues?: Record<string, unknown>) => {
     if (pending) return
     setPending(true)
-    const toastId = toast.loading(`Generating "${label}"…`)
+    const toastId = toast.loading(t('export_report.menu.generating', { label }))
     try {
       const argumentValues = { ...resolved, ...(promptedValues ?? {}) }
       const result = await formsApi.exportReport(
@@ -61,12 +63,15 @@ export function ExportReportMenuItem({ formId, recordId, config, label, onDone }
       const { url } = await contentApi.presignedUrl(result.content_id)
       window.open(url, '_blank', 'noopener,noreferrer')
 
-      toast.success(`"${label}" is ready`, {
+      toast.success(t('export_report.menu.ready', { label }), {
         id: toastId,
-        description: `${result.filename} · ${result.row_count} row${result.row_count === 1 ? '' : 's'}`,
+        description: t(result.row_count === 1 ? 'export_report.menu.result_singular' : 'export_report.menu.result_plural', {
+          filename: result.filename,
+          count: result.row_count,
+        }),
       })
     } catch (e) {
-      toast.error(`Couldn't generate "${label}"`, { id: toastId, description: e instanceof Error ? e.message : undefined })
+      toast.error(t('export_report.menu.generate_failed', { label }), { id: toastId, description: e instanceof Error ? e.message : undefined })
     } finally {
       setPending(false)
     }
@@ -101,7 +106,7 @@ export function ExportReportMenuItem({ formId, recordId, config, label, onDone }
         open={promptOpen}
         argumentList={toPrompt}
         title={label}
-        confirmLabel="Export"
+        confirmLabel={t('export_report.menu.confirm_label')}
         busy={pending}
         onCancel={() => { setPromptOpen(false); onDone?.() }}
         onConfirm={(values) => void run(values)}

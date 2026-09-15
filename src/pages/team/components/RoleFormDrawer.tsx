@@ -11,6 +11,7 @@ import { useCreateRole, useUpdateRole } from '@/features/roles/hooks'
 import { usePermissionsCatalog } from '@/features/permissions/hooks'
 import type { Role } from '@/features/roles/types'
 import type { PermissionDef } from '@/features/permissions/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 // Pulled out of the resource-group tree below into its own standalone
 // switch: unlike the rest of the catalog (CRUD-shaped resource permissions),
@@ -46,6 +47,7 @@ interface RoleFormDrawerProps {
  *  drawer; the older role-level field mask this drawer used to edit has
  *  been removed. */
 export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
+  const t = useTranslation()
   const { data: catalog } = usePermissionsCatalog(appId)
   const createMutation = useCreateRole(appId)
   const updateMutation = useUpdateRole(role?.id ?? '', appId)
@@ -77,7 +79,7 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
   const handleSave = async () => {
     setError(null)
     if (!name.trim()) {
-      setError('Name is required.')
+      setError(t('team.role_name_required'))
       return
     }
     try {
@@ -88,7 +90,7 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
       }
       onClose()
     } catch {
-      setError('Could not save role — a role with this name may already exist for this app.')
+      setError(t('team.role_save_failed'))
     }
   }
 
@@ -96,25 +98,25 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
     <Drawer open onOpenChange={(o) => !o && onClose()}>
       <DrawerContent size="lg">
         <DrawerHeader>
-          <DrawerTitle>Role Details</DrawerTitle>
-          <DrawerDescription>Choose which permissions this role grants within this application.</DrawerDescription>
+          <DrawerTitle>{t('team.role_details')}</DrawerTitle>
+          <DrawerDescription>{t('team.role_details_description')}</DrawerDescription>
         </DrawerHeader>
 
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-6">
           <div>
-            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name this Role *</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Please name this Role..." />
+            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('team.role_name_label')}</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('team.role_name_placeholder')} />
           </div>
 
           <div>
             <Label className="flex cursor-pointer items-center gap-2 font-normal">
               <Switch checked={canDesign} onCheckedChange={toggleAppDesign} />
-              <span className="text-xs text-[hsl(var(--muted-foreground))]">Switch off to disable App design permissions</span>
+              <span className="text-xs text-[hsl(var(--muted-foreground))]">{t('team.app_design_permissions')}</span>
             </Label>
           </div>
 
           <div>
-            <p className="mb-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">What permissions should this role have?</p>
+            <p className="mb-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('team.permissions_question')}</p>
             <Accordion type="multiple" defaultValue={Object.keys(grouped)} className="rounded-md border border-[hsl(var(--border))]">
               {Object.entries(grouped).map(([resource, defs]) => {
                 const selectedCount = defs.filter((d) => permissions.includes(d.key)).length
@@ -162,7 +164,7 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
                       onClick={(e) => e.stopPropagation()}
                     />
                     <AccordionTrigger className="py-2 normal-case tracking-normal text-sm font-medium text-[hsl(var(--foreground))]">
-                      Forms (records)
+                      {t('team.forms_records')}
                     </AccordionTrigger>
                   </div>
                   <AccordionContent>
@@ -189,7 +191,7 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
                                 {defs.map((p) => (
                                   <Label key={p.key} className="flex cursor-pointer items-center gap-2 text-sm font-normal text-[hsl(var(--foreground))]">
                                     <Checkbox checked={permissions.includes(p.key)} onCheckedChange={(c) => toggleOne(p.key, c === true)} />
-                                    {actionLabel(p)}
+                                    {actionLabel(p, t)}
                                   </Label>
                                 ))}
                               </div>
@@ -208,10 +210,10 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
         </div>
 
         <DrawerFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={onClose}>{t('team.cancel')}</Button>
           <Button onClick={handleSave} disabled={isPending}>
             {isPending && <Spinner className="h-4 w-4" />}
-            Save
+            {t('team.save')}
           </Button>
         </DrawerFooter>
       </DrawerContent>
@@ -261,6 +263,7 @@ const ACTION_LABELS: Record<string, string> = {
   comment: 'Comment on records',
 }
 
-function actionLabel(def: PermissionDef): string {
-  return ACTION_LABELS[def.action] ?? def.label
+function actionLabel(def: PermissionDef, t: (key: string, vars?: Record<string, string | number>) => string): string {
+  const actionKey = def.action && `team.permission_${def.action}`
+  return actionKey && ACTION_LABELS[def.action] ? t(actionKey) : def.label
 }

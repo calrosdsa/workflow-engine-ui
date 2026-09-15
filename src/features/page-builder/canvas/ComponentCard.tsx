@@ -6,6 +6,7 @@ import { cn, onKeyboardActivate } from '@/lib/utils'
 import { usePageBuilderStore } from '../store'
 import { PAGE_COMPONENT_REGISTRY } from '../component-registry'
 import { ComponentPreview } from '../ComponentPreview'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { PageComponent } from '../schema'
 
 interface ComponentCardProps {
@@ -22,6 +23,7 @@ interface ComponentCardProps {
 // both stores). Still re-renders on its own selectedId store subscription
 // regardless of props, which is correct.
 export const ComponentCard = memo(function ComponentCard({ component, sectionId, columnId }: ComponentCardProps) {
+  const t = useTranslation()
   const selectedId = usePageBuilderStore((s) => s.selectedItemId)
   const selectComponent = usePageBuilderStore((s) => s.selectItem)
   const duplicate = usePageBuilderStore((s) => s.duplicateItemById)
@@ -30,6 +32,7 @@ export const ComponentCard = memo(function ComponentCard({ component, sectionId,
   const selected = selectedId === component.id
   const reg = PAGE_COMPONENT_REGISTRY[component.component]
   const Icon = reg.icon
+  const typeLabel = t(`builder.pages.${component.component}.label`)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: component.id,
@@ -53,7 +56,12 @@ export const ComponentCard = memo(function ComponentCard({ component, sectionId,
       // from ALSO re-triggering selectComponent, the same reason onClick
       // below needs e.stopPropagation() on the mouse side.
       role="group"
-      aria-label={`${reg.label} component${selected ? ' — selected' : ''}`}
+      // {{name}} is a named slot precisely so es.ts can reorder to
+      // "componente {{name}}" — a bare noun key concatenated in JS
+      // (`${label} ${noun}`) would bake English word order into the
+      // template itself, unreachable from the dictionary. See the i18n
+      // memory's correction of the slice-4 WidgetTile precedent.
+      aria-label={`${t('builder.pages.canvas.component_aria', { name: typeLabel })}${selected ? ` — ${t('builder.pages.canvas.component_aria_selected')}` : ''}`}
       tabIndex={0}
       onClick={(e) => { e.stopPropagation(); selectComponent(component.id) }}
       onKeyDown={onKeyboardActivate(() => selectComponent(component.id))}
@@ -74,21 +82,21 @@ export const ComponentCard = memo(function ComponentCard({ component, sectionId,
           {...listeners}
           onClick={(e) => e.stopPropagation()}
           className="flex h-6 w-6 cursor-grab items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 active:cursor-grabbing"
-          title="Drag to move"
+          title={t('builder.pages.canvas.drag_move')}
         >
           <GripVertical size={13} />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); duplicate(component.id) }}
           className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
-          title="Duplicate"
+          title={t('common.duplicate')}
         >
           <Copy size={12} />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); remove(component.id) }}
           className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
-          title="Delete"
+          title={t('common.delete')}
         >
           <Trash2 size={12} />
         </button>
@@ -97,7 +105,7 @@ export const ComponentCard = memo(function ComponentCard({ component, sectionId,
       {/* Type tag */}
       <div className="flex items-center gap-1.5 border-b border-slate-100 px-2.5 py-1">
         <Icon size={11} className="text-slate-400" />
-        <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">{reg.label}</span>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">{typeLabel}</span>
       </div>
 
       {/* Preview */}

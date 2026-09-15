@@ -19,6 +19,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { ReferenceFieldAutocomplete } from './ReferenceFieldAutocomplete'
 import { formsApi } from '@/features/forms/api'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import type { FormElement } from '@/features/form-builder/schema'
 
 vi.mock('@/features/forms/hooks', () => ({
@@ -64,7 +65,9 @@ function renderWith(sourceFormId?: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={qc}>
-      <Harness sourceFormId={sourceFormId} />
+      <I18nProvider>
+        <Harness sourceFormId={sourceFormId} />
+      </I18nProvider>
     </QueryClientProvider>,
   )
 }

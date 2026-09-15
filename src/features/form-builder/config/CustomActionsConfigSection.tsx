@@ -17,6 +17,7 @@ import { nanoid } from '@/features/workflows/builder/nanoid'
 import { allCustomActions, getCustomAction } from '@/features/forms/runtime/custom-actions/registry'
 import '@/features/forms/runtime/custom-actions'
 import { TabVisibilitySection, TabRenderIfSection } from '@/features/forms/runtime/detail-tabs/DetailTabConfigForm'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { cn } from '@/lib/utils'
 import type { CustomActionConfig, FormSchema } from '../schema'
 
@@ -28,6 +29,7 @@ interface CustomActionsConfigSectionProps {
 }
 
 export function CustomActionsConfigSection({ formId, schema, customActions, onChange }: CustomActionsConfigSectionProps) {
+  const t = useTranslation()
   const actions = customActions ?? []
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -58,7 +60,7 @@ export function CustomActionsConfigSection({ formId, schema, customActions, onCh
   return (
     <div className="space-y-3">
       {actions.length === 0 ? (
-        <p className="text-[11px] text-[hsl(var(--muted-foreground))]">No custom actions configured yet.</p>
+        <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('custom_action.section.empty')}</p>
       ) : (
         <Accordion
           type="single"
@@ -89,7 +91,7 @@ export function CustomActionsConfigSection({ formId, schema, customActions, onCh
             type="button"
             className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-[hsl(var(--border))] py-2 text-[12px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:border-[hsl(var(--primary))]/40 hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
           >
-            <Plus size={13} /> Add Action
+            <Plus size={13} /> {t('custom_action.section.add_action')}
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="center" className="w-72">
@@ -118,6 +120,7 @@ function CustomActionRow({ formId, schema, action, index, count, onMove, onRemov
   onRemove: () => void
   onPatch: (patch: Partial<CustomActionConfig>) => void
 }) {
+  const t = useTranslation()
   const def = getCustomAction(action.type)
   const isConditional = action.renderIf?.mode === 'expression'
   const hasCustomVisibility = (action.visibility?.mode ?? 'everyone') !== 'everyone'
@@ -133,7 +136,7 @@ function CustomActionRow({ formId, schema, action, index, count, onMove, onRemov
             type="button"
             onClick={() => onMove(-1)}
             disabled={index === 0}
-            title="Move up"
+            title={t('custom_action.section.move_up')}
             className="rounded p-0.5 text-[hsl(var(--muted-foreground))]/60 hover:text-[hsl(var(--muted-foreground))] disabled:cursor-not-allowed disabled:opacity-30"
           >
             <ChevronUp size={12} />
@@ -142,7 +145,7 @@ function CustomActionRow({ formId, schema, action, index, count, onMove, onRemov
             type="button"
             onClick={() => onMove(1)}
             disabled={index === count - 1}
-            title="Move down"
+            title={t('custom_action.section.move_down')}
             className="rounded p-0.5 text-[hsl(var(--muted-foreground))]/60 hover:text-[hsl(var(--muted-foreground))] disabled:cursor-not-allowed disabled:opacity-30"
           >
             <ChevronDown size={12} />
@@ -156,12 +159,12 @@ function CustomActionRow({ formId, schema, action, index, count, onMove, onRemov
             <span className="flex shrink-0 items-center gap-1">
               {hasCustomVisibility && (
                 <Badge variant="outline" className="h-5 gap-0.5 px-1.5 py-0 text-[9.5px] font-medium normal-case tracking-normal text-[hsl(var(--muted-foreground))]">
-                  <Users2 size={9} /> Restricted
+                  <Users2 size={9} /> {t('custom_action.section.restricted_badge')}
                 </Badge>
               )}
               {isConditional && (
                 <Badge variant="outline" className="h-5 gap-0.5 px-1.5 py-0 text-[9.5px] font-medium normal-case tracking-normal text-[hsl(var(--muted-foreground))]">
-                  <GitBranch size={9} /> Conditional
+                  <GitBranch size={9} /> {t('custom_action.section.conditional_badge')}
                 </Badge>
               )}
             </span>
@@ -171,7 +174,7 @@ function CustomActionRow({ formId, schema, action, index, count, onMove, onRemov
         <button
           type="button"
           onClick={onRemove}
-          title="Remove action"
+          title={t('custom_action.section.remove_action')}
           className="rounded-md p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
         >
           <Trash2 size={14} />
@@ -182,7 +185,7 @@ function CustomActionRow({ formId, schema, action, index, count, onMove, onRemov
         {def && (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Label</Label>
+              <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('custom_action.section.label_field')}</Label>
               <Input
                 value={action.label}
                 onChange={(e) => onPatch({ label: e.target.value })}

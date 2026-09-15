@@ -30,6 +30,7 @@ import { nanoid } from './nanoid'
 import type { NodeOutputSchema } from './node-output-schema'
 import { mergeSystemFields } from '@/features/forms/types'
 import { useForm as useFormDef } from '@/features/forms/hooks'
+import { useI18n } from '@/features/i18n/I18nProvider'
 import type { FieldDef } from '@/features/forms/types'
 import type { VariableDecl, FilterGroup, FilterCondition, CompareOp, ValueMode } from '../types'
 
@@ -141,6 +142,7 @@ interface FilterBuilderProps {
 }
 
 export function FilterBuilder({ group, fields, variables, nodeContext = [], onChange, onRemove, depth = 0, hideExpressions = false, fieldGroups, viewerModes }: FilterBuilderProps) {
+  const { t } = useI18n()
   // Every caller's `fields` ultimately means "what can this condition match
   // against" — for the common case (a form's own declared fields) that's
   // missing id/created_at/updated_at, which exist on every record but are
@@ -190,7 +192,7 @@ export function FilterBuilder({ group, fields, variables, nodeContext = [], onCh
                     : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]',
                 )}
               >
-                {c}
+                {t(`workflows.builder.combinator_${c}`)}
               </button>
             )
           })}
@@ -198,8 +200,8 @@ export function FilterBuilder({ group, fields, variables, nodeContext = [], onCh
         {onRemove && (
           <button
             onClick={onRemove}
-            title="Remove group"
-            aria-label="Remove group"
+            title={t('workflows.builder.remove_group')}
+            aria-label={t('workflows.builder.remove_group')}
             className="flex h-6 w-6 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
           >
             <Trash2 size={12} />
@@ -210,7 +212,7 @@ export function FilterBuilder({ group, fields, variables, nodeContext = [], onCh
       {isEmpty && (
         <div className="flex flex-col items-center gap-1.5 rounded-lg border border-dashed border-[hsl(var(--border))] px-2 py-5 text-center">
           <ListFilter size={16} className="text-[hsl(var(--muted-foreground))]/50" />
-          <p className="text-[11px] text-[hsl(var(--muted-foreground))]">No conditions yet — add one below.</p>
+          <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('workflows.builder.no_conditions')}</p>
         </div>
       )}
 
@@ -263,12 +265,12 @@ export function FilterBuilder({ group, fields, variables, nodeContext = [], onCh
 
       {/* Add buttons */}
       <div className="mt-2.5 flex gap-1.5">
-        <Button variant="outline" size="sm" onClick={addCondition} className="h-7 flex-1 gap-1.5 border-dashed text-[11px]">
-          <Plus size={12} /> Condition
+          <Button variant="outline" size="sm" onClick={addCondition} className="h-7 flex-1 gap-1.5 border-dashed text-[11px]">
+          <Plus size={12} /> {t('workflows.builder.condition')}
         </Button>
         {depth < 3 && (
-          <Button variant="outline" size="sm" onClick={addGroup} className="h-7 gap-1.5 border-dashed text-[11px]">
-            <FolderPlus size={12} /> Group
+            <Button variant="outline" size="sm" onClick={addGroup} className="h-7 gap-1.5 border-dashed text-[11px]">
+            <FolderPlus size={12} /> {t('workflows.builder.group')}
           </Button>
         )}
       </div>
@@ -281,10 +283,11 @@ export function FilterBuilder({ group, fields, variables, nodeContext = [], onCh
 // own) so a group of 3+ conditions doesn't force the reader to scroll back up
 // to the header toggle to know how the rows below relate to each other.
 function Connector({ combinator }: { combinator: 'and' | 'or' }) {
+  const { t } = useI18n()
   return (
     <div className="flex items-center justify-center py-0.5" aria-hidden="true">
       <span className="rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-        {combinator}
+        {t(`workflows.builder.combinator_${combinator}`)}
       </span>
     </div>
   )
@@ -305,6 +308,7 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
   fieldGroups?: FieldGroup[]
   viewerModes?: ViewerFilterContext
 }) {
+  const { t } = useI18n()
   const [editorOpen, setEditorOpen] = useState(false)
   const needsValue = opNeedsValue(condition.op)
   const ignoresField = opIgnoresField(condition.op)
@@ -335,7 +339,7 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
 
   const fieldControl = ignoresField ? (
     <div className="min-w-0 flex-1 truncate rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-2 py-1.5 text-[11px] italic text-[hsl(var(--muted-foreground))]">
-      whole record
+      {t('workflows.builder.whole_record')}
     </div>
   ) : (
     <SelectField
@@ -350,7 +354,7 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
       // untouched — switching the field mid-expression doesn't invalidate
       // the expression itself the way a static value does.
       onChange={(v) => onChange({ field: v, value: '' })}
-      placeholder="field…"
+      placeholder={t('workflows.builder.field_placeholder')}
       options={fields.map((f) => ({ value: f.name, label: f.label || f.name }))}
       groups={fieldGroups?.map((g) => ({ label: g.label, options: g.fields.map((f) => ({ value: f.name, label: f.label || f.name })) }))}
       className="min-w-0 flex-1"
@@ -361,7 +365,7 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
     <SelectField
       value={condition.op}
       onChange={(v) => onChange({ op: v as CompareOp, field: v === 'search' ? '_search' : condition.field })}
-      options={viewerModes ? VIEWER_OPERATORS : OPERATORS}
+      options={(viewerModes ? VIEWER_OPERATORS : OPERATORS).map((operator) => ({ ...operator, label: operatorLabel(operator.value, t) }))}
       className="w-[7.5rem] shrink-0"
     />
   )
@@ -369,8 +373,8 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
   const removeButton = (
     <button
       onClick={onRemove}
-      title="Remove condition"
-      aria-label="Remove condition"
+      title={t('workflows.builder.remove_condition')}
+      aria-label={t('workflows.builder.remove_condition')}
       className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
     >
       <Trash2 size={13} />
@@ -387,7 +391,7 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
     <SelectField
       value={condition.value == null ? '' : String(condition.value)}
       onChange={(v) => onChange({ value: v })}
-      placeholder="select value…"
+      placeholder={t('workflows.builder.select_value')}
       options={selectedField!.enum_values!.map((v) => ({ value: v, label: v }))}
       className={valueWidthClass}
       size="value"
@@ -396,8 +400,8 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
     <SelectField
       value={condition.value == null || condition.value === '' ? '' : String(condition.value)}
       onChange={(v) => onChange({ value: v === '' ? '' : v === 'true' })}
-      placeholder="select…"
-      options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]}
+      placeholder={t('workflows.builder.select')}
+      options={[{ value: 'true', label: t('common.yes') }, { value: 'false', label: t('common.no') }]}
       className={valueWidthClass}
       size="value"
     />
@@ -427,7 +431,7 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
     <Input
       value={condition.value == null ? '' : String(condition.value)}
       onChange={(e) => onChange({ value: e.target.value })}
-      placeholder={isMultiValue ? 'comma,separated,values' : 'value…'}
+      placeholder={isMultiValue ? 'comma,separated,values' : t('workflows.builder.value_placeholder')}
       className={cn('h-7 text-[12px]', valueWidthClass)}
     />
   )
@@ -440,8 +444,8 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
     <button
       type="button"
       onClick={() => onChange({ value_mode: isExpr ? 'static' : 'expression' })}
-      title={isExpr ? 'Switch to a static value' : 'Use an expression instead of a static value'}
-      aria-label={isExpr ? 'Switch to a static value' : 'Use an expression instead of a static value'}
+      title={isExpr ? t('workflows.builder.switch_static') : t('workflows.builder.use_expression')}
+      aria-label={isExpr ? t('workflows.builder.switch_static') : t('workflows.builder.use_expression')}
       aria-pressed={isExpr}
       className={cn(
         'flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]',
@@ -479,9 +483,9 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
                 // means nothing as a static value and vice versa.
                 onChange={(m) => onChange({ value_mode: m as ValueMode, value: '' })}
                 options={[
-                  { value: 'static', label: 'Fixed value' },
-                  { value: 'current_user', label: "Current user's…" },
-                  ...(viewerModes.thisRecordRefs ? [{ value: 'this_record', label: "This record's…" }] : []),
+                  { value: 'static', label: t('workflows.builder.fixed_value') },
+                  { value: 'current_user', label: t('workflows.builder.current_user') },
+                  ...(viewerModes.thisRecordRefs ? [{ value: 'this_record', label: t('workflows.builder.this_record') }] : []),
                 ]}
                 className="w-[8.5rem] shrink-0"
               />
@@ -490,7 +494,7 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
                 <SelectField
                   value={condition.value == null ? '' : String(condition.value)}
                   onChange={(v) => onChange({ value: v })}
-                  placeholder="attribute…"
+                  placeholder={t('workflows.builder.attribute')}
                   options={viewerModes.currentUserAttrs}
                   className="min-w-0 flex-1"
                   size="value"
@@ -547,8 +551,8 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
             />
             <button
               onClick={() => setEditorOpen(true)}
-              title="Open expression editor"
-              aria-label="Open expression editor"
+              title={t('workflows.builder.open_expression')}
+              aria-label={t('workflows.builder.open_expression')}
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] transition-colors hover:border-[hsl(var(--primary))] hover:text-[hsl(var(--primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
             >
               <Code2 size={13} />
@@ -568,7 +572,7 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
         onChange={(expr) => onChange({ expression: expr })}
         variables={variables}
         nodeContext={nodeContext}
-        label={condition.field || 'filter value'}
+        label={condition.field || t('workflows.builder.value_placeholder')}
       />
     </div>
   )
@@ -583,6 +587,7 @@ function ThisRecordValuePicker({ value, refs, onChange }: {
   refs: { name: string; label: string; targetFormId: string }[]
   onChange: (v: string) => void
 }) {
+  const { t } = useI18n()
   const dot = value.indexOf('.')
   const refName = dot === -1 ? value : value.slice(0, dot)
   const attr = dot === -1 ? '' : value.slice(dot + 1)
@@ -593,7 +598,7 @@ function ThisRecordValuePicker({ value, refs, onChange }: {
       <SelectField
         value={refName}
         onChange={(r) => onChange(r ? `${r}.` : '')}
-        placeholder="reference…"
+        placeholder={t('workflows.builder.reference')}
         options={refs.map((r) => ({ value: r.name, label: r.label }))}
         className="min-w-0 flex-1"
         size="value"
@@ -601,13 +606,26 @@ function ThisRecordValuePicker({ value, refs, onChange }: {
       <SelectField
         value={attr}
         onChange={(a) => { if (refName) onChange(`${refName}.${a}`) }}
-        placeholder={refName ? 'attribute…' : 'pick a reference first'}
+        placeholder={refName ? t('workflows.builder.attribute') : t('workflows.builder.pick_reference_first')}
         options={(hopForm?.fields ?? []).map((f) => ({ value: f.name, label: f.label || f.name }))}
         className="min-w-0 flex-1"
         size="value"
       />
     </>
   )
+}
+
+function operatorLabel(value: CompareOp, t: (key: string, vars?: Record<string, string | number>) => string) {
+  const keys: Partial<Record<CompareOp, string>> = {
+    contains: 'workflows.builder.operator_contains',
+    starts_with: 'workflows.builder.operator_starts_with',
+    in: 'workflows.builder.operator_in',
+    is_null: 'workflows.builder.operator_is_null',
+    not_null: 'workflows.builder.operator_not_null',
+    search: 'workflows.builder.operator_search',
+    was_updated: 'workflows.builder.operator_was_updated',
+  }
+  return keys[value] ? t(keys[value]!) : OPERATORS.find((operator) => operator.value === value)?.label ?? value
 }
 
 // Radix's real dropdown (select-menu.tsx) shared by the Field/Operator/

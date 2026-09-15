@@ -7,6 +7,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Eye, EyeOff } from 'lucide-react'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { FieldDef } from '@/features/forms/types'
 
 interface ColumnsPickerProps {
@@ -26,6 +27,7 @@ interface ColumnsPickerProps {
 // (@dnd-kit, vertical strategy here vs. horizontal for table headers) rather
 // than introducing a second drag library.
 export function ColumnsPicker({ fields, columns, onChange }: ColumnsPickerProps) {
+  const t = useTranslation()
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -55,14 +57,14 @@ export function ColumnsPicker({ fields, columns, onChange }: ColumnsPickerProps)
       <div>
         <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
           <Eye size={12} />
-          Visible columns
+          {t('menus.saved_views.columns_picker.visible_columns')}
         </p>
         <div className="min-h-[3rem] space-y-1 rounded-md border p-1.5" style={{ borderColor: 'hsl(var(--border))' }}>
-          {visible.length === 0 && <p className="px-1.5 py-2 text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>No visible columns.</p>}
+          {visible.length === 0 && <p className="px-1.5 py-2 text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('menus.saved_views.columns_picker.no_visible')}</p>}
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleVisibleDragEnd}>
             <SortableContext items={visibleNames} strategy={verticalListSortingStrategy}>
               {visible.map((f) => (
-                <ColumnRow key={f.name} field={f} draggable onAction={() => hide(f.name)} actionIcon={EyeOff} actionTitle="Hide column" />
+                <ColumnRow key={f.name} field={f} draggable onAction={() => hide(f.name)} actionIcon={EyeOff} actionTitle={t('menus.saved_views.columns_picker.hide_column')} />
               ))}
             </SortableContext>
           </DndContext>
@@ -72,12 +74,12 @@ export function ColumnsPicker({ fields, columns, onChange }: ColumnsPickerProps)
       <div>
         <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
           <EyeOff size={12} />
-          Hidden columns
+          {t('menus.saved_views.columns_picker.hidden_columns')}
         </p>
         <div className="min-h-[3rem] space-y-1 rounded-md border p-1.5" style={{ borderColor: 'hsl(var(--border))' }}>
-          {hidden.length === 0 && <p className="px-1.5 py-2 text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>No hidden columns.</p>}
+          {hidden.length === 0 && <p className="px-1.5 py-2 text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('menus.saved_views.columns_picker.no_hidden')}</p>}
           {hidden.map((f) => (
-            <ColumnRow key={f.name} field={f} onAction={() => show(f.name)} actionIcon={Eye} actionTitle="Show column" />
+            <ColumnRow key={f.name} field={f} onAction={() => show(f.name)} actionIcon={Eye} actionTitle={t('menus.saved_views.columns_picker.show_column')} />
           ))}
         </div>
       </div>

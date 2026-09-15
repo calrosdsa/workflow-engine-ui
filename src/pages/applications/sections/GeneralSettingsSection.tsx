@@ -5,12 +5,14 @@ import { Input } from '@/components/ui/input'
 import { useUpdateApplicationSettings } from '@/features/applications/hooks'
 import { usePermission } from '@/features/auth/permissions'
 import type { Application } from '@/features/applications/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 interface GeneralSettingsSectionProps {
   app: Application
 }
 
 export function GeneralSettingsSection({ app }: GeneralSettingsSectionProps) {
+  const t = useTranslation()
   const updateMutation = useUpdateApplicationSettings()
   const canWrite = usePermission('application:write')
 
@@ -38,17 +40,17 @@ export function GeneralSettingsSection({ app }: GeneralSettingsSectionProps) {
   return (
     <div className="mx-auto max-w-xl space-y-6 p-6">
       <div>
-        <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">General settings</h2>
-        <p className="text-sm text-[hsl(var(--muted-foreground))]">Basic information about this application.</p>
+        <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">{t('app_config.general_title')}</h2>
+        <p className="text-sm text-[hsl(var(--muted-foreground))]">{t('app_config.general_description')}</p>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name</label>
+          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('app_config.name')}</label>
           <Input value={name} onChange={(e) => { setName(e.target.value); setSaved(false) }} placeholder="My Application" disabled={!canWrite} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Description</label>
+          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('app_config.description')}</label>
           <textarea
             value={description}
             onChange={(e) => { setDescription(e.target.value); setSaved(false) }}
@@ -59,7 +61,7 @@ export function GeneralSettingsSection({ app }: GeneralSettingsSectionProps) {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Default menu slug</label>
+          <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('app_config.default_menu_slug')}</label>
           <Input
             value={defaultMenuSlug}
             onChange={(e) => { setDefaultMenuSlug(e.target.value); setSaved(false) }}
@@ -67,7 +69,7 @@ export function GeneralSettingsSection({ app }: GeneralSettingsSectionProps) {
             disabled={!canWrite}
             className="font-mono text-xs"
           />
-          <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">Which menu the runtime lands on at /{'{clientId}'}/{'{appId}'} with no slug given.</p>
+          <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">{t('app_config.default_menu_slug_help')}</p>
         </div>
       </div>
 
@@ -75,13 +77,13 @@ export function GeneralSettingsSection({ app }: GeneralSettingsSectionProps) {
         <div className="flex items-center gap-3">
           <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-1.5">
             {updateMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            Save
+            {t('common.save')}
           </Button>
           {saved && !updateMutation.isPending && (
-            <span className="flex items-center gap-1 text-xs text-[hsl(var(--success))]"><CheckCircle2 size={13} />Saved</span>
+            <span className="flex items-center gap-1 text-xs text-[hsl(var(--success))]"><CheckCircle2 size={13} />{t('common.saved')}</span>
           )}
           {updateMutation.isError && (
-            <span className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={13} />Failed to save</span>
+            <span className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]"><AlertCircle size={13} />{t('common.save_failed')}</span>
           )}
         </div>
       )}

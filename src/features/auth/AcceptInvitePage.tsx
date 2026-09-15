@@ -8,20 +8,23 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 // Matches the backend's minPasswordLength (api/invitations/handler.go),
 // itself matching credentialpassword's defaultMinPasswordLength.
-const schema = z.object({
-  first_name: z.string().min(1, 'First name is required'),
-  last_name: z.string().min(1, 'Last name is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-})
-type FormValues = z.infer<typeof schema>
+type FormValues = { first_name: string; last_name: string; password: string }
 
 export function AcceptInvitePage() {
   const navigate = useNavigate()
   const acceptInvitation = useAcceptInvitation()
+  const t = useTranslation()
   const [submitted, setSubmitted] = useState(false)
+
+  const schema = z.object({
+    first_name: z.string().min(1, t('auth.first_name_required')),
+    last_name: z.string().min(1, t('auth.last_name_required')),
+    password: z.string().min(8, t('auth.password_min_length')),
+  })
 
   // This route lives outside the authenticated shell (no session yet), so
   // it reads the token directly from the URL rather than the router's
@@ -49,8 +52,8 @@ export function AcceptInvitePage() {
       <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
         <Card className="w-full max-w-sm">
           <CardHeader>
-            <CardTitle>Invalid invitation link</CardTitle>
-            <CardDescription>This link is missing its invitation token.</CardDescription>
+            <CardTitle>{t('auth.invalid_invitation')}</CardTitle>
+            <CardDescription>{t('auth.invitation_missing_token')}</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -61,34 +64,34 @@ export function AcceptInvitePage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Accept invitation</CardTitle>
-          <CardDescription>Set your name and password to create your account.</CardDescription>
+          <CardTitle>{t('auth.accept_invitation')}</CardTitle>
+          <CardDescription>{t('auth.accept_invitation_description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {submitted ? (
-            <p className="text-sm text-emerald-700">Account created — redirecting to sign in…</p>
+            <p className="text-sm text-emerald-700">{t('auth.account_created_redirect')}</p>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-1">
-                <Label htmlFor="first_name">First name</Label>
+                <Label htmlFor="first_name">{t('auth.first_name')}</Label>
                 <Input id="first_name" {...register('first_name')} autoComplete="given-name" />
                 {errors.first_name && <p className="text-xs text-destructive">{errors.first_name.message}</p>}
               </div>
               <div className="space-y-1">
-                <Label htmlFor="last_name">Last name</Label>
+                <Label htmlFor="last_name">{t('auth.last_name')}</Label>
                 <Input id="last_name" {...register('last_name')} autoComplete="family-name" />
                 {errors.last_name && <p className="text-xs text-destructive">{errors.last_name.message}</p>}
               </div>
               <div className="space-y-1">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('auth.password')}</Label>
                 <Input id="password" type="password" {...register('password')} autoComplete="new-password" />
                 {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
               </div>
               {acceptInvitation.isError && (
-                <p className="text-xs text-destructive">This invitation could not be accepted — it may be invalid or expired.</p>
+                <p className="text-xs text-destructive">{t('auth.invitation_failed')}</p>
               )}
               <Button type="submit" className="w-full" disabled={acceptInvitation.isPending}>
-                {acceptInvitation.isPending ? 'Creating account…' : 'Create account'}
+                {acceptInvitation.isPending ? t('auth.creating_account') : t('auth.create_account')}
               </Button>
             </form>
           )}

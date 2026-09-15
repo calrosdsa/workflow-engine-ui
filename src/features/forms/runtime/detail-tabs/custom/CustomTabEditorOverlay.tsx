@@ -30,6 +30,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { useAuthStore } from '@/stores/auth'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { DashboardSchema } from '@/features/dashboard/schema'
 
 interface CustomTabEditorOverlayProps {
@@ -50,6 +51,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 export function CustomTabEditorOverlay({ open, onOpenChange, tabLabel, schema, onChange }: CustomTabEditorOverlayProps) {
+  const t = useTranslation()
   const activeMembership = useAuthStore((s) => s.activeMembership)
   const clientId = activeMembership?.client_id
   const appId = activeMembership?.app_id
@@ -124,12 +126,12 @@ export function CustomTabEditorOverlay({ open, onOpenChange, tabLabel, schema, o
 
   useEffect(() => {
     if (!justSaved) return
-    const t = setTimeout(() => setJustSaved(false), 1600)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setJustSaved(false), 1600)
+    return () => clearTimeout(timer)
   }, [justSaved])
 
   const handleBack = () => {
-    if (dirty && !window.confirm('You have unsaved changes to this tab. Leave without saving?')) return
+    if (dirty && !window.confirm(t('common.confirm_leave_unsaved'))) return
     onOpenChange(false)
   }
 
@@ -140,9 +142,9 @@ export function CustomTabEditorOverlay({ open, onOpenChange, tabLabel, schema, o
       <DialogContent
         className="left-0 top-0 h-screen w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0 data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0"
       >
-        <DialogTitle className="sr-only">{tabLabel} — Custom Tab Editor</DialogTitle>
+        <DialogTitle className="sr-only">{t('custom.config.editor_title', { tabLabel })}</DialogTitle>
         <DialogDescription className="sr-only">
-          Arrange this tab's widget grid — the same widgets a Dashboard menu uses.
+          {t('custom.config.editor_description')}
         </DialogDescription>
 
         {!initialised ? (
@@ -153,8 +155,8 @@ export function CustomTabEditorOverlay({ open, onOpenChange, tabLabel, schema, o
               <Button
                 variant="ghost" size="icon"
                 onClick={handleBack}
-                aria-label="Back to Detail Page Builder"
-                title="Back to Detail Page Builder"
+                aria-label={t('custom.config.back_to_builder')}
+                title={t('custom.config.back_to_builder')}
               >
                 <ArrowLeft size={16} />
               </Button>
@@ -166,7 +168,7 @@ export function CustomTabEditorOverlay({ open, onOpenChange, tabLabel, schema, o
                 {dirty && (
                   <span className="flex items-center gap-1 rounded-full bg-[hsl(var(--warning))]/15 px-2 py-0.5 text-[10px] font-medium text-[hsl(var(--warning))]">
                     <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--warning))]" />
-                    Unsaved
+                    {t('common.unsaved')}
                   </span>
                 )}
               </div>
@@ -178,8 +180,8 @@ export function CustomTabEditorOverlay({ open, onOpenChange, tabLabel, schema, o
                   variant="ghost" size="icon"
                   onClick={undo}
                   disabled={!canUndo}
-                  aria-label="Undo"
-                  title="Undo (Ctrl+Z)"
+                  aria-label={t('common.undo')}
+                  title={t('common.undo')}
                 >
                   <Undo2 size={16} />
                 </Button>
@@ -187,8 +189,8 @@ export function CustomTabEditorOverlay({ open, onOpenChange, tabLabel, schema, o
                   variant="ghost" size="icon"
                   onClick={redo}
                   disabled={!canRedo}
-                  aria-label="Redo"
-                  title="Redo (Ctrl+Shift+Z)"
+                  aria-label={t('common.redo')}
+                  title={t('common.redo')}
                 >
                   <Redo2 size={16} />
                 </Button>
@@ -196,15 +198,15 @@ export function CustomTabEditorOverlay({ open, onOpenChange, tabLabel, schema, o
 
               <div className="h-5 w-px bg-[hsl(var(--border))]" />
 
-              <Button size="sm" onClick={handleSave} title="Apply to this tab (Ctrl+S)">
+              <Button size="sm" onClick={handleSave} title={t('custom.config.apply_title')}>
                 {justSaved ? <Check size={13} /> : <Save size={13} />}
-                {justSaved ? 'Applied' : 'Apply'}
+                {justSaved ? t('custom.config.applied') : t('common.apply')}
               </Button>
             </header>
 
             <div className="flex items-center gap-1.5 border-b border-[hsl(var(--warning))]/25 bg-[hsl(var(--warning))]/10 px-3 py-1.5 text-[11px] text-[hsl(var(--warning))]">
               <AlertCircle size={12} className="shrink-0" />
-              Applying here updates this tab's configuration — use the Form Builder's own Save to persist it.
+              {t('custom.config.editor_warning')}
             </div>
 
             <div className="flex flex-1 overflow-hidden">

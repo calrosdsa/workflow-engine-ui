@@ -2,7 +2,8 @@ import { Variable } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { registerUiWorkflowNode, type UiWorkflowNodeConfigPanelProps } from '../node-registry'
-import { Field, FieldPicker, VALUE_SOURCE_HINT } from './panel-kit'
+import { Field, FieldPicker } from './panel-kit'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { resolveValue } from '../values'
 import { ALL_PLATFORMS } from '../types'
 
@@ -36,30 +37,31 @@ export function parseSetVariableConfig(raw: unknown): SetVariableStepConfig {
 }
 
 function SetVariablePanel({ config, onChange, fields }: UiWorkflowNodeConfigPanelProps<SetVariableStepConfig>) {
+  const t = useTranslation()
   return (
     <div className="space-y-2">
-      <Field label="Variable name" hint="Later steps read this by name.">
+      <Field label={t('ui_workflows.panel.set_variable.name_label')} hint={t('ui_workflows.panel.set_variable.name_hint')}>
         <Input
           value={config.name}
           onChange={(e) => onChange({ ...config, name: e.target.value })}
-          placeholder="total"
+          placeholder={t('ui_workflows.panel.set_variable.name_placeholder')}
           className="h-8 text-[12px]"
         />
       </Field>
-      <Field label="Value from" hint={VALUE_SOURCE_HINT}>
+      <Field label={t('ui_workflows.panel.value_from_label')} hint={t('ui_workflows.value_source_hint')}>
         <SelectMenu
           value={config.source}
           onValueChange={(v) => onChange({ ...config, source: v as SetVariableStepConfig['source'] })}
         >
           <SelectTrigger className="h-8 text-[12px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="static" className="text-[12px]">A typed-in value</SelectItem>
-            <SelectItem value="field" className="text-[12px]">A field on this record</SelectItem>
+            <SelectItem value="static" className="text-[12px]">{t('ui_workflows.value_source.static')}</SelectItem>
+            <SelectItem value="field" className="text-[12px]">{t('ui_workflows.value_source.field')}</SelectItem>
           </SelectContent>
         </SelectMenu>
       </Field>
       {config.source === 'static' ? (
-        <Field label="Value">
+        <Field label={t('common.value')}>
           <Input
             value={String(config.value ?? '')}
             onChange={(e) => onChange({ ...config, value: e.target.value })}
@@ -67,7 +69,7 @@ function SetVariablePanel({ config, onChange, fields }: UiWorkflowNodeConfigPane
           />
         </Field>
       ) : (
-        <Field label="Field">
+        <Field label={t('ui_workflows.panel.field_label')}>
           <FieldPicker
             fields={fields}
             value={config.field ?? ''}

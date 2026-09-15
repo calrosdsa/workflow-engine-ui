@@ -12,6 +12,7 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { render, cleanup, screen } from '@testing-library/react'
 import { FormRenderer } from './FormRenderer'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import type { FieldDef } from '@/features/forms/types'
 import type { FormSchema } from '@/features/form-builder/schema'
 
@@ -31,11 +32,13 @@ function schemaOf(fields: FieldDef[]): FormSchema {
 describe('accessible names', () => {
   it('names a text input by its label', () => {
     render(
-      <FormRenderer
-        schema={schemaOf([{ name: 'customer', label: 'Customer', type: 'string' }])}
-        fields={[{ name: 'customer', label: 'Customer', type: 'string' }]}
-        onSubmit={() => {}}
-      />,
+      <I18nProvider>
+        <FormRenderer
+          schema={schemaOf([{ name: 'customer', label: 'Customer', type: 'string' }])}
+          fields={[{ name: 'customer', label: 'Customer', type: 'string' }]}
+          onSubmit={() => {}}
+        />
+      </I18nProvider>,
     )
     expect(screen.getByRole('textbox', { name: /customer/i })).toBeTruthy()
   })
@@ -48,7 +51,7 @@ describe('accessible names', () => {
       { name: 'active', label: 'Active', type: 'boolean' },
       { name: 'stage', label: 'Stage', type: 'enum', enum_values: ['new', 'won'] },
     ]
-    render(<FormRenderer schema={schemaOf(fields)} fields={fields} onSubmit={() => {}} />)
+    render(<I18nProvider><FormRenderer schema={schemaOf(fields)} fields={fields} onSubmit={() => {}} /></I18nProvider>)
 
     expect(screen.getByRole('textbox', { name: /^title$/i })).toBeTruthy()
     expect(screen.getByRole('textbox', { name: /notes/i })).toBeTruthy()
@@ -60,7 +63,9 @@ describe('accessible names', () => {
   it('focuses the input when its label is clicked', () => {
     const fields: FieldDef[] = [{ name: 'customer', label: 'Customer', type: 'string' }]
     const { container } = render(
-      <FormRenderer schema={schemaOf(fields)} fields={fields} onSubmit={() => {}} />,
+      <I18nProvider>
+        <FormRenderer schema={schemaOf(fields)} fields={fields} onSubmit={() => {}} />
+      </I18nProvider>,
     )
 
     // The htmlFor/id pair is what makes this work; without it the label points
@@ -77,10 +82,10 @@ describe('accessible names', () => {
     // emit duplicate ids and every label would point at the first copy.
     const fields: FieldDef[] = [{ name: 'customer', label: 'Customer', type: 'string' }]
     render(
-      <>
+      <I18nProvider>
         <FormRenderer schema={schemaOf(fields)} fields={fields} onSubmit={() => {}} />
         <FormRenderer schema={schemaOf(fields)} fields={fields} onSubmit={() => {}} />
-      </>,
+      </I18nProvider>,
     )
 
     const [a, b] = screen.getAllByRole('textbox', { name: /customer/i })
@@ -93,7 +98,7 @@ describe('accessible names', () => {
     const schema = schemaOf(fields)
     schema.sections[0].columns[0].elements[0].helpText = 'Legal entity name'
 
-    render(<FormRenderer schema={schema} fields={fields} onSubmit={() => {}} />)
+    render(<I18nProvider><FormRenderer schema={schema} fields={fields} onSubmit={() => {}} /></I18nProvider>)
 
     const input = screen.getByRole('textbox', { name: /customer/i })
     const describedBy = input.getAttribute('aria-describedby')
@@ -105,14 +110,14 @@ describe('accessible names', () => {
 
   it('marks a required field as required for assistive tech', () => {
     const fields: FieldDef[] = [{ name: 'customer', label: 'Customer', type: 'string', required: true }]
-    render(<FormRenderer schema={schemaOf(fields)} fields={fields} onSubmit={() => {}} />)
+    render(<I18nProvider><FormRenderer schema={schemaOf(fields)} fields={fields} onSubmit={() => {}} /></I18nProvider>)
 
     expect(screen.getByRole('textbox', { name: /customer/i }).getAttribute('aria-required')).toBe('true')
   })
 
   it('hides the decorative required asterisk from the accessible name', () => {
     const fields: FieldDef[] = [{ name: 'customer', label: 'Customer', type: 'string', required: true }]
-    render(<FormRenderer schema={schemaOf(fields)} fields={fields} onSubmit={() => {}} />)
+    render(<I18nProvider><FormRenderer schema={schemaOf(fields)} fields={fields} onSubmit={() => {}} /></I18nProvider>)
 
     // "Customer", not "Customer *" — aria-required already carries that, and a
     // literal asterisk read aloud is noise.
@@ -130,7 +135,7 @@ describe('multi-control fields are labelled as a group', () => {
     el.component = 'multiselect'
     el.options = [{ value: 'a', label: 'Alpha' }, { value: 'b', label: 'Beta' }]
 
-    render(<FormRenderer schema={schema} fields={fields} onSubmit={() => {}} />)
+    render(<I18nProvider><FormRenderer schema={schema} fields={fields} onSubmit={() => {}} /></I18nProvider>)
 
     // A <label htmlFor> pointing at a container would be invalid and ignored,
     // so the set is named with role=group + aria-labelledby instead.

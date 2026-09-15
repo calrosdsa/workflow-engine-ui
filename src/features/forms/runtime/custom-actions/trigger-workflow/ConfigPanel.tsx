@@ -9,6 +9,7 @@ import { useMemo } from 'react'
 import { Label } from '@/components/ui/label'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useWorkflows } from '@/features/workflows/hooks'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { CustomActionConfigPanelProps } from '../contract'
 import type { TriggerWorkflowActionConfig } from './schema'
 import type { GraphNode, TriggerConfig, WorkflowDefinition } from '@/features/workflows/types'
@@ -28,6 +29,7 @@ function triggerConfigOf(wf: WorkflowDefinition): TriggerConfig | undefined {
 }
 
 export function TriggerWorkflowConfigPanel({ config, onChange, formId }: CustomActionConfigPanelProps<TriggerWorkflowActionConfig>) {
+  const t = useTranslation()
   const { data: workflows } = useWorkflows()
 
   const eligible = useMemo(() => {
@@ -41,16 +43,16 @@ export function TriggerWorkflowConfigPanel({ config, onChange, formId }: CustomA
 
   return (
     <div className="flex flex-col gap-1.5">
-      <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Workflow to run</Label>
+      <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('trigger_workflow.config.workflow_label')}</Label>
       <SelectMenu
         value={config.workflowDefinitionId}
         onValueChange={(workflowDefinitionId) => onChange({ ...config, workflowDefinitionId })}
       >
-        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Choose a workflow…" /></SelectTrigger>
+        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('trigger_workflow.config.choose_workflow_placeholder')} /></SelectTrigger>
         <SelectContent>
           {eligible.length === 0 ? (
             <div className="px-2 py-1.5 text-[12px] text-[hsl(var(--muted-foreground))]">
-              No eligible workflows. Create one with Trigger Mode "On Demand (with a record)" — optionally restricted to this form.
+              {t('trigger_workflow.config.no_eligible_workflows')}
             </div>
           ) : (
             eligible.map((wf) => (

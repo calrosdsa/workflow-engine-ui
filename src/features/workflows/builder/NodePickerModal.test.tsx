@@ -32,33 +32,37 @@ function open(onSelect: (s: PickerSelection) => void = () => {}) {
   )
 }
 
-const tabNames = () =>
+const categoryNames = ['AI', 'Data', 'Flow', 'Core', 'Output']
+
+const visibleCategoryNames = () =>
   screen
     .getAllByRole('button')
     .map((b) => b.textContent?.trim() ?? '')
-    .filter((t) => ['All', 'Structure', 'Data', 'Logic', 'Integration', 'AI', 'Notify', 'Output', 'Utility'].includes(t))
+    .map((t) => categoryNames.find((name) => t.startsWith(name)) ?? '')
+    .filter(Boolean)
 
 describe('the node picker, against the live catalog', () => {
-  it('renders one tab per OCCUPIED category, in the order the server gave', () => {
+  it('renders one landing choice per OCCUPIED category, in the order the server gave', () => {
     open()
     // Ordering is the server's `order` field, not this file's opinion. A
-    // category with no addable members never appears — trigger/exit/loop_end
-    // are placed automatically, so Structure shows only because Iterator and
-    // Merge are in the palette.
-    expect(tabNames()).toEqual(['All', 'Structure', 'Data', 'Logic', 'Integration', 'AI', 'Notify', 'Output', 'Utility'])
+    // category with no addable members never appears. The visible choices are
+    // presentation buckets: Flow combines Structure + Logic, while Core
+    // combines Integration + Notify + Utility.
+    expect(visibleCategoryNames()).toEqual(categoryNames)
+    expect(screen.getByText('Action in an app')).toBeTruthy()
   })
 
   it('lets the server re-group a node the frontend had classified differently', () => {
     open()
-    // Iterator and Merge were 'logic' in this bundle's compiled-in fallback and
-    // 'structure' in the engine's catalog. The served answer wins, which is
-    // the entire point of the taxonomy endpoint — and the visible proof that
-    // regrouping a node needs no frontend release.
-    fireEvent.click(screen.getByRole('button', { name: 'Structure' }))
+    // Iterator and Merge are served as Structure, and Set Variable is served
+    // as Logic. The picker presents both as one Flow choice while the server
+    // taxonomy remains unchanged.
+    fireEvent.click(screen.getByRole('button', { name: /^Flow/ }))
     expect(screen.getByText('Iterator')).toBeTruthy()
     expect(screen.getByText('Merge')).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Logic' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Back to categories/ }))
+    fireEvent.click(screen.getByRole('button', { name: /^Core/ }))
     expect(screen.queryByText('Iterator')).toBeNull()
   })
 
@@ -66,44 +70,48 @@ describe('the node picker, against the live catalog', () => {
     open()
     // The old layout grouped by provenance. Someone looking for "post to
     // Slack" scans for what a node does, not for which process implements it.
-    // The new "Apps" tab below does NOT reintroduce this — it's an
+    // The new app-browse choice does NOT reintroduce this — it is an
     // additional browsing mode, not a replacement: a package node still
-    // also appears under its own functional-category tab exactly as
-    // today, so nothing is removed from the tabs this test guards, unlike
-    // the old Connectors tab, which fragmented the SAME entries across two
-    // competing grouping axes.
+    // also appears under its functional category, so the same action is not
+    // fragmented across competing grouping axes.
     expect(screen.queryByRole('button', { name: 'Connectors' })).toBeNull()
   })
 
-  it('puts a package node in the same group as the built-in it resembles', () => {
+  it('keeps app actions out of the Core category', () => {
     open()
-    // The whole point of the two-axis model, end to end: slack_post_message
-    // is a package node, and it belongs next to http_request under
-    // Integration.
-    fireEvent.click(screen.getByRole('button', { name: 'Integration' }))
-    const slack = screen.getByText('Slack — Post Message').closest('button')!
-    expect(within(slack).getByText('package')).toBeTruthy()
+    // Core is for platform-owned steps. Provider actions are intentionally
+    // reached through the separate Action in an app path.
+    fireEvent.click(screen.getByRole('button', { name: /^Core/ }))
+    expect(screen.getByText('HTTP Request')).toBeTruthy()
+    expect(screen.getByText('Notification')).toBeTruthy()
+    expect(screen.queryByText('Post Message')).toBeNull()
+    expect(screen.queryByText('Send Template Message')).toBeNull()
+    expect(screen.queryByText('Format Reference Code')).toBeNull()
+    expect(screen.queryByText('Slack actions')).toBeNull()
   })
 
-  it('lists built-ins ahead of package nodes within a shared group', () => {
+  it('keeps Core action cards full width', () => {
     open()
-    fireEvent.click(screen.getByRole('button', { name: 'Integration' }))
-    const labels = screen.getAllByRole('button').map((b) => b.textContent ?? '')
-    const http = labels.findIndex((t) => t.includes('HTTP Request'))
-    const slack = labels.findIndex((t) => t.includes('Slack'))
-    expect(http).toBeGreaterThan(-1)
-    expect(slack).toBeGreaterThan(http)
+    fireEvent.click(screen.getByRole('button', { name: /^Core/ }))
+    const http = screen.getByText('HTTP Request').closest('button')!
+    expect(http.className).toContain('w-full')
   })
 
-  it('fills the Utility tab, which had no members before packages existed', () => {
+  it('keeps utility package actions available through app browsing', () => {
     open()
-    fireEvent.click(screen.getByRole('button', { name: 'Utility' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Core/ }))
+    expect(screen.queryByText('Format Reference Code')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /^Back to categories/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Action in an app/ }))
+    fireEvent.click(screen.getByText('Examples'))
     expect(screen.getByText('Format Reference Code')).toBeTruthy()
   })
 
-  it('badges provenance only where it is not the default', () => {
+  it('keeps built-in provenance implicit in the section hierarchy', () => {
     open()
-    // A core node carries no badge — every node wearing one would be noise.
+    // Provenance is communicated by the section label rather than a badge on
+    // every card — the card itself can stay focused on the action.
+    fireEvent.click(screen.getByRole('button', { name: /^Flow/ }))
     const setVar = screen.getByText('Set Variable').closest('button')!
     expect(within(setVar).queryByText('core')).toBeNull()
     expect(within(setVar).queryByText('package')).toBeNull()
@@ -121,9 +129,9 @@ describe('the node picker, against the live catalog', () => {
     expect(screen.queryByText('Slack — Post Message')).toBeNull()
   })
 
-  it('has an Apps tab that renders the app-grouped picker', () => {
+  it('has an app-browse choice that renders the app-grouped picker', () => {
     open()
-    fireEvent.click(screen.getByRole('button', { name: 'Apps' }))
+    fireEvent.click(screen.getByRole('button', { name: /Action in an app/ }))
     expect(screen.getByText('WhatsApp')).toBeTruthy()
     expect(screen.getByText('Slack')).toBeTruthy()
     // The flat node grid's own search box is gone — AppPickerPanel has its
@@ -132,23 +140,23 @@ describe('the node picker, against the live catalog', () => {
     expect(screen.getByPlaceholderText('Search apps…')).toBeTruthy()
   })
 
-  it('reports an action picked from the Apps tab as a node selection', () => {
+  it('reports an action picked from app browsing as a node selection', () => {
     const onSelect = vi.fn()
     open(onSelect)
-    fireEvent.click(screen.getByRole('button', { name: 'Apps' }))
+    fireEvent.click(screen.getByRole('button', { name: /Action in an app/ }))
     fireEvent.click(screen.getByText('WhatsApp'))
     fireEvent.click(screen.getByText('WhatsApp — Send Template Message'))
     expect(onSelect).toHaveBeenCalledWith({ kind: 'node', type: 'whatsapp_send' })
   })
 
-  it('reports a trigger picked from the Apps tab as a trigger_preset selection, not a node', () => {
+  it('reports a trigger picked from app browsing as a trigger_preset selection, not a node', () => {
     // The whole point of the discriminated selection: picking a trigger
     // from THIS mid-workflow picker must not add a graph node — the
     // singleton Trigger node gets reconfigured instead, one layer up in
     // Layout.tsx's handlePickerSelect.
     const onSelect = vi.fn()
     open(onSelect)
-    fireEvent.click(screen.getByRole('button', { name: 'Apps' }))
+    fireEvent.click(screen.getByRole('button', { name: /Action in an app/ }))
     fireEvent.click(screen.getByText('WhatsApp'))
     fireEvent.click(screen.getByText('WhatsApp — On Message'))
     expect(onSelect).toHaveBeenCalledWith({
@@ -157,11 +165,14 @@ describe('the node picker, against the live catalog', () => {
     })
   })
 
-  it('returns to the flat category view when switching tabs away from Apps', () => {
+  it('returns to the category landing when leaving app browsing', () => {
     open()
-    fireEvent.click(screen.getByRole('button', { name: 'Apps' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Integration' }))
+    fireEvent.click(screen.getByRole('button', { name: /Action in an app/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Categories' }))
+    expect(screen.getByText('What happens next?')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /^Core/ }))
     expect(screen.getByPlaceholderText('Search nodes…')).toBeTruthy()
-    expect(screen.getByText('Slack — Post Message')).toBeTruthy()
+    expect(screen.getByText('HTTP Request')).toBeTruthy()
+    expect(screen.queryByText('Post Message')).toBeNull()
   })
 })

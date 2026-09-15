@@ -42,28 +42,31 @@ import { Link2, LayoutGrid } from 'lucide-react'
 import { ZonedDetailTabList } from '@/features/forms/runtime/detail-tabs/ZonedDetailTabList'
 import { resolveDetailTabs } from '@/features/forms/runtime/detail-tabs/registry'
 import { PREVIEW_RECORD_ID } from '@/features/forms/runtime/preview-sentinel'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { fabricateSampleRecord } from './sample-data'
 import type { FormSchema } from '@/features/form-builder/schema'
 import type { FieldDef } from '@/features/forms/types'
 import type { DetailTabRendererProps } from '@/features/forms/runtime/detail-tabs/contract'
 
 function RelatedFormPreviewPlaceholder({ config }: DetailTabRendererProps<{ targetFormId?: string }>) {
+  const t = useTranslation()
   return (
     <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-[hsl(var(--border))] py-10 text-center">
       <Link2 size={20} className="text-[hsl(var(--muted-foreground))]" />
       <p className="text-sm text-[hsl(var(--muted-foreground))]">
-        {config.targetFormId ? 'Related records will appear here.' : 'Related records will appear here once a target form is configured.'}
+        {config.targetFormId ? t('detail_tab.canvas.related_form_placeholder') : t('detail_tab.canvas.related_form_placeholder_unconfigured')}
       </p>
-      <p className="text-xs text-[hsl(var(--muted-foreground))]/70">Not shown in preview.</p>
+      <p className="text-xs text-[hsl(var(--muted-foreground))]/70">{t('detail_tab.canvas.not_shown_in_preview')}</p>
     </div>
   )
 }
 
 function CustomTabPreviewPlaceholder() {
+  const t = useTranslation()
   return (
     <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-[hsl(var(--border))] py-10 text-center">
       <LayoutGrid size={20} className="text-[hsl(var(--muted-foreground))]" />
-      <p className="text-sm text-[hsl(var(--muted-foreground))]">Custom widgets are not shown in preview.</p>
+      <p className="text-sm text-[hsl(var(--muted-foreground))]">{t('detail_tab.canvas.custom_not_shown')}</p>
     </div>
   )
 }

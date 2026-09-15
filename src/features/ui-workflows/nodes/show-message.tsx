@@ -3,6 +3,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { registerUiWorkflowNode, type UiWorkflowNodeConfigPanelProps } from '../node-registry'
 import { Field } from './panel-kit'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { ALL_PLATFORMS } from '../types'
 
 /** Kept name- and shape-compatible with the SERVER's show_message node
@@ -34,26 +35,27 @@ export function parseShowMessageConfig(raw: unknown): ShowMessageStepConfig {
 }
 
 function ShowMessagePanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<ShowMessageStepConfig>) {
+  const t = useTranslation()
   return (
     <div className="space-y-2">
-      <Field label="Message">
+      <Field label={t('ui_workflows.panel.message_label')}>
         <Textarea
           value={config.message}
           onChange={(e) => onChange({ ...config, message: e.target.value })}
           rows={2}
-          placeholder="Saved."
+          placeholder={t('ui_workflows.panel.show_message.message_placeholder')}
           className="text-[12px]"
         />
       </Field>
-      <Field label="Style">
+      <Field label={t('ui_workflows.panel.show_message.style_label')}>
         <SelectMenu
           value={config.message_type}
           onValueChange={(v) => onChange({ ...config, message_type: v as ShowMessageStepConfig['message_type'] })}
         >
           <SelectTrigger className="h-8 text-[12px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {(['info', 'success', 'warning', 'error'] as const).map((t) => (
-              <SelectItem key={t} value={t} className="text-[12px]">{t}</SelectItem>
+            {(['info', 'success', 'warning', 'error'] as const).map((kind) => (
+              <SelectItem key={kind} value={kind} className="text-[12px]">{t(`common.${kind}`)}</SelectItem>
             ))}
           </SelectContent>
         </SelectMenu>

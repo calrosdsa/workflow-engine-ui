@@ -8,6 +8,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useLinkableForms, useLinkSharedForm } from './hooks'
 import type { LinkableForm, FormVisibility } from './types'
 
@@ -18,13 +19,17 @@ interface LinkSharedFormDialogProps {
 
 /** What a borrowing app may do under each grant. Deliberately phrased from
  *  the BORROWER's point of view — the same three values read very
- *  differently in Share Settings, where the owner is deciding. */
-const GRANT_LABEL: Record<FormVisibility, { label: string; variant: 'default' | 'secondary'; hint: string }> = {
-  full_access: { label: 'Full access', variant: 'default', hint: 'View, use, add, edit and delete records.' },
-  read_only:   { label: 'Read only',   variant: 'secondary', hint: 'View and use records, but not change them.' },
-  // Never rendered: a private form is not linkable and the server filters it
-  // out of this list. Present so the map is total.
-  private:     { label: 'Not shared',  variant: 'secondary', hint: 'Not shared.' },
+ *  differently in Share Settings, where the owner is deciding. Local to this
+ *  one component, so a t()-taking factory is simpler than dynamic-key
+ *  reconstruction — same shape as fnLabels(t) elsewhere in this migration. */
+function grantLabels(t: ReturnType<typeof useTranslation>): Record<FormVisibility, { label: string; variant: 'default' | 'secondary'; hint: string }> {
+  return {
+    full_access: { label: t('forms.link_shared_dialog.grant_full_access'), variant: 'default', hint: t('forms.link_shared_dialog.grant_full_access_hint') },
+    read_only:   { label: t('forms.link_shared_dialog.grant_read_only'),   variant: 'secondary', hint: t('forms.link_shared_dialog.grant_read_only_hint') },
+    // Never rendered: a private form is not linkable and the server filters
+    // it out of this list. Present so the map is total.
+    private:     { label: t('forms.link_shared_dialog.grant_not_shared'),  variant: 'secondary', hint: t('forms.link_shared_dialog.grant_not_shared_hint') },
+  }
 }
 
 /** "Shared from another app" — picks a form another app owns and has shared,
@@ -36,8 +41,10 @@ const GRANT_LABEL: Record<FormVisibility, { label: string; variant: 'default' | 
  *  no further action, which is why nothing in this dialog promises the form
  *  will stay. */
 export function LinkSharedFormDialog({ open, onOpenChange }: LinkSharedFormDialogProps) {
+  const t = useTranslation()
   const { data: forms, isLoading, error } = useLinkableForms(open)
   const linkMutation = useLinkSharedForm()
+  const GRANT_LABEL = grantLabels(t)
 
   // Grouped by owning app: "which app is this coming from" is the first
   // thing you need to know about a borrowed form, and a flat list of names
@@ -54,15 +61,15 @@ export function LinkSharedFormDialog({ open, onOpenChange }: LinkSharedFormDialo
 
   const link = (form: LinkableForm) => {
     linkMutation.mutate(form.id, {
-      onSuccess: () => toast.success(`"${form.name}" added to this app.`),
+      onSuccess: () => toast.success(t('forms.link_shared_dialog.linked_toast', { name: form.name })),
       onError: (e) => {
         // 409 is the real race this dialog can hit: the list was fetched,
         // then the owning app narrowed the grant before the click landed.
         if (e instanceof HTTPError && e.response.status === 409) {
-          toast.error(`"${form.name}" is no longer shared by ${form.owner_app_name}.`)
+          toast.error(t('forms.link_shared_dialog.no_longer_shared_toast', { name: form.name, owner: form.owner_app_name }))
           return
         }
-        toast.error(`Could not add "${form.name}".`)
+        toast.error(t('forms.link_shared_dialog.link_failed_toast', { name: form.name }))
       },
     })
   }
@@ -71,11 +78,9 @@ export function LinkSharedFormDialog({ open, onOpenChange }: LinkSharedFormDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[80vh] w-full max-w-lg flex-col">
         <DialogHeader>
-          <DialogTitle>Shared from another app</DialogTitle>
+          <DialogTitle>{t('forms.link_shared_dialog.title')}</DialogTitle>
           <DialogDescription>
-            These forms belong to other apps in this workspace and have been shared. Adding one puts it in
-            this app's list — it stays owned by its own app, and what you can do with it follows that app's
-            sharing setting.
+            {t('forms.link_shared_dialog.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -84,16 +89,16 @@ export function LinkSharedFormDialog({ open, onOpenChange }: LinkSharedFormDialo
             <div className="flex h-32 items-center justify-center"><Spinner /></div>
           ) : error ? (
             <p className="py-8 text-center text-sm text-[hsl(var(--destructive))]">
-              Could not load shared forms.
+              {t('forms.link_shared_dialog.load_error')}
             </p>
           ) : byApp.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-[hsl(var(--border))] px-6 py-10 text-center">
               <Share2 size={26} className="mb-3 text-[hsl(var(--muted-foreground))]/60" />
               <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                No other app has shared a form with this one yet.
+                {t('forms.link_shared_dialog.empty_title')}
               </p>
               <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
-                An app shares a form from its own Form Builder, via the ⋯ menu → Share Settings.
+                {t('forms.link_shared_dialog.empty_hint')}
               </p>
             </div>
           ) : (
@@ -129,7 +134,7 @@ export function LinkSharedFormDialog({ open, onOpenChange }: LinkSharedFormDialo
                             disabled={linkMutation.isPending}
                             onClick={() => link(form)}
                           >
-                            <Plus size={14} />Add
+                            <Plus size={14} />{t('forms.link_shared_dialog.add')}
                           </Button>
                         </div>
                       )

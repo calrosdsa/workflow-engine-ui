@@ -15,6 +15,7 @@ import { DropZone } from './DropZone'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuLabel } from '@/components/ui/context-menu'
 import type { SetVariableConfig, ConditionConfig, VariableAssignment, FetchRecordsConfig, FilterGroup, IteratorConfig, HttpRequestConfig, TriggerConfig, ShowMessageConfig, NotificationConfig, DebugConfig } from '../../types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 const DRAG_TRANSFER_KEY = 'application/workflow-node-reorder'
 
@@ -63,13 +64,14 @@ export function statusBadgeText(status: NodeExecutionStatus, timing?: NodeTiming
   return timing ? `${label} · ${formatDuration(timing.duration_ms)}` : label
 }
 
-function nodeCategoryLabel(category: string): string {
-  return category === 'ai'
-    ? 'AI'
-    : category.charAt(0).toUpperCase() + category.slice(1)
+function nodeCategoryLabel(category: string, t: ReturnType<typeof useI18n>['t']): string {
+  const key = `workflows.category.${category}`
+  const translated = t(key)
+  return translated === key ? (category === 'ai' ? 'AI' : category.charAt(0).toUpperCase() + category.slice(1)) : translated
 }
 
 export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
+  const { t } = useI18n()
   // Two-step lookup, same pattern as NodeConfigPanel.tsx's — NODE_REGISTRY
   // only has the built-in NodeType keys, so a package-typed node (e.g.
   // "whatsapp_send") resolves to undefined there at RUNTIME, even though
@@ -107,12 +109,13 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   // trigger icon before ever consulting the preset's icon_hint (see
   // icon-hints.ts's own doc comment on why iconFor can't do this).
   const Icon      = (triggerPreset && iconForHint(triggerPreset.icon_hint)) || iconFor(data.type, packageEntry?.icon_hint)
-  const headerLabel = triggerPreset?.display_name ?? builtInReg?.label ?? packageEntry?.display_name ?? data.type
+  const builtInLabel = builtInReg ? t(`workflows.node.${data.type}.label`) : undefined
+  const headerLabel = triggerPreset?.display_name ?? (builtInLabel && builtInLabel !== `workflows.node.${data.type}.label` ? builtInLabel : builtInReg?.label) ?? packageEntry?.display_name ?? data.type
   const nodeCategory = packageEntry?.category
     ?? builtInReg?.category
     ?? fallbackCategory(data.type as keyof typeof NODE_REGISTRY)
   const usesDefaultLabel = data.label.trim().toLocaleLowerCase() === headerLabel.trim().toLocaleLowerCase()
-  const nodeMeta = usesDefaultLabel ? nodeCategoryLabel(nodeCategory) : headerLabel
+  const nodeMeta = usesDefaultLabel ? nodeCategoryLabel(nodeCategory, t) : headerLabel
   const hasInputs  = data.inputs?.length  > 0
   const hasOutputs = data.outputs?.length > 0
 
@@ -250,7 +253,12 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const handleDrop = (e: React.DragEvent, position: DropPosition) => {
     const srcId = e.dataTransfer.getData(DRAG_TRANSFER_KEY)
     if (!srcId || srcId === id) return
-    reorderNode(srcId, id, position)
+    // Only the left/right zones render below — dropping left of a node reads
+    // as "insert before it," right as "insert after it," in this left-to-right
+    // flow. Translate to the store's own before/after splice rather than its
+    // left/right parallel-branch move (branching stays reachable through the
+    // dedicated "+" button on a branch point's own toolbar, below).
+    reorderNode(srcId, id, position === 'left' ? 'before' : 'after')
     setDraggingNode(null)
     setActiveDropTarget(null)
     setTimeout(() => applyDagreLayout('LR'), 0)
@@ -271,8 +279,8 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const dimForDrag = draggingNodeId !== null && !isDraggingThis && !isActiveDropTarget
 
   const deleteLabel = data.type === 'iterator' || data.type === 'loop_end'
-    ? 'Delete loop (keeps body steps)'
-    : 'Delete node'
+    ? t('workflows.node.delete_loop')
+    : t('workflows.node.delete_node')
 
   return (
     <ContextMenu>
@@ -290,13 +298,15 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
         dimUnreached ? 'workflow-node--unreached' : '',
       )}
     >
-      {/* Drop zones — appear around the node while another node is dragged */}
+      {/* Drop zones — appear beside the node while another node is dragged.
+          Left/right only: this canvas lays workflows out left-to-right, so a
+          zone above/below a node had no clear "before" or "after" reading —
+          left and right, matching the direction the chain actually reads,
+          are the only two positions offered. */}
       {showDropZones && (
         <>
-          <DropZone position="before" active={dropAt('before')} onDragOver={handleDropZoneOver} onDrop={handleDrop} onDragLeave={handleDropZoneLeave} />
-          <DropZone position="after"  active={dropAt('after')}  onDragOver={handleDropZoneOver} onDrop={handleDrop} onDragLeave={handleDropZoneLeave} />
-          <DropZone position="left"   active={dropAt('left')}   onDragOver={handleDropZoneOver} onDrop={handleDrop} onDragLeave={handleDropZoneLeave} />
-          <DropZone position="right"  active={dropAt('right')}  onDragOver={handleDropZoneOver} onDrop={handleDrop} onDragLeave={handleDropZoneLeave} />
+          <DropZone position="left"  active={dropAt('left')}  onDragOver={handleDropZoneOver} onDrop={handleDrop} onDragLeave={handleDropZoneLeave} />
+          <DropZone position="right" active={dropAt('right')} onDragOver={handleDropZoneOver} onDrop={handleDrop} onDragLeave={handleDropZoneLeave} />
         </>
       )}
 
@@ -349,7 +359,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
                   : nodeMessage?.message_type === 'info' ? 'bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))] shadow-[hsl(var(--warning))]/30'
                   : 'bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] shadow-[hsl(var(--success))]/30',
               )}
-              title={failedItems?.length ? 'View failed items' : nodeError ? 'View error details' : 'View message'}
+              title={failedItems?.length ? t('workflows.node.view_failed_items') : nodeError ? t('workflows.node.view_error') : t('workflows.node.view_message')}
             >
               {nodeError ? <AlertCircle size={12} strokeWidth={2.5} /> : <MessageCircle size={12} strokeWidth={2.5} />}
             </button>
@@ -373,15 +383,15 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
                   : nodeMessage?.message_type === 'info' ? 'text-[hsl(var(--warning))]'
                   : 'text-[hsl(var(--success))]',
               )}>
-                {failedItems?.length ? `${failedItems.length} item${failedItems.length > 1 ? 's' : ''} failed` : nodeError ? 'Node error' : nodeMessage?.message_type}
+                {failedItems?.length ? `${failedItems.length} ${failedItems.length > 1 ? 'items' : 'item'} failed` : nodeError ? t('common.error') : nodeMessage?.message_type}
               </span>
               <button
                 onClick={() => copyOverlayText(nodeError ?? nodeMessage?.message ?? '')}
                 className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--card))]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
-                title="Copy to clipboard"
+                title={t('workflows.node.copy_clipboard')}
               >
                 {errorCopied ? <Check size={11} /> : <Copy size={11} />}
-                {errorCopied ? 'Copied' : 'Copy'}
+                {errorCopied ? t('workflows.node.copied') : t('workflows.node.copy')}
               </button>
             </div>
             <div className="max-h-64 overflow-y-auto px-3 py-2.5">
@@ -434,15 +444,15 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           >
             <div className="flex items-center justify-between gap-2 rounded-t-xl border-b border-[hsl(var(--success))]/20 bg-[hsl(var(--success))]/10 px-3 py-2">
               <span className="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--success))]">
-                {debugSnapshot.label || 'Debug snapshot'}
+                {debugSnapshot.label || t('workflows.node.debug_snapshot')}
               </span>
               <button
                 onClick={() => copyOverlayText(JSON.stringify(debugSnapshot.variables ?? {}, null, 2))}
                 className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--card))]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
-                title="Copy to clipboard"
+                title={t('workflows.node.copy_clipboard')}
               >
                 {errorCopied ? <Check size={11} /> : <Copy size={11} />}
-                {errorCopied ? 'Copied' : 'Copy'}
+                {errorCopied ? t('workflows.node.copied') : t('workflows.node.copy')}
               </button>
             </div>
             <div className="max-h-64 overflow-y-auto px-3 py-2.5">
@@ -468,7 +478,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
                   {JSON.stringify(debugSnapshot.variables, null, 2)}
                 </pre>
               ) : (
-                <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">No workflow variables declared.</p>
+                <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">{t('workflows.node.no_variables')}</p>
               )}
             </div>
           </PopoverContent>
@@ -489,7 +499,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               className="workflow-node-overlay-button absolute -left-2 -top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))] shadow-md shadow-[hsl(var(--warning))]/30 ring-2 ring-[hsl(var(--card))] nodrag nopan"
-              title="View warning"
+              title={t('workflows.node.warning')}
             >
               <AlertTriangle size={12} strokeWidth={2.5} />
             </button>
@@ -500,14 +510,14 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-2 rounded-t-xl border-b border-[hsl(var(--warning))]/20 bg-[hsl(var(--warning))]/10 px-3 py-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--warning))]">Warning</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--warning))]">{t('workflows.node.warning')}</span>
               <button
                 onClick={() => copyOverlayText(nodeWarning)}
                 className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--card))]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
-                title="Copy to clipboard"
+                title={t('workflows.node.copy_clipboard')}
               >
                 {errorCopied ? <Check size={11} /> : <Copy size={11} />}
-                {errorCopied ? 'Copied' : 'Copy'}
+                {errorCopied ? t('workflows.node.copied') : t('workflows.node.copy')}
               </button>
             </div>
             <div className="max-h-64 overflow-y-auto px-3 py-2.5">
@@ -536,7 +546,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
                 duplicateNode(id)
                 setTimeout(() => applyDagreLayout('LR'), 0)
               }}
-              title="Duplicate node"
+                title={t('common.duplicate')}
             >
               <Copy size={12} strokeWidth={2.5} />
             </button>
@@ -551,8 +561,8 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
                 setTimeout(() => applyDagreLayout('LR'), 0)
               }}
               title={data.type === 'iterator' || data.type === 'loop_end'
-                ? 'Delete loop (keeps body steps)'
-                : 'Delete node (reconnects the chain)'}
+                ? t('workflows.node.delete_loop')
+                : t('workflows.node.delete_node_reconnect')}
             >
               <Trash2 size={12} strokeWidth={2.5} />
             </button>
@@ -577,7 +587,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           className="workflow-node-drag-handle flex h-7 w-4 shrink-0 cursor-grab items-center justify-center rounded nodrag nopan"
-          title="Drag to reorder"
+            title={t('workflows.list.drag_reorder')}
           onMouseDown={(e) => e.stopPropagation()}
         >
           <GripVertical size={14} strokeWidth={2.25} />
@@ -665,7 +675,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
             className="workflow-node-add pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-md shadow-[hsl(var(--primary))]/30 ring-4 ring-[hsl(var(--card))] nodrag nopan"
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => handleAddClick(e, data.outputs[0]?.id ?? 'out')}
-            title="Add next node"
+            title={t('workflows.node.add_next')}
           >
             <Plus size={13} strokeWidth={2.75} />
           </button>
@@ -697,7 +707,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
                 swapLastTwoBranches(id)
                 setTimeout(() => applyDagreLayout('LR'), 0)
               }}
-              title="Reorder branches"
+                title={t('workflows.node.reorder_branches')}
             >
               <ArrowLeftRight size={12} strokeWidth={2.5} />
             </button>
@@ -709,7 +719,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
                 deleteBranch(id, branchChildIds[branchChildIds.length - 1])
                 setTimeout(() => applyDagreLayout('LR'), 0)
               }}
-              title="Delete last branch"
+                title={t('workflows.node.delete_branch')}
             >
               <Trash2 size={12} strokeWidth={2.5} />
             </button>
@@ -717,7 +727,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               className="workflow-node-branch-add flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => handleAddClick(e, data.outputs[0]?.id ?? 'out')}
-              title="Add node in a new branch"
+              title={t('workflows.node.add_branch')}
             >
               <GitBranchPlus size={13} strokeWidth={2.5} />
             </button>
@@ -741,7 +751,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
       <ContextMenuLabel>{data.label}</ContextMenuLabel>
       <ContextMenuItem onSelect={() => selectNode(id)}>
         <PanelRight size={13} strokeWidth={2.25} />
-        Open
+        {t('common.open')}
       </ContextMenuItem>
       {(canDuplicate || canDelete) && <ContextMenuSeparator />}
       {canDuplicate && (
@@ -752,7 +762,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
           }}
         >
           <Copy size={13} strokeWidth={2.25} />
-          Duplicate
+          {t('common.duplicate')}
         </ContextMenuItem>
       )}
       {canDelete && (
@@ -775,22 +785,23 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
 // ---------------------------------------------------------------------------
 
 function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; triggerPresetLabel?: string }) {
+  const { t } = useI18n()
   switch (data.type) {
     case 'entry':
-      return <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Workflow starts here</p>
+      return <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.starts_here')}</p>
     case 'trigger': {
       const cfg = data.configuration as TriggerConfig | undefined
-      if (!cfg?.mode) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">Not configured</p>
+      if (!cfg?.mode) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.not_configured')}</p>
       const labels: Record<TriggerConfig['mode'], string> = {
-        on_demand: 'On demand', scheduled: 'Scheduled',
-        before: 'Before write', after: 'After write', after_async: 'After write (async)',
-        on_demand_data_driven: 'On demand (with a record)',
+        on_demand: t('workflows.trigger.mode.on_demand.label'), scheduled: t('workflows.trigger.mode.scheduled.label'),
+        before: t('workflows.trigger.mode.before.label'), after: t('workflows.trigger.mode.after.label'), after_async: t('workflows.trigger.mode.after_async.label'),
+        on_demand_data_driven: t('workflows.trigger.mode.on_demand_data_driven.label'),
         // A plain webhook mode reads generically here — an applied trigger
         // preset (e.g. "WhatsApp — On Message") overrides this flat label
         // below, same as it overrides the header label.
         webhook: 'Webhook',
-        executed_by_workflow: 'Executed by workflow',
-        on_error: 'On error',
+        executed_by_workflow: t('workflows.trigger.mode.executed_by_workflow.label'),
+        on_error: t('workflows.trigger.mode.on_error.label'),
       }
       return (
         <div className="space-y-1 text-[10px]">
@@ -798,20 +809,20 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
             <code className="rounded bg-[hsl(var(--success))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--success))]">
               {cfg.mode === 'webhook' && triggerPresetLabel ? triggerPresetLabel : labels[cfg.mode]}
             </code>
-            {cfg.enabled === false && <span className="rounded bg-[hsl(var(--muted))] px-1 text-[hsl(var(--muted-foreground))]">disabled</span>}
+            {cfg.enabled === false && <span className="rounded bg-[hsl(var(--muted))] px-1 text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.disabled')}</span>}
           </div>
           {cfg.mode === 'scheduled' && cfg.cron && (
             <code className="block truncate rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 font-mono text-[10px] text-[hsl(var(--muted-foreground))]">{cfg.cron}</code>
           )}
           {(cfg.mode === 'before' || cfg.mode === 'after' || cfg.mode === 'after_async') && (
-            <p className="truncate text-[hsl(var(--muted-foreground))]">{cfg.event_type ?? '…'} on {cfg.form_id ? cfg.form_id.slice(0, 8) + '…' : 'no form'}</p>
+            <p className="truncate text-[hsl(var(--muted-foreground))]">{cfg.event_type ?? '…'} on {cfg.form_id ? cfg.form_id.slice(0, 8) + '…' : t('workflows.node.body.no_form')}</p>
           )}
         </div>
       )
     }
     case 'show_message': {
       const cfg = data.configuration as ShowMessageConfig | undefined
-      if (!cfg?.message) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">No message set</p>
+      if (!cfg?.message) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.no_message')}</p>
       const typeColor: Record<ShowMessageConfig['message_type'], string> = {
         success: 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]', error: 'bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))]', info: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]',
       }
@@ -824,7 +835,7 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
     }
     case 'notification': {
       const cfg = data.configuration as NotificationConfig | undefined
-      if (!cfg?.title) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">No title set</p>
+      if (!cfg?.title) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.no_title')}</p>
       const severityColor: Record<NotificationConfig['severity'], string> = {
         success: 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]', error: 'bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))]',
         warning: 'bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]', info: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]',
@@ -839,13 +850,13 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
       )
     }
     case 'exit':
-      return <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Workflow ends here</p>
+      return <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.ends_here')}</p>
     case 'merge':
-      return <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Joins parallel branches</p>
+      return <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.joins_branches')}</p>
     case 'set_variable': {
       const cfg = data.configuration as SetVariableConfig
       const assignments: VariableAssignment[] = cfg?.assignments ?? []
-      if (assignments.length === 0) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">Not configured</p>
+      if (assignments.length === 0) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.not_configured')}</p>
       return (
         <div className="space-y-1">
           {assignments.slice(0, 3).map((a, i) => (
@@ -866,40 +877,40 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
     }
     case 'condition': {
       const cfg = data.configuration as ConditionConfig
-      if (!cfg?.expression) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">No expression set</p>
+      if (!cfg?.expression) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.no_expression')}</p>
       return <code className="block truncate rounded bg-[hsl(var(--muted))] px-1.5 py-1 font-mono text-[10px] text-[hsl(var(--foreground))]">{cfg.expression}</code>
     }
     case 'subflow': {
       const cfg = data.configuration as { definition_id?: string; sync?: boolean }
-      if (!cfg?.definition_id) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">No workflow selected</p>
+      if (!cfg?.definition_id) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.no_workflow')}</p>
       return (
         <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-          ↳ {cfg.definition_id.slice(0, 8)}… <span className="text-[hsl(var(--muted-foreground))]/70">· {cfg.sync === false ? 'fire and forget' : 'waits for result'}</span>
+          ↳ {cfg.definition_id.slice(0, 8)}… <span className="text-[hsl(var(--muted-foreground))]/70">· {cfg.sync === false ? t('workflows.node.body.fire_forget') : t('workflows.node.body.wait_result')}</span>
         </p>
       )
     }
     case 'loop_end':
-      return <p className="text-[11px] text-[hsl(var(--muted-foreground))]">Marks the end of the loop body</p>
+      return <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.loop_end')}</p>
     case 'iterator': {
       const cfg = data.configuration as IteratorConfig | undefined
-      if (!cfg?.source_expr) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">No source list set</p>
+      if (!cfg?.source_expr) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.no_source')}</p>
       const itemV = cfg.item_var || 'item'
       const idxV = cfg.index_var || 'index'
       return (
         <div className="space-y-1 text-[10px]">
           <div className="flex items-center gap-1">
-            <span className="text-[hsl(var(--muted-foreground))]">for</span>
+            <span className="text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.for')}</span>
             <code className="rounded bg-[hsl(var(--warning))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--warning))]">{itemV}</code>
             <span className="text-[hsl(var(--muted-foreground))]/60">,</span>
             <code className="rounded bg-[hsl(var(--warning))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--warning))]">{idxV}</code>
-            <span className="text-[hsl(var(--muted-foreground))]">in</span>
+            <span className="text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.in')}</span>
           </div>
           <code className="block truncate rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 font-mono text-[10px] text-[hsl(var(--muted-foreground))]">{cfg.source_expr}</code>
           {(cfg.filter_expr || cfg.stop_expr || cfg.continue_on_error) && (
             <div className="flex gap-1 text-[hsl(var(--muted-foreground))]">
-              {cfg.filter_expr && <span className="rounded bg-[hsl(var(--muted))] px-1">filter</span>}
-              {cfg.stop_expr && <span className="rounded bg-[hsl(var(--muted))] px-1">stop</span>}
-              {cfg.continue_on_error && <span className="rounded bg-[hsl(var(--warning))]/10 px-1 text-[hsl(var(--warning))]">continue on error</span>}
+              {cfg.filter_expr && <span className="rounded bg-[hsl(var(--muted))] px-1">{t('workflows.node.body.filter')}</span>}
+              {cfg.stop_expr && <span className="rounded bg-[hsl(var(--muted))] px-1">{t('workflows.node.body.stop')}</span>}
+              {cfg.continue_on_error && <span className="rounded bg-[hsl(var(--warning))]/10 px-1 text-[hsl(var(--warning))]">{t('workflows.node.body.continue_on_error')}</span>}
             </div>
           )}
         </div>
@@ -907,14 +918,14 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
     }
     case 'fetch_records': {
       const cfg = data.configuration as FetchRecordsConfig | undefined
-      if (!cfg?.form_id) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">No form selected</p>
+      if (!cfg?.form_id) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.no_form_selected')}</p>
       const conds = countConditions(cfg.filter)
       return (
         <div className="space-y-1 text-[10px]">
           <div className="flex items-center gap-1">
-            <code className="rounded bg-[hsl(var(--destructive))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--destructive))]">{cfg.mode === 'one' ? 'single' : 'multiple'}</code>
-            {conds > 0 && <span className="text-[hsl(var(--muted-foreground))]">· {conds} filter{conds > 1 ? 's' : ''}</span>}
-            {cfg.limit ? <span className="text-[hsl(var(--muted-foreground))]">· top {cfg.limit}</span> : null}
+            <code className="rounded bg-[hsl(var(--destructive))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--destructive))]">{cfg.mode === 'one' ? t('workflows.node.body.single') : t('workflows.node.body.multiple')}</code>
+            {conds > 0 && <span className="text-[hsl(var(--muted-foreground))]">· {conds > 1 ? t('workflows.node.body.filter_count', { count: conds }) : t('workflows.node.body.filter_count_one', { count: conds })}</span>}
+            {cfg.limit ? <span className="text-[hsl(var(--muted-foreground))]">· {t('workflows.node.body.top', { count: cfg.limit })}</span> : null}
           </div>
           {cfg.output_var && (
             <div className="flex items-center gap-1">
@@ -928,7 +939,7 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
     case 'http_request': {
       const cfg = data.configuration as HttpRequestConfig | undefined
       const url = cfg?.url_mode === 'expression' ? cfg?.url_expr : cfg?.url
-      if (!url) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">No URL set</p>
+      if (!url) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.no_url')}</p>
       return (
         <div className="space-y-1 text-[10px]">
           <div className="flex items-center gap-1.5">
@@ -936,7 +947,7 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
             <code className="truncate text-[hsl(var(--muted-foreground))]">{url}</code>
           </div>
           {cfg?.auth_type && cfg.auth_type !== 'none' && (
-            <span className="rounded bg-[hsl(var(--muted))] px-1 text-[hsl(var(--muted-foreground))]">auth: {cfg.auth_type}</span>
+            <span className="rounded bg-[hsl(var(--muted))] px-1 text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.auth', { type: cfg.auth_type })}</span>
           )}
         </div>
       )
@@ -946,8 +957,8 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
       const watchCount = cfg?.watches?.length ?? 0
       return (
         <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-          {cfg?.label ? <span className="text-[hsl(var(--success))]">{cfg.label}</span> : 'Captures a variable snapshot here'}
-          {watchCount > 0 && <span className="ml-1.5 text-[hsl(var(--muted-foreground))]">· {watchCount} watch{watchCount === 1 ? '' : 'es'}</span>}
+          {cfg?.label ? <span className="text-[hsl(var(--success))]">{cfg.label}</span> : t('workflows.node.body.snapshot')}
+          {watchCount > 0 && <span className="ml-1.5 text-[hsl(var(--muted-foreground))]">· {watchCount === 1 ? t('workflows.node.body.watch_count_one', { count: watchCount }) : t('workflows.node.body.watch_count', { count: watchCount })}</span>}
         </p>
       )
     }

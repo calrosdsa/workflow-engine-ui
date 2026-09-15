@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useForms, useForm } from '@/features/forms/hooks'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useReportStore } from '../../store'
 import type { ReportBlockConfigPanelProps } from '../../report-block-contract'
 import { StyleEditor } from '../../StyleEditor'
@@ -18,6 +19,7 @@ import type { ColumnConfig, TableBlockConfig, TableStyles } from './schema'
 // per the agreed build order); columns[].expression round-trips untouched
 // if already present in a hand-authored definition.
 export function TableBlockConfigPanel({ config, onChange }: ReportBlockConfigPanelProps<TableBlockConfig>) {
+  const t = useTranslation()
   const { data: forms } = useForms()
   const sources = useReportStore((state) => state.definition.data_sources) ?? []
   // DP-07: the data half of this panel is now a source selector. The form
@@ -60,16 +62,16 @@ export function TableBlockConfigPanel({ config, onChange }: ReportBlockConfigPan
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
-        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Data source</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.blocks.data_source_label')}</Label>
         <SelectMenu
           value={config.source_id ?? ''}
           onValueChange={(source_id) => onChange({ ...config, source_id, form_id: '', columns: [] })}
         >
-          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Choose a data source…" /></SelectTrigger>
+          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('reports.blocks.choose_data_source_placeholder')} /></SelectTrigger>
           <SelectContent>
             {sources.length === 0 ? (
               <div className="px-2 py-1.5 text-[12px] text-[hsl(var(--muted-foreground))]">
-                No data sources yet — add one at the top of this panel.
+                {t('reports.blocks.no_data_sources')}
               </div>
             ) : (
               sources.map((s) => (
@@ -80,8 +82,7 @@ export function TableBlockConfigPanel({ config, onChange }: ReportBlockConfigPan
         </SelectMenu>
         {source && (
           <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-            Its form, filter, sort, and limit come from the source — change them there and every
-            region using it follows.
+            {t('reports.blocks.source_hint')}
           </p>
         )}
       </div>
@@ -89,13 +90,13 @@ export function TableBlockConfigPanel({ config, onChange }: ReportBlockConfigPan
       {!config.source_id && config.form_id && (
         <div className="flex flex-col gap-1.5">
           <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-            Form <span className="font-normal">(this region predates data sources)</span>
+            {t('reports.data_sources.form_label')} <span className="font-normal">({t('reports.blocks.predates_data_sources')})</span>
           </Label>
           <SelectMenu
             value={config.form_id}
             onValueChange={(form_id) => onChange({ ...config, form_id, columns: [] })}
           >
-            <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Choose a form…" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('reports.choose_form_placeholder')} /></SelectTrigger>
             <SelectContent>
               {(forms ?? []).map((f) => (
                 <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>
@@ -103,7 +104,7 @@ export function TableBlockConfigPanel({ config, onChange }: ReportBlockConfigPan
             </SelectContent>
           </SelectMenu>
           <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-            Still works as-is. Pick a data source above to gain filters and sorting.
+            {t('reports.blocks.table.legacy_form_hint')}
           </p>
         </div>
       )}
@@ -111,7 +112,7 @@ export function TableBlockConfigPanel({ config, onChange }: ReportBlockConfigPan
       {form && (
         <div className="flex flex-col gap-1.5">
           <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-            Columns <span className="font-normal">(none checked = every field)</span>
+            {t('reports.blocks.table.columns_label')} <span className="font-normal">({t('reports.blocks.columns_hint_suffix')})</span>
           </Label>
           <div className="flex flex-col gap-1 rounded-md border border-[hsl(var(--border))] p-2">
             {form.fields.map((f) => {
@@ -139,22 +140,22 @@ export function TableBlockConfigPanel({ config, onChange }: ReportBlockConfigPan
 
       <div className="flex flex-col gap-1.5">
         <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-          Row limit <span className="font-normal">(optional)</span>
+          {t('reports.data_sources.row_limit_label')} <span className="font-normal">({t('common.optional')})</span>
         </Label>
         <Input
           type="number"
           min={0}
           value={config.limit ?? ''}
           onChange={(e) => onChange({ ...config, limit: e.target.value ? Number(e.target.value) : undefined })}
-          placeholder="Unlimited"
+          placeholder={t('reports.blocks.unlimited_placeholder')}
           className="h-8 text-sm"
         />
       </div>
 
       <details open className="rounded-md border border-[hsl(var(--border))] p-3">
-        <summary className="cursor-pointer text-xs font-semibold text-[hsl(var(--foreground))]">Header style</summary>
+        <summary className="cursor-pointer text-xs font-semibold text-[hsl(var(--foreground))]">{t('reports.blocks.table.header_style')}</summary>
         <p className="mt-1 text-[11px] leading-4 text-[hsl(var(--muted-foreground))]">
-          Overrides the base table formatting for column headings only.
+          {t('reports.blocks.table.header_style_hint')}
         </p>
         <div className="mt-3">
           <StyleEditor
@@ -165,9 +166,9 @@ export function TableBlockConfigPanel({ config, onChange }: ReportBlockConfigPan
       </details>
 
       <details className="rounded-md border border-[hsl(var(--border))] p-3">
-        <summary className="cursor-pointer text-xs font-semibold text-[hsl(var(--foreground))]">Body style</summary>
+        <summary className="cursor-pointer text-xs font-semibold text-[hsl(var(--foreground))]">{t('reports.blocks.table.body_style')}</summary>
         <p className="mt-1 text-[11px] leading-4 text-[hsl(var(--muted-foreground))]">
-          Overrides the base table formatting for data rows only.
+          {t('reports.blocks.table.body_style_hint')}
         </p>
         <div className="mt-3">
           <StyleEditor

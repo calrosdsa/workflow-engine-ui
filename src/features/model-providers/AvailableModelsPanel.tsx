@@ -6,6 +6,7 @@ import { useProviderCatalog } from './hooks'
 import { CapabilityBadge } from './CapabilityBadge'
 import { PROVIDER_LOGOS, PROVIDER_LABELS } from './logos'
 import type { Capability, ProviderType } from './types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 type FilterChip = 'all' | Capability
 
@@ -18,6 +19,7 @@ interface AvailableModelsPanelProps {
 // scope; no Rerank/TTS/ASR/VLM/OCR chips, not even disabled ones) + provider
 // cards. Clicking a card opens AddProviderDialog for that provider.
 export function AvailableModelsPanel({ onSelectProvider }: AvailableModelsPanelProps) {
+  const t = useTranslation()
   const { data: catalog } = useProviderCatalog()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<FilterChip>('all')
@@ -42,17 +44,17 @@ export function AvailableModelsPanel({ onSelectProvider }: AvailableModelsPanelP
 
   return (
     <div className="flex h-full flex-col">
-      <h2 className="mb-3 text-sm font-semibold text-[hsl(var(--foreground))]">Available models</h2>
+      <h2 className="mb-3 text-sm font-semibold text-[hsl(var(--foreground))]">{t('model_providers.available')}</h2>
 
       <div className="relative mb-3">
         <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" className="h-8 pl-8 text-[12px]" />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('model_providers.search')} className="h-8 pl-8 text-[12px]" />
       </div>
 
       <div className="mb-3 flex flex-wrap gap-1.5">
-        <FilterButton label="All" count={counts.all} active={filter === 'all'} onClick={() => setFilter('all')} />
-        <FilterButton label="LLM" count={counts.llm} active={filter === 'llm'} onClick={() => setFilter('llm')} />
-        <FilterButton label="Embedding" count={counts.embedding} active={filter === 'embedding'} onClick={() => setFilter('embedding')} />
+        <FilterButton label={t('common.all')} count={counts.all} active={filter === 'all'} onClick={() => setFilter('all')} />
+        <FilterButton label={t('model_providers.llm')} count={counts.llm} active={filter === 'llm'} onClick={() => setFilter('llm')} />
+        <FilterButton label={t('model_providers.embedding')} count={counts.embedding} active={filter === 'embedding'} onClick={() => setFilter('embedding')} />
       </div>
 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">

@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select-menu'
 import { MenuSlugSelect } from './MenuSlugSelect'
 import type { PageComponent } from '../schema'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -33,18 +34,19 @@ export interface ComponentFormProps {
 }
 
 export function HeadingComponentForm({ component, onChange }: ComponentFormProps) {
+  const t = useTranslation()
   return (
     <>
-      <Field label="Heading Text">
+      <Field label={t('page_config.heading_text')}>
         <Input value={component.text ?? ''} onChange={(e) => onChange({ text: e.target.value })} className="h-8 text-sm" />
       </Field>
-      <Field label="Level">
+      <Field label={t('page_config.level')}>
         <SelectMenu value={String(component.level ?? 2)} onValueChange={(v) => onChange({ level: Number(v) as 1 | 2 | 3 })}>
           <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="1" className="text-xs">Heading 1 (large)</SelectItem>
-            <SelectItem value="2" className="text-xs">Heading 2 (medium)</SelectItem>
-            <SelectItem value="3" className="text-xs">Heading 3 (small)</SelectItem>
+            <SelectItem value="1" className="text-xs">{t('page_config.heading_level_1')}</SelectItem>
+            <SelectItem value="2" className="text-xs">{t('page_config.heading_level_2')}</SelectItem>
+            <SelectItem value="3" className="text-xs">{t('page_config.heading_level_3')}</SelectItem>
           </SelectContent>
         </SelectMenu>
       </Field>
@@ -53,30 +55,32 @@ export function HeadingComponentForm({ component, onChange }: ComponentFormProps
 }
 
 export function ParagraphComponentForm({ component, onChange }: ComponentFormProps) {
+  const t = useTranslation()
   return (
-    <Field label="Paragraph Text">
+    <Field label={t('page_config.paragraph_text')}>
       <Textarea value={component.text ?? ''} onChange={(e) => onChange({ text: e.target.value })} rows={4} className="text-sm" />
     </Field>
   )
 }
 
 export function ImageComponentForm({ component, onChange }: ComponentFormProps) {
+  const t = useTranslation()
   return (
     <>
-      <Field label="Image URL" hint="No file upload yet — paste a direct link to an image.">
+      <Field label={t('page_config.image_url')} hint={t('page_config.image_url_hint')}>
         <Input value={component.src ?? ''} onChange={(e) => onChange({ src: e.target.value })} placeholder="https://…" className="h-8 text-sm" />
       </Field>
-      <Field label="Alt Text">
+      <Field label={t('page_config.alt_text')}>
         <Input value={component.alt ?? ''} onChange={(e) => onChange({ alt: e.target.value })} className="h-8 text-sm" />
       </Field>
-      <Field label="Width">
+      <Field label={t('page_config.width')}>
         <SelectMenu value={component.width ?? 'full'} onValueChange={(v) => onChange({ width: v as PageComponent['width'] })}>
           <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="full" className="text-xs">Full width</SelectItem>
-            <SelectItem value="half" className="text-xs">Half width</SelectItem>
-            <SelectItem value="third" className="text-xs">A third</SelectItem>
-            <SelectItem value="auto" className="text-xs">Auto (natural size)</SelectItem>
+            <SelectItem value="full" className="text-xs">{t('page_config.full_width')}</SelectItem>
+            <SelectItem value="half" className="text-xs">{t('page_config.half_width')}</SelectItem>
+            <SelectItem value="third" className="text-xs">{t('page_config.third_width')}</SelectItem>
+            <SelectItem value="auto" className="text-xs">{t('page_config.auto_natural_size')}</SelectItem>
           </SelectContent>
         </SelectMenu>
       </Field>
@@ -85,56 +89,59 @@ export function ImageComponentForm({ component, onChange }: ComponentFormProps) 
 }
 
 export function SpacerComponentForm({ component, onChange }: ComponentFormProps) {
+  const t = useTranslation()
   return (
-    <Field label="Height (px)">
+    <Field label={t('page_config.height_px')}>
       <Input type="number" value={component.height ?? 24} onChange={(e) => onChange({ height: Number(e.target.value) })} className="h-8 text-sm" />
     </Field>
   )
 }
 
 export function DividerComponentForm() {
-  return <p className="text-xs text-slate-400">A horizontal divider line. No configuration needed.</p>
+  const t = useTranslation()
+  return <p className="text-xs text-slate-400">{t('page_config.divider_help')}</p>
 }
 
 export function ButtonComponentForm({ component, onChange, currentMenuId }: ComponentFormProps) {
+  const t = useTranslation()
   return (
     <>
-      <Field label="Button Label">
+      <Field label={t('page_config.button_label')}>
         <Input value={component.label ?? ''} onChange={(e) => onChange({ label: e.target.value })} className="h-8 text-sm" />
       </Field>
-      <Field label="Style">
+      <Field label={t('page_config.style')}>
         <SelectMenu value={component.variant ?? 'primary'} onValueChange={(v) => onChange({ variant: v as PageComponent['variant'] })}>
           <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="primary" className="text-xs">Primary</SelectItem>
-            <SelectItem value="secondary" className="text-xs">Secondary</SelectItem>
-            <SelectItem value="outline" className="text-xs">Outline</SelectItem>
+            <SelectItem value="primary" className="text-xs">{t('page_config.primary')}</SelectItem>
+            <SelectItem value="secondary" className="text-xs">{t('page_config.secondary')}</SelectItem>
+            <SelectItem value="outline" className="text-xs">{t('page_config.outline')}</SelectItem>
           </SelectContent>
         </SelectMenu>
       </Field>
       <div>
-        <Label className="mb-1.5 block text-[11px] font-medium text-slate-600">Links to</Label>
+        <Label className="mb-1.5 block text-[11px] font-medium text-slate-600">{t('page_config.links_to')}</Label>
         <div className="flex gap-1 rounded-md bg-slate-100 p-0.5">
-          {(['menu', 'external'] as const).map((t) => (
+          {(['menu', 'external'] as const).map((linkType) => (
             <button
-              key={t}
+              key={linkType}
               type="button"
-              onClick={() => onChange({ linkType: t })}
+              onClick={() => onChange({ linkType })}
               className={`flex-1 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
-                (component.linkType ?? 'external') === t ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400'
+                (component.linkType ?? 'external') === linkType ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400'
               }`}
             >
-              {t === 'menu' ? 'Another menu' : 'External URL'}
+              {linkType === 'menu' ? t('page_config.another_menu') : t('page_config.external_url')}
             </button>
           ))}
         </div>
       </div>
       {(component.linkType ?? 'external') === 'menu' ? (
-        <Field label="Target menu">
+        <Field label={t('page_config.target_menu')}>
           <MenuSlugSelect value={component.menuSlug ?? ''} onChange={(slug) => onChange({ menuSlug: slug })} excludeMenuId={currentMenuId} />
         </Field>
       ) : (
-        <Field label="URL">
+        <Field label={t('page_config.url')}>
           <Input value={component.url ?? ''} onChange={(e) => onChange({ url: e.target.value })} placeholder="https://…" className="h-8 text-sm" />
         </Field>
       )}

@@ -1,4 +1,5 @@
 import { ExternalLink, FileText } from 'lucide-react'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { WidgetRendererProps } from '../../widget-contract'
 import type { QuickLinksWidgetConfig, QuickLink } from './schema'
 
@@ -24,10 +25,11 @@ const DISPLAY_CONTAINER: Record<QuickLinksWidgetConfig['display'], string> = {
 }
 
 export function QuickLinksRenderer({ config, menus, onNavigate, mode }: WidgetRendererProps<QuickLinksWidgetConfig>) {
+  const t = useTranslation()
   const visibleLinks = config.links.filter((l) => isVisible(l, menus, mode))
 
   if (visibleLinks.length === 0) {
-    return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No links added yet.</div>
+    return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('builder.dashboard_quick-links.no_links_runtime')}</div>
   }
 
   return (

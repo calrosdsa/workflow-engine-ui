@@ -27,7 +27,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { useTranslation } from '@/features/i18n/I18nProvider'
 import { extractApiError } from '@/lib/api'
 import { reportsApi } from './api'
-import { ALL_FORMATS, FORMAT_LABELS, FORMAT_PREVIEW_KIND } from './types'
+import { ALL_FORMATS, FORMAT_PREVIEW_KIND } from './types'
 import type { ExportFormat, ReportDefinition } from './types'
 
 interface ReportPreviewDialogProps {
@@ -157,7 +157,7 @@ export function ReportPreviewDialog({ open, onClose, definition, argumentValues 
                 </SelectTrigger>
                 <SelectContent>
                   {ALL_FORMATS.map((f) => (
-                    <SelectItem key={f} value={f} className="text-xs">{FORMAT_LABELS[f]}</SelectItem>
+                    <SelectItem key={f} value={f} className="text-xs">{t(`reports.format.${f}.label`)}</SelectItem>
                   ))}
                 </SelectContent>
               </SelectMenu>
@@ -199,7 +199,7 @@ export function ReportPreviewDialog({ open, onClose, definition, argumentValues 
             <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
               <FileWarning size={22} className="text-[hsl(var(--muted-foreground))]" />
               <p className="text-sm font-medium">
-                {t('reports.preview.not_viewable', { format: FORMAT_LABELS[format] })}
+                {t('reports.preview.not_viewable', { format: t(`reports.format.${format}.label`) })}
               </p>
               <p className="max-w-md text-xs text-[hsl(var(--muted-foreground))]">
                 {t('reports.preview.not_viewable_hint')}

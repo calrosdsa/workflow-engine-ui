@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { FilterBuilder } from '@/features/workflows/builder/FilterBuilder'
 import { useForms } from '@/features/forms/hooks'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { cn } from '@/lib/utils'
 import {
   createDataSource,
@@ -32,6 +33,7 @@ interface DataSourcesSectionProps {
 }
 
 export function DataSourcesSection({ onBeforeChange }: DataSourcesSectionProps) {
+  const t = useTranslation()
   const definition = useReportStore((state) => state.definition)
   const addDataSource = useReportStore((state) => state.addDataSource)
   const updateDataSource = useReportStore((state) => state.updateDataSource)
@@ -61,7 +63,7 @@ export function DataSourcesSection({ onBeforeChange }: DataSourcesSectionProps) 
     <section className="border-b border-[hsl(var(--border))] p-3" aria-labelledby="data-sources-heading">
       <div className="mb-2 flex items-center justify-between">
         <h3 id="data-sources-heading" className="text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-          Data sources
+          {t('reports.data_sources.title')}
         </h3>
         <Button
           type="button"
@@ -71,14 +73,13 @@ export function DataSourcesSection({ onBeforeChange }: DataSourcesSectionProps) 
           onClick={addSource}
           disabled={!formList || formList.length === 0}
         >
-          <Plus size={11} /> Add
+          <Plus size={11} /> {t('common.add')}
         </Button>
       </div>
 
       {sources.length === 0 ? (
         <p className="px-1 py-2 text-[11px] leading-4 text-[hsl(var(--muted-foreground))]">
-          A data source is a form plus an optional filter and sort. Add one, then select cells in the
-          sheet and insert it.
+          {t('reports.data_sources.empty')}
         </p>
       ) : (
         <div className="space-y-1">
@@ -101,7 +102,7 @@ export function DataSourcesSection({ onBeforeChange }: DataSourcesSectionProps) 
                     blocks.length > 0 ? `${blocks.length} region${blocks.length === 1 ? '' : 's'} (${blocks.join(', ')})` : '',
                     formulas.length > 0 ? `${formulas.length} formula${formulas.length === 1 ? '' : 's'} (${formulas.map((f) => f.address).join(', ')})` : '',
                   ].filter(Boolean).join(' and ')
-                  if (!window.confirm(`"${source.name}" is used by ${parts}. Delete it anyway? Those will keep pointing at a source that no longer exists.`)) return
+                  if (!window.confirm(t('reports.data_sources.delete_confirm', { name: source.name, parts }))) return
                 }
                 guard(() => removeDataSource(source.id))
               }}
@@ -124,6 +125,7 @@ interface SourceRowProps {
 }
 
 function SourceRow({ source, forms, declared, open, onToggle, onChange, onRemove }: SourceRowProps) {
+  const t = useTranslation()
   const definition = useReportStore((state) => state.definition)
   const form = forms.find((f) => f.id === source.form_id)
   const nameProblem = source.implicit ? undefined : validateSourceName(source.name, declared, source.id)
@@ -140,12 +142,11 @@ function SourceRow({ source, forms, declared, open, onToggle, onChange, onRemove
           <Database size={12} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
           <span className="min-w-0 flex-1 truncate text-xs font-medium text-[hsl(var(--foreground))]">{source.name}</span>
           <span className="shrink-0 rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
-            From region
+            {t('reports.data_sources.from_region')}
           </span>
         </div>
         <p className="mt-1 text-[10px] leading-4 text-[hsl(var(--muted-foreground))]">
-          This report predates named data sources — {form?.name ?? 'its form'} comes straight from a region.
-          It still works; add a data source to gain filters and sorting.
+          {t('reports.data_sources.legacy_source_hint', { form: form?.name ?? t('reports.data_sources.its_form_fallback') })}
         </p>
       </div>
     )
@@ -163,7 +164,7 @@ function SourceRow({ source, forms, declared, open, onToggle, onChange, onRemove
         <Database size={12} className="shrink-0 text-[hsl(var(--primary))]" />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-xs font-medium text-[hsl(var(--foreground))]">{source.name}</span>
-          <span className="block truncate text-[10px] text-[hsl(var(--muted-foreground))]">{form?.name ?? 'Form unavailable'}</span>
+          <span className="block truncate text-[10px] text-[hsl(var(--muted-foreground))]">{form?.name ?? t('reports.data_sources.form_unavailable')}</span>
         </span>
         {nameProblem && <AlertTriangle size={12} className="shrink-0 text-[hsl(var(--destructive))]" />}
       </button>
@@ -171,7 +172,7 @@ function SourceRow({ source, forms, declared, open, onToggle, onChange, onRemove
       {open && (
         <div className="space-y-3 border-t border-[hsl(var(--border))] p-3">
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Name</Label>
+            <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('common.name')}</Label>
             <Input
               value={source.name}
               onChange={(e) => onChange({ name: e.target.value })}
@@ -182,23 +183,28 @@ function SourceRow({ source, forms, declared, open, onToggle, onChange, onRemove
               <p className="text-[10px] leading-4 text-[hsl(var(--destructive))]">{nameProblem.message}</p>
             ) : (
               <p className="text-[10px] leading-4 text-[hsl(var(--muted-foreground))]">
-                Reference it from any cell — e.g. <code>=SUM({source.name}[Amount])</code>
+                {t('reports.data_sources.reference_hint_prefix')} <code>=SUM({source.name}[Amount])</code>
               </p>
             )}
             {breakages.length > 0 && (
               <p className="rounded bg-[hsl(var(--warning))]/10 px-2 py-1.5 text-[10px] leading-4 text-[hsl(var(--warning))]">
                 {breakages.length === 1
-                  ? `${breakages[0].address} references this name.`
-                  : `${breakages.length} cells reference this name (${breakages.slice(0, 4).map((b) => b.address).join(', ')}${breakages.length > 4 ? '…' : ''}).`}{' '}
-                Renaming it will break {breakages.length === 1 ? 'that formula' : 'those formulas'} — they are not rewritten automatically.
+                  ? t('reports.data_sources.formula_ref_single', { address: breakages[0].address })
+                  : t('reports.data_sources.formula_ref_multiple', {
+                      count: breakages.length,
+                      addresses: breakages.slice(0, 4).map((b) => b.address).join(', ') + (breakages.length > 4 ? '…' : ''),
+                    })}{' '}
+                {t('reports.data_sources.rename_breaks', {
+                  target: breakages.length === 1 ? t('reports.data_sources.that_formula') : t('reports.data_sources.those_formulas'),
+                })}
               </p>
             )}
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Form</Label>
+            <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.data_sources.form_label')}</Label>
             <SelectMenu value={source.form_id} onValueChange={(form_id) => onChange({ form_id })}>
-              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Choose a form…" /></SelectTrigger>
+              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('reports.choose_form_placeholder')} /></SelectTrigger>
               <SelectContent>
                 {forms.map((f) => <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>)}
               </SelectContent>
@@ -206,7 +212,7 @@ function SourceRow({ source, forms, declared, open, onToggle, onChange, onRemove
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Filter</Label>
+            <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.data_sources.filter_label')}</Label>
             {/* hideExpressions: a report data source has no workflow variables
                 or upstream node outputs to reference, exactly like the runtime
                 Search menu's filter. */}
@@ -227,13 +233,13 @@ function SourceRow({ source, forms, declared, open, onToggle, onChange, onRemove
 
           <div className="space-y-1.5">
             <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-              Row limit <span className="font-normal">(optional)</span>
+              {t('reports.data_sources.row_limit_label')} <span className="font-normal">({t('common.optional')})</span>
             </Label>
             <Input
               type="number"
               min={1}
               value={source.limit ?? ''}
-              placeholder="No limit"
+              placeholder={t('reports.data_sources.no_limit_placeholder')}
               onChange={(e) => {
                 const next = Number(e.target.value)
                 onChange({ limit: Number.isFinite(next) && next > 0 ? Math.floor(next) : undefined })
@@ -241,7 +247,7 @@ function SourceRow({ source, forms, declared, open, onToggle, onChange, onRemove
               className="h-8 text-sm"
             />
             <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-              The report's overall row cap still applies — a limit narrows, it never raises the ceiling.
+              {t('reports.data_sources.row_limit_hint')}
             </p>
           </div>
 
@@ -253,7 +259,7 @@ function SourceRow({ source, forms, declared, open, onToggle, onChange, onRemove
               className="h-7 gap-1 px-2 text-[11px] text-[hsl(var(--destructive))]"
               onClick={onRemove}
             >
-              <Trash2 size={11} /> Delete source
+              <Trash2 size={11} /> {t('reports.data_sources.delete_source')}
             </Button>
           </div>
         </div>
@@ -270,10 +276,11 @@ function SortEditor({ sort, fields, onChange }: {
   fields: Array<{ name: string; label: string }>
   onChange: (sort: SortRule[]) => void
 }) {
+  const t = useTranslation()
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Sort</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.data_sources.sort_label')}</Label>
         <Button
           type="button"
           variant="ghost"
@@ -282,11 +289,11 @@ function SortEditor({ sort, fields, onChange }: {
           onClick={() => onChange([...sort, { field: fields[0]?.name ?? '', dir: 'asc' }])}
           disabled={fields.length === 0}
         >
-          <Plus size={10} /> Add
+          <Plus size={10} /> {t('common.add')}
         </Button>
       </div>
       {sort.length === 0 ? (
-        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Unsorted — rows come back in the form's default order.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('reports.data_sources.unsorted_hint')}</p>
       ) : (
         sort.map((rule, index) => (
           <div key={index} className="flex items-center gap-1.5">
@@ -294,7 +301,7 @@ function SortEditor({ sort, fields, onChange }: {
               value={rule.field}
               onValueChange={(field) => onChange(sort.map((r, i) => (i === index ? { ...r, field } : r)))}
             >
-              <SelectTrigger className="h-8 flex-1 text-xs"><SelectValue placeholder="Field…" /></SelectTrigger>
+              <SelectTrigger className="h-8 flex-1 text-xs"><SelectValue placeholder={t('reports.field_placeholder')} /></SelectTrigger>
               <SelectContent>
                 {fields.map((f) => <SelectItem key={f.name} value={f.name} className="text-xs">{f.label}</SelectItem>)}
               </SelectContent>
@@ -305,8 +312,8 @@ function SortEditor({ sort, fields, onChange }: {
             >
               <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="asc" className="text-xs">Ascending</SelectItem>
-                <SelectItem value="desc" className="text-xs">Descending</SelectItem>
+                <SelectItem value="asc" className="text-xs">{t('reports.data_sources.sort_asc')}</SelectItem>
+                <SelectItem value="desc" className="text-xs">{t('reports.data_sources.sort_desc')}</SelectItem>
               </SelectContent>
             </SelectMenu>
             <Button
@@ -314,7 +321,7 @@ function SortEditor({ sort, fields, onChange }: {
               variant="ghost"
               size="icon"
               className="h-7 w-7 shrink-0 text-[hsl(var(--destructive))]"
-              aria-label="Remove sort rule"
+              aria-label={t('reports.data_sources.remove_sort_rule')}
               onClick={() => onChange(sort.filter((_, i) => i !== index))}
             >
               <Trash2 size={11} />

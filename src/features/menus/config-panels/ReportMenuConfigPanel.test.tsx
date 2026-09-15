@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
+import type { ReactElement } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, fireEvent } from '@testing-library/react'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import { ReportMenuConfigPanel } from './ReportMenuConfigPanel'
 import { useReports } from '@/features/reports/hooks'
 import { emptyReportDefinition } from '@/features/reports/types'
@@ -13,6 +15,12 @@ vi.mock('@/features/reports/hooks', () => ({
   useReports: vi.fn(),
 }))
 
+// I18nProvider ancestor — real provider, no props, same pattern as
+// features/reports/blocks/related/ConfigPanel.test.tsx.
+function renderPanel(ui: ReactElement) {
+  return render(<I18nProvider>{ui}</I18nProvider>)
+}
+
 function menu(reportDefinitionId: string): Menu {
   return {
     id: 'm-1', app_id: 'a-1', parent_id: null, menu_type: 'report', slug: 'sales-report', name: 'Sales Report',
@@ -24,7 +32,7 @@ function menu(reportDefinitionId: string): Menu {
 describe('ReportMenuConfigPanel', () => {
   it('shows the empty state when no reports exist yet', () => {
     vi.mocked(useReports).mockReturnValue({ data: [] } as unknown as ReturnType<typeof useReports>)
-    render(<ReportMenuConfigPanel menu={menu('')} onChange={vi.fn()} />)
+    renderPanel(<ReportMenuConfigPanel menu={menu('')} onChange={vi.fn()} />)
     fireEvent.click(screen.getByRole('combobox'))
     expect(screen.getByText(/no reports yet/i)).toBeTruthy()
   })
@@ -36,7 +44,7 @@ describe('ReportMenuConfigPanel', () => {
     ]
     vi.mocked(useReports).mockReturnValue({ data: reports } as unknown as ReturnType<typeof useReports>)
     const onChange = vi.fn()
-    render(<ReportMenuConfigPanel menu={menu('')} onChange={onChange} />)
+    renderPanel(<ReportMenuConfigPanel menu={menu('')} onChange={onChange} />)
 
     fireEvent.click(screen.getByRole('combobox'))
     fireEvent.click(screen.getByText('Inventory Report'))
@@ -54,7 +62,7 @@ describe('ReportMenuConfigPanel', () => {
     const reports: ReportDefinitionRow[] = [{ id: 'rep-1', name: 'Sales Report', definition: def, created_at: '', updated_at: '' }]
     vi.mocked(useReports).mockReturnValue({ data: reports } as unknown as ReturnType<typeof useReports>)
 
-    render(<ReportMenuConfigPanel menu={menu('rep-1')} onChange={vi.fn()} />)
+    renderPanel(<ReportMenuConfigPanel menu={menu('rep-1')} onChange={vi.fn()} />)
     expect(screen.getByText(/1 block/i)).toBeTruthy()
     expect(screen.getByText(/1 filter/i)).toBeTruthy()
   })

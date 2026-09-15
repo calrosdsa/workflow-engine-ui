@@ -16,6 +16,7 @@ import {
   Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
 } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useWorkflows } from '../../hooks'
 
 interface WorkflowReferenceSelectProps {
@@ -29,6 +30,7 @@ interface WorkflowReferenceSelectProps {
 }
 
 export function WorkflowReferenceSelect({ value, onChange, excludeId, placeholder }: WorkflowReferenceSelectProps) {
+  const t = useTranslation()
   const { data: workflows, isLoading } = useWorkflows()
   const [open, setOpen] = useState(false)
 
@@ -62,12 +64,12 @@ export function WorkflowReferenceSelect({ value, onChange, excludeId, placeholde
               <WorkflowIcon size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
               <span className="truncate">
                 {isLoading && !selected
-                  ? 'Loading workflows…'
+                  ? t('workflows.builder.loading_workflows')
                   : selected
                     ? selected.name
                     : isBroken
-                      ? 'Unavailable workflow'
-                      : (placeholder ?? 'Select a workflow…')}
+                      ? t('workflows.builder.unavailable_workflow')
+                      : (placeholder ?? t('workflows.builder.select_workflow_placeholder'))}
               </span>
             </span>
             <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
@@ -79,15 +81,15 @@ export function WorkflowReferenceSelect({ value, onChange, excludeId, placeholde
               itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
             }
           >
-            <CommandInput placeholder="Search workflows…" />
+            <CommandInput placeholder={t('workflows.builder.search_workflows_placeholder')} />
             <CommandList>
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
-                  <Loader2 size={13} className="animate-spin" /> Loading workflows…
+                  <Loader2 size={13} className="animate-spin" /> {t('workflows.builder.loading_workflows')}
                 </div>
               ) : (
                 <>
-                  <CommandEmpty>No workflows found.</CommandEmpty>
+                  <CommandEmpty>{t('workflows.builder.no_workflows_found')}</CommandEmpty>
                   <CommandGroup>
                     {options.map((w) => (
                       <CommandItem
@@ -119,7 +121,7 @@ export function WorkflowReferenceSelect({ value, onChange, excludeId, placeholde
             {isBroken ? (
               <>
                 <AlertTriangle size={12} className="shrink-0 text-[hsl(var(--warning))]" />
-                <span className="text-[hsl(var(--warning))]">Referenced workflow is unavailable</span>
+                <span className="text-[hsl(var(--warning))]">{t('workflows.builder.workflow_unavailable_warning')}</span>
               </>
             ) : (
               <>
@@ -132,7 +134,7 @@ export function WorkflowReferenceSelect({ value, onChange, excludeId, placeholde
             type="button"
             onClick={() => onChange(undefined)}
             className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
-            title="Clear selection"
+            title={t('workflows.builder.clear_selection')}
           >
             <X size={12} />
           </button>
@@ -140,8 +142,7 @@ export function WorkflowReferenceSelect({ value, onChange, excludeId, placeholde
       )}
       {isBroken && (
         <p className="text-[10px] text-[hsl(var(--warning))]">
-          The stored reference (<span className="font-mono">{value}</span>) no longer matches an existing
-          workflow. It's preserved until you pick a new one.
+          {t('workflows.builder.stored_reference_prefix')}<span className="font-mono">{value}</span>{t('workflows.builder.stored_reference_workflow_suffix')}
         </p>
       )}
     </div>

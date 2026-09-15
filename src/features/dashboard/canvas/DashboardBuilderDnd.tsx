@@ -4,6 +4,7 @@ import {
   useSensor, useSensors,
   type DragStartEvent, type DragEndEvent,
 } from '@dnd-kit/core'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useDashboardStore } from '../store'
 import { getWidget } from '../widget-registry'
 import { CANVAS_DROPPABLE_ID } from './GridCanvas'
@@ -19,6 +20,7 @@ import { CANVAS_DROPPABLE_ID } from './GridCanvas'
 // clicking a toolbox item would do.
 
 export function DashboardBuilderDnd({ children }: { children: ReactNode }) {
+  const t = useTranslation()
   const addWidget = useDashboardStore((s) => s.addWidget)
   const [draggingType, setDraggingType] = useState<string | null>(null)
 
@@ -54,7 +56,7 @@ export function DashboardBuilderDnd({ children }: { children: ReactNode }) {
             <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]">
               <draggingDef.icon size={15} />
             </span>
-            <span className="text-[12px] font-medium text-[hsl(var(--foreground))]">{draggingDef.label}</span>
+            <span className="text-[12px] font-medium text-[hsl(var(--foreground))]">{t(`builder.dashboard.${draggingDef.type}.label`)}</span>
           </div>
         )}
       </DragOverlay>

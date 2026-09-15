@@ -12,6 +12,7 @@ import {
   Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
 } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useAuthStore } from '@/stores/auth'
 import { useRoles } from '@/features/roles/hooks'
 
@@ -24,6 +25,7 @@ interface RoleMultiSelectProps {
 }
 
 export function RoleMultiSelect({ value, onChange, appId: appIdProp }: RoleMultiSelectProps) {
+  const t = useTranslation()
   const activeAppId = useAuthStore((s) => s.activeMembership?.app_id) ?? ''
   const appId = appIdProp ?? activeAppId
   const { data: roles, isLoading } = useRoles(appId)
@@ -43,7 +45,7 @@ export function RoleMultiSelect({ value, onChange, appId: appIdProp }: RoleMulti
   if (!appId) {
     return (
       <Button variant="outline" disabled className="h-8 w-full justify-between gap-2 px-2.5 text-[13px] font-normal text-[hsl(var(--muted-foreground))]">
-        No active app
+        {t('form_config.no_active_app')}
       </Button>
     )
   }
@@ -62,10 +64,10 @@ export function RoleMultiSelect({ value, onChange, appId: appIdProp }: RoleMulti
               <ShieldCheck size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
               <span className="truncate">
                 {isLoading
-                  ? 'Loading roles…'
+                  ? t('form_config.loading_roles')
                   : selected.length === 0
-                    ? 'Select Role'
-                    : `${selected.length} selected`}
+                    ? t('form_config.select_role')
+                    : t('form_config.n_selected', { count: selected.length })}
               </span>
             </span>
             <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
@@ -77,15 +79,15 @@ export function RoleMultiSelect({ value, onChange, appId: appIdProp }: RoleMulti
               itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
             }
           >
-            <CommandInput placeholder="Search roles…" />
+            <CommandInput placeholder={t('form_config.search_roles_placeholder')} />
             <CommandList>
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
-                  <Loader2 size={13} className="animate-spin" /> Loading roles…
+                  <Loader2 size={13} className="animate-spin" /> {t('form_config.loading_roles')}
                 </div>
               ) : (
                 <>
-                  <CommandEmpty>No roles found.</CommandEmpty>
+                  <CommandEmpty>{t('form_config.no_roles_found')}</CommandEmpty>
                   <CommandGroup>
                     {options.map((r) => {
                       const isSelected = value.includes(r.id)
@@ -120,7 +122,7 @@ export function RoleMultiSelect({ value, onChange, appId: appIdProp }: RoleMulti
                 type="button"
                 onClick={() => toggle(r.id)}
                 className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
-                title="Remove"
+                title={t('common.remove')}
               >
                 <X size={11} />
               </button>

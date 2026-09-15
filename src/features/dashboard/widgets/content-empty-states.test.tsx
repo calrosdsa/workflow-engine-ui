@@ -15,10 +15,12 @@
 // `container` query, to avoid one test's DOM leaking into another's query.
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, fireEvent, cleanup, within } from '@testing-library/react'
+import type { ReactElement } from 'react'
 import { HeadingRenderer } from './heading/Renderer'
 import { ParagraphRenderer } from './paragraph/Renderer'
 import { RichTextRenderer } from './richtext/Renderer'
 import { ImageRenderer } from './image/Renderer'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import type { WidgetInstance } from '../schema'
 
 afterEach(() => cleanup())
@@ -26,19 +28,31 @@ afterEach(() => cleanup())
 const baseInstance: WidgetInstance = { id: 'w1', type: 'test', layout: { x: 0, y: 0, w: 1, h: 1 }, chrome: 'plain', config: {} }
 const commonProps = { instance: baseInstance, clientId: '', appId: '' }
 
+// HeadingRenderer (and, once migrated, ParagraphRenderer/RichTextRenderer/
+// ImageRenderer) calls useTranslation, which throws outside an I18nProvider
+// ancestor — real provider, no props, same pattern as InsertDataMenu.test.tsx.
+// Every render() in this file goes through this helper so a widget gaining
+// useTranslation() later doesn't quietly re-break this shared test file.
+function widgetTree(ui: ReactElement) {
+  return <I18nProvider>{ui}</I18nProvider>
+}
+function renderWidget(ui: ReactElement) {
+  return render(widgetTree(ui))
+}
+
 describe('content widget empty states (builder mode only)', () => {
   it('HeadingRenderer shows a placeholder for empty text in builder mode, but renders normally at runtime', () => {
     const empty = { text: '', level: 2 as const }
-    const builder = render(<HeadingRenderer config={empty} mode="builder" {...commonProps} />)
+    const builder = renderWidget(<HeadingRenderer config={empty} mode="builder" {...commonProps} />)
     expect(within(builder.container).getByText(/Empty heading/i)).toBeTruthy()
     builder.unmount()
 
-    const runtime = render(<HeadingRenderer config={empty} mode="runtime" {...commonProps} />)
+    const runtime = renderWidget(<HeadingRenderer config={empty} mode="runtime" {...commonProps} />)
     expect(within(runtime.container).queryByText(/Empty heading/i)).toBeNull()
   })
 
   it('HeadingRenderer renders the real heading when text is present', () => {
-    const { container } = render(<HeadingRenderer config={{ text: 'Hello', level: 1 }} mode="builder" {...commonProps} />)
+    const { container } = renderWidget(<HeadingRenderer config={{ text: 'Hello', level: 1 }} mode="builder" {...commonProps} />)
     const heading = within(container).getByText('Hello')
     expect(heading.tagName).toBe('H1')
     expect(within(container).queryByText(/Empty heading/i)).toBeNull()
@@ -46,37 +60,37 @@ describe('content widget empty states (builder mode only)', () => {
 
   it('ParagraphRenderer shows a placeholder for empty text in builder mode only', () => {
     const empty = { text: '' }
-    const builder = render(<ParagraphRenderer config={empty} mode="builder" {...commonProps} />)
+    const builder = renderWidget(<ParagraphRenderer config={empty} mode="builder" {...commonProps} />)
     expect(within(builder.container).getByText(/Empty paragraph/i)).toBeTruthy()
     builder.unmount()
 
-    const runtime = render(<ParagraphRenderer config={empty} mode="runtime" {...commonProps} />)
+    const runtime = renderWidget(<ParagraphRenderer config={empty} mode="runtime" {...commonProps} />)
     expect(within(runtime.container).queryByText(/Empty paragraph/i)).toBeNull()
   })
 
   it('RichTextRenderer shows a placeholder for empty/whitespace-only markdown in builder mode only', () => {
-    const builder = render(<RichTextRenderer config={{ markdown: '   ' }} mode="builder" {...commonProps} />)
+    const builder = renderWidget(<RichTextRenderer config={{ markdown: '   ' }} mode="builder" {...commonProps} />)
     expect(within(builder.container).getByText(/Empty — click to add Markdown/i)).toBeTruthy()
     builder.unmount()
 
-    const runtime = render(<RichTextRenderer config={{ markdown: '' }} mode="runtime" {...commonProps} />)
+    const runtime = renderWidget(<RichTextRenderer config={{ markdown: '' }} mode="runtime" {...commonProps} />)
     expect(within(runtime.container).queryByText(/Empty — click to add Markdown/i)).toBeNull()
   })
 
   it('RichTextRenderer renders real markdown as semantic HTML when present', () => {
-    const { container } = render(<RichTextRenderer config={{ markdown: '## Hi' }} mode="builder" {...commonProps} />)
+    const { container } = renderWidget(<RichTextRenderer config={{ markdown: '## Hi' }} mode="builder" {...commonProps} />)
     expect(container.querySelector('h2')?.textContent).toBe('Hi')
   })
 })
 
 describe('ImageRenderer empty/error states', () => {
   it('shows "No image URL set yet" when src is empty', () => {
-    const { container } = render(<ImageRenderer config={{ src: '', alt: '', width: 'full' }} mode="builder" {...commonProps} />)
+    const { container } = renderWidget(<ImageRenderer config={{ src: '', alt: '', width: 'full' }} mode="builder" {...commonProps} />)
     expect(within(container).getByText(/No image URL set yet/i)).toBeTruthy()
   })
 
   it('shows a broken-image fallback after the <img> fires onError', () => {
-    const { container } = render(
+    const { container } = renderWidget(
       <ImageRenderer config={{ src: 'https://example.com/broken.png', alt: 'a photo', width: 'full' }} mode="builder" {...commonProps} />,
     )
     const img = within(container).getByAltText('a photo')
@@ -86,12 +100,12 @@ describe('ImageRenderer empty/error states', () => {
 
   it('clears the broken-image fallback once the src is corrected to a working one', () => {
     const config1 = { src: 'https://example.com/broken.png', alt: '', width: 'full' as const }
-    const { rerender, container } = render(<ImageRenderer config={config1} mode="builder" {...commonProps} />)
+    const { rerender, container } = renderWidget(<ImageRenderer config={config1} mode="builder" {...commonProps} />)
     fireEvent.error(container.querySelector('img')!)
     expect(within(container).getByText(/Couldn't load this image/i)).toBeTruthy()
 
     const config2 = { src: 'https://example.com/working.png', alt: '', width: 'full' as const }
-    rerender(<ImageRenderer config={config2} mode="builder" {...commonProps} />)
+    rerender(widgetTree(<ImageRenderer config={config2} mode="builder" {...commonProps} />))
     expect(within(container).queryByText(/Couldn't load this image/i)).toBeNull()
   })
 })

@@ -2,6 +2,7 @@ import { useDraggable } from '@dnd-kit/core'
 import { cn } from '@/lib/utils'
 import { PAGE_COMPONENT_REGISTRY } from './component-registry'
 import type { PageComponentType } from './schema'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 // A horizontal chip-row alternative to Toolbox.tsx's fixed-width left rail,
 // for width-constrained embedding contexts (CustomMenuConfigPanel, mounted
@@ -10,6 +11,7 @@ import type { PageComponentType } from './schema'
 // useDraggable wiring/data.kind convention as ToolboxItem in Toolbox.tsx,
 // just laid out as wrapping chips instead of a scrollable category list.
 function CompactToolboxItem({ type }: { type: PageComponentType }) {
+  const t = useTranslation()
   const entry = PAGE_COMPONENT_REGISTRY[type]
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `page-toolbox:${type}`,
@@ -27,10 +29,10 @@ function CompactToolboxItem({ type }: { type: PageComponentType }) {
         'hover:border-indigo-300 hover:bg-indigo-50/50 active:cursor-grabbing cursor-grab',
         isDragging && 'opacity-40',
       )}
-      title={entry.description}
+      title={t(`builder.pages.${entry.type}.description`)}
     >
       <Icon size={13} className="shrink-0 text-slate-500" />
-      <span className="whitespace-nowrap text-[11px] font-medium text-slate-700">{entry.label}</span>
+      <span className="whitespace-nowrap text-[11px] font-medium text-slate-700">{t(`builder.pages.${entry.type}.label`)}</span>
     </button>
   )
 }

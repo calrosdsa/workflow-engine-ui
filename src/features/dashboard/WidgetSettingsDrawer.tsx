@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { useDashboardStore, findWidget } from './store'
 import { getWidget } from './widget-registry'
 import type { WidgetChrome } from './schema'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 interface WidgetSettingsDrawerProps {
   clientId: string
@@ -21,6 +22,7 @@ interface WidgetSettingsDrawerProps {
 // (every widget has a tile title/chrome regardless of type) rather than
 // something each widget's own ConfigPanel should have to reimplement.
 export function WidgetSettingsDrawer({ clientId, appId }: WidgetSettingsDrawerProps) {
+  const t = useTranslation()
   const schema = useDashboardStore((s) => s.schema)
   const selectedWidgetId = useDashboardStore((s) => s.selectedWidgetId)
   const selectWidget = useDashboardStore((s) => s.selectWidget)
@@ -39,7 +41,7 @@ export function WidgetSettingsDrawer({ clientId, appId }: WidgetSettingsDrawerPr
       <div className="flex shrink-0 items-center justify-between border-b border-[hsl(var(--border))] px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           {def && <def.icon size={14} className="shrink-0 text-[hsl(var(--primary))]" />}
-          <p className="truncate text-xs font-semibold text-[hsl(var(--foreground))]">{def?.label ?? 'Unavailable widget'}</p>
+          <p className="truncate text-xs font-semibold text-[hsl(var(--foreground))]">{def ? t(`builder.dashboard.${def.type}.label`) : t('builder.dashboard.unavailable')}</p>
         </div>
         <Button
           variant="ghost" size="icon"
@@ -53,17 +55,17 @@ export function WidgetSettingsDrawer({ clientId, appId }: WidgetSettingsDrawerPr
       <ScrollArea className="flex-1">
         <div className="space-y-4 p-4">
           <div>
-            <Label className="mb-1 block text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Tile title (optional)</Label>
+            <Label className="mb-1 block text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('builder.dashboard.tile_title')}</Label>
             <Input
               value={instance.title ?? ''}
               onChange={(e) => updateWidgetTitle(instance.id, e.target.value)}
-              placeholder={def?.label ?? 'Untitled'}
+              placeholder={def ? t(`builder.dashboard.${def.type}.label`) : t('common.unsaved')}
               className="h-8 text-xs"
             />
           </div>
 
           <div>
-            <Label className="mb-1.5 block text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Tile style</Label>
+            <Label className="mb-1.5 block text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('builder.dashboard.tile_style')}</Label>
             <div className="flex gap-1 rounded-md bg-[hsl(var(--muted))] p-0.5">
               {(['card', 'plain'] as WidgetChrome[]).map((chrome) => (
                 <button
@@ -92,7 +94,7 @@ export function WidgetSettingsDrawer({ clientId, appId }: WidgetSettingsDrawerPr
             />
           ) : (
             <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-              This widget's type ("{instance.type}") isn't registered, so it has no settings to show. Its position and data are preserved — you can still move, resize, or delete the tile.
+              {t('builder.dashboard.no_settings', { type: instance.type })}
             </p>
           )}
         </div>

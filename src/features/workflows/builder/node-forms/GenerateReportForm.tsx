@@ -17,6 +17,7 @@ import { useReports } from '@/features/reports/hooks'
 import { declaredArguments, missingRequiredArguments } from '@/features/reports/arguments'
 import { ReportArgumentInput } from '@/features/reports/ReportArgumentsDialog'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, ReportGenerateConfig, ReportExportFormat, ValueMode } from '../../types'
 
@@ -32,6 +33,14 @@ export function normaliseReportGenerateConfig(raw: unknown): ReportGenerateConfi
   }
 }
 
+// Kept as a plain (untranslated-at-definition) map — values are format
+// NAMES, not prose, and are read through t() by dynamic key
+// (`workflows.node_forms.report_format.<key>`) at every render site rather
+// than translated here. Deliberately minted as real keys even though most
+// values are language-invariant (CSV/PDF/HTML/Markdown, and Excel/Word stay
+// "Excel"/"Word" in Spanish too): the per-app override layer can still
+// customize them, and the project's unconditional t()-everything rule makes
+// no exception for values that happen not to change across locales.
 const FORMAT_LABELS: Record<ReportExportFormat, string> = {
   csv: 'CSV',
   xlsx: 'Excel (.xlsx)',
@@ -43,6 +52,7 @@ const FORMAT_LABELS: Record<ReportExportFormat, string> = {
 }
 
 function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMode) => void }) {
+  const t = useTranslation()
   return (
     <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
       {(['static', 'expression'] as const).map((m) => (
@@ -55,7 +65,7 @@ function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMo
             mode === m ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
           )}
         >
-          {m === 'static' ? 'Static' : 'Expression'}
+          {m === 'static' ? t('workflows.node_forms.static') : t('workflows.node_forms.expression')}
         </button>
       ))}
     </div>
@@ -70,6 +80,7 @@ export interface GenerateReportFormProps {
 }
 
 export function GenerateReportForm({ config, variables, nodeContext, onChange }: GenerateReportFormProps) {
+  const t = useTranslation()
   const { data: reports } = useReports()
   const set = (patch: Partial<ReportGenerateConfig>) => onChange({ ...config, ...patch })
 
@@ -83,16 +94,16 @@ export function GenerateReportForm({ config, variables, nodeContext, onChange }:
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Report</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.report')}</Label>
         <SelectMenu
           value={config.report_definition_id}
           onValueChange={(report_definition_id) => set({ report_definition_id })}
         >
-          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Choose a report…" /></SelectTrigger>
+          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('workflows.node_forms.choose_report')} /></SelectTrigger>
           <SelectContent>
             {!reports || reports.length === 0 ? (
               <div className="px-2 py-1.5 text-[12px] text-[hsl(var(--muted-foreground))]">
-                No reports yet. Create one in Report Builder first.
+                {t('workflows.node_forms.no_reports')}
               </div>
             ) : (
               reports.map((r) => (
@@ -105,17 +116,17 @@ export function GenerateReportForm({ config, variables, nodeContext, onChange }:
 
       <div className="space-y-1.5">
         <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-          Format <span className="normal-case font-normal">(optional — defaults to the report's own default format)</span>
+          {t('workflows.node_forms.format')} <span className="normal-case font-normal">{t('workflows.node_forms.format_optional_hint')}</span>
         </Label>
         <SelectMenu
           value={config.format ?? ''}
           onValueChange={(format) => set({ format: format as ReportExportFormat | '' })}
         >
-          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Use report default…" /></SelectTrigger>
+          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('workflows.node_forms.use_report_default_placeholder')} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="" className="text-xs">Use report default</SelectItem>
+            <SelectItem value="" className="text-xs">{t('workflows.node_forms.use_report_default')}</SelectItem>
             {(Object.keys(FORMAT_LABELS) as ReportExportFormat[]).map((f) => (
-              <SelectItem key={f} value={f} className="text-xs">{FORMAT_LABELS[f]}</SelectItem>
+              <SelectItem key={f} value={f} className="text-xs">{t(`workflows.node_forms.report_format.${f}`)}</SelectItem>
             ))}
           </SelectContent>
         </SelectMenu>
@@ -124,7 +135,7 @@ export function GenerateReportForm({ config, variables, nodeContext, onChange }:
       <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Parameters</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.parameters')}</Label>
         <ModeToggle mode={config.parameters_mode ?? 'static'} onChange={(m) => set({ parameters_mode: m })} />
         {config.parameters_mode === 'expression' ? (
           <ExpressionField
@@ -132,14 +143,18 @@ export function GenerateReportForm({ config, variables, nodeContext, onChange }:
             onChange={(v) => set({ parameters_expr: v })}
             variables={variables}
             nodeContext={nodeContext}
-            placeholder="e.g. Vars.report_params"
-            label="Parameters"
+            placeholder={t('workflows.node_forms.report_params_placeholder')}
+            label={t('workflows.node_forms.parameters')}
           />
         ) : argumentList.length > 0 ? (
           <div className="space-y-2.5">
             {argumentList.map((argument) => (
               <div key={argument.key} className="space-y-1">
                 <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
+                  {/* argument.label is declared BY THE REPORT DEFINITION (its
+                      own author-set argument label), not UI chrome — routing
+                      it through t() would be wrong, there is no English
+                      source string to look up. */}
                   {argument.label}
                   {argument.required && <span className="ml-1 text-[hsl(var(--destructive))]">*</span>}
                 </Label>
@@ -161,16 +176,16 @@ export function GenerateReportForm({ config, variables, nodeContext, onChange }:
             {unmappedRequired.length > 0 && (
               <p className="rounded-md bg-[hsl(var(--warning))]/10 px-2 py-1.5 text-[10px] text-[hsl(var(--warning))]">
                 {unmappedRequired.length === 1
-                  ? `"${unmappedRequired[0]}" is required and has no value — this node will fail when it runs.`
-                  : `${unmappedRequired.length} required inputs have no value — this node will fail when it runs.`}
+                  ? t('workflows.node_forms.required_arg_missing', { name: unmappedRequired[0] })
+                  : t('workflows.node_forms.required_args_missing', { count: unmappedRequired.length })}
               </p>
             )}
           </div>
         ) : (
           <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
             {config.report_definition_id
-              ? 'This report takes no inputs.'
-              : 'Choose a report to see the inputs it takes.'}
+              ? t('workflows.node_forms.report_no_inputs')
+              : t('workflows.node_forms.choose_report_to_see_inputs')}
           </p>
         )}
       </div>
@@ -178,15 +193,15 @@ export function GenerateReportForm({ config, variables, nodeContext, onChange }:
       <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Output Variable</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.output_variable')}</Label>
         <Input
           value={config.output_var}
           onChange={(e) => set({ output_var: e.target.value })}
-          placeholder="report_result"
+          placeholder={t('workflows.node_forms.report_result_placeholder')}
           className="h-8 font-mono text-[12px]"
         />
         <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-          Result published as content_id/filename/format/row_count — both on this node's output and on the named variable.
+          {t('workflows.node_forms.report_result_help')}
         </p>
       </div>
     </div>

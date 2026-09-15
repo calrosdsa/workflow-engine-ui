@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { parseUiWorkflow, validateUiWorkflow } from './parse'
 import { graphPlatforms, selectableUiWorkflowNodes } from './node-registry'
 import type { UiWorkflow } from './types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 export interface UiWorkflowJsonEditorProps {
   value: UiWorkflow
@@ -26,10 +27,11 @@ export interface UiWorkflowJsonEditorProps {
 export function UiWorkflowJsonEditor({
   value,
   onChange,
-  label = 'Steps (JSON)',
+  label,
   rows = 14,
   help,
 }: UiWorkflowJsonEditorProps) {
+  const t = useTranslation()
   const [text, setText] = useState(() => JSON.stringify(value, null, 2))
   const [jsonError, setJsonError] = useState<string | null>(null)
 
@@ -53,14 +55,14 @@ export function UiWorkflowJsonEditor({
       onChange(parseUiWorkflow(JSON.parse(next)))
       setJsonError(null)
     } catch (e) {
-      setJsonError(e instanceof Error ? e.message : 'That is not valid JSON.')
+      setJsonError(e instanceof Error ? e.message : t('ui_workflows.invalid_json'))
     }
   }
 
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
-        <Label className="text-[13px] font-medium">{label}</Label>
+        <Label className="text-[13px] font-medium">{label ?? t('ui_workflows.steps_json')}</Label>
         {help && <p className="text-[12px] text-[hsl(var(--muted-foreground))]">{help}</p>}
         <Textarea
           value={text}
@@ -81,16 +83,16 @@ export function UiWorkflowJsonEditor({
         <p className="text-[12px] text-[hsl(var(--muted-foreground))]">
           {/* A graph is only as portable as its least portable step, so this
               is the intersection rather than a per-step list. */}
-          Runs on: {platforms.length > 0 ? platforms.join(', ') : 'nothing — one of these steps runs nowhere'}
+          {t('ui_workflows.runs_on')}: {platforms.length > 0 ? platforms.join(', ') : t('ui_workflows.runs_nowhere')}
         </p>
       )}
 
       <details className="text-[12px] text-[hsl(var(--muted-foreground))]">
-        <summary className="cursor-pointer">Available step types</summary>
+        <summary className="cursor-pointer">{t('ui_workflows.available_step_types')}</summary>
         <ul className="mt-1.5 space-y-1">
           {selectableUiWorkflowNodes().map((n) => (
             <li key={n.type}>
-              <code className="text-[11px]">{n.type}</code> — {n.description}
+              <code className="text-[11px]">{n.type}</code> — {t(`ui_workflows.node.${n.type}.description`)}
             </li>
           ))}
         </ul>

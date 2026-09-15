@@ -16,6 +16,7 @@ import { Plus, Trash2, Code2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/features/i18n/I18nProvider'
 import { ExpressionEditor } from './ExpressionEditor'
 import { RecordReferencePicker } from './RecordReferencePicker'
 import { nanoid } from './nanoid'
@@ -36,6 +37,7 @@ interface ValuesEditorProps {
 }
 
 export function ValuesEditor({ values, fields, variables, nodeContext = [], onChange }: ValuesEditorProps) {
+  const { t } = useI18n()
   const addValue = () => onChange([...values, newFieldValue()])
   const updateValue = (id: string, patch: Partial<FieldValue>) =>
     onChange(values.map((v) => (v.id === id ? { ...v, ...patch } : v)))
@@ -44,7 +46,7 @@ export function ValuesEditor({ values, fields, variables, nodeContext = [], onCh
   return (
     <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-2.5">
       {values.length === 0 && (
-        <p className="px-1 py-2 text-center text-[11px] text-[hsl(var(--muted-foreground))]">No field values yet.</p>
+        <p className="px-1 py-2 text-center text-[11px] text-[hsl(var(--muted-foreground))]">{t('workflows.builder.no_field_values')}</p>
       )}
 
       <div className="space-y-1.5">
@@ -62,7 +64,7 @@ export function ValuesEditor({ values, fields, variables, nodeContext = [], onCh
       </div>
 
       <Button variant="outline" size="sm" onClick={addValue} className="mt-2 h-7 w-full gap-1 border-dashed text-[11px] text-[hsl(var(--muted-foreground))]">
-        <Plus size={12} /> Field value
+        <Plus size={12} /> {t('workflows.builder.field_value')}
       </Button>
     </div>
   )
@@ -76,6 +78,7 @@ function ValueRow({ value, fields, variables, nodeContext, onChange, onRemove }:
   onChange: (patch: Partial<FieldValue>) => void
   onRemove: () => void
 }) {
+  const { t } = useI18n()
   const [editorOpen, setEditorOpen] = useState(false)
   const isExpr = value.value_mode === 'expression'
   const selectedField = fields.find((f) => f.name === value.field)
@@ -87,7 +90,7 @@ function ValueRow({ value, fields, variables, nodeContext, onChange, onRemove }:
         onChange={(e) => onChange({ field: e.target.value })}
         className="w-28 shrink-0 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-1.5 py-1 text-[11px] text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none"
       >
-        <option value="">field…</option>
+        <option value="">{t('workflows.builder.field_placeholder')}</option>
         {fields.map((f) => (
           <option key={f.name} value={f.name}>{f.label || f.name}</option>
         ))}
@@ -99,13 +102,13 @@ function ValueRow({ value, fields, variables, nodeContext, onChange, onRemove }:
             key={m}
             type="button"
             onClick={() => onChange({ value_mode: m })}
-            title={m === 'static' ? 'Value' : 'Expression'}
+            title={m === 'static' ? t('common.value') : t('workflows.node_forms.expression')}
             className={cn(
               'rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors',
               (value.value_mode ?? 'static') === m ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]',
             )}
           >
-            {m === 'static' ? 'Value' : 'Expr'}
+            {m === 'static' ? t('common.value') : t('workflows.node_forms.expression')}
           </button>
         ))}
       </div>
@@ -120,7 +123,7 @@ function ValueRow({ value, fields, variables, nodeContext, onChange, onRemove }:
           />
           <button
             onClick={() => setEditorOpen(true)}
-            title="Open expression editor"
+            title={t('workflows.builder.open_expression')}
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           >
             <Code2 size={12} />
@@ -138,7 +141,7 @@ function ValueRow({ value, fields, variables, nodeContext, onChange, onRemove }:
           onChange={(e) => onChange({ value: e.target.value })}
           className="h-7 min-w-0 flex-1 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2 text-[12px] text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none"
         >
-          <option value="">select…</option>
+          <option value="">{t('workflows.builder.select')}</option>
           {selectedField.enum_values.map((v) => (
             <option key={v} value={v}>{v}</option>
           ))}
@@ -147,7 +150,7 @@ function ValueRow({ value, fields, variables, nodeContext, onChange, onRemove }:
         <Input
           value={value.value == null ? '' : String(value.value)}
           onChange={(e) => onChange({ value: e.target.value })}
-          placeholder="value…"
+          placeholder={t('workflows.builder.value_placeholder')}
           className="h-7 min-w-0 flex-1 text-[12px]"
         />
       )}
@@ -155,7 +158,7 @@ function ValueRow({ value, fields, variables, nodeContext, onChange, onRemove }:
       <button
         onClick={onRemove}
         className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
-        title="Remove value"
+        title={t('workflows.builder.remove_value')}
       >
         <Trash2 size={11} />
       </button>

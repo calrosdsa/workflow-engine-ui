@@ -12,6 +12,7 @@ import { Trash2, Plus, ShieldAlert } from 'lucide-react'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { RoleMultiSelect } from './RoleMultiSelect'
 import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuilder'
 import { useCurrentUserAttrs } from '@/features/workflows/builder/useCurrentUserAttrs'
@@ -32,6 +33,7 @@ function emptyRule(): AccessScopeRule {
 }
 
 export function AccessScopeConfigSection({ rules, onChange, fields }: AccessScopeConfigSectionProps) {
+  const t = useTranslation()
   const activeAppId = useAuthStore((s) => s.activeMembership?.app_id) ?? ''
   const { data: roles } = useRoles(activeAppId)
   const currentUserModes = useCurrentUserAttrs()
@@ -64,7 +66,7 @@ export function AccessScopeConfigSection({ rules, onChange, fields }: AccessScop
     <div className="space-y-3">
       {rules.length === 0 ? (
         <p className="rounded-md bg-[hsl(var(--muted))]/50 px-3 py-2 text-[11px] text-[hsl(var(--muted-foreground))]">
-          No rules configured — every viewer with permission to see this form sees every record.
+          {t('form_config.no_access_rules')}
         </p>
       ) : (
         <Accordion type="single" collapsible value={openIndex} onValueChange={setOpenIndex} className="space-y-2">
@@ -75,11 +77,11 @@ export function AccessScopeConfigSection({ rules, onChange, fields }: AccessScop
                   <span className="flex items-center gap-2">
                     <span className="font-medium">
                       {rule.audience.type === 'everyone'
-                        ? 'Everyone'
-                        : `${(rule.audience.role_ids ?? []).length} role${(rule.audience.role_ids ?? []).length === 1 ? '' : 's'}`}
+                        ? t('form_config.audience_everyone')
+                        : t((rule.audience.role_ids ?? []).length === 1 ? 'form_config.role_count_one' : 'form_config.role_count_many', { count: (rule.audience.role_ids ?? []).length })}
                     </span>
                     <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
-                      {countAccessScopeConditions([rule])} condition{countAccessScopeConditions([rule]) === 1 ? '' : 's'}
+                      {t(countAccessScopeConditions([rule]) === 1 ? 'form_config.condition_count_one' : 'form_config.condition_count_many', { count: countAccessScopeConditions([rule]) })}
                     </span>
                   </span>
                 </AccordionTrigger>
@@ -95,7 +97,7 @@ export function AccessScopeConfigSection({ rules, onChange, fields }: AccessScop
               </div>
               <AccordionContent className="space-y-3 pb-3">
                 <div className="space-y-1.5">
-                  <p className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Applies to</p>
+                  <p className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('form_config.applies_to')}</p>
                   <SelectMenu
                     value={rule.audience.type}
                     onValueChange={(v) =>
@@ -104,8 +106,8 @@ export function AccessScopeConfigSection({ rules, onChange, fields }: AccessScop
                   >
                     <SelectTrigger className="h-8 text-[12px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="everyone">Everyone</SelectItem>
-                      <SelectItem value="role">Specific role(s)</SelectItem>
+                      <SelectItem value="everyone">{t('form_config.audience_everyone')}</SelectItem>
+                      <SelectItem value="role">{t('form_config.specific_roles_option')}</SelectItem>
                     </SelectContent>
                   </SelectMenu>
                   {rule.audience.type === 'role' && (
@@ -117,7 +119,7 @@ export function AccessScopeConfigSection({ rules, onChange, fields }: AccessScop
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <p className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">May only see/edit records where</p>
+                  <p className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('form_config.may_only_see_edit')}</p>
                   <FilterBuilder
                     group={rule.filter}
                     fields={fields}
@@ -137,15 +139,14 @@ export function AccessScopeConfigSection({ rules, onChange, fields }: AccessScop
         <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-400">
           <ShieldAlert size={14} className="mt-0.5 shrink-0" />
           <span>
-            Not covered by any rule, so unrestricted: {uncoveredRoles.map((r) => r.name).join(', ')}. Add a rule for
-            {uncoveredRoles.length === 1 ? ' this role' : ' these roles'}, or an "Everyone" rule, if that's not intended.
+            {t(uncoveredRoles.length === 1 ? 'form_config.uncovered_roles_singular' : 'form_config.uncovered_roles_plural', { names: uncoveredRoles.map((r) => r.name).join(', ') })}
           </span>
         </div>
       )}
 
       <Button type="button" variant="outline" onClick={addRule} className="flex w-full items-center gap-2 text-[12px]">
         <Plus size={14} />
-        Add rule
+        {t('form_config.add_rule')}
       </Button>
     </div>
   )

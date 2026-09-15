@@ -41,6 +41,7 @@
 // group's `icons` array.
 
 import { dynamicIconImports, type IconName } from 'lucide-react/dynamic'
+import type { I18nContextValue } from '@/features/i18n/I18nProvider'
 import {
   // General / navigation
   Home, LayoutDashboard, LayoutGrid, LayoutList, Menu as MenuIcon, Compass,
@@ -75,6 +76,14 @@ import {
 } from 'lucide-react'
 
 export interface MenuIconGroup {
+  /** Stable slug for the group's translated label — see MenuIconPicker.tsx,
+   *  which reads `menus.icon_picker.groups.${key}` rather than this file's
+   *  own `label`, since a plain module-level array has no I18nProvider to
+   *  call `t()` from (same constraint as MENU_TYPE_REGISTRY's label/
+   *  description — see that file's own note). Kept separate from `label`
+   *  (rather than deriving a key from it, e.g. `label.toLowerCase()`) because
+   *  "Places & media" would produce a key with a space and an ampersand. */
+  key: string
   label: string
   icons: { name: string; Icon: LucideIcon }[]
 }
@@ -82,6 +91,7 @@ export interface MenuIconGroup {
 /** The catalog, grouped for the picker. Order is the order shown. */
 export const MENU_ICON_GROUPS: MenuIconGroup[] = [
   {
+    key: 'general',
     label: 'General',
     icons: [
       { name: 'Home', Icon: Home },
@@ -101,6 +111,7 @@ export const MENU_ICON_GROUPS: MenuIconGroup[] = [
     ],
   },
   {
+    key: 'data',
     label: 'Data',
     icons: [
       { name: 'Database', Icon: Database },
@@ -121,6 +132,7 @@ export const MENU_ICON_GROUPS: MenuIconGroup[] = [
     ],
   },
   {
+    key: 'search',
     label: 'Search',
     icons: [
       { name: 'Search', Icon: Search },
@@ -130,6 +142,7 @@ export const MENU_ICON_GROUPS: MenuIconGroup[] = [
     ],
   },
   {
+    key: 'people',
     label: 'People',
     icons: [
       { name: 'User', Icon: User },
@@ -143,6 +156,7 @@ export const MENU_ICON_GROUPS: MenuIconGroup[] = [
     ],
   },
   {
+    key: 'commerce',
     label: 'Commerce',
     icons: [
       { name: 'ShoppingCart', Icon: ShoppingCart },
@@ -158,6 +172,7 @@ export const MENU_ICON_GROUPS: MenuIconGroup[] = [
     ],
   },
   {
+    key: 'communication',
     label: 'Communication',
     icons: [
       { name: 'Mail', Icon: Mail },
@@ -170,6 +185,7 @@ export const MENU_ICON_GROUPS: MenuIconGroup[] = [
     ],
   },
   {
+    key: 'time',
     label: 'Time',
     icons: [
       { name: 'Calendar', Icon: Calendar },
@@ -182,6 +198,7 @@ export const MENU_ICON_GROUPS: MenuIconGroup[] = [
     ],
   },
   {
+    key: 'analytics',
     label: 'Analytics',
     icons: [
       { name: 'ChartBar', Icon: ChartBar },
@@ -194,6 +211,7 @@ export const MENU_ICON_GROUPS: MenuIconGroup[] = [
     ],
   },
   {
+    key: 'status',
     label: 'Status',
     icons: [
       { name: 'CircleCheck', Icon: CircleCheck },
@@ -208,6 +226,7 @@ export const MENU_ICON_GROUPS: MenuIconGroup[] = [
     ],
   },
   {
+    key: 'system',
     label: 'System',
     icons: [
       { name: 'Settings', Icon: Settings },
@@ -228,6 +247,7 @@ export const MENU_ICON_GROUPS: MenuIconGroup[] = [
     ],
   },
   {
+    key: 'places_media',
     label: 'Places & media',
     icons: [
       { name: 'MapPin', Icon: MapPin },
@@ -338,13 +358,19 @@ export const CUSTOM_ICON_MIME_TYPES = ['image/png', 'image/svg+xml', 'image/webp
  *  trip. The server's own maxUploadBytes remains the real ceiling. */
 export const CUSTOM_ICON_MAX_BYTES = 512 * 1024
 
-/** Validates a chosen file, returning an error message or null. */
-export function validateCustomIconFile(file: File): string | null {
+/** Validates a chosen file, returning an error message or null.
+ *
+ *  Takes `t` as a parameter rather than calling `useTranslation()` itself —
+ *  this is a plain function, not a component, so it can't call a hook, but
+ *  its only call site (MenuIconPicker's `handleFile`) already has `t` in
+ *  scope. Same pattern as localizeFormName(id, name, tc) and the
+ *  fnLabels(t)/layoutLabels(t) helpers elsewhere in this vertical. */
+export function validateCustomIconFile(file: File, t: I18nContextValue['t']): string | null {
   if (!CUSTOM_ICON_MIME_TYPES.includes(file.type)) {
-    return `${file.name} is a ${file.type || 'unknown'} file — use a PNG, SVG, WebP or JPEG.`
+    return t('menus.icon_picker.file_type_error', { filename: file.name, type: file.type || t('menus.icon_picker.unknown_type') })
   }
   if (file.size > CUSTOM_ICON_MAX_BYTES) {
-    return `${file.name} is ${(file.size / 1024).toFixed(0)} KB — icons must be under ${CUSTOM_ICON_MAX_BYTES / 1024} KB.`
+    return t('menus.icon_picker.file_size_error', { filename: file.name, size: (file.size / 1024).toFixed(0), max: CUSTOM_ICON_MAX_BYTES / 1024 })
   }
   return null
 }

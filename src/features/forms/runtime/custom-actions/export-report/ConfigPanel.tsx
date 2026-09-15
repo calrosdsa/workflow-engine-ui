@@ -8,12 +8,14 @@
 import { Label } from '@/components/ui/label'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useReports } from '@/features/reports/hooks'
-import { ALL_FORMATS, FORMAT_LABELS, type ExportFormat } from '@/features/reports/types'
+import { ALL_FORMATS, type ExportFormat } from '@/features/reports/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { CustomActionConfigPanelProps } from '../contract'
 import { effectiveArgumentMode, supportsCurrentRecord, type ArgumentMode, type ExportReportActionConfig } from './schema'
 import { declaredArguments } from '@/features/reports/arguments'
 
 export function ExportReportConfigPanel({ config, onChange, formId }: CustomActionConfigPanelProps<ExportReportActionConfig>) {
+  const t = useTranslation()
   const { data: reports } = useReports()
 
   const selectedReport = reports?.find((r) => r.id === config.reportDefinitionId)
@@ -26,16 +28,16 @@ export function ExportReportConfigPanel({ config, onChange, formId }: CustomActi
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
-        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Report to export</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('export_report.config.report_label')}</Label>
         <SelectMenu
           value={config.reportDefinitionId}
           onValueChange={(reportDefinitionId) => onChange({ ...config, reportDefinitionId })}
         >
-          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Choose a report…" /></SelectTrigger>
+          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('export_report.config.choose_report_placeholder')} /></SelectTrigger>
           <SelectContent>
             {!reports || reports.length === 0 ? (
               <div className="px-2 py-1.5 text-[12px] text-[hsl(var(--muted-foreground))]">
-                No reports yet. Create one in Report Builder first.
+                {t('export_report.config.no_reports')}
               </div>
             ) : (
               reports.map((r) => (
@@ -48,16 +50,20 @@ export function ExportReportConfigPanel({ config, onChange, formId }: CustomActi
 
       <div className="flex flex-col gap-1.5">
         <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-          Format <span className="text-[hsl(var(--muted-foreground))] font-normal">(optional — defaults to the report's own default format)</span>
+          {t('export_report.config.format_label')} <span className="text-[hsl(var(--muted-foreground))] font-normal">{t('export_report.config.format_optional_hint')}</span>
         </Label>
         <SelectMenu
           value={config.format}
           onValueChange={(format) => onChange({ ...config, format: format as ExportFormat })}
         >
-          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Use report default…" /></SelectTrigger>
+          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('export_report.config.use_default_placeholder')} /></SelectTrigger>
           <SelectContent>
             {ALL_FORMATS.map((f) => (
-              <SelectItem key={f} value={f} className="text-xs">{FORMAT_LABELS[f]}</SelectItem>
+              // reports.format.* — shared with reports/ReportSettingsPanel.tsx
+              // and ReportPreviewDialog.tsx; this custom-actions vertical
+              // reaches into that namespace deliberately, the enum (FORMAT_LABELS,
+              // reports/types.ts) is shared code, not duplicated copy.
+              <SelectItem key={f} value={f} className="text-xs">{t(`reports.format.${f}.label`)}</SelectItem>
             ))}
           </SelectContent>
         </SelectMenu>
@@ -66,10 +72,10 @@ export function ExportReportConfigPanel({ config, onChange, formId }: CustomActi
       {argumentList.length > 0 && (
         <div className="flex flex-col gap-2 rounded-md border border-[hsl(var(--border))] p-3">
           <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-            Report inputs
+            {t('export_report.config.inputs_label')}
           </Label>
           <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-            Choose where each input comes from when someone runs this action.
+            {t('export_report.config.inputs_help')}
           </p>
 
           {argumentList.map((argument) => {
@@ -88,24 +94,24 @@ export function ExportReportConfigPanel({ config, onChange, formId }: CustomActi
                         argument pointing at this very form. Otherwise a saved
                         config could only ever fail at click time. */}
                     {canUseRecord && (
-                      <SelectItem value="current_record" className="text-xs">Use the current record</SelectItem>
+                      <SelectItem value="current_record" className="text-xs">{t('export_report.config.mode_current_record')}</SelectItem>
                     )}
-                    <SelectItem value="prompt" className="text-xs">Ask the person</SelectItem>
+                    <SelectItem value="prompt" className="text-xs">{t('export_report.config.mode_prompt')}</SelectItem>
                     {/* A required argument has nothing to fall back on, so
                         leaving it empty could only fail at click time. */}
                     {!argument.required && (
-                      <SelectItem value="skip" className="text-xs">Leave empty</SelectItem>
+                      <SelectItem value="skip" className="text-xs">{t('export_report.config.mode_skip')}</SelectItem>
                     )}
                   </SelectContent>
                 </SelectMenu>
                 {!canUseRecord && argument.type === 'reference' && (
                   <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-                    This input points at a different form, so it has to be asked for.
+                    {t('export_report.config.mode_hint_prompt_forced')}
                   </p>
                 )}
                 {mode === 'skip' && (
                   <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-                    This input is left unset, so it won't narrow the report at all.
+                    {t('export_report.config.mode_hint_skip')}
                   </p>
                 )}
               </div>

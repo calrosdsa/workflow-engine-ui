@@ -12,10 +12,12 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { TeamListLayout } from '../components/TeamListLayout'
 import { RoleFormDrawer } from '../components/RoleFormDrawer'
 import type { Role } from '@/features/roles/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 const PAGE_SIZE = 10
 
 export function RolesSection() {
+  const t = useTranslation()
   const { data: apps, isLoading: appsLoading } = useApps()
   const canWrite = usePermission('roles:write')
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null)
@@ -57,10 +59,10 @@ export function RolesSection() {
   }
 
   const columns: DataTableColumn[] = [
-    { key: 'name', label: 'Role Name' },
+    { key: 'name', label: t('team.role_name') },
     {
-      key: 'status', label: 'Status',
-      render: () => <Badge variant="success">Active</Badge>,
+      key: 'status', label: t('common.status'),
+      render: () => <Badge variant="success">{t('team.active')}</Badge>,
     },
     {
       key: 'actions', label: '', align: 'right',
@@ -69,12 +71,12 @@ export function RolesSection() {
         if (!canWrite) return null
         return (
           <div className="flex justify-end gap-1">
-            <Button variant="ghost" size="icon" title="Edit role" onClick={() => setEditing(role)}>
+            <Button variant="ghost" size="icon" title={t('team.edit_role')} onClick={() => setEditing(role)}>
               <Pencil size={14} />
             </Button>
             {!role.is_builtin && (
               <Button
-                variant="ghost" size="icon" title="Delete role" className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
+                variant="ghost" size="icon" title={t('team.delete_role')} className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
                 onClick={() => setDeleteTarget(role)}
               >
                 <Trash2 size={14} />
@@ -92,7 +94,7 @@ export function RolesSection() {
     return (
       <div className="p-6">
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center">
-          <p className="text-[hsl(var(--muted-foreground))]">No applications yet — roles are created per app.</p>
+          <p className="text-[hsl(var(--muted-foreground))]">{t('team.no_apps_roles')}</p>
         </div>
       </div>
     )
@@ -105,8 +107,8 @@ export function RolesSection() {
       onSelectApp={handleSelectApp}
       search={search}
       onSearchChange={handleSearchChange}
-      searchPlaceholder="Search Roles..."
-      primaryAction={canWrite ? { label: '+ Add Role', onClick: () => setEditing('new') } : undefined}
+      searchPlaceholder={t('team.search_roles')}
+      primaryAction={canWrite ? { label: t('team.add_role'), onClick: () => setEditing('new') } : undefined}
     >
       {rolesLoading ? (
         <div className="flex h-32 items-center justify-center"><Spinner /></div>
@@ -116,15 +118,14 @@ export function RolesSection() {
             columns={columns}
             rows={pagedRoles as unknown as Record<string, unknown>[]}
             getRowId={(row) => (row as unknown as Role).id}
-            emptyMessage="No roles yet for this application."
+            emptyMessage={t('team.no_roles')}
           />
           <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
         </>
       )}
 
       <p className="border-t border-[hsl(var(--border))] px-4 py-3 text-xs text-[hsl(var(--muted-foreground))]">
-        Platform roles (Super Admin, Owner, Editor, Viewer) aren't scoped to one app and don't
-        appear in this list — grant Super Admin from a user's "Manage Access" panel on the Users tab.
+        {t('team.platform_roles_hint')}
       </p>
 
       {editing && selectedAppId && (
@@ -138,9 +139,9 @@ export function RolesSection() {
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(o) => !o && setDeleteTarget(null)}
-        title="Delete role?"
-        description={`"${deleteTarget?.name}" will be removed. Users currently assigned this role will lose the permissions it grants.`}
-        confirmLabel="Delete"
+        title={t('team.delete_role_title')}
+        description={t('team.delete_role_description', { name: deleteTarget?.name ?? '' })}
+        confirmLabel={t('common.delete')}
         destructive
         loading={deleteMutation.isPending}
         onConfirm={handleConfirmDelete}

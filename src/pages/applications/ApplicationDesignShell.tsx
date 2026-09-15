@@ -1,5 +1,6 @@
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { Bot, Workflow, FileText, Palette, SlidersHorizontal, Rocket, Loader2, AlertCircle, ListTree, Eye, LogOut, Sun, Moon, BookOpen, Lock } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { Bot, Workflow, FileText, Palette, SlidersHorizontal, Rocket, Loader2, AlertCircle, ListTree, Eye, LogOut, Sun, Moon, BookOpen, Lock, ChevronsUpDown, LayoutGrid, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
@@ -11,13 +12,15 @@ import {
 import { cn } from '@/lib/utils'
 import { useApplication, useApplicationVersions, usePublishApplication } from '@/features/applications/hooks'
 import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
-import { usePermission } from '@/features/auth/permissions'
+import { usePermission, hasPermission } from '@/features/auth/permissions'
 import { useLogout } from '@/features/auth/hooks'
 import { useAuthStore } from '@/stores/auth'
 import { useBuilderTheme } from '@/features/theme/useBuilderTheme'
 import { runtimeUrlFor } from '@/features/runtime/urls'
 import { useState } from 'react'
 import type { ValidationIssue } from '@/features/applications/types'
+import type { Membership } from '@/features/auth/types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 // The app-scoped design shell — replaces the old ApplicationBuilderPage's
 // bespoke header+useState tab bar with real nested routes
@@ -32,19 +35,19 @@ const NAV_ITEMS = [
   // it — it just isn't a nav destination for now. Note this is still the
   // shell's index route, so entering an app from Home lands here even
   // though nothing in the bar points at it.
-  { to: '/applications/$appId/workflows', label: 'Workflows', icon: Workflow, exact: false },
-  { to: '/applications/$appId/forms', label: 'Forms', icon: FileText, exact: false },
-  { to: '/applications/$appId/design', label: 'App Design', icon: Palette, exact: false },
+  { to: '/applications/$appId/workflows', labelKey: 'app_design.workflows', icon: Workflow, exact: false },
+  { to: '/applications/$appId/forms', labelKey: 'app_design.forms', icon: FileText, exact: false },
+  { to: '/applications/$appId/design', labelKey: 'app_design.design', icon: Palette, exact: false },
   // Promoted out of App Design's tab bar to a destination of its own.
-  { to: '/applications/$appId/agents', label: 'Agents', icon: Bot, exact: false },
+  { to: '/applications/$appId/agents', labelKey: 'app_design.agents', icon: Bot, exact: false },
   // FR-C9-002: now a real per-app nested route — a KB always belongs to
   // exactly one owning app, so this is app-scoped like every other item
   // here, not a link out to a global page.
-  { to: '/applications/$appId/knowledge-bases', label: 'Knowledge Base', icon: BookOpen, exact: false },
+  { to: '/applications/$appId/knowledge-bases', labelKey: 'app_design.knowledge_base', icon: BookOpen, exact: false },
   // App Configuration absorbed the old Settings nav item (credentials +
   // variables are now its 'settings' tab) along with five tabs that used to
   // sit under App Design — see AppConfigurationPage.
-  { to: '/applications/$appId/configuration', label: 'App Configuration', icon: SlidersHorizontal, exact: false },
+  { to: '/applications/$appId/configuration', labelKey: 'app_design.configuration', icon: SlidersHorizontal, exact: false },
 ] as const
 
 // The Workflow Builder (/applications/$appId/workflows/$workflowId) owns its
@@ -71,7 +74,18 @@ function isKnowledgeDocumentDetailRoute(pathname: string, appId: string): boolea
   return new RegExp(`^/applications/${escapedAppId}/knowledge-bases/[^/]+/documents/[^/]+/?$`).test(pathname)
 }
 
+// The evaluation dataset editor is a focused, full-width workspace (row
+// table, run history, results) in the same vein as the workflow/form
+// editors above — its own "Back to workflow" link already covers returning,
+// so this shell's global nav would only add a second, redundant navigation
+// layer above it.
+function isEvaluationDatasetRoute(pathname: string, appId: string): boolean {
+  const escapedAppId = appId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`^/applications/${escapedAppId}/workflows/[^/]+/evaluations/[^/]+/?$`).test(pathname)
+}
+
 export function ApplicationDesignShell({ appId }: { appId: string }) {
+  const { t } = useI18n()
   const navigate = useNavigate()
   const { data: app, isLoading } = useApplication()
   const { data: versions } = useApplicationVersions()
@@ -90,6 +104,7 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
   const hideShellChrome = isWorkflowEditRoute(pathname, appId)
     || isFormEditRoute(pathname, appId)
     || isKnowledgeDocumentDetailRoute(pathname, appId)
+    || isEvaluationDatasetRoute(pathname, appId)
 
   const [publishIssues, setPublishIssues] = useState<ValidationIssue[] | null>(null)
   const [publishError, setPublishError] = useState<string | null>(null)
@@ -115,7 +130,7 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
     } catch (e) {
       const { issues, message } = await extractPublishError(e)
       if (issues) setPublishIssues(issues)
-      else setPublishError(message ?? 'Publishing failed. Please try again.')
+      else setPublishError(message ?? t('app_design.publish_failed'))
     }
   }
 
@@ -132,11 +147,8 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
        *  that all 5 destinations plus the Live badge and Launch button fit
        *  without any of them needing an overflow menu. */}
       <header className="grid h-20 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4">
-        <div className="flex min-w-0 items-center gap-2 justify-self-start">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
-            <ListTree size={14} />
-          </div>
-          <span className="hidden max-w-[160px] truncate text-sm font-semibold text-[hsl(var(--foreground))] sm:inline" title={app.name}>{app.name}</span>
+        <div className="min-w-0">
+          <AppSwitcher appId={appId} appName={app.name} appClientId={app.client_id} />
         </div>
 
         {/* Centered in the header via the grid's own [1fr_auto_1fr] track
@@ -151,9 +163,10 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
            *  item currently carries `nav-pill-anchor` below — see index.css's
            *  .nav-pill / .nav-pill-anchor doc comment (design.md § Motion). */}
           <div className="nav-pill" aria-hidden />
-          {NAV_ITEMS.map(({ to, label, icon: Icon, exact }) => {
+          {NAV_ITEMS.map(({ to, labelKey, icon: Icon, exact }) => {
             const target = to.replace('$appId', appId)
             const active = exact ? pathname === target : pathname.startsWith(target)
+            const label = t(labelKey)
             return (
               <button
                 key={to}
@@ -180,7 +193,7 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
               variant="outline"
               size="icon"
               onClick={() => window.open(`${runtimeUrlFor(app.client_id, app.id)}?preview=draft`, '_blank', 'noopener,noreferrer')}
-              title="Preview Draft — see your unpublished changes live, without publishing"
+              title={t('app_design.preview_draft_hint')}
               className="h-8 w-8 shrink-0"
             >
               <Eye size={14} />
@@ -191,7 +204,7 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
               size="sm"
               onClick={() => setPublishDialogOpen(true)}
               disabled={publishMutation.isPending}
-              title="Publish Application"
+              title={t('app_design.publish_application')}
               className="gap-1.5 px-2"
             >
               {publishMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Rocket size={14} />}
@@ -200,7 +213,7 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
                *  used up this header's last slack at sm+, so both labels
                *  now collapse together rather than one staying full-text
                *  while the other goes icon-only. */}
-              <span className="hidden lg:inline">Publish Application</span>
+              <span className="hidden lg:inline">{t('app_design.publish_application')}</span>
             </Button>
           )}
           <ThemeToggle />
@@ -212,13 +225,13 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
         <div className="flex items-center justify-between gap-3 border-b border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/10 px-4 py-2 text-[12px] font-medium text-[hsl(var(--warning))]">
           <span className="flex items-center gap-2">
             <Lock size={14} className="shrink-0" />
-            This app is a linked Production environment — design-time edits are disabled. Make changes in its linked Sandbox and Promote them across.
+            {t('app_design.production_locked')}
           </span>
           <Button
             variant="ghost" size="sm" className="h-6 shrink-0 gap-1 px-2 text-[11px] text-[hsl(var(--warning))] hover:bg-[hsl(var(--warning))]/10"
             onClick={() => navigate({ to: '/applications/$appId/configuration', params: { appId }, search: { tab: 'environment' } })}
           >
-            View Environment Link
+            {t('app_design.view_environment')}
           </Button>
         </div>
       )}
@@ -227,7 +240,7 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
         <div className="border-b border-[hsl(var(--destructive))]/30 bg-[hsl(var(--destructive))]/10 px-4 py-3 text-[12px] text-[hsl(var(--destructive))]">
           <div className="mb-1 flex items-center gap-2 font-medium">
             <AlertCircle size={14} className="shrink-0" />
-            Application cannot be published — fix these issues first:
+            {t('app_design.cannot_publish')}
           </div>
           <ul className="ml-6 list-disc space-y-0.5">
             {publishIssues.map((issue, i) => (
@@ -259,6 +272,81 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
   )
 }
 
+// Header app icon+name, doubling as a dropdown: jump back to Home, or switch
+// directly into another app's design shell without a Home detour. Listed
+// apps are scoped to appClientId (the CURRENTLY OPEN app's client), not
+// activeClientId from the store — a bookmarked/deep-linked $appId can belong
+// to a different client than whatever Home last had active, and
+// applicationShellRoute's beforeLoad only re-syncs activeMembership, not
+// activeClientId, so activeClientId is not trustworthy here.
+export function AppSwitcher({ appId, appName, appClientId }: { appId: string; appName: string; appClientId: string }) {
+  const navigate = useNavigate()
+  const qc = useQueryClient()
+  const session = useAuthStore((s) => s.session)
+  const setActiveMembership = useAuthStore((s) => s.setActiveMembership)
+  const t = useI18n().t
+
+  // Only apps this member can actually design — this menu lands directly in
+  // the design shell (unlike Home's AppCard, which also lists apps you can
+  // only open at runtime).
+  const appMemberships = (session?.memberships ?? []).filter(
+    (m) => m.app_id && m.client_id === appClientId && hasPermission(m.permissions, 'application:design'),
+  )
+
+  const switchTo = (m: Membership) => {
+    if (m.app_id === appId) return
+    setActiveMembership(m)
+    // Every application-scoped query key (applicationKeys in
+    // features/applications/hooks.ts) is app-agnostic — it's the
+    // activeMembership-derived X-App-ID header, not the key, that scopes the
+    // request. This shell stays mounted across the switch (only the $appId
+    // route param changes), so without invalidating, Workflows/Forms/etc.
+    // would keep rendering the PREVIOUS app's cached data. Same
+    // "invalidate everything" precedent as useRollback/useImportApp rather
+    // than enumerating every affected key.
+    qc.invalidateQueries()
+    navigate({ to: '/applications/$appId', params: { appId: m.app_id! } })
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          title={appName}
+          aria-label={t('app_design.switch_application')}
+          className="-ml-1.5 flex w-full min-w-0 items-center gap-1.5 rounded-md py-1 pl-1.5 pr-1 transition-colors hover:bg-[hsl(var(--muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
+        >
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
+            <ListTree size={14} />
+          </div>
+          <span className="hidden max-w-[160px] truncate text-sm font-semibold text-[hsl(var(--foreground))] sm:inline">{appName}</span>
+          <ChevronsUpDown size={12} className="hidden shrink-0 opacity-50 sm:inline" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-64">
+        <DropdownMenuItem onSelect={() => navigate({ to: '/' })} className="gap-2">
+          <LayoutGrid size={14} />
+          {t('app_design.back_to_apps')}
+        </DropdownMenuItem>
+        {appMemberships.length > 1 && (
+          <>
+            <DropdownMenuSeparator />
+            <div className="px-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
+              {t('app_design.switch_application')}
+            </div>
+            {appMemberships.map((m) => (
+              <DropdownMenuItem key={m.app_id} onSelect={() => switchTo(m)} className="justify-between gap-2">
+                <span className="truncate">{m.app_name || m.app_id}</span>
+                {m.app_id === appId && <Check size={13} className="shrink-0" />}
+              </DropdownMenuItem>
+            ))}
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 // Builder-shell light/dark switcher — see useBuilderTheme.ts. Icon shows the
 // mode a click WOULD switch to (sun while dark, moon while light), matching
 // the convention every other icon-toggle button in this codebase already
@@ -266,13 +354,14 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
 // monitor trio in ThemeSection.tsx).
 function ThemeToggle() {
   const { theme, toggle } = useBuilderTheme()
+  const t = useI18n().t
   return (
     <Button
       variant="outline"
       size="icon"
       onClick={toggle}
-      title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={theme === 'dark' ? t('app_design.switch_light') : t('app_design.switch_dark')}
+      aria-label={theme === 'dark' ? t('app_design.switch_light') : t('app_design.switch_dark')}
       className="h-8 w-8 shrink-0"
     >
       {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
@@ -292,6 +381,7 @@ function ThemeToggle() {
 function AccountMenu() {
   const session = useAuthStore((s) => s.session)
   const logoutMutation = useLogout()
+  const t = useI18n().t
   if (!session) return null
 
   const fullName = `${session.first_name ?? ''} ${session.last_name ?? ''}`.trim()
@@ -302,7 +392,7 @@ function AccountMenu() {
       <DropdownMenuTrigger asChild>
         <button
           title={fullName || session.email}
-          aria-label="Account menu"
+          aria-label={t('profile.account_menu')}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[11px] font-semibold text-[hsl(var(--primary-foreground))] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))]"
         >
           {initials}
@@ -325,7 +415,7 @@ function AccountMenu() {
           onSelect={() => logoutMutation.mutate()}
         >
           {logoutMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <LogOut size={14} />}
-          Log out
+          {t('profile.log_out')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -341,6 +431,7 @@ function PublishDialog({
   onPublish: (requestedVersion?: number) => void
   isPending: boolean
 }) {
+  const t = useI18n().t
   const suggestedNext = currentMajor + 1
   const [versionText, setVersionText] = useState('')
 
@@ -359,16 +450,16 @@ function PublishDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="w-full max-w-sm">
         <DialogHeader>
-          <DialogTitle>Launch Application</DialogTitle>
+          <DialogTitle>{t('app_design.launch_application')}</DialogTitle>
           <DialogDescription>
             {currentMajor > 0
-              ? `Currently live: v${currentMajor}.0. Publishing starts a new major version.`
-              : 'This will be the first published version of this app.'}
+              ? t('app_design.currently_live', { version: `${currentMajor}.0` })
+              : t('app_design.first_publish')}
           </DialogDescription>
         </DialogHeader>
         <div className="px-6 py-2">
           <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">
-            Version number (optional)
+            {t('app_design.publish_version')}
           </label>
           <Input
             value={versionText}
@@ -379,12 +470,12 @@ function PublishDialog({
           />
           {!isValid && (
             <p className="mt-1 flex items-center gap-1.5 text-[12px] text-[hsl(var(--destructive))]">
-              <AlertCircle size={12} /> Must be a whole number greater than {currentMajor}.
+              <AlertCircle size={12} /> {t('app_design.version_invalid', { current: currentMajor })}
             </p>
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={isPending}>Cancel</Button>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={isPending}>{t('common.cancel')}</Button>
           <Button
             size="sm"
             className="gap-1.5"
@@ -392,7 +483,7 @@ function PublishDialog({
             disabled={!isValid || isPending}
           >
             {isPending ? <Loader2 size={13} className="animate-spin" /> : <Rocket size={13} />}
-            Launch v{parsed ?? suggestedNext}.0
+            {t('app_design.launch_version', { version: `${parsed ?? suggestedNext}.0` })}
           </Button>
         </DialogFooter>
       </DialogContent>

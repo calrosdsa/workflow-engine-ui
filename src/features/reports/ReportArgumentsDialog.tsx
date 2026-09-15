@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Spinner } from '@/components/ui/spinner'
 import { ReferenceFieldAutocomplete } from '@/features/forms/runtime/ReferenceFieldAutocomplete'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { FormElement } from '@/features/form-builder/schema'
 import {
   initialArgumentValues,
@@ -27,7 +28,9 @@ interface ReportArgumentsDialogProps {
   argumentList: ReportArgument[]
   /** Values already resolved by the caller, used to seed the controls. */
   seed?: Record<string, unknown>
+  /** Defaults to t('reports.run_dialog.title') when omitted. */
   title?: string
+  /** Defaults to t('common.run') when omitted. */
   confirmLabel?: string
   busy?: boolean
   onCancel: () => void
@@ -38,12 +41,15 @@ export function ReportArgumentsDialog({
   open,
   argumentList,
   seed,
-  title = 'Run report',
-  confirmLabel = 'Run',
+  title,
+  confirmLabel,
   busy = false,
   onCancel,
   onConfirm,
 }: ReportArgumentsDialogProps) {
+  const t = useTranslation()
+  const dialogTitle = title ?? t('reports.run_dialog.title')
+  const confirmButtonLabel = confirmLabel ?? t('common.run')
   const [values, setValues] = useState<Record<string, unknown>>(() => initialArgumentValues(argumentList, seed))
 
   // Re-seed whenever the dialog reopens so a previous run's edits never leak
@@ -74,11 +80,11 @@ export function ReportArgumentsDialog({
         }}
       >
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription>
             {argumentList.length === 1
-              ? 'This report takes one input.'
-              : `This report takes ${argumentList.length} inputs.`}
+              ? t('reports.run_dialog.description_one')
+              : t('reports.run_dialog.description_many', { count: argumentList.length })}
           </DialogDescription>
         </DialogHeader>
 
@@ -95,7 +101,7 @@ export function ReportArgumentsDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onCancel} disabled={busy}>Cancel</Button>
+          <Button variant="outline" onClick={onCancel} disabled={busy}>{t('common.cancel')}</Button>
           <Button
             onClick={() => onConfirm(pruneEmptyArguments(argumentList, values))}
             // Gated on required arguments only; the backend enforces this too,
@@ -103,7 +109,7 @@ export function ReportArgumentsDialog({
             disabled={busy || missing.length > 0}
           >
             {busy ? <Spinner className="h-4 w-4" /> : null}
-            {confirmLabel}
+            {confirmButtonLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -118,6 +124,11 @@ interface ArgumentControlProps {
   disabled: boolean
 }
 
+// argument.label is author-authored per-report content (like a form field's
+// label), not this dialog's own chrome — it is not run through t()/tc() here.
+// Localizing it would need the same content-override scheme forms use
+// (localize-schema.ts's form.<id>.field.<path> keys); reports have no
+// equivalent yet, which is a separate, larger gap than this dialog's own UI.
 function ArgumentControl({ argument, value, onChange, disabled }: ArgumentControlProps) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -134,6 +145,7 @@ function ArgumentControl({ argument, value, onChange, disabled }: ArgumentContro
  *  same controls the run prompt uses — one place decides how each argument
  *  type is edited. */
 export function ReportArgumentInput({ argument, value, onChange, disabled }: ArgumentControlProps) {
+  const t = useTranslation()
   // A range argument shows a from/to pair — the shape the backend compiles
   // into a gte/lte pair, since no `between` operator exists.
   if (argument.range) {
@@ -143,16 +155,16 @@ export function ReportArgumentInput({ argument, value, onChange, disabled }: Arg
       <div className="flex items-center gap-2">
         <Input
           type={inputType}
-          aria-label={`${argument.label} from`}
+          aria-label={t('reports.run_dialog.range_from_aria', { label: argument.label })}
           value={(range.from as string) ?? ''}
           onChange={(e) => onChange({ ...range, from: e.target.value })}
           disabled={disabled}
           className="h-8 text-sm"
         />
-        <span className="text-xs text-[hsl(var(--muted-foreground))]">to</span>
+        <span className="text-xs text-[hsl(var(--muted-foreground))]">{t('reports.run_dialog.range_to_separator')}</span>
         <Input
           type={inputType}
-          aria-label={`${argument.label} to`}
+          aria-label={t('reports.run_dialog.range_to_aria', { label: argument.label })}
           value={(range.to as string) ?? ''}
           onChange={(e) => onChange({ ...range, to: e.target.value })}
           disabled={disabled}

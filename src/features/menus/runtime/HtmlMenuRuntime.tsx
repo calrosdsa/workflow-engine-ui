@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { formsApi } from '@/features/forms/api'
 import { composeSrcDoc, buildThemeCss, THEME_TOKENS } from '../html/srcdoc'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { MenuRuntimeRendererProps } from '../menu-registry'
 import type { HtmlMenuConfig, HtmlDataSource, HtmlWriteTarget } from '../types'
 
@@ -65,6 +66,7 @@ interface WriteMessage {
  *  See features/menus/html/srcdoc.ts for the document composition and why
  *  `allow-same-origin` must never be added to the sandbox attribute. */
 export function HtmlMenuRuntime({ menu }: MenuRuntimeRendererProps) {
+  const t = useTranslation()
   const config = menu.config as HtmlMenuConfig
   const frameRef = useRef<HTMLIFrameElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
@@ -202,7 +204,7 @@ export function HtmlMenuRuntime({ menu }: MenuRuntimeRendererProps) {
   if (!config.html?.trim()) {
     return (
       <div className="flex h-full items-center justify-center p-6 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
-        This page has no content yet.
+        {t('menus.runtime.html.no_content')}
       </div>
     )
   }

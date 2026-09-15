@@ -1,4 +1,3 @@
-import { useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { executionsApi, type GetExecutionLogsParams, type ListExecutionsParams } from './api'
 import type { ExecutionStatus } from './types'
@@ -16,19 +15,25 @@ const TERMINAL: ExecutionStatus[] = ['COMPLETED', 'FAILED', 'CANCELLED']
 
 // Log rows reach Postgres through the worker's batched nodelog.Writer (flushed
 // every ≤200ms), so a run can already read as terminal a beat before its
-// final step's row lands. For LOG_SETTLE_MS after a caller first sees a
-// just-finished run as terminal, its logs keep "settling" (polling briefly)
-// instead of freezing one step short; only then are they treated as
-// immutable.
+// final step's row lands. A terminal run's rows are treated as final
+// (immutable, never refetched) only once BOTH hold:
+//   1. a fetch landed after the run was first seen terminal — rows cached
+//      while it was still running may predate its last steps, however long
+//      ago it actually finished; and
+//   2. for a run that finished recently, LOG_SETTLE_MS have passed since
+//      that first sighting (1s polling meanwhile), so a just-flushed last
+//      row still makes it in.
 //
-// The window is timed on the browser's clock, from that first sighting —
-// never from the server's finished_at, whose clock (Postgres in a Docker/
-// WSL2 VM in dev) was seen drifting ~10s from the browser's, which stretched
-// a finished_at-based window to 15s of polling. finished_at only decides
-// whether the run is recent enough to settle at all, with a tolerance wide
-// enough to absorb that drift.
+// Both are timed on the browser's clock, from the first sighting — never
+// from the server's finished_at, whose clock (Postgres in a Docker/WSL2 VM
+// in dev) was seen drifting ~10s from the browser's. finished_at only
+// decides whether a run is recent enough to need the settle window, with a
+// tolerance wide enough to absorb that drift.
 const LOG_SETTLE_MS = 5000
 const RECENT_FINISH_MS = 60_000
+// Upper bound on post-terminal 1s polling, so an endpoint that keeps failing
+// can't be retried forever.
+const MAX_CATCH_UP_MS = 30_000
 
 function finishedRecently(finishedAt?: string | null): boolean {
   if (!finishedAt) return false
@@ -36,13 +41,43 @@ function finishedRecently(finishedAt?: string | null): boolean {
   return !Number.isNaN(finished) && Math.abs(Date.now() - finished) < RECENT_FINISH_MS
 }
 
+// First sighting of each execution as terminal, shared by every caller and
+// kept across remounts: the builder's Logs dock unmounts its panel while
+// collapsed, and the canvas's run-order caller follows the selection — a
+// per-component record would restart the settle window (and refetch) on
+// every re-expand or A→B→A reselection. Bounded; oldest entries go first.
+const terminalSeenAt = new Map<string, number>()
+const MAX_TRACKED_RUNS = 500
+
+function firstSeenTerminal(executionId: string): number {
+  const known = terminalSeenAt.get(executionId)
+  if (known !== undefined) return known
+  const now = Date.now()
+  terminalSeenAt.set(executionId, now)
+  if (terminalSeenAt.size > MAX_TRACKED_RUNS) {
+    const oldest = terminalSeenAt.keys().next().value
+    if (oldest !== undefined) terminalSeenAt.delete(oldest)
+  }
+  return now
+}
+
 // Lists one page of executions. params defaults to {} — the backend's own
 // default page (1) / page_size (25) apply when omitted, matching
 // useExecutions()'s pre-pagination "just give me executions" call shape.
-export function useExecutions(params: ListExecutionsParams = {}) {
+/**
+ * List executions, optionally refreshing while an inspector is open.  The
+ * refresh policy intentionally belongs to the caller: most list pages are a
+ * one-shot browse, while the workflow editor's live inspector benefits from a
+ * small, explicit polling interval that a user can turn off.
+ */
+export function useExecutions(
+  params: ListExecutionsParams = {},
+  options: { refetchInterval?: number | false } = {},
+) {
   return useQuery({
     queryKey: executionKeys.all(params),
     queryFn:  () => executionsApi.list(params),
+    refetchInterval: options.refetchInterval,
   })
 }
 
@@ -87,14 +122,13 @@ export function useExecution(executionId: string) {
 // while the run is still going" need) unless `pollWhileRunning: false` (a
 // fetch used only to compute chronological node order, where re-ordering the
 // canvas mid-run isn't worth a second background poll). Either way, a run
-// that has just turned terminal (see `finishedAt` / LOG_SETTLE_MS above)
-// polls every 1s while it settles, so both callers end on the complete set
-// of rows.
+// that has turned terminal polls every 1s until its rows are final (see
+// LOG_SETTLE_MS above), so both callers end on the complete set of rows.
 //
-// A terminal, settled run's logs never change, so such a caller gets
-// staleTime: Infinity — remounting a panel on a run whose rows are already
-// cached (the builder's Logs dock re-expanding), or the window regaining
-// focus, costs no request.
+// Final rows never change, so from then on the query is never stale:
+// remounting a panel on a run whose rows are already cached (the builder's
+// Logs dock re-expanding), reselecting it, or the window regaining focus
+// costs no request.
 export function useExecutionLogs(
   executionId: string | undefined,
   params: GetExecutionLogsParams = {},
@@ -107,36 +141,31 @@ export function useExecutionLogs(
 ) {
   const enabled = !!executionId && (opts.enabled ?? false)
   const terminal = !!opts.executionStatus && TERMINAL.includes(opts.executionStatus)
-
-  // When THIS caller first saw this execution as terminal (keyed by id: the
-  // builder's overlay caller follows the selection without remounting).
-  // Recording it during render is idempotent — a re-render for the same id
-  // never moves it.
-  const firstSeenTerminal = useRef<{ id: string; at: number } | null>(null)
-  if (terminal && executionId && firstSeenTerminal.current?.id !== executionId) {
-    firstSeenTerminal.current = { id: executionId, at: Date.now() }
-  }
-  const settling = () => {
-    const seen = firstSeenTerminal.current
-    return terminal && !!seen && seen.id === executionId
-      && finishedRecently(opts.finishedAt)
-      && Date.now() - seen.at < LOG_SETTLE_MS
-  }
+  // Recorded during render; idempotent per execution (see firstSeenTerminal).
+  const seenAt = terminal && executionId ? firstSeenTerminal(executionId) : null
+  const settleUntil = seenAt === null ? 0 : seenAt + (finishedRecently(opts.finishedAt) ? LOG_SETTLE_MS : 0)
+  const rowsAreFinal = (query: { state: { dataUpdatedAt: number } }) =>
+    seenAt !== null && query.state.dataUpdatedAt > seenAt && Date.now() >= settleUntil
 
   return useQuery({
     queryKey: executionKeys.logs(executionId ?? '', params),
     queryFn:  () => executionsApi.getLogs(executionId as string, params),
     enabled,
-    // A function, evaluated whenever react-query checks staleness — not a
-    // value frozen at the last render. A settle-window refetch that returns
-    // identical rows doesn't re-render (structural sharing keeps `data`), so
-    // a render-time value would stay 0 after settling and every window
-    // refocus would re-download the whole page of rows.
-    staleTime: () => (terminal && !settling() ? Infinity : 0),
-    refetchInterval: () => {
+    // Functions, evaluated whenever react-query checks — not values frozen at
+    // the last render. A settle-window refetch that returns identical rows
+    // doesn't re-render (structural sharing keeps `data`), so a render-time
+    // value would stay "stale" after settling and every window refocus
+    // would re-download the whole page of rows.
+    staleTime: (query) => (rowsAreFinal(query) ? Infinity : 0),
+    refetchInterval: (query) => {
       if (!opts.executionStatus) return false
       if (!terminal) return (opts.pollWhileRunning ?? true) ? 4000 : false
-      return settling() ? 1000 : false
+      if (rowsAreFinal(query)) return false
+      // A failing endpoint isn't hammered: recovery is left to react-query's
+      // own retry and to refetch-on-mount/focus, which still fire because
+      // non-final rows stay stale.
+      if (query.state.status === 'error' && query.state.errorUpdatedAt > (seenAt ?? 0)) return false
+      return Date.now() - (seenAt ?? 0) < MAX_CATCH_UP_MS ? 1000 : false
     },
   })
 }

@@ -9,9 +9,17 @@
 // correctly — only the picker couldn't show what was selected.
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, cleanup, screen, fireEvent } from '@testing-library/react'
+import type { ReactElement } from 'react'
 import { FilterBuilder, newGroup } from './FilterBuilder'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import type { FieldDef } from '@/features/forms/types'
 import type { FilterGroup } from '../types'
+
+// FilterBuilder calls useTranslation, which throws outside an I18nProvider
+// ancestor — real provider, no props, same as InsertDataMenu.test.tsx.
+function renderBuilder(ui: ReactElement) {
+  return render(<I18nProvider>{ui}</I18nProvider>)
+}
 
 Element.prototype.hasPointerCapture = () => false
 Element.prototype.setPointerCapture = () => {}
@@ -30,7 +38,7 @@ function groupWithCondition(field: string): FilterGroup {
 
 describe('FilterBuilder field picker', () => {
   it('offers id/created_at/updated_at even though the target form never declares them', () => {
-    render(
+    renderBuilder(
       <FilterBuilder group={groupWithCondition('id')} fields={formFields} variables={[]} onChange={() => {}} />,
     )
 
@@ -45,7 +53,7 @@ describe('FilterBuilder field picker', () => {
   })
 
   it('shows the selected system field\'s label on the trigger, not a blank picker', () => {
-    render(
+    renderBuilder(
       <FilterBuilder group={groupWithCondition('id')} fields={formFields} variables={[]} onChange={() => {}} />,
     )
     // Reproduces the reported symptom directly: condition.field === 'id' is
@@ -60,7 +68,7 @@ describe('FilterBuilder field picker', () => {
     // (RESERVED_FIELD_KEYS blocks it at save time), but a non-form field
     // source — e.g. workflow variables — isn't subject to that guard.
     const fieldsWithCustomId: FieldDef[] = [{ name: 'id', label: 'Custom Var Named Id', type: 'string' }]
-    render(
+    renderBuilder(
       <FilterBuilder group={groupWithCondition('id')} fields={fieldsWithCustomId} variables={[]} onChange={() => {}} />,
     )
     fireEvent.pointerDown(screen.getAllByRole('combobox')[0], { button: 0, pointerType: 'mouse' })

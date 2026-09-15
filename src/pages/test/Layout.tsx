@@ -33,6 +33,7 @@ import { NODE_REGISTRY } from "@/features/workflows/builder/node-registry";
 import { useNodeTaxonomy } from "@/features/workflows/builder/node-taxonomy";
 import type { NodeType } from "@/features/workflows/types";
 import { NodePickerModal } from "@/features/workflows/builder/NodePickerModal";
+import { CanvasOverlayPortal } from "@/features/workflows/builder/canvas-overlay";
 import type { PickerSelection } from "@/features/workflows/builder/AppPickerPanel";
 import { findTriggerNode, applyTriggerPresetPatch } from "@/features/workflows/builder/trigger-preset-apply";
 import {
@@ -483,40 +484,46 @@ const Flow = () => {
         )}
       </ReactFlow>
 
+      {/* Both overlays portal to the builder's canvas-column layer when there
+          is one (see canvas-overlay.tsx), so they cover the Logs dock too. */}
       {pickerContext && (
-        <NodePickerModal onSelect={handlePickerSelect} onClose={closePicker} />
+        <CanvasOverlayPortal>
+          <NodePickerModal onSelect={handlePickerSelect} onClose={closePicker} />
+        </CanvasOverlayPortal>
       )}
 
       {commandOpen && (
-        <dialog
-          open
-          className="workflow-builder-command-backdrop"
-          aria-label="Workflow command bar"
-        >
-          <div className="workflow-builder-command-dialog">
-            <Command loop>
-              <CommandInput placeholder="Type a command or search…" autoFocus />
-              <CommandList>
-                <CommandEmpty>No matching commands.</CommandEmpty>
-                {recentCommands.length > 0 && <CommandGroup heading="Recent actions">
-                  {recentCommands.map((command) => <WorkflowCommandItem key={command.id} command={command} onSelect={() => runCommand(command.id)} />)}
-                </CommandGroup>}
-                {(["Canvas", "Navigate", "Workflow"] as const).map((group) => {
-                  const commands = WORKFLOW_COMMANDS.filter((command) => command.group === group)
-                  return <CommandGroup key={group} heading={group}>
-                    {commands.map((command) => <WorkflowCommandItem key={command.id} command={command} onSelect={() => runCommand(command.id)} />)}
+        <CanvasOverlayPortal>
+          <dialog
+            open
+            className="workflow-builder-command-backdrop"
+            aria-label="Workflow command bar"
+          >
+            <div className="workflow-builder-command-dialog">
+              <Command loop>
+                <CommandInput placeholder="Type a command or search…" autoFocus />
+                <CommandList>
+                  <CommandEmpty>No matching commands.</CommandEmpty>
+                  {recentCommands.length > 0 && <CommandGroup heading="Recent actions">
+                    {recentCommands.map((command) => <WorkflowCommandItem key={command.id} command={command} onSelect={() => runCommand(command.id)} />)}
+                  </CommandGroup>}
+                  {(["Canvas", "Navigate", "Workflow"] as const).map((group) => {
+                    const commands = WORKFLOW_COMMANDS.filter((command) => command.group === group)
+                    return <CommandGroup key={group} heading={group}>
+                      {commands.map((command) => <WorkflowCommandItem key={command.id} command={command} onSelect={() => runCommand(command.id)} />)}
+                    </CommandGroup>
+                  })}
+                  <CommandGroup heading="Add node">
+                    {nodeAddCommands.map((node) => <CommandItem key={node.type} value={`add ${node.label} ${node.type}`} onSelect={() => { addNode(node.type); rememberWorkflowCommand("add-step"); setCommandOpen(false) }}><Plus size={15} /><span>Add {node.label}</span></CommandItem>)}
                   </CommandGroup>
-                })}
-                <CommandGroup heading="Add node">
-                  {nodeAddCommands.map((node) => <CommandItem key={node.type} value={`add ${node.label} ${node.type}`} onSelect={() => { addNode(node.type); rememberWorkflowCommand("add-step"); setCommandOpen(false) }}><Plus size={15} /><span>Add {node.label}</span></CommandItem>)}
-                </CommandGroup>
-                <CommandGroup heading="Go to node">
-                  {nodeNavigationCommands.map((node) => <CommandItem key={node.id} value={`go to ${node.label} ${node.type}`} onSelect={() => { selectNode(node.id); setCommandOpen(false) }}><PanelRight size={15} /><span>{node.label}</span><kbd>{node.type}</kbd></CommandItem>)}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </div>
-        </dialog>
+                  <CommandGroup heading="Go to node">
+                    {nodeNavigationCommands.map((node) => <CommandItem key={node.id} value={`go to ${node.label} ${node.type}`} onSelect={() => { selectNode(node.id); setCommandOpen(false) }}><PanelRight size={15} /><span>{node.label}</span><kbd>{node.type}</kbd></CommandItem>)}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </div>
+          </dialog>
+        </CanvasOverlayPortal>
       )}
     </div>
   );

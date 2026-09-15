@@ -1,5 +1,6 @@
 import { nanoid } from '@/features/workflows/builder/nanoid'
 import { RecordsTable } from '@/features/forms/runtime/RecordsTable'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { WidgetRendererProps } from '../../widget-contract'
 import type { TableWidgetConfig } from './schema'
 import type { FilterGroup } from '@/features/workflows/types'
@@ -41,8 +42,9 @@ function withRecordScope(
 }
 
 export function TableRenderer({ config, recordContext }: WidgetRendererProps<TableWidgetConfig>) {
+  const t = useTranslation()
   if (!config.formId) {
-    return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No form selected yet.</div>
+    return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('builder.dashboard_table.no_form_selected')}</div>
   }
 
   return (

@@ -13,6 +13,7 @@ import { SortRuleList } from '@/components/ui/sort-rule-list'
 import { nanoid } from '@/features/workflows/builder/nanoid'
 import { cn } from '@/lib/utils'
 import { useRoles } from '@/features/roles/hooks'
+import { useTranslation, type I18nContextValue } from '@/features/i18n/I18nProvider'
 import { ColumnsPicker } from './ColumnsPicker'
 import { KanbanColumnsPicker } from './KanbanColumnsPicker'
 import type { FieldDef } from '@/features/forms/types'
@@ -23,13 +24,28 @@ import type {
   CalendarLayoutConfig, KanbanLayoutConfig, TreeLayoutConfig,
 } from './types'
 
-const LAYOUTS: { value: ViewLayout; label: string; icon: typeof LayoutList }[] = [
-  { value: 'list', label: 'List', icon: LayoutList },
-  { value: 'card', label: 'Card', icon: LayoutGrid },
-  { value: 'calendar', label: 'Calendar', icon: CalendarDays },
-  { value: 'kanban', label: 'Kanban', icon: Columns3 },
-  { value: 'tree', label: 'Tree', icon: ListTree },
-]
+// Layout names double as the picker's own labels AND the vars composed into
+// disabled_reason/disabled_title below — one t() per layout, not a separate
+// English literal at each of the three use sites.
+function layoutLabels(t: I18nContextValue['t']): Record<ViewLayout, string> {
+  return {
+    list: t('menus.saved_views.dialog.layout_list'),
+    card: t('menus.saved_views.dialog.layout_card'),
+    calendar: t('menus.saved_views.dialog.layout_calendar'),
+    kanban: t('menus.saved_views.dialog.layout_kanban'),
+    tree: t('menus.saved_views.dialog.layout_tree'),
+  }
+}
+
+function buildLayouts(labels: Record<ViewLayout, string>): { value: ViewLayout; label: string; icon: typeof LayoutList }[] {
+  return [
+    { value: 'list', label: labels.list, icon: LayoutList },
+    { value: 'card', label: labels.card, icon: LayoutGrid },
+    { value: 'calendar', label: labels.calendar, icon: CalendarDays },
+    { value: 'kanban', label: labels.kanban, icon: Columns3 },
+    { value: 'tree', label: labels.tree, icon: ListTree },
+  ]
+}
 
 // Re-attach UI-only `id` keys to a filter tree that may have come from the
 // backend (which stores the stripped, id-less shape) — the identical
@@ -92,6 +108,7 @@ interface SaveViewDialogProps {
 // RoleFormDrawer.tsx) — this drawer renders inside the runtime app, which is
 // themeable (light/dark), unlike the builder shell.
 export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabels, config, editing, onSave, saving }: SaveViewDialogProps) {
+  const t = useTranslation()
   const seed = editing?.config ?? config
   const [name, setName] = useState(editing?.name ?? '')
   const [visibility, setVisibility] = useState<SavedViewVisibility>(editing?.visibility ?? 'private')
@@ -143,13 +160,26 @@ export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabel
   // purely for the icon (see that config key's own doc comment).
   const treeParentFields = fields.filter((f) => f.type === 'reference' && f.reference_table === formId)
   const treeGroupFields = fields.filter((f) => f.type === 'boolean')
+  const labels = layoutLabels(t)
+  const layouts = buildLayouts(labels)
+  const fieldKinds = {
+    calendar: t('menus.saved_views.dialog.field_kind_date'),
+    kanban: t('menus.saved_views.dialog.field_kind_select'),
+    tree: t('menus.saved_views.dialog.field_kind_reference'),
+  }
   // A native `disabled` button drops out of the tab order — a keyboard
   // user can never focus one to read its title attribute, so the reason
   // needs an always-visible home too (rendered beneath the picker grid).
+  // Tree gets its own full sentence, not the shared template: the original
+  // copy explained self-referencing with a trailing clause ("one whose
+  // target is this same form") that doesn't fit the generic {{layout}}
+  // needs a {{kind}} field shape without also polluting field_kind_reference
+  // (which the title tooltip below reuses, where that clause would read
+  // as a mid-sentence aside).
   const disabledLayoutReasons = [
-    dateFields.length === 0 && 'Calendar needs a date or datetime field on this form.',
-    groupFields.length === 0 && 'Kanban needs a Select field on this form.',
-    treeParentFields.length === 0 && 'Tree needs a self-referencing Reference field on this form (one whose target is this same form).',
+    dateFields.length === 0 && t('menus.saved_views.dialog.disabled_reason', { layout: labels.calendar, kind: fieldKinds.calendar }),
+    groupFields.length === 0 && t('menus.saved_views.dialog.disabled_reason', { layout: labels.kanban, kind: fieldKinds.kanban }),
+    treeParentFields.length === 0 && t('menus.saved_views.dialog.disabled_reason_tree'),
   ].filter((r): r is string => !!r)
 
   const layoutNeedsField = layout === 'calendar' ? !dateField : layout === 'kanban' ? !groupField : layout === 'tree' ? !parentField : false
@@ -176,24 +206,24 @@ export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabel
     <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
       <DrawerContent size="lg" container={document.getElementById('runtime-root')}>
         <DrawerHeader>
-          <DrawerTitle>{editing ? 'Edit view' : 'Save current as new view'}</DrawerTitle>
+          <DrawerTitle>{editing ? t('menus.saved_views.edit_view') : t('menus.saved_views.save_as_new')}</DrawerTitle>
           <DrawerDescription>
             {editing
-              ? 'Update this view’s name, columns, filter, sort, layout, or visibility.'
-              : 'Saves a named, reusable combination of columns, filter, sort, and layout.'}
+              ? t('menus.saved_views.dialog.description_edit')
+              : t('menus.saved_views.dialog.description_create')}
           </DrawerDescription>
         </DrawerHeader>
 
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-6">
           <div>
-            <FieldLabel>Name this view *</FieldLabel>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. My open tasks" maxLength={100} autoFocus />
+            <FieldLabel>{t('menus.saved_views.dialog.name_label')}</FieldLabel>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('menus.saved_views.dialog.name_placeholder')} maxLength={100} autoFocus />
           </div>
 
           <div>
-            <FieldLabel>Layout</FieldLabel>
+            <FieldLabel>{t('menus.saved_views.dialog.layout_label')}</FieldLabel>
             <div className="grid grid-cols-5 gap-1.5">
-              {LAYOUTS.map((l) => {
+              {layouts.map((l) => {
                 const disabled = (l.value === 'calendar' && dateFields.length === 0) || (l.value === 'kanban' && groupFields.length === 0) || (l.value === 'tree' && treeParentFields.length === 0)
                 const selected = !disabled && layout === l.value
                 return (
@@ -220,7 +250,7 @@ export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabel
                       if (l.value === 'kanban' && !groupField && groupFields[0]) setGroupField(groupFields[0].name)
                       if (l.value === 'tree' && !parentField && treeParentFields[0]) setParentField(treeParentFields[0].name)
                     }}
-                    title={disabled ? `No ${l.value === 'calendar' ? 'date/datetime' : l.value === 'tree' ? 'self-referencing Reference' : 'Select'} field on this form` : undefined}
+                    title={disabled ? t('menus.saved_views.dialog.disabled_title', { kind: l.value === 'calendar' ? fieldKinds.calendar : l.value === 'tree' ? fieldKinds.tree : fieldKinds.kanban }) : undefined}
                     className={cn(
                       'flex flex-col items-center gap-1 rounded-md border px-2 py-2 text-xs transition-colors',
                       disabled && 'cursor-not-allowed opacity-40',
@@ -251,14 +281,14 @@ export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabel
 
           {layout === 'calendar' && (
             <div className="space-y-3">
-              <FieldPicker label="Date field" fields={dateFields} value={dateField} onChange={(v) => setDateField(v ?? '')} required />
+              <FieldPicker label={t('menus.saved_views.dialog.date_field_label')} fields={dateFields} value={dateField} onChange={(v) => setDateField(v ?? '')} required />
             </div>
           )}
 
           {layout === 'tree' && (
             <div className="space-y-3">
               <FieldPicker
-                label="Parent field"
+                label={t('menus.saved_views.dialog.parent_field_label')}
                 fields={treeParentFields}
                 value={parentField}
                 onChange={(v) => setParentField(v ?? '')}
@@ -266,13 +296,13 @@ export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabel
               />
               <div>
                 <FieldPicker
-                  label="Group/folder field (optional)"
+                  label={t('menus.saved_views.dialog.group_field_label')}
                   fields={treeGroupFields}
                   value={treeGroupField}
                   onChange={(v) => setTreeGroupField(v ?? '')}
                 />
                 <p className="mt-1 text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                  Only changes which icon a node gets (folder vs. leaf). A record can still expand into children whether or not this field is checked.
+                  {t('menus.saved_views.dialog.group_field_hint')}
                 </p>
               </div>
             </div>
@@ -281,7 +311,7 @@ export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabel
           {layout === 'kanban' && (
             <div className="space-y-3">
               <FieldPicker
-                label="Group by field"
+                label={t('menus.saved_views.dialog.group_by_field_label')}
                 fields={groupFields}
                 value={groupField}
                 onChange={(v) => {
@@ -298,7 +328,7 @@ export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabel
               />
               {groupFieldDef && (
                 <div>
-                  <FieldLabel>Columns</FieldLabel>
+                  <FieldLabel>{t('menus.saved_views.dialog.columns_label')}</FieldLabel>
                   <KanbanColumnsPicker
                     options={kanbanColumnOptions}
                     visibleColumns={kanbanVisibleColumns}
@@ -310,12 +340,12 @@ export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabel
           )}
 
           <div>
-            <FieldLabel>Columns</FieldLabel>
+            <FieldLabel>{t('menus.saved_views.dialog.columns_label')}</FieldLabel>
             <ColumnsPicker fields={fieldsWithSystem} columns={columns} onChange={setColumns} />
           </div>
 
           <div>
-            <FieldLabel>Filter</FieldLabel>
+            <FieldLabel>{t('menus.saved_views.dialog.filter_label')}</FieldLabel>
             {/* viewerModes (not hideExpressions — it takes precedence and
                implies the same collapsed, no-expression layout): a saved
                view's filter is end-user-facing config, not workflow-canvas
@@ -336,7 +366,7 @@ export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabel
           </div>
 
           <div>
-            <FieldLabel>Sort</FieldLabel>
+            <FieldLabel>{t('menus.saved_views.dialog.sort_label')}</FieldLabel>
             <SortRuleList
               rules={sort}
               fields={fieldsWithSystem.map((f) => ({ name: f.name, label: f.label }))}
@@ -345,23 +375,23 @@ export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabel
           </div>
 
           <div>
-            <FieldLabel>Visibility</FieldLabel>
+            <FieldLabel>{t('menus.saved_views.dialog.visibility_label')}</FieldLabel>
             <RadioGroup value={visibility} onValueChange={(v) => setVisibility(v as SavedViewVisibility)} className="flex flex-col gap-2">
               <label className="flex cursor-pointer items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}>
-                <RadioGroupItem value="private" /> Private — only you see this view
+                <RadioGroupItem value="private" /> {t('menus.saved_views.dialog.visibility_private')}
               </label>
               <label className="flex cursor-pointer items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}>
-                <RadioGroupItem value="public" /> Public — every viewer of this menu sees this view
+                <RadioGroupItem value="public" /> {t('menus.saved_views.dialog.visibility_public')}
               </label>
               <label className="flex cursor-pointer items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}>
-                <RadioGroupItem value="role" /> Specific roles — only members holding these roles see this view
+                <RadioGroupItem value="role" /> {t('menus.saved_views.dialog.visibility_role')}
               </label>
             </RadioGroup>
           </div>
 
           {visibility === 'role' && (
             <div className="space-y-1.5">
-              {(roles ?? []).length === 0 && <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No roles found for this app.</p>}
+              {(roles ?? []).length === 0 && <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('menus.saved_views.dialog.no_roles')}</p>}
               {(roles ?? []).map((r) => (
                 <label key={r.id} className="flex cursor-pointer items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}>
                   <Checkbox checked={roleIds.includes(r.id)} onCheckedChange={() => toggleRole(r.id)} />
@@ -373,15 +403,15 @@ export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabel
 
           <label className="flex cursor-pointer items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}>
             <Checkbox checked={isDefault} onCheckedChange={(c) => setIsDefault(!!c)} />
-            Make this the default view {visibility === 'private' ? '(for you)' : visibility === 'role' ? '(for these roles)' : '(for everyone)'}
+            {t('menus.saved_views.dialog.default_view_label')} {visibility === 'private' ? t('menus.saved_views.dialog.default_scope_you') : visibility === 'role' ? t('menus.saved_views.dialog.default_scope_roles') : t('menus.saved_views.dialog.default_scope_everyone')}
           </label>
         </div>
 
         <DrawerFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={onClose}>{t('common.cancel')}</Button>
           <Button onClick={submit} disabled={!canSubmit || saving}>
             {saving && <Spinner className="h-4 w-4" />}
-            {editing ? 'Save changes' : 'Save view'}
+            {editing ? t('menus.saved_views.dialog.save_changes') : t('menus.saved_views.dialog.save_view')}
           </Button>
         </DrawerFooter>
       </DrawerContent>
@@ -400,6 +430,7 @@ function FieldPicker({ label, fields, value, onChange, required }: {
   onChange: (v: string | undefined) => void
   required?: boolean
 }) {
+  const t = useTranslation()
   return (
     <div>
       <label className="mb-1 block text-[11px] font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>{label}</label>
@@ -408,7 +439,7 @@ function FieldPicker({ label, fields, value, onChange, required }: {
         onChange={(e) => onChange(e.target.value === '__none__' ? undefined : e.target.value)}
         className="h-8 text-xs"
       >
-        {!required && <option value="__none__">None</option>}
+        {!required && <option value="__none__">{t('menus.saved_views.dialog.field_none')}</option>}
         {fields.map((f) => (
           <option key={f.name} value={f.name}>{f.label || f.name}</option>
         ))}

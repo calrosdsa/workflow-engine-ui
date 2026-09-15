@@ -3,7 +3,8 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { registerUiWorkflowNode, type UiWorkflowNodeConfigPanelProps } from '../node-registry'
-import { Field, FieldPicker, VALUE_SOURCE_HINT } from './panel-kit'
+import { Field, FieldPicker } from './panel-kit'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { resolveValue } from '../values'
 import { ALL_PLATFORMS } from '../types'
 import type { FieldStatePatch } from '../host'
@@ -46,26 +47,27 @@ export function parseSetFieldConfig(raw: unknown): SetFieldStepConfig {
 }
 
 function SetFieldPanel({ config, onChange, fields }: UiWorkflowNodeConfigPanelProps<SetFieldStepConfig>) {
+  const t = useTranslation()
   return (
     <div className="space-y-2">
-      <Field label="Field to set">
+      <Field label={t('ui_workflows.panel.set_field.field_to_set_label')}>
         <FieldPicker fields={fields} value={config.field} onChange={(field) => onChange({ ...config, field })} />
       </Field>
-      <Field label="Value from" hint={VALUE_SOURCE_HINT}>
+      <Field label={t('ui_workflows.panel.value_from_label')} hint={t('ui_workflows.value_source_hint')}>
         <SelectMenu
           value={config.source}
           onValueChange={(v) => onChange({ ...config, source: v as SetFieldStepConfig['source'] })}
         >
           <SelectTrigger className="h-8 text-[12px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="static" className="text-[12px]">A typed-in value</SelectItem>
-            <SelectItem value="variable" className="text-[12px]">A variable</SelectItem>
-            <SelectItem value="field" className="text-[12px]">Another field</SelectItem>
+            <SelectItem value="static" className="text-[12px]">{t('ui_workflows.value_source.static')}</SelectItem>
+            <SelectItem value="variable" className="text-[12px]">{t('ui_workflows.value_source.variable')}</SelectItem>
+            <SelectItem value="field" className="text-[12px]">{t('ui_workflows.value_source.another_field')}</SelectItem>
           </SelectContent>
         </SelectMenu>
       </Field>
       {config.source === 'static' && (
-        <Field label="Value">
+        <Field label={t('common.value')}>
           <Input
             value={String(config.value ?? '')}
             onChange={(e) => onChange({ ...config, value: e.target.value })}
@@ -74,7 +76,7 @@ function SetFieldPanel({ config, onChange, fields }: UiWorkflowNodeConfigPanelPr
         </Field>
       )}
       {config.source === 'variable' && (
-        <Field label="Variable">
+        <Field label={t('ui_workflows.panel.variable_label')}>
           <Input
             value={config.variable ?? ''}
             onChange={(e) => onChange({ ...config, variable: e.target.value })}
@@ -83,7 +85,7 @@ function SetFieldPanel({ config, onChange, fields }: UiWorkflowNodeConfigPanelPr
         </Field>
       )}
       {config.source === 'field' && (
-        <Field label="Copy from">
+        <Field label={t('ui_workflows.panel.set_field.copy_from_label')}>
           <FieldPicker fields={fields} value={config.from_field ?? ''} onChange={(from_field) => onChange({ ...config, from_field })} />
         </Field>
       )}
@@ -166,6 +168,7 @@ function StateToggle({ label, value, onChange }: {
   value: boolean | undefined
   onChange: (next: boolean | undefined) => void
 }) {
+  const t = useTranslation()
   return (
     <label className="flex items-center gap-2 text-[11px] text-[hsl(var(--muted-foreground))]">
       <Checkbox
@@ -176,22 +179,23 @@ function StateToggle({ label, value, onChange }: {
         onCheckedChange={(v) => onChange(v === true ? true : undefined)}
       />
       {label}
-      {value === undefined && <span className="text-[10px]">(left alone)</span>}
+      {value === undefined && <span className="text-[10px]">{t('ui_workflows.panel.set_field_state.left_alone')}</span>}
     </label>
   )
 }
 
 function SetFieldStatePanel({ config, onChange, fields }: UiWorkflowNodeConfigPanelProps<SetFieldStateStepConfig>) {
+  const t = useTranslation()
   return (
     <div className="space-y-2">
-      <Field label="Field">
+      <Field label={t('ui_workflows.panel.field_label')}>
         <FieldPicker fields={fields} value={config.field} onChange={(field) => onChange({ ...config, field })} />
       </Field>
-      <Field label="Make it" hint="Unticked means “leave this to the form’s own rules”, not the opposite.">
+      <Field label={t('ui_workflows.panel.set_field_state.make_it_label')} hint={t('ui_workflows.panel.set_field_state.make_it_hint')}>
         <div className="space-y-1">
-          <StateToggle label="Visible" value={config.visible} onChange={(visible) => onChange({ ...config, visible })} />
-          <StateToggle label="Required" value={config.required} onChange={(required) => onChange({ ...config, required })} />
-          <StateToggle label="Read-only" value={config.readOnly} onChange={(readOnly) => onChange({ ...config, readOnly })} />
+          <StateToggle label={t('ui_workflows.panel.set_field_state.visible')} value={config.visible} onChange={(visible) => onChange({ ...config, visible })} />
+          <StateToggle label={t('ui_workflows.panel.set_field_state.required')} value={config.required} onChange={(required) => onChange({ ...config, required })} />
+          <StateToggle label={t('ui_workflows.panel.set_field_state.read_only')} value={config.readOnly} onChange={(readOnly) => onChange({ ...config, readOnly })} />
         </div>
       </Field>
     </div>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { HtmlCodeEditor } from '@/features/dashboard/widgets/custom-html/HtmlCodeEditor'
 import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenceSelect'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { isAllowedHost } from '../html/srcdoc'
 import { slugifyKey } from '@/features/form-builder/factory'
 import type { MenuConfigPanelProps } from '../menu-registry'
@@ -36,6 +37,7 @@ const STARTER_HTML = `<div style="padding:24px">
  *  declared here, and can only make outbound requests to a host listed
  *  here (see features/menus/html/srcdoc.ts). */
 export function HtmlMenuConfigPanel({ menu, onChange }: MenuConfigPanelProps) {
+  const t = useTranslation()
   const config = menu.config as HtmlMenuConfig
   const patch = (p: Partial<HtmlMenuConfig>) => onChange({ ...config, ...p })
 
@@ -65,18 +67,18 @@ export function HtmlMenuConfigPanel({ menu, onChange }: MenuConfigPanelProps) {
     <div className="space-y-5">
       <div>
         <div className="mb-1 flex items-center justify-between">
-          <Label className="text-xs font-medium text-[hsl(var(--muted-foreground))]">Page HTML</Label>
+          <Label className="text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('menus.config_panels.html.page_html_label')}</Label>
           {!config.html?.trim() && (
             <Button type="button" size="sm" variant="ghost" className="h-6 px-2 text-[11px]"
               onClick={() => patch({ html: STARTER_HTML })}>
-              Insert starter page
+              {t('menus.config_panels.html.insert_starter')}
             </Button>
           )}
         </div>
         <HtmlCodeEditor value={config.html ?? ''} onChange={(html) => patch({ html })} />
         <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
-          Runs in an isolated frame. Scripts work; they cannot reach the rest of the app. Use{' '}
-          <code>hsl(var(--primary))</code> and the other theme variables to match the app.
+          {t('menus.config_panels.html.isolated_hint_before')}{' '}
+          <code>hsl(var(--primary))</code> {t('menus.config_panels.html.isolated_hint_after')}
         </p>
       </div>
 
@@ -84,7 +86,7 @@ export function HtmlMenuConfigPanel({ menu, onChange }: MenuConfigPanelProps) {
       <div>
         <div className="mb-1 flex items-center justify-between">
           <Label className="flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))]">
-            <Database size={12} /> Data sources
+            <Database size={12} /> {t('menus.config_panels.html.data_sources_label')}
           </Label>
           <Button
             type="button" size="sm" variant="outline" className="h-6 gap-1 px-2 text-[11px]"
@@ -92,13 +94,13 @@ export function HtmlMenuConfigPanel({ menu, onChange }: MenuConfigPanelProps) {
               data_sources: [...sources, { id: uniqueId('source', sources.map((s) => s.id)), form_id: '' }],
             })}
           >
-            <Plus size={11} /> Add
+            <Plus size={11} /> {t('common.add')}
           </Button>
         </div>
 
         {sources.length === 0 ? (
           <p className="rounded-md border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
-            No data sources. The page can render, but has nothing to read.
+            {t('menus.config_panels.html.no_data_sources')}
           </p>
         ) : (
           <div className="space-y-2">
@@ -111,13 +113,13 @@ export function HtmlMenuConfigPanel({ menu, onChange }: MenuConfigPanelProps) {
                       data_sources: sources.map((s, j) => j === i ? { ...s, id: slugifyKey(e.target.value) } : s),
                     })}
                     className="h-7 flex-1 font-mono text-[11px]"
-                    placeholder="source id"
+                    placeholder={t('menus.config_panels.html.source_id_placeholder')}
                   />
                   <button
                     type="button"
                     onClick={() => patch({ data_sources: sources.filter((_, j) => j !== i) })}
                     className="shrink-0 rounded p-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]"
-                    title="Remove data source"
+                    title={t('menus.config_panels.html.remove_source_title')}
                   >
                     <Trash2 size={13} />
                   </button>
@@ -143,21 +145,21 @@ export function HtmlMenuConfigPanel({ menu, onChange }: MenuConfigPanelProps) {
       <div>
         <div className="mb-1 flex items-center justify-between">
           <Label className="flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))]">
-            <PencilLine size={12} /> Write targets
+            <PencilLine size={12} /> {t('menus.config_panels.html.write_targets_label')}
           </Label>
           <Button
             type="button" size="sm" variant="outline" className="h-6 gap-1 px-2 text-[11px]"
             onClick={() => patch({
-              write_targets: [...targets, { id: uniqueId('target', targets.map((t) => t.id)), form_id: '', allow_create: true }],
+              write_targets: [...targets, { id: uniqueId('target', targets.map((wt) => wt.id)), form_id: '', allow_create: true }],
             })}
           >
-            <Plus size={11} /> Add
+            <Plus size={11} /> {t('common.add')}
           </Button>
         </div>
 
         {targets.length === 0 ? (
           <p className="rounded-md border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
-            No write targets. The page is read-only.
+            {t('menus.config_panels.html.no_write_targets')}
           </p>
         ) : (
           <div className="space-y-2">
@@ -167,16 +169,16 @@ export function HtmlMenuConfigPanel({ menu, onChange }: MenuConfigPanelProps) {
                   <Input
                     value={target.id}
                     onChange={(e) => patch({
-                      write_targets: targets.map((t, j) => j === i ? { ...t, id: slugifyKey(e.target.value) } : t),
+                      write_targets: targets.map((wt, j) => j === i ? { ...wt, id: slugifyKey(e.target.value) } : wt),
                     })}
                     className="h-7 flex-1 font-mono text-[11px]"
-                    placeholder="target id"
+                    placeholder={t('menus.config_panels.html.target_id_placeholder')}
                   />
                   <button
                     type="button"
                     onClick={() => patch({ write_targets: targets.filter((_, j) => j !== i) })}
                     className="shrink-0 rounded p-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]"
-                    title="Remove write target"
+                    title={t('menus.config_panels.html.remove_target_title')}
                   >
                     <Trash2 size={13} />
                   </button>
@@ -185,7 +187,7 @@ export function HtmlMenuConfigPanel({ menu, onChange }: MenuConfigPanelProps) {
                   <FormReferenceSelect
                     value={target.form_id}
                     onChange={(formId) => patch({
-                      write_targets: targets.map((t, j) => j === i ? { ...t, form_id: formId ?? '' } : t),
+                      write_targets: targets.map((wt, j) => j === i ? { ...wt, form_id: formId ?? '' } : wt),
                     })}
                   />
                 </div>
@@ -195,17 +197,17 @@ export function HtmlMenuConfigPanel({ menu, onChange }: MenuConfigPanelProps) {
                       <Checkbox
                         checked={target[key] === true}
                         onCheckedChange={(checked) => patch({
-                          write_targets: targets.map((t, j) => j === i ? { ...t, [key]: checked === true } : t),
+                          write_targets: targets.map((wt, j) => j === i ? { ...wt, [key]: checked === true } : wt),
                         })}
                       />
-                      {key === 'allow_create' ? 'Create' : 'Update'}
+                      {key === 'allow_create' ? t('common.create') : t('common.update')}
                     </Label>
                   ))}
                 </div>
               </div>
             ))}
             <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-              Writes run as the person viewing the page — they can never do more than that viewer could by hand.
+              {t('menus.config_panels.html.writes_hint')}
             </p>
           </div>
         )}
@@ -214,7 +216,7 @@ export function HtmlMenuConfigPanel({ menu, onChange }: MenuConfigPanelProps) {
       {/* --- Allowed hosts ----------------------------------------------- */}
       <div>
         <Label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))]">
-          <Globe size={12} /> Allowed hosts
+          <Globe size={12} /> {t('menus.config_panels.html.allowed_hosts_label')}
         </Label>
         <div className="flex items-center gap-1.5">
           <Input
@@ -226,12 +228,12 @@ export function HtmlMenuConfigPanel({ menu, onChange }: MenuConfigPanelProps) {
           />
           <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-[11px]"
             onClick={addHost} disabled={!newHost.trim() || hostInvalid}>
-            Add
+            {t('common.add')}
           </Button>
         </div>
         {hostInvalid && (
           <p className="mt-1 flex items-center gap-1 text-[11px] text-[hsl(var(--destructive))]">
-            <AlertCircle size={11} /> Use a hostname like <code>cdn.example.com</code> or <code>*.example.com</code> — no paths or spaces.
+            <AlertCircle size={11} /> {t('menus.config_panels.html.host_hint_before')} <code>cdn.example.com</code> {t('menus.config_panels.html.host_hint_middle')} <code>*.example.com</code> {t('menus.config_panels.html.host_hint_after')}
           </p>
         )}
         {hosts.length > 0 && (
@@ -243,7 +245,7 @@ export function HtmlMenuConfigPanel({ menu, onChange }: MenuConfigPanelProps) {
                   type="button"
                   onClick={() => patch({ allowed_hosts: hosts.filter((h) => h !== host) })}
                   className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]"
-                  aria-label={`Remove ${host}`}
+                  aria-label={t('menus.config_panels.html.remove_host_aria', { host })}
                 >
                   ×
                 </button>
@@ -253,8 +255,8 @@ export function HtmlMenuConfigPanel({ menu, onChange }: MenuConfigPanelProps) {
         )}
         <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
           {hosts.length === 0
-            ? 'The page cannot make any outbound requests. Add a host to allow one.'
-            : 'The page may only reach the hosts listed here.'}
+            ? t('menus.config_panels.html.no_hosts_hint')
+            : t('menus.config_panels.html.has_hosts_hint')}
         </p>
       </div>
     </div>

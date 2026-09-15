@@ -4,6 +4,7 @@ import {
   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts'
 import { Loader2, AlertCircle, BarChart3 } from 'lucide-react'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { WidgetRendererProps } from '../../widget-contract'
 import { DATE_FIELD_TYPES, type ChartWidgetConfig } from './schema'
 import { useChartData } from './useChartData'
@@ -29,6 +30,11 @@ function seriesColor(config: ChartWidgetConfig, index: number): string {
   return config.series[index]?.color ?? PALETTE[index % PALETTE.length]
 }
 
+// Not translated: this feeds export-csv.ts's CSV column headers via a free
+// function outside React, and the sibling branch (`${fn}(${field})`) is raw,
+// untranslatable technical content — translating only the 'count' case would
+// produce a header row that's half-Spanish. Same exclusion class as
+// FORMAT_LABELS (reports/ReportSettingsPanel.tsx) and argument.label.
 export function seriesLabel(config: ChartWidgetConfig, index: number): string {
   const s = config.series[index]
   if (s?.label) return s.label
@@ -37,6 +43,7 @@ export function seriesLabel(config: ChartWidgetConfig, index: number): string {
 }
 
 export function ChartRenderer({ config, clientId, appId, menus, mode }: WidgetRendererProps<ChartWidgetConfig>) {
+  const t = useTranslation()
   const isRuntime = mode === 'runtime'
   const isStat = config.chartType === 'stat'
   const needsGroupBy = config.chartType !== 'stat'
@@ -92,7 +99,7 @@ export function ChartRenderer({ config, clientId, appId, menus, mode }: WidgetRe
       <div className="flex h-full flex-col items-center justify-center gap-1.5 p-3 text-center">
         <BarChart3 size={18} style={{ color: 'hsl(var(--muted-foreground))' }} />
         <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
-          {needsGroupBy ? 'Choose a form and a field to group by.' : 'Choose a form to aggregate.'}
+          {needsGroupBy ? t('builder.dashboard_chart.choose_form_field') : t('builder.dashboard_chart.choose_form')}
         </p>
       </div>
     )
@@ -106,11 +113,11 @@ export function ChartRenderer({ config, clientId, appId, menus, mode }: WidgetRe
     content = (
       <div className="flex h-full flex-col items-center justify-center gap-1.5 p-3 text-center">
         <AlertCircle size={18} style={{ color: 'hsl(var(--destructive))' }} />
-        <p className="text-xs" style={{ color: 'hsl(var(--destructive))' }}>Couldn't load chart data.</p>
+        <p className="text-xs" style={{ color: 'hsl(var(--destructive))' }}>{t('builder.dashboard_chart.load_error')}</p>
       </div>
     )
   } else if (groups.length === 0) {
-    content = <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No data yet.</div>
+    content = <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('builder.dashboard_chart.no_data')}</div>
   } else if (isStat) {
     const sourceFieldName = config.series[0]?.field
     const numberFormat = sourceForm?.fields.find((f) => f.name === sourceFieldName)?.number_format

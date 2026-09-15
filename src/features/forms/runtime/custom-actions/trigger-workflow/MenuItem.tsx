@@ -37,6 +37,7 @@ import { toast } from 'sonner'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { formsApi } from '@/features/forms/api'
 import { executionsApi } from '@/features/executions/api'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { CustomActionMenuItemProps } from '../contract'
 import type { TriggerWorkflowActionConfig } from './schema'
 import type { ExecutionMessage } from '@/features/executions/types'
@@ -53,6 +54,7 @@ function lastMessage(messages: ExecutionMessage[] | undefined): ExecutionMessage
 }
 
 export function TriggerWorkflowMenuItem({ formId, recordId, config, label, onDone }: CustomActionMenuItemProps<TriggerWorkflowActionConfig>) {
+  const t = useTranslation()
   const [pending, setPending] = useState(false)
 
   // No configured workflow yet (an action added but never finished being
@@ -68,7 +70,7 @@ export function TriggerWorkflowMenuItem({ formId, recordId, config, label, onDon
     // Copy speaks to the action the viewer clicked (its configured label),
     // not backend vocabulary like "workflow"/"execution" — a viewer doesn't
     // necessarily know or care that this action is backed by a workflow.
-    const toastId = toast.loading(`Running "${label}"…`)
+    const toastId = toast.loading(t('trigger_workflow.menu.running', { label }))
     try {
       const { execution_id } = await formsApi.triggerWorkflow(formId, recordId, config.workflowDefinitionId)
       onDone?.()
@@ -82,12 +84,12 @@ export function TriggerWorkflowMenuItem({ formId, recordId, config, label, onDon
             const toastFn = msg.message_type === 'error' ? toast.error : msg.message_type === 'info' ? toast.info : toast.success
             toastFn(msg.message, { id: toastId })
           } else {
-            toast.success(`"${label}" is done`, { id: toastId })
+            toast.success(t('trigger_workflow.menu.done', { label }), { id: toastId })
           }
           break
         }
         if (execution.status === 'FAILED' || execution.status === 'CANCELLED') {
-          toast.error(execution.status === 'FAILED' ? `"${label}" ran into a problem` : `"${label}" was cancelled`, {
+          toast.error(execution.status === 'FAILED' ? t('trigger_workflow.menu.failed', { label }) : t('trigger_workflow.menu.cancelled', { label }), {
             id: toastId,
             description: firstNodeError(execution.node_errors),
           })
@@ -96,7 +98,7 @@ export function TriggerWorkflowMenuItem({ formId, recordId, config, label, onDon
         await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
       }
     } catch (e) {
-      toast.error(`Couldn't start "${label}"`, { id: toastId, description: e instanceof Error ? e.message : undefined })
+      toast.error(t('trigger_workflow.menu.start_failed', { label }), { id: toastId, description: e instanceof Error ? e.message : undefined })
     } finally {
       setPending(false)
     }

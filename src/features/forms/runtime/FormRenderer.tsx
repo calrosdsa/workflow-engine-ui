@@ -13,6 +13,7 @@ import { resolveAdvancedSettings, NO_EFFECTS } from './advanced-settings'
 import { useUiWorkflowHost } from '@/features/ui-workflows/useUiWorkflowHost'
 import { useFieldChangeWorkflow } from '@/features/ui-workflows/useFieldChangeWorkflow'
 import type { FieldStatePatch } from '@/features/ui-workflows/host'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { FieldRenderer } from './FieldRenderer'
 import { FormSectionShell, shouldChromeSections } from './FormSectionShell'
 import type { AdvancedFieldEffects } from './advanced-settings'
@@ -36,9 +37,9 @@ import type { FieldDef } from '@/features/forms/types'
 // required-field message at the schema level (schema-to-zod.ts's default
 // case); this is the backstop for any fieldType that isn't, so a raw Zod
 // string can never reach the page regardless.
-function humanizeFieldError(error: { message?: string; type?: string } | undefined, label: string): string | undefined {
+function humanizeFieldError(error: { message?: string; type?: string } | undefined, label: string, t: ReturnType<typeof useTranslation>): string | undefined {
   if (!error) return undefined
-  if (error.type === 'invalid_type') return `${label} is required.`
+  if (error.type === 'invalid_type') return t('form_renderer.field_required', { field: label })
   return error.message
 }
 
@@ -133,6 +134,7 @@ export interface FormRendererProps {
 // configure. This is the piece Add Menu depends on; no runtime form-fill
 // renderer existed anywhere in the codebase before this.
 export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitting, submitLabel, onDirtyChange }: FormRendererProps) {
+  const t = useTranslation()
   const variables = schemaToVariableDecls(schema)
 
   // Fields an Advanced Setting hides from THIS viewer, fed back into the
@@ -322,7 +324,7 @@ export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitti
                         control={control}
                         formId={formId}
                         runtimeState={{ visible, required, readOnly }}
-                        error={humanizeFieldError(errors[el.key] as { message?: string; type?: string } | undefined, el.label)}
+                        error={humanizeFieldError(errors[el.key] as { message?: string; type?: string } | undefined, el.label, t)}
                       />
                     )
                   })}
@@ -335,7 +337,7 @@ export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitti
 
       <Button type="submit" disabled={submitting} className="gap-1.5">
         {submitting ? <Loader2 size={14} className="animate-spin" /> : null}
-        {submitLabel ?? 'Submit'}
+        {submitLabel ?? t('form_renderer.submit')}
       </Button>
     </form>
   )

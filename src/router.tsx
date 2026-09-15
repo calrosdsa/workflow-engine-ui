@@ -48,6 +48,9 @@ const ExecutionsPage = lazyRouteComponent(() =>
 const ExecutionDetailPage = lazyRouteComponent(() =>
   import('@/pages/ExecutionDetailPage').then((m) => ({ default: m.ExecutionDetailPage })),
 )
+const EvaluationDatasetPage = lazyRouteComponent(() =>
+  import('@/pages/workflows/EvaluationDatasetPage').then((m) => ({ default: m.EvaluationDatasetPage })),
+)
 const FormsPage = lazyRouteComponent(() =>
   import('@/pages/FormsPage').then((m) => ({ default: m.FormsPage })),
 )
@@ -302,6 +305,12 @@ const appWorkflowDetailRoute = createRoute({
   component: () => <WorkflowBuilderPage mode="edit" />,
 })
 
+const appEvaluationDatasetRoute = createRoute({
+  getParentRoute: () => applicationShellRoute,
+  path: '/workflows/$workflowId/evaluations/$datasetId',
+  component: EvaluationDatasetPage,
+})
+
 const appExecutionsRoute = createRoute({
   getParentRoute: () => applicationShellRoute,
   path: '/executions',
@@ -509,6 +518,7 @@ const routeTree = rootRoute.addChildren([
       appWorkflowsRoute,
       appWorkflowNewRoute,
       appWorkflowDetailRoute,
+      appEvaluationDatasetRoute,
       appExecutionsRoute,
       appExecutionDetailRoute,
       appFormsRoute,

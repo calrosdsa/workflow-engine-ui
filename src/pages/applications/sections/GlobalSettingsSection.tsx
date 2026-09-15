@@ -114,6 +114,7 @@ function CredentialRow({ credential, credentialTypes, canWrite, onDelete, deleti
 // ---------------------------------------------------------------------------
 
 function VariablesSubsection() {
+  const t = useTranslation()
   const { data: variables, isLoading } = useVariables()
   const deleteMutation = useDeleteVariable()
   const canWrite = usePermission('credentials:write')
@@ -123,15 +124,15 @@ function VariablesSubsection() {
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Global variables</h2>
+          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">{t('app_settings.variables.title')}</h2>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
-            Non-secret values shared across every workflow, addressable from any expression as{' '}
+            {t('app_settings.variables.description')}{' '}
             <code className="rounded bg-[hsl(var(--muted))] px-1 py-0.5 text-[11px]">AppSettings["name"]</code>.
           </p>
         </div>
         {canWrite && (
           <Button size="sm" onClick={() => setAdding(true)} className="shrink-0 gap-1.5">
-            <Plus size={14} />Add variable
+            <Plus size={14} />{t('app_settings.variables.add')}
           </Button>
         )}
       </div>
@@ -140,7 +141,7 @@ function VariablesSubsection() {
         <div className="flex h-24 items-center justify-center"><Spinner /></div>
       ) : !variables?.length && !adding ? (
         <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
-          No global variables yet.
+          {t('app_settings.variables.empty')}
         </div>
       ) : (
         <div className="space-y-2">
@@ -201,6 +202,7 @@ function VariableRow({ variable, canWrite, onDelete, deleting }: {
 }
 
 function NewVariableRow({ onDone }: { onDone: () => void }) {
+  const t = useTranslation()
   const upsertMutation = useUpsertVariable()
   const [name, setName] = useState('')
   const [value, setValue] = useState('')
@@ -214,12 +216,12 @@ function NewVariableRow({ onDone }: { onDone: () => void }) {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-dashed border-[hsl(var(--primary))]/40 bg-[hsl(var(--primary))]/5 p-3">
       <Braces size={16} className="shrink-0 text-[hsl(var(--primary))]" />
-      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="name" className="w-32 shrink-0 font-mono text-xs" />
-      <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder="value" className="min-w-0 flex-1 font-mono text-xs" />
+      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('app_settings.variables.name')} className="w-32 shrink-0 font-mono text-xs" />
+      <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder={t('app_settings.variables.value')} className="min-w-0 flex-1 font-mono text-xs" />
       <Button size="sm" onClick={handleSave} disabled={!name.trim() || upsertMutation.isPending} className="shrink-0 gap-1">
         {upsertMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
       </Button>
-      <Button variant="ghost" size="sm" onClick={onDone} className="shrink-0 text-[hsl(var(--muted-foreground))]">Cancel</Button>
+      <Button variant="ghost" size="sm" onClick={onDone} className="shrink-0 text-[hsl(var(--muted-foreground))]">{t('common.cancel')}</Button>
     </div>
   )
 }

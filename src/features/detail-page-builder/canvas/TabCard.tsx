@@ -8,6 +8,7 @@ import { GripVertical, Eye, EyeOff, Trash2, Lock, Users2, GitBranch } from 'luci
 import { cn, onKeyboardActivate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { getDetailTab } from '@/features/forms/runtime/detail-tabs/registry'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { DetailTabConfig } from '@/features/form-builder/schema'
 
 interface TabCardProps {
@@ -29,6 +30,7 @@ interface TabCardProps {
 }
 
 export function TabCard({ tab, zoneId, selected, canHide, canRemove = true, onSelect, onToggleHidden, onRemove }: TabCardProps) {
+  const t = useTranslation()
   const def = getDetailTab(tab.type)
   const isConditional = tab.renderIf?.mode === 'expression'
   const hasCustomVisibility = (tab.visibility?.mode ?? 'everyone') !== 'everyone'
@@ -54,7 +56,7 @@ export function TabCard({ tab, zoneId, selected, canHide, canRemove = true, onSe
       // from ALSO re-triggering onSelect, the same reason onClick below
       // needs e.stopPropagation() on the mouse side.
       role="group"
-      aria-label={`${displayLabel} tab${selected ? ' — selected' : ''}`}
+      aria-label={`${t('detail_tab.canvas.tab_aria_label', { label: displayLabel })}${selected ? t('detail_tab.canvas.selected_suffix') : ''}`}
       tabIndex={0}
       onClick={(e) => { e.stopPropagation(); onSelect() }}
       onKeyDown={onKeyboardActivate(onSelect)}
@@ -81,7 +83,7 @@ export function TabCard({ tab, zoneId, selected, canHide, canRemove = true, onSe
           {...listeners}
           onClick={(e) => e.stopPropagation()}
           className="flex h-6 w-6 cursor-grab touch-none items-center justify-center rounded text-[hsl(var(--muted-foreground))]/60 hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 focus-visible:ring-offset-[hsl(var(--card))] active:cursor-grabbing"
-          title="Drag to move"
+          title={t('detail_tab.canvas.drag_to_move')}
         >
           <GripVertical size={13} />
         </button>
@@ -89,7 +91,7 @@ export function TabCard({ tab, zoneId, selected, canHide, canRemove = true, onSe
           type="button"
           onClick={(e) => { e.stopPropagation(); onToggleHidden() }}
           disabled={!canHide}
-          title={tab.hidden ? 'Show tab' : canHide ? 'Hide tab' : 'At least one tab must stay visible'}
+          title={tab.hidden ? t('detail_tab.section.show_tab') : canHide ? t('detail_tab.section.hide_tab') : t('detail_tab.section.must_stay_visible')}
           className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 focus-visible:ring-offset-[hsl(var(--card))] disabled:cursor-not-allowed disabled:opacity-40"
         >
           {tab.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
@@ -98,7 +100,7 @@ export function TabCard({ tab, zoneId, selected, canHide, canRemove = true, onSe
           type="button"
           onClick={(e) => { e.stopPropagation(); onRemove() }}
           disabled={!canRemove}
-          title={!canHide ? 'At least one tab must stay visible' : canRemove ? 'Remove tab' : 'This tab is always shown — hide it instead'}
+          title={!canHide ? t('detail_tab.section.must_stay_visible') : canRemove ? t('detail_tab.section.remove_tab') : t('detail_tab.section.always_shown_hide_instead')}
           className="flex h-6 w-6 items-center justify-center rounded text-[hsl(var(--muted-foreground))] transition-colors hover:bg-red-50 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 focus-visible:ring-offset-[hsl(var(--card))] disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Trash2 size={13} />

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PencilRuler, HelpCircle } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { hasPermission } from '@/features/auth/permissions'
 import { getMenuType } from '@/features/menus/menu-registry'
 import { MenuIconTile } from '@/features/menus/MenuIconTile'
@@ -28,6 +29,7 @@ interface RuntimeHomePageProps {
 // isModulesModeApp) — apps with none never reach this component, keeping
 // today's redirect-straight-into-a-menu behavior for everyone else.
 export function RuntimeHomePage({ snapshot, clientId, appId, homeTiles }: RuntimeHomePageProps) {
+  const t = useTranslation()
   const [drilldownRoot, setDrilldownRoot] = useState<MenuTreeNode | null>(null)
   const session = useAuthStore((s) => s.session)
   const membership = session?.memberships?.find((m) => m.client_id === clientId && m.app_id === appId)
@@ -46,7 +48,7 @@ export function RuntimeHomePage({ snapshot, clientId, appId, homeTiles }: Runtim
               style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}
             >
               <PencilRuler size={13} />
-              Edit Design
+              {t('runtime.edit_design')}
             </button>
           )}
           {session && (

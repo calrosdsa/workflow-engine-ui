@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar'
 import { ClientSwitcher } from './ClientSwitcher'
 import { useAuthStore } from '@/stores/auth'
 import { ProfileMenu } from '@/features/runtime/ProfileMenu'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 // /applications/$appId/* (the app-scoped design shell) renders its own
 // full-screen chrome — header with Dashboard/Workflows/Forms/App
@@ -19,6 +20,7 @@ import { ProfileMenu } from '@/features/runtime/ProfileMenu'
 export function AppShell() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const session = useAuthStore((s) => s.session)
+  const t = useTranslation()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const isAppDesignShell = pathname.startsWith('/applications/')
 
@@ -64,7 +66,7 @@ export function AppShell() {
           <div className="flex min-w-0 items-center gap-3">
             <button
               onClick={() => setMobileNavOpen((o) => !o)}
-              aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+              aria-label={mobileNavOpen ? t('common.close_navigation') : t('common.open_navigation')}
               aria-expanded={mobileNavOpen}
               className="-ml-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] md:hidden"
             >

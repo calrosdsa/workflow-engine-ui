@@ -7,6 +7,7 @@ import { useEffect, useMemo } from 'react'
 import {
   SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui/select-menu'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 
 interface AdoptedReferenceFieldSelectProps {
@@ -21,6 +22,7 @@ interface AdoptedReferenceFieldSelectProps {
 }
 
 export function AdoptedReferenceFieldSelect({ formId, parentFormId, value, onChange }: AdoptedReferenceFieldSelectProps) {
+  const t = useTranslation()
   const { data: targetForm, isLoading } = useFormDef(formId ?? '')
 
   const options = useMemo(
@@ -43,7 +45,7 @@ export function AdoptedReferenceFieldSelect({ formId, parentFormId, value, onCha
   if (!formId) {
     return (
       <SelectMenu disabled>
-        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select a form first" /></SelectTrigger>
+        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('form_config.select_a_form_first')} /></SelectTrigger>
         <SelectContent />
       </SelectMenu>
     )
@@ -52,7 +54,7 @@ export function AdoptedReferenceFieldSelect({ formId, parentFormId, value, onCha
   if (!isLoading && options.length === 0) {
     return (
       <SelectMenu disabled>
-        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="This form has no reference field pointing back at the parent" /></SelectTrigger>
+        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('form_config.no_backreference_field')} /></SelectTrigger>
         <SelectContent />
       </SelectMenu>
     )
@@ -61,7 +63,7 @@ export function AdoptedReferenceFieldSelect({ formId, parentFormId, value, onCha
   return (
     <SelectMenu value={value ?? ''} onValueChange={(v) => onChange(v || undefined)} disabled={isLoading}>
       <SelectTrigger className="h-8 text-sm">
-        <SelectValue placeholder={isLoading ? 'Loading fields…' : 'Select a reference field'} />
+        <SelectValue placeholder={isLoading ? t('form_config.loading_fields') : t('form_config.select_reference_field')} />
       </SelectTrigger>
       <SelectContent>
         {options.map((f) => (

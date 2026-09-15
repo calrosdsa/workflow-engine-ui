@@ -22,6 +22,7 @@ import { syncLineItemsChildren } from '@/features/form-builder/lineItemsSync'
 import { slugifyKey } from '@/features/form-builder/factory'
 import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
 import type { VariableDecl } from '@/features/workflows/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 interface FormBuilderPageProps {
   mode: 'new' | 'edit'
@@ -39,6 +40,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 export function FormBuilderPage({ mode }: FormBuilderPageProps) {
+  const t = useTranslation()
   const navigate = useNavigate()
   const params = useParams({ strict: false }) as { appId?: string; formId?: string }
   const appId = params.appId ?? ''
@@ -322,7 +324,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3">
         <Spinner />
-        <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading form…</p>
+        <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('form_builder.loading')}</p>
       </div>
     )
   }
@@ -334,7 +336,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
         <button
           onClick={handleBackClick}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
-          title="Back to forms"
+          title={t('form_builder.back')}
         >
           <ArrowLeft size={17} />
         </button>
@@ -347,35 +349,35 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Form name"
+            placeholder={t('form_builder.name_placeholder')}
             className="h-8 max-w-[240px] border-transparent bg-transparent text-sm font-semibold text-[hsl(var(--foreground))] hover:border-[hsl(var(--border))] focus:border-[hsl(var(--ring))]"
           />
           <div className="flex items-center gap-1 rounded-md bg-[hsl(var(--muted))] px-2 py-1">
-            <span id="form-slug-label" className="text-[10px] font-medium uppercase tracking-wider text-[hsl(var(--muted-foreground))]">slug</span>
+            <span id="form-slug-label" className="text-[10px] font-medium uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('form_builder.slug')}</span>
             <input
               value={slug}
               onChange={(e) => { setSlugTouched(true); setSlug(slugifyKey(e.target.value)) }}
-              placeholder="table_name"
+              placeholder={t('form_builder.table_name')}
               aria-labelledby="form-slug-label"
               className="w-32 bg-transparent font-mono text-[12px] text-[hsl(var(--muted-foreground))] outline-none"
-              title="Logical identifier for URLs — editable; must stay unique. The physical table is never renamed."
+              title={t('form_builder.slug_hint')}
             />
           </div>
         </div>
 
         {/* Column count indicator */}
-        <div className="flex items-center gap-1.5 rounded-md bg-[hsl(var(--muted))] px-2.5 py-1.5 text-[11px] text-[hsl(var(--muted-foreground))]" title="Data fields that become SQL columns">
+        <div className="flex items-center gap-1.5 rounded-md bg-[hsl(var(--muted))] px-2.5 py-1.5 text-[11px] text-[hsl(var(--muted-foreground))]" title={t('form_builder.column_hint')}>
           <Table2 size={13} className="text-[hsl(var(--muted-foreground))]" />
-          {projection.fields.length} {projection.fields.length === 1 ? 'column' : 'columns'}
+          {projection.fields.length} {projection.fields.length === 1 ? t('form_builder.column_one') : t('form_builder.columns')}
         </div>
 
         {parentForm && (
           <span className="rounded-full bg-[hsl(var(--primary))]/15 px-2 py-1 text-[11px] font-medium text-[hsl(var(--primary))]">
-            Dependent of {parentForm.name}
+            {t('form_builder.dependent_of', { name: parentForm.name })}
           </span>
         )}
 
-        {isDirty && <span className="rounded-full bg-[hsl(var(--warning))]/15 px-2 py-1 text-[11px] font-medium text-[hsl(var(--warning))]">Unsaved</span>}
+        {isDirty && <span className="rounded-full bg-[hsl(var(--warning))]/15 px-2 py-1 text-[11px] font-medium text-[hsl(var(--warning))]">{t('form_builder.unsaved')}</span>}
 
         <div className="flex items-center gap-0.5">
           <Button
@@ -383,7 +385,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
             className="h-8 w-8 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] disabled:opacity-30"
             onClick={undo}
             disabled={!canUndo}
-            title="Undo (Ctrl+Z)"
+            title={t('common.undo')}
           >
             <Undo2 size={16} />
           </Button>
@@ -392,24 +394,24 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
             className="h-8 w-8 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] disabled:opacity-30"
             onClick={redo}
             disabled={!canRedo}
-            title="Redo (Ctrl+Shift+Z)"
+            title={t('common.redo')}
           >
             <Redo2 size={16} />
           </Button>
         </div>
 
         <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)} className="gap-1.5">
-          <Eye size={14} /> Preview
+          <Eye size={14} /> {t('form_builder.preview')}
         </Button>
         <Button
           size="sm"
           onClick={handleSave}
           disabled={saving || isLockedProduction}
           className="gap-1.5"
-          title={isLockedProduction ? 'This app is a linked Production environment — edit its linked Sandbox instead' : undefined}
+          title={isLockedProduction ? t('form_builder.production_locked') : undefined}
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : mode === 'new' ? <FilePlus2 size={14} /> : <Save size={14} />}
-          {saving ? (mode === 'new' ? 'Creating…' : 'Saving…') : mode === 'new' ? 'Create Form' : 'Save'}
+          {saving ? (mode === 'new' ? t('form_builder.creating') : t('form_builder.saving')) : mode === 'new' ? t('form_builder.create') : t('form_builder.save')}
         </Button>
       </header>
 
@@ -432,10 +434,10 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
               <AlertCircle size={14} className="shrink-0 text-[hsl(var(--warning))]" />
               <span className="text-[hsl(var(--foreground))]">
                 {issue.kind === 'record_title'
-                  ? 'Every form needs a Record Title field — it is what the runtime shows wherever a record is named.'
-                  : 'Every form needs a Searchable field — without one, search matches nothing.'}
+                  ? t('form_builder.record_title_required')
+                  : t('form_builder.searchable_required')}
               </span>
-              <span className="text-[hsl(var(--muted-foreground))]">Use:</span>
+              <span className="text-[hsl(var(--muted-foreground))]">{t('form_builder.use')}</span>
               {issue.candidates.slice(0, 6).map((c) => (
                 <button
                   key={c.key}
@@ -448,7 +450,7 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
               ))}
               {issue.candidates.length > 6 && (
                 <span className="text-[11px] text-[hsl(var(--muted-foreground))]">
-                  or set it on any field from its Appearance tab
+                  {t('form_builder.title_search_more')}
                 </span>
               )}
             </div>
@@ -477,10 +479,10 @@ export function FormBuilderPage({ mode }: FormBuilderPageProps) {
       <ConfirmDialog
         open={confirmingLeave}
         onOpenChange={setConfirmingLeave}
-        title="Discard unsaved changes?"
-        description="You have unsaved changes to this form. Leaving now will discard them — this can't be undone."
-        confirmLabel="Discard changes"
-        cancelLabel="Keep editing"
+        title={t('form_builder.discard_title')}
+        description={t('form_builder.discard_description')}
+        confirmLabel={t('form_builder.discard')}
+        cancelLabel={t('form_builder.keep_editing')}
         destructive
         onConfirm={() => { setConfirmingLeave(false); goToFormsList() }}
       />

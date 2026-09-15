@@ -78,6 +78,20 @@ export interface MenuRuntimeRendererProps {
 
 export interface MenuTypeRegistryEntry {
   type: MenuType
+  /** Rendered UI copy (the "Add Menu" type picker, and MenuDetail's own
+   *  headers, both in MenusSection.tsx) goes through `t(\`menus.types.${type}.label\`)`/
+   *  `.description` instead of reading these directly — see that file's
+   *  own comments at each call site, and en.ts/es.ts's `menus.types.*` keys.
+   *  UNLIKE the report-block/dashboard-widget registries' label/description
+   *  (dead after their own migrations, kept only because the interface
+   *  requires them), these two fields are NOT dead: MenusSection.tsx still
+   *  reads `entry.label` directly to seed a newly created menu's `name` —
+   *  `` `New ${entry.label}` `` — and `ensurePairedAddMenu` reads
+   *  `searchMenu.name` into `` `Add ${searchMenu.name}` ``. Both become
+   *  Menu.name, PERSISTED data, not display-time chrome (same exclusion
+   *  class as `'Untitled Report'`/`'New link'` elsewhere in this app) — do
+   *  NOT redirect those two call sites through `t()`, and do not delete
+   *  these string literals in a future "now unused" cleanup. */
   label: string
   icon: LucideIcon
   description: string

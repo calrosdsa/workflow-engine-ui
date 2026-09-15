@@ -15,6 +15,7 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { formsApi } from '@/features/forms/api'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { resolveReferenceLabel } from '@/features/forms/runtime/record-title'
+import { useI18n } from '@/features/i18n/I18nProvider'
 import type { FieldDef } from '@/features/forms/types'
 import type { FilterGroup } from '../types'
 
@@ -34,6 +35,7 @@ interface RecordReferencePickerProps {
 }
 
 export function RecordReferencePicker({ field, value, onChange, disabled }: RecordReferencePickerProps) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search, 300)
@@ -63,7 +65,7 @@ export function RecordReferencePicker({ field, value, onChange, disabled }: Reco
     enabled: !!targetFormId && !!value,
   })
 
-  if (!targetFormId) return <p className="text-[11px] text-[hsl(var(--warning))]">No target form configured for this reference field.</p>
+  if (!targetFormId) return <p className="text-[11px] text-[hsl(var(--warning))]">{t('workflows.builder.no_target_form')}</p>
 
   const options = results?.records ?? []
   const selectedLabel = currentRecord ? resolveReferenceLabel(targetForm?.fields, currentRecord, field.display_field) : value || undefined
@@ -81,7 +83,7 @@ export function RecordReferencePicker({ field, value, onChange, disabled }: Reco
         >
           <span className="flex min-w-0 items-center gap-1.5">
             <FileText size={12} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
-            <span className="truncate">{selectedLabel ?? 'Search…'}</span>
+            <span className="truncate">{selectedLabel ?? t('workflows.builder.search')}</span>
           </span>
           <ChevronsUpDown size={12} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
         </Button>
@@ -89,7 +91,7 @@ export function RecordReferencePicker({ field, value, onChange, disabled }: Reco
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder={searchField ? 'Type to search…' : 'Search unavailable — showing first page'}
+            placeholder={searchField ? t('workflows.builder.type_to_search') : t('workflows.builder.search_unavailable')}
             value={search}
             onValueChange={setSearch}
             disabled={!searchField}
@@ -97,11 +99,11 @@ export function RecordReferencePicker({ field, value, onChange, disabled }: Reco
           <CommandList>
             {isLoading ? (
               <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
-                <Loader2 size={13} className="animate-spin" /> Searching…
+                <Loader2 size={13} className="animate-spin" /> {t('workflows.builder.searching')}
               </div>
             ) : (
               <>
-                <CommandEmpty>No records found.</CommandEmpty>
+                <CommandEmpty>{t('workflows.builder.no_records')}</CommandEmpty>
                 <CommandGroup>
                   {options.map((r) => {
                     const id = r.id as string
@@ -131,7 +133,7 @@ export function RecordReferencePicker({ field, value, onChange, disabled }: Reco
               type="button"
               onClick={() => onChange(null)}
               className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
-              title="Clear selection"
+              title={t('workflows.builder.clear_selection')}
             >
               <X size={12} />
             </button>

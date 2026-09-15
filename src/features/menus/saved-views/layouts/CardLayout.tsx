@@ -4,6 +4,7 @@ import { RoleValueLabel } from '@/features/forms/runtime/RoleValueLabel'
 import { resolveEnumLabel } from '@/features/forms/runtime/enum-labels'
 import { FileCellDisplay } from '@/features/forms/runtime/FileCellDisplay'
 import { ReferenceValueLabel } from '@/features/forms/runtime/ReferenceValueLabel'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { FieldDef, FormRecord } from '@/features/forms/types'
 
 interface CardLayoutProps {
@@ -35,15 +36,16 @@ interface CardLayoutProps {
 // marks visible renders as a labeled body row, so Card shows the same data
 // List does, just presented as cards instead of table rows.
 export function CardLayout({ records, fields, columns, roleField, enumLabels, onOpenRecord, loading }: CardLayoutProps) {
+  const t = useTranslation()
   const bodyFields = columns
     .map((name) => fields.find((f) => f.name === name))
     .filter((f): f is FieldDef => !!f)
 
   if (loading) {
-    return <div className="p-8 text-center text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading…</div>
+    return <div className="p-8 text-center text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('common.loading')}</div>
   }
   if (records.length === 0) {
-    return <div className="p-8 text-center text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>No records match this view.</div>
+    return <div className="p-8 text-center text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('menus.saved_views.no_records')}</div>
   }
 
   return (

@@ -1,4 +1,5 @@
 import { useForm } from '@/features/forms/hooks'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { ReportBlockRendererProps } from '../../report-block-contract'
 import { reportBlockPreviewStyle } from '../../preview-style'
 import type { TableBlockConfig } from './schema'
@@ -11,10 +12,11 @@ import type { TableBlockConfig } from './schema'
 // widgets (heading/divider) already establish, extended here to a block
 // type that DOES eventually resolve real data, just not in this component.
 export function TableBlockPreview({ config, instance }: ReportBlockRendererProps<TableBlockConfig>) {
+  const t = useTranslation()
   const { data: form } = useForm(config.form_id)
 
   if (!config.form_id) {
-    return <p className="p-3 text-xs italic text-[hsl(var(--muted-foreground))]">No form selected</p>
+    return <p className="p-3 text-xs italic text-[hsl(var(--muted-foreground))]">{t('reports.blocks.no_form_selected')}</p>
   }
 
   const columns = config.columns?.length
@@ -27,7 +29,7 @@ export function TableBlockPreview({ config, instance }: ReportBlockRendererProps
   return (
     <div className="flex h-full flex-col p-3">
       <p className="mb-2 text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-        {form?.name ?? 'Loading…'} · table
+        {form?.name ?? t('common.loading')} · {t('reports.blocks.table.preview_kind')}
       </p>
       <div className="overflow-hidden rounded border border-[hsl(var(--border))]" style={baseStyle}>
         <table className="w-full text-[11px]" style={baseStyle}>

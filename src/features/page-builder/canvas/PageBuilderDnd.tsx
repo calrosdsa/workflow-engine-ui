@@ -8,6 +8,7 @@ import {
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { usePageBuilderStore, findComponent } from '../store'
 import { PAGE_COMPONENT_REGISTRY } from '../component-registry'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { PageComponentType } from '../schema'
 
 // Direct mirror of features/form-builder/canvas/FormBuilderDnd.tsx — same
@@ -31,6 +32,7 @@ type ActiveDrag =
  * this one context, otherwise drops never register.
  */
 export function PageBuilderDnd({ children }: { children: ReactNode }) {
+  const t = useTranslation()
   const schema = usePageBuilderStore((s) => s.schema)
   const addComponent = usePageBuilderStore((s) => s.addItem)
   const moveComponent = usePageBuilderStore((s) => s.moveItem)
@@ -138,7 +140,7 @@ export function PageBuilderDnd({ children }: { children: ReactNode }) {
         {activeDrag?.kind === 'component' && <ExistingComponentDragPreview componentId={activeDrag.componentId} />}
         {activeDrag?.kind === 'section' && (
           <div className="rounded-xl border border-indigo-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-xl">
-            Moving section…
+            {t('builder.pages.canvas.moving_section')}
           </div>
         )}
       </DragOverlay>
@@ -151,6 +153,7 @@ export function PageBuilderDnd({ children }: { children: ReactNode }) {
 // ---------------------------------------------------------------------------
 
 function ComponentDragPreview({ component }: { component: PageComponentType }) {
+  const t = useTranslation()
   const reg = PAGE_COMPONENT_REGISTRY[component]
   const Icon = reg.icon
   return (
@@ -158,12 +161,13 @@ function ComponentDragPreview({ component }: { component: PageComponentType }) {
       <span className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-100 text-indigo-600">
         <Icon size={15} />
       </span>
-      <span className="text-[12px] font-medium text-slate-700">{reg.label}</span>
+      <span className="text-[12px] font-medium text-slate-700">{t(`builder.pages.${component}.label`)}</span>
     </div>
   )
 }
 
 function ExistingComponentDragPreview({ componentId }: { componentId: string }) {
+  const t = useTranslation()
   const schema = usePageBuilderStore((s) => s.schema)
   const found = findComponent(schema, componentId)
   if (!found) return null
@@ -172,7 +176,7 @@ function ExistingComponentDragPreview({ componentId }: { componentId: string }) 
   return (
     <div className="flex items-center gap-2.5 rounded-lg border border-indigo-300 bg-white px-3 py-2 shadow-xl">
       <Icon size={14} className="text-indigo-500" />
-      <span className="text-[12px] font-medium text-slate-700">{reg.label}</span>
+      <span className="text-[12px] font-medium text-slate-700">{t(`builder.pages.${found.item.component}.label`)}</span>
     </div>
   )
 }

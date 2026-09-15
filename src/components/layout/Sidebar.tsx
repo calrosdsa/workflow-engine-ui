@@ -3,6 +3,7 @@ import { LayoutGrid, Users2, Cpu, Store } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth'
 import { isSuperAdmin } from '@/features/auth/access'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 // Global chrome only — Workflows/Forms/Executions moved into the app-scoped
 // design shell (ApplicationDesignShell) since they only make sense inside a
@@ -14,17 +15,17 @@ import { isSuperAdmin } from '@/features/auth/access'
 // Team/User Management (client-wide, Super-Admin-only — see
 // features/auth/access.ts's isSuperAdmin and teamRoute's beforeLoad).
 const navItems = [
-  { to: '/',                label: 'Home',            icon: LayoutGrid },
+  { to: '/',                labelKey: 'nav.home',            icon: LayoutGrid },
 ]
 
 const globalNavItems = [
-  { to: '/model-providers', label: 'Model Providers', icon: Cpu },
+  { to: '/model-providers', labelKey: 'nav.model_providers', icon: Cpu },
   // Marketplace is genuinely global like the two above — it lists apps
   // published by OTHER clients, so it can't live inside any one app's
   // design shell. Ungated here (no permission check): browsing is
   // harmless, and the page itself only shows listings the backend already
   // decided this account may see.
-  { to: '/marketplace',     label: 'Marketplace',     icon: Store },
+  { to: '/marketplace',     labelKey: 'nav.marketplace',     icon: Store },
 ]
 
 interface SidebarProps {
@@ -37,6 +38,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onNavigate }: SidebarProps = {}) {
+  const t = useTranslation()
   const session = useAuthStore((s) => s.session)
   const canSeeTeam = isSuperAdmin(session)
 
@@ -44,11 +46,11 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
     <aside className="flex h-screen w-60 flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">
       <div className="flex h-14 items-center border-b border-[hsl(var(--border))] px-4">
         <span className="text-sm font-semibold tracking-wide uppercase text-[hsl(var(--muted-foreground))]">
-          Workflow Engine
+          {t('nav.workflow_engine')}
         </span>
       </div>
       <nav className="flex-1 space-y-1 p-3">
-        {navItems.map(({ to, label, icon: Icon }) => (
+        {navItems.map(({ to, labelKey, icon: Icon }) => (
           <Link
             key={to}
             to={to}
@@ -60,13 +62,13 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
             )}
           >
             <Icon size={16} />
-            {label}
+            {t(labelKey)}
           </Link>
         ))}
 
         <div className="my-2 border-t border-[hsl(var(--border))] pt-2">
-          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Global</p>
-          {globalNavItems.map(({ to, label, icon: Icon }) => (
+          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('nav.global')}</p>
+          {globalNavItems.map(({ to, labelKey, icon: Icon }) => (
             <Link
               key={to}
               to={to}
@@ -78,7 +80,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
               )}
             >
               <Icon size={16} />
-              {label}
+              {t(labelKey)}
             </Link>
           ))}
           {canSeeTeam && (
@@ -92,7 +94,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
               )}
             >
               <Users2 size={16} />
-              Team
+              {t('nav.team')}
             </Link>
           )}
         </div>

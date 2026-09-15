@@ -8,6 +8,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { cn } from '@/lib/utils'
 import { TabCard } from './TabCard'
 import { isAlwaysPresentDetailTab } from '@/features/forms/runtime/detail-tabs/registry'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { DetailTabConfig, DetailPageZoneDef } from '@/features/form-builder/schema'
 
 interface ZoneDropZoneProps {
@@ -21,6 +22,7 @@ interface ZoneDropZoneProps {
 }
 
 export function ZoneDropZone({ zone, tabs, selectedTabId, visibleCount, onSelect, onToggleHidden, onRemove }: ZoneDropZoneProps) {
+  const t = useTranslation()
   const { setNodeRef, isOver } = useDroppable({
     id: `zone:${zone.id}`,
     data: { kind: 'zone', zoneId: zone.id },
@@ -30,7 +32,13 @@ export function ZoneDropZone({ zone, tabs, selectedTabId, visibleCount, onSelect
 
   return (
     <div className={cn('flex min-h-0 flex-col', zone.width === 'flex' ? 'flex-1 min-w-0' : 'w-72 shrink-0')}>
-      <p className="mb-2 px-0.5 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{zone.label}</p>
+      {/* zone.label stays a literal in schema.ts's MAIN_ZONE/SIDEBAR_ZONE/
+          ACTIVITY_ZONE consts (same registry-seed pattern as every other
+          registry this effort has touched) — reconstructed here via the
+          zone's own stable `id`, not read raw, since this is the zone
+          set's only real consumer (ZonedDetailTabList.tsx/store.ts only
+          ever touch `.zones` structurally, never `.label`). */}
+      <p className="mb-2 px-0.5 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t(`detail_tab.canvas.zone.${zone.id}.label`)}</p>
       <div
         ref={setNodeRef}
         className={cn(
@@ -61,7 +69,7 @@ export function ZoneDropZone({ zone, tabs, selectedTabId, visibleCount, onSelect
             'flex min-h-[72px] items-center justify-center text-center text-[11px] transition-colors',
             isOver ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--muted-foreground))]/60',
           )}>
-            {isOver ? 'Drop here' : 'Nothing here yet'}
+            {isOver ? t('detail_tab.canvas.drop_here') : t('detail_tab.canvas.empty_zone')}
           </div>
         )}
       </div>

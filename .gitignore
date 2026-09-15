@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# graphify knowledge-graph output (regenerable; see app-builder/.gitignore)
+graphify-out/
+
 # Impeccable's own throwaway live-preview server state (not the critique archive)
 .impeccable/live/
 

@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import type { WorkflowDefinition, TriggerConfig } from '@/features/workflows/types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 /** Pulls the Trigger root node's config out of a saved definition, if any —
  *  same lookup api/workflows/handler.go's triggerConfig does server-side.
@@ -28,12 +29,12 @@ function getTriggerConfig(wf: WorkflowDefinition): TriggerConfig | null {
   return node.configuration as TriggerConfig
 }
 
-const MODE_LABEL: Record<string, string> = {
-  before: 'Before',
-  after: 'After',
-  after_async: 'After (async)',
-  scheduled: 'Scheduled',
-  on_demand: 'On demand',
+const MODE_LABEL_KEY: Record<string, string> = {
+  before: 'workflows.list.before',
+  after: 'workflows.list.after',
+  after_async: 'workflows.list.after_async',
+  scheduled: 'workflows.list.scheduled',
+  on_demand: 'workflows.list.on_demand',
 }
 
 const MODE_STYLE: Record<string, string> = {
@@ -45,6 +46,7 @@ const MODE_STYLE: Record<string, string> = {
 }
 
 export function WorkflowsPage() {
+  const { t, locale } = useI18n()
   const { data: workflows, isLoading } = useWorkflows()
   const deleteMutation = useDeleteWorkflow()
   const reorderMutation = useReorderWorkflows()
@@ -95,21 +97,21 @@ export function WorkflowsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Workflow Definitions</h1>
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">{t('workflows.list.title')}</h1>
           <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-            {ordered.length} definitions · drag to set execution order
+            {t('workflows.list.count_and_order', { count: ordered.length })}
           </p>
         </div>
         {canWrite && (
           <Link to="/applications/$appId/workflows/new" params={{ appId }}>
-            <Button><Plus size={16} />New Workflow</Button>
+          <Button><Plus size={16} />{t('workflows.list.new')}</Button>
           </Link>
         )}
       </div>
 
       {triggeredId && (
         <div className="rounded-md bg-[hsl(var(--primary))]/10 border border-[hsl(var(--primary))]/30 p-3 text-sm text-[hsl(var(--primary))]">
-          Execution triggered — <Link to="/applications/$appId/executions/$executionId" params={{ appId, executionId: triggeredId }} className="underline font-medium">track it here</Link>
+        {t('workflows.list.triggered')} <Link to="/applications/$appId/executions/$executionId" params={{ appId, executionId: triggeredId }} className="underline font-medium">{t('workflows.list.track_here')}</Link>
         </div>
       )}
 
@@ -118,8 +120,7 @@ export function WorkflowsPage() {
       ) : (
         <div className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
           <p className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/60 px-4 py-2 text-xs text-[hsl(var(--muted-foreground))]">
-            When multiple workflows trigger on the same record event, they run top-to-bottom in this order —
-            a Before/After workflow only fires for events that happen after it in the list.
+            {t('workflows.list.order_hint')}
           </p>
           <DndContext
             sensors={sensors}
@@ -148,6 +149,7 @@ export function WorkflowsPage() {
                     onTrigger={() => triggerMutation.mutate(wf.id, { onSuccess: (r) => setTriggeredId(r.execution_id) })}
                     isTriggering={triggerMutation.isPending}
                     onMove={(dir) => move(wf.id, dir)}
+                    locale={locale}
                   />
                 ))}
               </div>
@@ -169,7 +171,7 @@ export function WorkflowsPage() {
 }
 
 function WorkflowRow({
-  appId, wf, index, count, triggerCfg, formName, canWrite, canTrigger, onDelete, onTrigger, isTriggering, onMove,
+  appId, wf, index, count, triggerCfg, formName, canWrite, canTrigger, onDelete, onTrigger, isTriggering, onMove, locale,
 }: {
   appId: string
   wf: WorkflowDefinition
@@ -183,7 +185,9 @@ function WorkflowRow({
   onTrigger: () => void
   isTriggering: boolean
   onMove: (dir: -1 | 1) => void
+  locale: string
 }) {
+  const t = useI18n().t
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: wf.id })
 
   const style = {
@@ -192,7 +196,7 @@ function WorkflowRow({
   }
 
   const modeKey = triggerCfg?.mode
-  const modeLabel = modeKey ? MODE_LABEL[modeKey] ?? modeKey : null
+  const modeLabel = modeKey ? t(MODE_LABEL_KEY[modeKey] ?? modeKey) : null
   const modeStyle = modeKey ? MODE_STYLE[modeKey] ?? 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] border-[hsl(var(--border))]' : null
 
   return (
@@ -206,7 +210,7 @@ function WorkflowRow({
       <button
         {...attributes}
         {...listeners}
-        title="Drag to reorder"
+        title={t('workflows.list.drag_reorder')}
         className="shrink-0 cursor-grab touch-none rounded p-1 text-[hsl(var(--muted-foreground))]/60 hover:text-[hsl(var(--muted-foreground))] active:cursor-grabbing disabled:opacity-30"
         disabled={!canWrite}
       >
@@ -225,16 +229,16 @@ function WorkflowRow({
         <p className="mt-0.5 truncate text-xs text-[hsl(var(--muted-foreground))]">
           {formName && triggerCfg?.event_type ? `${formName} · ${triggerCfg.event_type}` : null}
           {formName && triggerCfg?.event_type ? ' · ' : ''}
-          {wf.definition.nodes?.length ?? 0} nodes · Updated {new Date(wf.updated_at).toLocaleDateString()}
+          {t('workflows.list.updated', { count: wf.definition.nodes?.length ?? 0, date: new Date(wf.updated_at).toLocaleDateString(locale) })}
         </p>
       </div>
 
       {canWrite && (
         <span className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
-          <button title="Move up" disabled={index === 0} onClick={() => onMove(-1)} className="rounded p-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] disabled:opacity-30">
+          <button title={t('workflows.list.move_up')} disabled={index === 0} onClick={() => onMove(-1)} className="rounded p-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] disabled:opacity-30">
             ▲
           </button>
-          <button title="Move down" disabled={index === count - 1} onClick={() => onMove(1)} className="rounded p-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] disabled:opacity-30">
+          <button title={t('workflows.list.move_down')} disabled={index === count - 1} onClick={() => onMove(1)} className="rounded p-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] disabled:opacity-30">
             ▼
           </button>
         </span>
@@ -244,7 +248,7 @@ function WorkflowRow({
         {canTrigger && (
           <Button size="sm" variant="outline" onClick={onTrigger} disabled={isTriggering}>
             {isTriggering ? <Spinner className="h-4 w-4" /> : <Play size={14} />}
-            Run
+            {t('workflows.list.run')}
           </Button>
         )}
         <Link to="/applications/$appId/workflows/$workflowId" params={{ appId, workflowId: wf.id }}>
@@ -261,12 +265,13 @@ function WorkflowRow({
 }
 
 function EmptyState({ canWrite, appId }: { canWrite: boolean; appId: string }) {
+  const t = useI18n().t
   return (
     <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center">
-      <p className="text-[hsl(var(--muted-foreground))] mb-4">No workflow definitions yet</p>
+      <p className="text-[hsl(var(--muted-foreground))] mb-4">{t('workflows.list.no_definitions')}</p>
       {canWrite && (
         <Link to="/applications/$appId/workflows/new" params={{ appId }}>
-          <Button variant="outline"><Plus size={16} />Create your first workflow</Button>
+          <Button variant="outline"><Plus size={16} />{t('workflows.list.create_first')}</Button>
         </Link>
       )}
     </div>

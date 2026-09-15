@@ -17,6 +17,7 @@ import { UniverSheetsTablePreset } from '@univerjs/preset-sheets-table'
 import sheetsTableEnUS from '@univerjs/preset-sheets-table/locales/en-US'
 import '@univerjs/preset-sheets-table/lib/index.css'
 import { useForms } from '@/features/forms/hooks'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { NumberFormat, ReportBlockRegion, ReportDefinition, ReportWorkbook } from '../types'
 import { createReportWorkbookBlueprint, type ReportWorkbookBlueprint } from './blueprint'
 import { fromUniverWorkbook, numberFormatIndex, toUniverWorkbook } from './contract'
@@ -64,6 +65,11 @@ const SUPPRESSED_NUMFMT_MENU = {
 
 const WORKBOOK_ID = 'report-builder-workbook'
 const SHEET_ID = 'report-layout'
+// Univer's own internal sheet-tab name, seeded once at workbook creation —
+// like the sheetsCoreEnUS/sheetsTableEnUS locale imports above, this is
+// third-party spreadsheet chrome, not this app's i18n surface. Left English
+// deliberately: the sheet tab (and the rest of Univer's own UI) does not
+// switch with the app locale.
 const SHEET_NAME = 'Report layout'
 
 export interface UniverWorkbookSurfaceProps {
@@ -128,6 +134,7 @@ export const UniverWorkbookSurface = forwardRef<WorkbookSurfaceHandle, UniverWor
   { definition, onEdited, onBeforeChange },
   ref,
 ) {
+  const t = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const activeWorkbookRef = useRef<ActiveWorkbookHandle | null>(null)
   const [completion, setCompletion] = useState<{
@@ -350,7 +357,7 @@ export const UniverWorkbookSurface = forwardRef<WorkbookSurfaceHandle, UniverWor
   return (
     <section
       className="flex min-w-0 flex-1 flex-col bg-[hsl(var(--background))]"
-      aria-label="Spreadsheet report layout"
+      aria-label={t('reports.workbook_surface.aria_label')}
       data-report-workbook
     >
       <div className="flex shrink-0 items-center gap-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-4 py-2 text-xs text-[hsl(var(--muted-foreground))]">
@@ -375,9 +382,9 @@ export const UniverWorkbookSurface = forwardRef<WorkbookSurfaceHandle, UniverWor
           onBeforeChange={onBeforeChange}
         />
         <span className="h-3 w-px bg-[hsl(var(--border))]" aria-hidden="true" />
-        <span>Static cell values, formulas, formatting, and merges save with this report.</span>
+        <span>{t('reports.workbook_surface.static_cells_hint')}</span>
         <span className="ml-auto rounded-full bg-[hsl(var(--primary))]/10 px-2 py-0.5 text-[11px] font-medium text-[hsl(var(--primary))]">
-          Data regions are semantic guides
+          {t('reports.workbook_surface.semantic_guides_badge')}
         </span>
       </div>
       <div ref={containerRef} className="min-h-0 flex-1" />

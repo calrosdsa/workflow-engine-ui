@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { checkEmbeddable } from '@/lib/api'
 import { integrationsApi } from '@/features/integrations/api'
 import { parsePageSchema } from '@/features/page-builder/serialize'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { PageComponent } from '@/features/page-builder/schema'
 import type { Menu, CustomMenuConfig } from '../types'
 
@@ -26,6 +27,7 @@ interface CustomMenuRuntimeProps {
 // (flex ratio) -> elements.map, minus all react-hook-form/validation
 // machinery since PageComponents carry no data.
 export function CustomMenuRuntime({ menu, onNavigate }: CustomMenuRuntimeProps) {
+  const t = useTranslation()
   const config = menu.config as CustomMenuConfig
   const mode = config.mode ?? 'page'
 
@@ -36,7 +38,7 @@ export function CustomMenuRuntime({ menu, onNavigate }: CustomMenuRuntimeProps) 
   const schema = parsePageSchema(config.schema)
 
   if (schema.sections.length === 0) {
-    return <div className="p-6 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>"{menu.name}" has no content yet.</div>
+    return <div className="p-6 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('menus.runtime.custom.no_content', { name: menu.name })}</div>
   }
 
   return (
@@ -67,6 +69,7 @@ const BUTTON_VARIANT_MAP = {
 } as const
 
 function RuntimeComponent({ component, onNavigate }: { component: PageComponent; onNavigate?: (slug: string) => void }) {
+  const t = useTranslation()
   switch (component.component) {
     case 'divider':
       return <hr style={{ borderColor: 'hsl(var(--border))' }} />
@@ -95,13 +98,13 @@ function RuntimeComponent({ component, onNavigate }: { component: PageComponent;
       if (component.linkType === 'external' && component.url) {
         return (
           <a href={component.url} target="_blank" rel="noopener noreferrer">
-            <Button type="button" variant={BUTTON_VARIANT_MAP[component.variant ?? 'primary']}>{component.label || 'Button'}</Button>
+            <Button type="button" variant={BUTTON_VARIANT_MAP[component.variant ?? 'primary']}>{component.label || t('menus.runtime.custom.button_fallback')}</Button>
           </a>
         )
       }
       return (
         <Button type="button" variant={BUTTON_VARIANT_MAP[component.variant ?? 'primary']} onClick={handleClick}>
-          {component.label || 'Button'}
+          {component.label || t('menus.runtime.custom.button_fallback')}
         </Button>
       )
     }
@@ -152,6 +155,7 @@ type EmbedStatus = 'checking' | 'embeddable' | 'blocked'
  *  instead. The Dashboard embed widget, authored by builder/admin users who
  *  DO hold credentials:read, keeps mode B. */
 function EmbedFrame({ url, integrationId }: { url: string; integrationId?: string }) {
+  const t = useTranslation()
   const [status, setStatus] = useState<EmbedStatus>('checking')
   const [reason, setReason] = useState<string | undefined>()
   const [launchUrl, setLaunchUrl] = useState(url)
@@ -169,7 +173,12 @@ function EmbedFrame({ url, integrationId }: { url: string; integrationId?: strin
       .catch(() => {
         if (cancelled) return
         setStatus('blocked')
-        setReason('could not verify whether this page can be embedded')
+        // Same locale-staleness tradeoff as the Dashboard embed widget's own
+        // Renderer.tsx: `t` deliberately isn't in this effect's deps — adding
+        // it would re-run checkEmbeddable on every locale switch, which is
+        // worse than this message staying in whatever locale was active when
+        // the check failed.
+        setReason(t('menus.runtime.custom.check_failed'))
       })
     return () => { cancelled = true }
   }, [url])
@@ -193,7 +202,7 @@ function EmbedFrame({ url, integrationId }: { url: string; integrationId?: strin
   }, [url, integrationId])
 
   if (!url) {
-    return <div className="p-6 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>No webpage URL has been configured for this page yet.</div>
+    return <div className="p-6 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('menus.runtime.custom.no_url')}</div>
   }
 
   if (status === 'checking') {
@@ -208,18 +217,18 @@ function EmbedFrame({ url, integrationId }: { url: string; integrationId?: strin
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-6 text-center" style={{ backgroundColor: 'hsl(var(--card))' }}>
         <ExternalLink size={32} style={{ color: 'hsl(var(--muted-foreground))' }} />
-        <p className="text-sm font-medium" style={{ color: 'hsl(var(--foreground))' }}>This page can't be displayed here</p>
+        <p className="text-sm font-medium" style={{ color: 'hsl(var(--foreground))' }}>{t('menus.runtime.custom.blocked_title')}</p>
         {reason && <p className="max-w-sm text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{reason}</p>}
         {/* min-h-11 (44px) matches the platform touch-target floor — this
             is the one control on this screen a phone user has to hit. */}
         <a href={url} target="_blank" rel="noopener noreferrer">
           <Button type="button" size="sm" className="min-h-11 gap-1.5 px-4">
-            <ExternalLink size={13} /> Open in a new tab
+            <ExternalLink size={13} /> {t('menus.runtime.custom.open_new_tab')}
           </Button>
         </a>
       </div>
     )
   }
 
-  return <iframe key={launchUrl} src={launchUrl} title="Embedded page" className="h-full w-full border-0" />
+  return <iframe key={launchUrl} src={launchUrl} title={t('menus.runtime.custom.iframe_title')} className="h-full w-full border-0" />
 }

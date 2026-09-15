@@ -12,17 +12,18 @@
 import { Workflow, Braces } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { useExposedTools } from '@/features/workflows/hooks'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 export function WorkflowToolsSubsection() {
+  const { t } = useI18n()
   const { data: tools, isLoading } = useExposedTools()
 
   return (
     <section className="space-y-3">
       <div>
-        <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Workflow Tools</h3>
+        <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">{t('agent_tools.workflow')}</h3>
         <p className="text-xs text-[hsl(var(--muted-foreground))]">
-          Workflows exposed as tools (via a Trigger node's "Expose as tool" setting) across this app. Not yet
-          callable by an Agent — shown here so authoring has somewhere to appear.
+          {t('agent_tools.workflow_description')}
         </p>
       </div>
 
@@ -30,7 +31,7 @@ export function WorkflowToolsSubsection() {
         <div className="flex h-16 items-center justify-center"><Spinner /></div>
       ) : !tools?.length ? (
         <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-4 text-center text-xs text-[hsl(var(--muted-foreground))]">
-          No workflows exposed as tools yet.
+          {t('agent_tools.workflow_empty')}
         </div>
       ) : (
         <div className="space-y-2">

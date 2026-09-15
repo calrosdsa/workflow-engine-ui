@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { contentApi, type ContentOwner } from '@/features/content/api'
 import type { ContentObject } from '@/features/content/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { MenuIcon } from './MenuIcon'
 import {
   MENU_ICON_GROUPS, resolveMenuIcon, iconSearchText, toKebabIconName,
@@ -42,6 +43,7 @@ interface MenuIconPickerProps {
  *  state: clearing an icon is something authors do on purpose, and a
  *  disabled-looking blank cell wouldn't say what clearing gets you. */
 export function MenuIconPicker({ value, onChange, fallbackIcon: Fallback, disabled }: MenuIconPickerProps) {
+  const t = useTranslation()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -68,7 +70,7 @@ export function MenuIconPicker({ value, onChange, fallbackIcon: Fallback, disabl
       // nobody uploads an icon in order to then pick it out of a grid.
       choose(customIconValue(obj.id))
     },
-    onError: () => setUploadError('Upload failed — try again.'),
+    onError: () => setUploadError(t('menus.icon_picker.upload_failed')),
   })
 
   const deleteMutation = useMutation({
@@ -98,7 +100,7 @@ export function MenuIconPicker({ value, onChange, fallbackIcon: Fallback, disabl
   const handleFile = (file: File | undefined) => {
     setUploadError(null)
     if (!file) return
-    const problem = validateCustomIconFile(file)
+    const problem = validateCustomIconFile(file, t)
     if (problem) {
       setUploadError(problem)
       return
@@ -127,7 +129,7 @@ export function MenuIconPicker({ value, onChange, fallbackIcon: Fallback, disabl
             className={value ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--muted-foreground))]'}
           />
           <span className={cn('min-w-0 flex-1 truncate text-left', !value && 'text-[hsl(var(--muted-foreground))]')}>
-            {selectedContentId ? 'Uploaded icon' : Selected ? value : 'Default'}
+            {selectedContentId ? t('menus.icon_picker.uploaded_icon') : Selected ? value : t('menus.icon_picker.default')}
           </span>
           {value && !disabled && (
             // A span, not a nested button: this trigger is itself a button,
@@ -136,7 +138,7 @@ export function MenuIconPicker({ value, onChange, fallbackIcon: Fallback, disabl
             <span
               role="button"
               tabIndex={0}
-              aria-label="Clear icon"
+              aria-label={t('menus.icon_picker.clear_icon')}
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); onChange(undefined) }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onChange(undefined) }
@@ -158,7 +160,7 @@ export function MenuIconPicker({ value, onChange, fallbackIcon: Fallback, disabl
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search icons…"
+              placeholder={t('menus.icon_picker.search_placeholder')}
               className="h-8 pl-7 text-xs"
             />
           </div>
@@ -176,7 +178,7 @@ export function MenuIconPicker({ value, onChange, fallbackIcon: Fallback, disabl
             )}
           >
             <Fallback size={14} className="shrink-0" />
-            Default — this menu type&apos;s icon
+            {t('menus.icon_picker.default_option_hint')}
           </button>
 
           {/* Upload + the app's own icon library. Kept above the catalog so
@@ -185,7 +187,7 @@ export function MenuIconPicker({ value, onChange, fallbackIcon: Fallback, disabl
           <div className="mb-2 rounded-md border border-[hsl(var(--border))] p-2">
             <div className="mb-1.5 flex items-center justify-between">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
-                Custom
+                {t('menus.icon_picker.custom_label')}
               </p>
               <button
                 type="button"
@@ -194,7 +196,7 @@ export function MenuIconPicker({ value, onChange, fallbackIcon: Fallback, disabl
                 className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-[hsl(var(--primary))] hover:bg-[hsl(var(--muted))]/60 disabled:opacity-50"
               >
                 {uploadMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />}
-                {uploadMutation.isPending ? 'Uploading…' : 'Upload'}
+                {uploadMutation.isPending ? t('menus.icon_picker.uploading') : t('menus.icon_picker.upload')}
               </button>
               <input
                 ref={fileInputRef}
@@ -234,8 +236,8 @@ export function MenuIconPicker({ value, onChange, fallbackIcon: Fallback, disabl
                     </button>
                     <button
                       type="button"
-                      title={`Delete ${obj.filename}`}
-                      aria-label={`Delete ${obj.filename}`}
+                      title={t('menus.icon_picker.delete_file', { filename: obj.filename })}
+                      aria-label={t('menus.icon_picker.delete_file', { filename: obj.filename })}
                       onClick={() => deleteMutation.mutate(obj.id)}
                       disabled={deleteMutation.isPending}
                       className="absolute -right-1 -top-1 hidden rounded-full bg-[hsl(var(--card))] p-0.5 text-[hsl(var(--muted-foreground))] shadow hover:text-[hsl(var(--destructive))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] group-focus-within:block group-hover:block"
@@ -247,21 +249,20 @@ export function MenuIconPicker({ value, onChange, fallbackIcon: Fallback, disabl
               </div>
             ) : (
               <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-                Upload a PNG, SVG, WebP or JPEG. Transparency is preserved, and uploads are shared across
-                this app&apos;s menus.
+                {t('menus.icon_picker.upload_hint')}
               </p>
             )}
           </div>
 
           {groups.length === 0 ? (
             <p className="py-6 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
-              No icon matches “{query}”.
+              {t('menus.icon_picker.no_matches', { query })}
             </p>
           ) : (
             groups.map((group) => (
-              <div key={group.label} className="mb-2 last:mb-0">
+              <div key={group.key} className="mb-2 last:mb-0">
                 <p className="mb-1 px-0.5 text-[10px] font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
-                  {group.label}
+                  {t(`menus.icon_picker.groups.${group.key}`)}
                 </p>
                 <div className="grid grid-cols-8 gap-1">
                   {group.icons.map(({ name, Icon }) => {

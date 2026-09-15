@@ -256,6 +256,10 @@ export type PickerContext =
 //   left / right   → make a parallel sibling (shares the target's parent)
 export type DropPosition = 'before' | 'after' | 'left' | 'right'
 
+// reorderNode only ever receives before/after — left/right drop zones are
+// translated to before/after before reaching it (see BaseNode's handleDrop).
+type SplicePosition = 'before' | 'after'
+
 // A point-in-time copy of everything undo/redo restores. Positions are
 // included so undoing a structural change also rolls back the re-layout.
 interface HistorySnapshot {
@@ -281,17 +285,22 @@ export interface BuilderState {
   undo: () => void
   redo: () => void
 
-  // Exclusive sidebar state (FR-C5-008) — at most one of Variables/Node
-  // Config/Executions open at a time. varsPanelOpen/configPanelOpen/
+  // Exclusive sidebar state (FR-C5-008) — at most one of Outline/Variables/
+  // Node Config/Executions open at a time (all four now surface only via the
+  // header's tab nav — see WorkflowBuilderPage — so no left-edge rail is ever
+  // left half-open behind it). outlinePanelOpen/varsPanelOpen/configPanelOpen/
   // executionsPanelOpen are derived getters kept for call-site compatibility
-  // with the three panels, which each still just read "am I open."
-  activeSidebar: 'variables' | 'config' | 'executions' | null
+  // with the four panels, which each still just read "am I open."
+  activeSidebar: 'outline' | 'variables' | 'config' | 'executions' | 'evaluations' | null
+  outlinePanelOpen: boolean
   varsPanelOpen:    boolean
   configPanelOpen:  boolean
   executionsPanelOpen: boolean
+  evaluationsPanelOpen: boolean
   /** Personal canvas preference, deliberately not serialized into a workflow
    * definition: a run overlay is inspection state, not workflow behavior. */
   showCompletedSteps: boolean
+  toggleOutlinePanel: () => void
   toggleVarsPanel:  () => void
   toggleConfigPanel:() => void
   toggleExecutionsPanel: () => void
@@ -299,6 +308,7 @@ export interface BuilderState {
    *  (e.g. a Run completing) where flipping an already-open panel closed
    *  would be wrong. */
   openExecutionsPanel: () => void
+  toggleEvaluationsPanel: () => void
   setShowCompletedSteps: (show: boolean) => void
   closeActiveSidebar: () => void
 
@@ -330,7 +340,7 @@ export interface BuilderState {
   addNode:              (type: NodeType | (string & {}), position?: { x: number; y: number }) => void
   addConnectedNode:     (type: NodeType | (string & {}), sourceNodeId: string, sourceHandle?: string) => void
   insertNodeOnEdge:     (type: NodeType | (string & {}), edgeId: string) => void
-  reorderNode:          (draggedId: string, targetId: string, position: DropPosition) => void
+  reorderNode:          (draggedId: string, targetId: string, position: SplicePosition) => void
   deleteBranch:         (parentId: string, branchRootId: string) => void
   swapLastTwoBranches:  (parentId: string) => void
   updateNodeConfig:     (nodeId: string, config: unknown) => void
@@ -447,25 +457,35 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
   // The canvas is the primary work surface. Utility panels remain exclusive,
   // but start closed so a new workflow opens with a readable graph.
   activeSidebar:       null,
+  outlinePanelOpen:    false,
   varsPanelOpen:       false,
   configPanelOpen:     false,
   executionsPanelOpen: false,
+  evaluationsPanelOpen: false,
   showCompletedSteps:  true,
+  toggleOutlinePanel: () => set((s) => {
+    const next = s.activeSidebar === 'outline' ? null : 'outline'
+    return { activeSidebar: next, outlinePanelOpen: next === 'outline', varsPanelOpen: false, configPanelOpen: false, executionsPanelOpen: false, evaluationsPanelOpen: false }
+  }),
   toggleVarsPanel: () => set((s) => {
     const next = s.activeSidebar === 'variables' ? null : 'variables'
-    return { activeSidebar: next, varsPanelOpen: next === 'variables', configPanelOpen: false, executionsPanelOpen: false }
+    return { activeSidebar: next, outlinePanelOpen: false, varsPanelOpen: next === 'variables', configPanelOpen: false, executionsPanelOpen: false, evaluationsPanelOpen: false }
   }),
   toggleConfigPanel: () => set((s) => {
     const next = s.activeSidebar === 'config' ? null : 'config'
-    return { activeSidebar: next, varsPanelOpen: false, configPanelOpen: next === 'config', executionsPanelOpen: false }
+    return { activeSidebar: next, outlinePanelOpen: false, varsPanelOpen: false, configPanelOpen: next === 'config', executionsPanelOpen: false, evaluationsPanelOpen: false }
   }),
   toggleExecutionsPanel: () => set((s) => {
     const next = s.activeSidebar === 'executions' ? null : 'executions'
-    return { activeSidebar: next, varsPanelOpen: false, configPanelOpen: false, executionsPanelOpen: next === 'executions' }
+    return { activeSidebar: next, outlinePanelOpen: false, varsPanelOpen: false, configPanelOpen: false, executionsPanelOpen: next === 'executions', evaluationsPanelOpen: false }
   }),
-  openExecutionsPanel: () => set({ activeSidebar: 'executions', varsPanelOpen: false, configPanelOpen: false, executionsPanelOpen: true }),
+  openExecutionsPanel: () => set({ activeSidebar: 'executions', outlinePanelOpen: false, varsPanelOpen: false, configPanelOpen: false, executionsPanelOpen: true, evaluationsPanelOpen: false }),
+  toggleEvaluationsPanel: () => set((s) => {
+    const next = s.activeSidebar === 'evaluations' ? null : 'evaluations'
+    return { activeSidebar: next, outlinePanelOpen: false, varsPanelOpen: false, configPanelOpen: false, executionsPanelOpen: false, evaluationsPanelOpen: next === 'evaluations' }
+  }),
   setShowCompletedSteps: (show) => set({ showCompletedSteps: show }),
-  closeActiveSidebar: () => set({ activeSidebar: null, varsPanelOpen: false, configPanelOpen: false, executionsPanelOpen: false }),
+  closeActiveSidebar: () => set({ activeSidebar: null, outlinePanelOpen: false, varsPanelOpen: false, configPanelOpen: false, executionsPanelOpen: false, evaluationsPanelOpen: false }),
 
   draggingNodeId:      null,
   activeDropTarget:    null,
@@ -705,8 +725,6 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
   // Reorder: detach draggedId from its current position and re-attach it
   // relative to targetId, rewiring all edges automatically.
   //   before / after → splice into the sequence (re-chain the line)
-  //   left / right   → make a parallel sibling sharing the target's parents;
-  //                    the dragged node's ENTIRE downstream subtree moves with it
   reorderNode: (draggedId, targetId, position) => {
     if (draggedId === targetId) return
     pushHistory()
@@ -729,73 +747,33 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
     const removeIds = new Set<string>()
     const newEdges: FlowEdge[] = []
 
-    // siblingX is set for left/right moves: the x the dragged subtree's root
-    // should sit at relative to the target, so execution order (which sorts
-    // children by position.x) matches the drop side immediately, before dagre
-    // re-runs. left → just left of target; right → just right of target.
-    let siblingX: number | null = null
+    // position === 'before' | 'after': splice dragged into a new spot in
+    // the sequence. First detach it completely from its old spot and
+    // bridge the gap it leaves — each old parent reconnects straight to
+    // each old child, carrying over the branch handle that fed it, so
+    // removing dragged from the middle of a chain doesn't strand either
+    // side. (Empty on either side means no bridge: the neighbor correctly
+    // becomes a terminal node, or a new root.)
+    for (const e of incomingToDragged)   removeIds.add(e.id)
+    for (const e of outgoingFromDragged) removeIds.add(e.id)
+    for (const p of incomingToDragged) {
+      for (const c of outgoingFromDragged) {
+        newEdges.push(mk(p.source, c.target, p.sourceHandle ?? 'out', c.targetHandle ?? 'in'))
+      }
+    }
 
-    if (position === 'left' || position === 'right') {
-      // Parallel sibling. Detach the dragged node from its OWN parents only —
-      // its outgoing edges are LEFT INTACT, so the whole downstream subtree
-      // travels with it (Bug 2). Re-attach the dragged node under each of the
-      // target's parents, making it a sibling of target.
-      for (const e of incomingToDragged) removeIds.add(e.id)
+    if (position === 'before') {
+      // target's old parents now feed dragged instead; dragged feeds target.
+      for (const e of incomingToTarget) removeIds.add(e.id)
       for (const e of incomingToTarget) {
         newEdges.push(mk(e.source, draggedId, e.sourceHandle ?? 'out', 'in'))
       }
-
-      // Position the dragged root just to the left/right of the target so the
-      // left-to-right execution order reflects the drop side (Bug 1). dagre will
-      // refine spacing on the subsequent layout pass but preserve this ordering.
-      const targetNode = s.nodes.find((n) => n.id === targetId)
-      if (targetNode) {
-        siblingX = position === 'left'
-          ? targetNode.position.x - (NODE_WIDTH + 60)
-          : targetNode.position.x + (NODE_WIDTH + 60)
-      }
-    } else if (position === 'before') {
-      // Insert dragged immediately before target in the chain.
-      for (const e of incomingToDragged)   removeIds.add(e.id)
-      for (const e of outgoingFromDragged) removeIds.add(e.id)
-      for (const e of incomingToTarget)    removeIds.add(e.id)
-
-      // dragged's old parents → dragged
-      for (const e of incomingToDragged) {
-        newEdges.push(mk(e.source, draggedId, e.sourceHandle ?? 'out', 'in'))
-      }
-      // target's old parents → dragged
-      for (const e of incomingToTarget) {
-        if (!incomingToDragged.some((de) => de.source === e.source)) {
-          newEdges.push(mk(e.source, draggedId, e.sourceHandle ?? 'out', 'in'))
-        }
-      }
-      // dragged → target
       newEdges.push(mk(draggedId, targetId))
-      // dragged's old children rerouted from target
-      for (const e of outgoingFromDragged) {
-        if (e.target !== targetId) {
-          newEdges.push(mk(targetId, e.target, 'out', e.targetHandle ?? 'in'))
-        }
-      }
     } else {
-      // position === 'after': insert dragged immediately after target.
-      for (const e of incomingToDragged)   removeIds.add(e.id)
-      for (const e of outgoingFromDragged) removeIds.add(e.id)
-      for (const e of outgoingFromTarget)  removeIds.add(e.id)
-
-      // target → dragged
+      // target feeds dragged; dragged feeds target's old children instead.
+      for (const e of outgoingFromTarget) removeIds.add(e.id)
       newEdges.push(mk(targetId, draggedId))
-      // dragged's old parents → target's old children
       for (const e of outgoingFromTarget) {
-        if (e.target !== draggedId) {
-          for (const pe of incomingToDragged) {
-            newEdges.push(mk(pe.source, e.target, pe.sourceHandle ?? 'out', 'in'))
-          }
-        }
-      }
-      // dragged → its old children
-      for (const e of outgoingFromDragged) {
         newEdges.push(mk(draggedId, e.target, 'out', e.targetHandle ?? 'in'))
       }
     }
@@ -806,7 +784,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
     // source→target pairs, and drop any edge whose endpoints don't both exist.
     const nodeIds = new Set(s.nodes.map((n) => n.id))
     const seen = new Set<string>()
-    let finalEdges = [...keptEdges, ...newEdges].filter((e) => {
+    const finalEdges = [...keptEdges, ...newEdges].filter((e) => {
       if (e.source === e.target) return false
       if (!nodeIds.has(e.source) || !nodeIds.has(e.target)) return false
       const key = `${e.source}→${e.target}`
@@ -815,44 +793,9 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
       return true
     })
 
-    // For a left/right move, dagre lays siblings out in edge order — but
-    // empirically (verified against @dagrejs/dagre directly) the LAST edge
-    // added from a shared parent ends up on the LEFT and the FIRST stays on
-    // the RIGHT, the opposite of the naive assumption. So to land the dragged
-    // node on the requested side, a 'left' drop must make parent→dragged the
-    // LAST edge from that parent (insert after parent→target) and a 'right'
-    // drop must make it come BEFORE parent→target.
-    if (position === 'left' || position === 'right') {
-      const parents = incomingToTarget.map((e) => e.source)
-      for (const parent of parents) {
-        const di = finalEdges.findIndex((e) => e.source === parent && e.target === draggedId)
-        const ti = finalEdges.findIndex((e) => e.source === parent && e.target === targetId)
-        if (di === -1 || ti === -1) continue
-        const [draggedEdge] = finalEdges.splice(di, 1)
-        // Recompute target index after the splice.
-        const ti2 = finalEdges.findIndex((e) => e.source === parent && e.target === targetId)
-        const insertAt = position === 'left' ? ti2 + 1 : ti2
-        finalEdges = [
-          ...finalEdges.slice(0, insertAt),
-          draggedEdge,
-          ...finalEdges.slice(insertAt),
-        ]
-      }
-    }
-
-    // Nudge the dragged subtree's root x so execution order (sorted by x) matches
-    // the drop side immediately; dagre refines positions on the next layout pass.
-    const nodes = siblingX === null
-      ? s.nodes
-      : s.nodes.map((n) =>
-          n.id === draggedId
-            ? { ...n, position: { ...n.position, x: siblingX as number } }
-            : n,
-        )
-
     set(() => ({
-      nodes,
-      edges:   finalEdges,
+      nodes: s.nodes,
+      edges: finalEdges,
       isDirty: true,
     }))
   },
@@ -968,7 +911,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
   // own onPaneClick additionally calls closeActiveSidebar for that case.
   selectNode: (id) => set(() => {
     if (id === null) return { selectedNodeId: null }
-    return { selectedNodeId: id, activeSidebar: 'config', varsPanelOpen: false, configPanelOpen: true, executionsPanelOpen: false }
+    return { selectedNodeId: id, activeSidebar: 'config', outlinePanelOpen: false, varsPanelOpen: false, configPanelOpen: true, executionsPanelOpen: false, evaluationsPanelOpen: false }
   }),
 
   // Deletes one node, healing the chain (parents bridged to children).
@@ -1076,9 +1019,11 @@ export const useBuilderStore = create<BuilderState>((set, get) => {
         nodes,
         selectedNodeId:   nodeId,
         activeSidebar:    'config',
+        outlinePanelOpen: false,
         varsPanelOpen:    false,
         configPanelOpen:  true,
         executionsPanelOpen: false,
+        evaluationsPanelOpen: false,
         isDirty:          true,
       }
     })

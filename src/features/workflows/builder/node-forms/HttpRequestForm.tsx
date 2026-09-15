@@ -22,6 +22,7 @@ import type {
   VariableDecl, HttpRequestConfig, HTTPMethod, HTTPAuthType, HTTPBodyMode, ValueMode,
   ResponseSchema, ResponseSchemaField, ResponseFieldType, ResponseSchemaKind, ResponseSchemaSource,
 } from '../../types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 const METHODS: HTTPMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD']
 
@@ -70,13 +71,14 @@ export interface HttpRequestFormProps {
 }
 
 export function HttpRequestForm({ config, variables, nodeContext, onChange }: HttpRequestFormProps) {
+  const t = useTranslation()
   const set = (patch: Partial<HttpRequestConfig>) => onChange({ ...config, ...patch })
 
   return (
     <div className="space-y-4">
       {/* Method + URL bar */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Request</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.request')}</Label>
         <div className="flex gap-1.5">
           <select
             value={config.method}
@@ -93,7 +95,7 @@ export function HttpRequestForm({ config, variables, nodeContext, onChange }: Ht
                 variables={variables}
                 nodeContext={nodeContext}
                 placeholder='AppSettings["base_url"] + "/items"'
-                label="url"
+                label="URL"
               />
             ) : (
               <Input
@@ -115,10 +117,10 @@ export function HttpRequestForm({ config, variables, nodeContext, onChange }: Ht
 
       <Tabs defaultValue="params">
         <TabsList className="w-full">
-          <TabsTrigger value="params" className="flex-1">Params</TabsTrigger>
-          <TabsTrigger value="headers" className="flex-1">Headers</TabsTrigger>
-          <TabsTrigger value="body" className="flex-1">Body</TabsTrigger>
-          <TabsTrigger value="auth" className="flex-1">Auth</TabsTrigger>
+          <TabsTrigger value="params" className="flex-1">{t('workflows.node_forms.params')}</TabsTrigger>
+          <TabsTrigger value="headers" className="flex-1">{t('workflows.node_forms.headers')}</TabsTrigger>
+          <TabsTrigger value="body" className="flex-1">{t('workflows.node_forms.body')}</TabsTrigger>
+          <TabsTrigger value="auth" className="flex-1">{t('workflows.node_forms.auth')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="params" className="mt-3">
@@ -127,8 +129,8 @@ export function HttpRequestForm({ config, variables, nodeContext, onChange }: Ht
             variables={variables}
             nodeContext={nodeContext}
             onChange={(rows) => set({ params: rows })}
-            keyPlaceholder="param name"
-            addLabel="Add param"
+            keyPlaceholder={t('workflows.http.param_name')}
+            addLabel={t('workflows.http.add_param')}
           />
         </TabsContent>
 
@@ -138,8 +140,8 @@ export function HttpRequestForm({ config, variables, nodeContext, onChange }: Ht
             variables={variables}
             nodeContext={nodeContext}
             onChange={(rows) => set({ headers: rows })}
-            keyPlaceholder="header name"
-            addLabel="Add header"
+            keyPlaceholder={t('workflows.http.header_name')}
+            addLabel={t('workflows.http.add_header')}
           />
         </TabsContent>
 
@@ -164,7 +166,7 @@ export function HttpRequestForm({ config, variables, nodeContext, onChange }: Ht
       <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Timeout (ms)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.timeout')}</Label>
         <Input
           type="number"
           min={0}
@@ -176,7 +178,7 @@ export function HttpRequestForm({ config, variables, nodeContext, onChange }: Ht
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Store In (optional)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.store_in')}</Label>
         <Input
           value={config.output_var ?? ''}
           onChange={(e) => set({ output_var: e.target.value })}
@@ -184,8 +186,7 @@ export function HttpRequestForm({ config, variables, nodeContext, onChange }: Ht
           className="h-8 font-mono text-[12px]"
         />
         <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-          The response (status/headers/body) is always available downstream as this node's output — this only
-          also mirrors it into a workflow variable.
+          {t('workflows.http.store_in_help')}
         </p>
       </div>
     </div>
@@ -198,6 +199,7 @@ export function HttpRequestForm({ config, variables, nodeContext, onChange }: Ht
 // ---------------------------------------------------------------------------
 
 function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMode) => void }) {
+  const t = useTranslation()
   return (
     <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
       {(['static', 'expression'] as const).map((m) => (
@@ -210,7 +212,7 @@ function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMo
             mode === m ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
           )}
         >
-          {m === 'static' ? 'Static' : 'Expression'}
+          {m === 'static' ? t('workflows.node_forms.static') : t('workflows.node_forms.expression')}
         </button>
       ))}
     </div>
@@ -244,6 +246,7 @@ function ResponseSchemaSection({ config, variables, schemas, onChange }: {
   schemas: ResponseSchema[]
   onChange: (schemas: ResponseSchema[]) => void
 }) {
+  const t = useTranslation()
   const [open, setOpen] = useState(true)
 
   const addSchema = () => onChange([...schemas, newResponseSchema()])
@@ -260,7 +263,7 @@ function ResponseSchemaSection({ config, variables, schemas, onChange }: {
       >
         <Table2 size={12} className="text-[hsl(var(--primary))]" />
         <Label className="cursor-pointer text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-          Output Schema
+          {t('workflows.http.output_schema')}
         </Label>
         {schemas.length > 0 && (
           <span className="rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))]">
@@ -275,10 +278,7 @@ function ResponseSchemaSection({ config, variables, schemas, onChange }: {
       {open && (
         <div className="space-y-2.5">
           <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-            Map JSONPath into named, typed fields — they'll show up as their own entry in the downstream
-            expression editor, e.g. <span className="font-mono text-[hsl(var(--primary))]">Users → Id</span>. A{' '}
-            <span className="font-mono text-[hsl(var(--primary))]">List Of Objects</span> schema becomes a real array you
-            can drop into an Iterator's source list, with each field autocompleting inside the loop body.
+            {t('workflows.http.output_schema_help')}
           </p>
 
           <AutoMapPanel config={config} variables={variables} onAddSchema={(schema) => onChange([...schemas, schema])} />
@@ -298,7 +298,7 @@ function ResponseSchemaSection({ config, variables, schemas, onChange }: {
             onClick={addSchema}
             className="h-7 w-full gap-1.5 border-dashed text-[11px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           >
-            <Plus size={12} /> Add New Schema
+            <Plus size={12} /> {t('workflows.http.add_schema')}
           </Button>
         </div>
       )}
@@ -311,6 +311,7 @@ function SchemaCard({ schema, onChange, onRemove }: {
   onChange: (patch: Partial<ResponseSchema>) => void
   onRemove: () => void
 }) {
+  const t = useTranslation()
   const [open, setOpen] = useState(true)
 
   const addField = () => onChange({ fields: [...schema.fields, newResponseSchemaField()] })
@@ -325,20 +326,20 @@ function SchemaCard({ schema, onChange, onRemove }: {
         <button
           onClick={onRemove}
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
-          title="Remove schema"
+          title={t('workflows.node_forms.remove_schema')}
         >
           <Trash2 size={12} />
         </button>
         <Input
           value={schema.name}
           onChange={(e) => onChange({ name: e.target.value })}
-          placeholder="Schema name, e.g. Users"
+          placeholder={t('workflows.auto_map.schema_name')}
           className="h-7 min-w-0 flex-1 text-[12px] font-semibold"
         />
         <button
           onClick={() => setOpen((o) => !o)}
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]"
-          title={open ? 'Collapse' : 'Expand'}
+          title={open ? t('workflows.node_forms.collapse') : t('workflows.node_forms.expand')}
         >
           {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
         </button>
@@ -349,7 +350,7 @@ function SchemaCard({ schema, onChange, onRemove }: {
           {/* Type + Source */}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <p className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">Type</p>
+              <p className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">{t('workflows.http.type')}</p>
               <div className="flex gap-1 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))] p-1">
                 {(['list', 'single'] as ResponseSchemaKind[]).map((k) => (
                   <button
@@ -361,13 +362,13 @@ function SchemaCard({ schema, onChange, onRemove }: {
                       schema.kind === k ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
                     )}
                   >
-                    {k === 'list' ? 'List Of Objects' : 'Single Object'}
+                    {k === 'list' ? t('workflows.http.list_objects') : t('workflows.http.single_object')}
                   </button>
                 ))}
               </div>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">Source</p>
+              <p className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.source')}</p>
               <div className="flex gap-1 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))] p-1">
                 {(['body', 'headers'] as ResponseSchemaSource[]).map((src) => (
                   <button
@@ -390,7 +391,7 @@ function SchemaCard({ schema, onChange, onRemove }: {
           <div className="space-y-1.5">
             {schema.fields.length === 0 && (
               <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-2.5 text-center text-[10.5px] text-[hsl(var(--muted-foreground))]">
-                No fields yet — add one below.
+                {t('workflows.http.no_fields_add_one')}
               </p>
             )}
             {schema.fields.map((f) => (
@@ -405,8 +406,7 @@ function SchemaCard({ schema, onChange, onRemove }: {
           </div>
 
           <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-            Declared type is applied on a best-effort basis (e.g. a numeric string becomes a real number) —
-            a value that can't be converted is published as extracted rather than failing the request.
+            {t('workflows.http.type_help')}
           </p>
 
           <Button
@@ -415,7 +415,7 @@ function SchemaCard({ schema, onChange, onRemove }: {
             onClick={addField}
             className="h-7 w-full gap-1.5 border-dashed text-[11px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           >
-            <Plus size={12} /> Add field
+            <Plus size={12} /> {t('workflows.node_forms.add')} {t('workflows.http.field_lower')}
           </Button>
         </div>
       )}
@@ -441,6 +441,7 @@ function SchemaFieldRow({ field, source, depth = 0, onChange, onRemove }: {
   onChange: (patch: Partial<ResponseSchemaField>) => void
   onRemove: () => void
 }) {
+  const t = useTranslation()
   const isList = field.type === 'list'
   const nested = field.fields ?? []
 
@@ -455,7 +456,7 @@ function SchemaFieldRow({ field, source, depth = 0, onChange, onRemove }: {
         <Input
           value={field.path}
           onChange={(e) => onChange({ path: e.target.value })}
-          placeholder={source === 'headers' ? 'header name, e.g. content-type' : isList ? 'JSONPath to the array, e.g. items' : 'JSONPath, e.g. address.geo.lat'}
+          placeholder={source === 'headers' ? t('workflows.http.header_path_placeholder') : isList ? t('workflows.http.array_path_placeholder') : t('workflows.http.path_placeholder')}
           className="h-7 min-w-0 flex-1 font-mono text-[11px]"
         />
         <span className="shrink-0 text-[11px] text-[hsl(var(--muted-foreground))]/60">=</span>
@@ -467,18 +468,18 @@ function SchemaFieldRow({ field, source, depth = 0, onChange, onRemove }: {
           }}
           className="h-7 shrink-0 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-1.5 text-[11px] capitalize text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none"
         >
-          {fieldTypeOptionsFor(source).map((t) => <option key={t} value={t}>{t === 'list' ? 'List of objects' : t}</option>)}
+          {fieldTypeOptionsFor(source).map((fieldType) => <option key={fieldType} value={fieldType}>{fieldType === 'list' ? t('workflows.http.list_objects') : fieldType}</option>)}
         </select>
         <Input
           value={field.name}
           onChange={(e) => onChange({ name: e.target.value })}
-          placeholder="e.g. Id"
+          placeholder={t('workflows.http.field_name_placeholder')}
           className="h-7 min-w-0 flex-1 text-[11px]"
         />
         <button
           onClick={onRemove}
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
-          title="Remove field"
+          title={t('workflows.node_forms.remove_field')}
         >
           <Trash2 size={11} />
         </button>
@@ -488,7 +489,7 @@ function SchemaFieldRow({ field, source, depth = 0, onChange, onRemove }: {
         <div className="mt-1.5 space-y-1.5 pl-3">
           {nested.length === 0 && (
             <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-2 text-center text-[10px] text-[hsl(var(--muted-foreground))]">
-              No fields yet for each item in this list.
+              {t('workflows.http.no_nested_fields')}
             </p>
           )}
           {nested.map((f) => (
@@ -507,7 +508,7 @@ function SchemaFieldRow({ field, source, depth = 0, onChange, onRemove }: {
             onClick={addNested}
             className="h-6 w-full gap-1.5 border-dashed text-[10.5px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           >
-            <Plus size={11} /> Add nested field
+            <Plus size={11} /> {t('workflows.http.add_nested_field')}
           </Button>
         </div>
       )}
@@ -525,6 +526,7 @@ function BodyTab({ config, variables, nodeContext, onChange }: {
   nodeContext: NodeOutputSchema[]
   onChange: (patch: Partial<HttpRequestConfig>) => void
 }) {
+  const t = useTranslation()
   const mode = config.body_mode ?? 'none'
 
   return (
@@ -540,14 +542,14 @@ function BodyTab({ config, variables, nodeContext, onChange }: {
               mode === m ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
             )}
           >
-            {m}
+            {m === 'none' ? t('workflows.http.none') : m === 'json' ? t('workflows.http.json') : m === 'form' ? t('workflows.http.form') : t('workflows.http.raw')}
           </button>
         ))}
       </div>
 
       {mode === 'none' && (
         <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-4 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
-          This request has no body.
+          {t('workflows.http.no_body')}
         </p>
       )}
 
@@ -557,7 +559,7 @@ function BodyTab({ config, variables, nodeContext, onChange }: {
             <Input
               value={config.body_raw_content_type ?? ''}
               onChange={(e) => onChange({ body_raw_content_type: e.target.value })}
-              placeholder="Content-Type, e.g. text/plain"
+              placeholder={t('workflows.http.content_type_placeholder')}
               className="h-7 font-mono text-[11px]"
             />
           )}
@@ -572,7 +574,7 @@ function BodyTab({ config, variables, nodeContext, onChange }: {
               variables={variables}
               nodeContext={nodeContext}
               placeholder='Vars["payload"]'
-              label="body"
+              label={t('workflows.node_forms.body')}
             />
           ) : (
             <textarea
@@ -592,8 +594,8 @@ function BodyTab({ config, variables, nodeContext, onChange }: {
           variables={variables}
           nodeContext={nodeContext}
           onChange={(rows) => onChange({ body_form: rows })}
-          keyPlaceholder="field name"
-          addLabel="Add field"
+          keyPlaceholder={t('workflows.http.field_name')}
+          addLabel={`${t('workflows.node_forms.add')} ${t('workflows.http.field_lower')}`}
         />
       )}
     </div>
@@ -618,6 +620,7 @@ function AuthTab({ config, variables, nodeContext, onChange }: {
   nodeContext: NodeOutputSchema[]
   onChange: (patch: Partial<HttpRequestConfig>) => void
 }) {
+  const t = useTranslation()
   const authType = config.auth_type ?? 'none'
 
   return (
@@ -627,21 +630,21 @@ function AuthTab({ config, variables, nodeContext, onChange }: {
         onChange={(e) => onChange({ auth_type: e.target.value as HTTPAuthType })}
         className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2.5 py-1.5 text-[12px] font-medium text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none"
       >
-        {(Object.keys(AUTH_TYPE_LABELS) as HTTPAuthType[]).map((t) => (
-          <option key={t} value={t}>{AUTH_TYPE_LABELS[t]}</option>
+        {(Object.keys(AUTH_TYPE_LABELS) as HTTPAuthType[]).map((authTypeKey) => (
+          <option key={authTypeKey} value={authTypeKey}>{t(`workflows.http.auth_${authTypeKey}`)}</option>
         ))}
       </select>
 
       {authType === 'none' && (
         <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-4 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
-          No authentication.
+          {t('workflows.http.no_authentication')}
         </p>
       )}
 
       {authType === 'basic' && (
         <div className="space-y-2">
           <StaticOrExprField
-            label="Username"
+            label={t('workflows.http.username')}
             mode={config.auth_username_mode ?? 'static'}
             value={config.auth_username ?? ''}
             expression={config.auth_username_expr ?? ''}
@@ -652,7 +655,7 @@ function AuthTab({ config, variables, nodeContext, onChange }: {
             onExpressionChange={(v) => onChange({ auth_username_expr: v })}
           />
           <StaticOrExprField
-            label="Password"
+            label={t('workflows.http.password')}
             mode={config.auth_password_mode ?? 'static'}
             value={config.auth_password ?? ''}
             expression={config.auth_password_expr ?? ''}
@@ -668,7 +671,7 @@ function AuthTab({ config, variables, nodeContext, onChange }: {
 
       {authType === 'bearer' && (
         <StaticOrExprField
-          label="Token"
+          label={t('workflows.http.token')}
           mode={config.auth_token_mode ?? 'static'}
           value={config.auth_token ?? ''}
           expression={config.auth_token_expr ?? ''}
@@ -684,7 +687,7 @@ function AuthTab({ config, variables, nodeContext, onChange }: {
       {authType === 'api_key' && (
         <div className="space-y-2">
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Key name</label>
+            <label className="mb-1 block text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('workflows.http.key_name')}</label>
             <Input
               value={config.auth_api_key_name ?? ''}
               onChange={(e) => onChange({ auth_api_key_name: e.target.value })}
@@ -708,7 +711,7 @@ function AuthTab({ config, variables, nodeContext, onChange }: {
             ))}
           </div>
           <StaticOrExprField
-            label="Value"
+            label={t('workflows.http.value')}
             mode={config.auth_api_key_value_mode ?? 'static'}
             value={config.auth_api_key_value ?? ''}
             expression={config.auth_api_key_value_expr ?? ''}
@@ -724,7 +727,7 @@ function AuthTab({ config, variables, nodeContext, onChange }: {
 
       {authType === 'credential' && (
         <div className="space-y-1.5">
-          <label className="mb-1 block text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Credential</label>
+          <label className="mb-1 block text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('workflows.http.credential')}</label>
           <CredentialSelect
             value={config.auth_credential || undefined}
             onChange={(name) => onChange({ auth_credential: name ?? '' })}

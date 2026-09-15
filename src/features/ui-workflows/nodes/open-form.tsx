@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenceSelect'
 import { registerUiWorkflowNode, type UiWorkflowNodeConfigPanelProps } from '../node-registry'
 import { Field } from './panel-kit'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { resolveValue } from '../values'
 import { MAX_FORM_DEPTH } from '../host'
 
@@ -75,32 +76,33 @@ export function parseOpenFormConfig(raw: unknown): OpenFormStepConfig {
 }
 
 function OpenFormPanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<OpenFormStepConfig>) {
+  const t = useTranslation()
   const setPrefill = (i: number, patch: Partial<OpenFormPrefill>) =>
     onChange({ ...config, prefill: config.prefill.map((p, idx) => (idx === i ? { ...p, ...patch } : p)) })
 
   return (
     <div className="space-y-2">
-      <Field label="Form to open" hint="Opens in a dialog. Its own rules and workflows apply, exactly as if they had navigated to it.">
+      <Field label={t('ui_workflows.panel.open_form.form_label')} hint={t('ui_workflows.panel.open_form.form_hint')}>
         <FormReferenceSelect
           value={config.form_id}
           onChange={(form_id) => onChange({ ...config, form_id: form_id ?? '' })}
         />
       </Field>
 
-      <Field label="Dialog title">
+      <Field label={t('ui_workflows.panel.open_form.dialog_title_label')}>
         <Input
           value={config.title ?? ''}
           onChange={(e) => onChange({ ...config, title: e.target.value })}
-          placeholder="New Customer"
+          placeholder={t('ui_workflows.panel.open_form.dialog_title_placeholder')}
           className="h-8 text-[12px]"
         />
       </Field>
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Start with these values</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('ui_workflows.panel.open_form.start_with_label')}</Label>
         {config.prefill.length === 0 && (
           <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-            Nothing prefilled — the form opens empty.
+            {t('ui_workflows.panel.open_form.nothing_prefilled')}
           </p>
         )}
         {config.prefill.map((entry, i) => (
@@ -108,15 +110,15 @@ function OpenFormPanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<Open
             <Input
               value={entry.field}
               onChange={(e) => setPrefill(i, { field: e.target.value })}
-              placeholder="field on that form"
+              placeholder={t('ui_workflows.panel.open_form.prefill_field_placeholder')}
               className="h-8 min-w-0 flex-1 font-mono text-[11px]"
             />
             <SelectMenu value={entry.source} onValueChange={(v) => setPrefill(i, { source: v as OpenFormPrefill['source'] })}>
               <SelectTrigger className="h-8 w-24 shrink-0 text-[11px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="static" className="text-[12px]">Value</SelectItem>
-                <SelectItem value="variable" className="text-[12px]">Variable</SelectItem>
-                <SelectItem value="field" className="text-[12px]">This record</SelectItem>
+                <SelectItem value="static" className="text-[12px]">{t('common.value')}</SelectItem>
+                <SelectItem value="variable" className="text-[12px]">{t('ui_workflows.panel.variable_label')}</SelectItem>
+                <SelectItem value="field" className="text-[12px]">{t('ui_workflows.panel.open_form.source_this_record')}</SelectItem>
               </SelectContent>
             </SelectMenu>
             <Input
@@ -136,7 +138,7 @@ function OpenFormPanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<Open
             />
             <Button
               type="button" variant="ghost" size="sm" className="h-7 w-7 shrink-0 p-0"
-              aria-label="Remove prefill"
+              aria-label={t('ui_workflows.panel.open_form.remove_prefill')}
               onClick={() => onChange({ ...config, prefill: config.prefill.filter((_, idx) => idx !== i) })}
             >
               <Trash2 size={11} />
@@ -147,28 +149,28 @@ function OpenFormPanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<Open
           type="button" variant="outline" size="sm" className="h-7 w-full gap-1 text-[11px]"
           onClick={() => onChange({ ...config, prefill: [...config.prefill, { field: '', source: 'static', value: '' }] })}
         >
-          <Plus size={11} /> Add value
+          <Plus size={11} /> {t('ui_workflows.panel.open_form.add_value')}
         </Button>
       </div>
 
-      <Field label="Store new record id in" hint="Lets a later step use what they just created.">
+      <Field label={t('ui_workflows.panel.store_new_id_label')} hint={t('ui_workflows.panel.open_form.store_id_hint')}>
         <Input
           value={config.output_variable ?? ''}
           onChange={(e) => onChange({ ...config, output_variable: e.target.value })}
-          placeholder="new_customer"
+          placeholder={t('ui_workflows.panel.open_form.store_id_placeholder')}
           className="h-8 font-mono text-[11px]"
         />
       </Field>
 
-      <Field label="If they close it without saving">
+      <Field label={t('ui_workflows.panel.open_form.if_cancel_label')}>
         <SelectMenu
           value={config.on_cancel}
           onValueChange={(v) => onChange({ ...config, on_cancel: v as OpenFormStepConfig['on_cancel'] })}
         >
           <SelectTrigger className="h-8 text-[12px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="stop" className="text-[12px]">Stop here</SelectItem>
-            <SelectItem value="continue" className="text-[12px]">Carry on to the next step</SelectItem>
+            <SelectItem value="stop" className="text-[12px]">{t('ui_workflows.panel.on_cancel.stop')}</SelectItem>
+            <SelectItem value="continue" className="text-[12px]">{t('ui_workflows.panel.on_cancel.continue')}</SelectItem>
           </SelectContent>
         </SelectMenu>
       </Field>

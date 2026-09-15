@@ -75,84 +75,86 @@ export function ExecutionLogsDock({ execution, loading, nodeLabels }: {
 
   const title = <span className="shrink-0 text-[13px] font-semibold text-[hsl(var(--foreground))]">{t('workflows.executions.logs.title')}</span>
   const runSummary = execution && <RunSummary execution={execution} />
+  const toggleLabel = t(open ? 'workflows.executions.logs.collapse' : 'workflows.executions.logs.expand')
 
-  if (!open) {
-    return (
-      <section ref={dockRef} aria-label={t('workflows.executions.logs.title')} className="shrink-0 border-t border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-expanded={false}
-          className="flex h-9 w-full items-center gap-3 px-3 text-left transition-colors hover:bg-[hsl(var(--muted))]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[hsl(var(--ring))]"
-          title={t('workflows.executions.logs.expand')}
-        >
-          {title}
-          {runSummary}
-          <ChevronUp size={15} className="ml-auto shrink-0 text-[hsl(var(--muted-foreground))]" aria-hidden="true" />
-          <span className="sr-only">{t('workflows.executions.logs.expand')}</span>
-        </button>
-      </section>
-    )
-  }
-
-  const collapseButton = (
-    <button
-      type="button"
-      onClick={() => setOpen(false)}
-      aria-expanded
-      aria-controls={bodyId}
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
-      title={t('workflows.executions.logs.collapse')}
-    >
-      <ChevronDown size={15} aria-hidden="true" />
-      <span className="sr-only">{t('workflows.executions.logs.collapse')}</span>
-    </button>
-  )
-
+  // Keyed children: the toggle stays the SAME DOM element in both states, so
+  // keyboard focus survives expand/collapse and screen readers hear
+  // aria-expanded flip. Without keys React would reuse the collapsed bar's
+  // <button> as the resize handle and drop the focused collapse button along
+  // with the body, leaving focus on <body>.
   return (
     <section
       ref={dockRef}
       aria-label={t('workflows.executions.logs.title')}
-      className="relative flex shrink-0 flex-col border-t border-[hsl(var(--border))] bg-[hsl(var(--card))]"
-      style={{ height, maxHeight: `${MAX_HEIGHT_RATIO * 100}%` }}
+      className={cn('shrink-0 border-t border-[hsl(var(--border))] bg-[hsl(var(--card))]', open && 'relative flex flex-col')}
+      style={open ? { height, maxHeight: `${MAX_HEIGHT_RATIO * 100}%` } : undefined}
     >
-      {/* Straddles the dock's own border-top, so at rest that 1px border is
-          the only line; hover/focus draws the same 2px primary rule as
-          NodeConfigPanel's pane splitters (.node-workbench-splitter). */}
+      {/* Collapsed, this IS the thin "Logs" bar; expanded, it becomes the
+          chevron in the dock's top-right corner, over the space the panel
+          keeps clear for it (reserveHeaderEnd). Outside the panel's grid, so
+          no narrow-column layout can clip it out of reach. */}
       <button
+        key="toggle"
         type="button"
-        aria-label={t('workflows.executions.logs.resize')}
-        onPointerDown={beginResize}
-        onKeyDown={resizeWithKeyboard}
-        className="absolute inset-x-0 top-0 z-[5] m-0 h-2 -translate-y-1/2 cursor-row-resize touch-none border-0 bg-transparent p-0 focus-visible:outline-none after:absolute after:inset-x-0 after:top-1/2 after:h-0.5 after:-translate-y-1/2 after:bg-[hsl(var(--primary))] after:opacity-0 after:content-[''] hover:after:opacity-100 focus-visible:after:opacity-100"
-      />
-      <div id={bodyId} className="flex min-h-0 flex-1 flex-col">
-        {execution ? (
-          <ExecutionLogsPanel
-            // Remount per run: page/selection/view state belongs to one run,
-            // and a stale page index would otherwise carry over to the next.
-            key={execution.execution_id}
-            variant="docked"
-            executionId={execution.execution_id}
-            executionStatus={execution.status}
-            executionFinishedAt={execution.finished_at}
-            nodeLabels={nodeLabels}
-            pageSize={DOCK_LOGS_PAGE_SIZE}
-            listHeader={<>{title}{runSummary}</>}
-            detailActions={collapseButton}
-          />
-        ) : (
-          <>
-            <div className="flex h-10 shrink-0 items-center gap-3 border-b border-[hsl(var(--border))] px-3">
-              {title}
-              <div className="ml-auto">{collapseButton}</div>
-            </div>
-            <div className="flex min-h-0 flex-1 items-center justify-center p-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
-              {loading ? <Spinner className="h-4 w-4" /> : t('workflows.executions.logs.no_execution_selected')}
-            </div>
-          </>
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-controls={open ? bodyId : undefined}
+        title={toggleLabel}
+        className={cn(
+          'flex items-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]',
+          open
+            ? 'absolute right-2 top-1.5 z-10 h-7 w-7 justify-center rounded-md text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]'
+            : 'h-9 w-full gap-3 px-3 text-left hover:bg-[hsl(var(--muted))]/60 focus-visible:ring-inset',
         )}
-      </div>
+      >
+        {!open && title}
+        {!open && runSummary}
+        {open
+          ? <ChevronDown size={15} aria-hidden="true" />
+          : <ChevronUp size={15} className="ml-auto shrink-0 text-[hsl(var(--muted-foreground))]" aria-hidden="true" />}
+        <span className="sr-only">{toggleLabel}</span>
+      </button>
+
+      {open && (
+        // Straddles the dock's own border-top, so at rest that 1px border is
+        // the only line; hover/focus draws the same 2px primary rule as
+        // NodeConfigPanel's pane splitters (.node-workbench-splitter).
+        <button
+          key="splitter"
+          type="button"
+          aria-label={t('workflows.executions.logs.resize')}
+          onPointerDown={beginResize}
+          onKeyDown={resizeWithKeyboard}
+          className="absolute inset-x-0 top-0 z-[5] m-0 h-2 -translate-y-1/2 cursor-row-resize touch-none border-0 bg-transparent p-0 focus-visible:outline-none after:absolute after:inset-x-0 after:top-1/2 after:h-0.5 after:-translate-y-1/2 after:bg-[hsl(var(--primary))] after:opacity-0 after:content-[''] hover:after:opacity-100 focus-visible:after:opacity-100"
+        />
+      )}
+
+      {open && (
+        <div key="body" id={bodyId} className="flex min-h-0 flex-1 flex-col">
+          {execution ? (
+            <ExecutionLogsPanel
+              // Remount per run: page/selection/view state belongs to one run,
+              // and a stale page index would otherwise carry over to the next.
+              key={execution.execution_id}
+              variant="docked"
+              executionId={execution.execution_id}
+              executionStatus={execution.status}
+              executionFinishedAt={execution.finished_at}
+              nodeLabels={nodeLabels}
+              pageSize={DOCK_LOGS_PAGE_SIZE}
+              listHeader={<>{title}{runSummary}</>}
+              reserveHeaderEnd
+            />
+          ) : (
+            <>
+              <div className="flex h-10 shrink-0 items-center gap-3 border-b border-[hsl(var(--border))] pl-3 pr-12">{title}</div>
+              <div className="flex min-h-0 flex-1 items-center justify-center p-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
+                {loading ? <Spinner className="h-4 w-4" /> : t('workflows.executions.logs.no_execution_selected')}
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </section>
   )
 }

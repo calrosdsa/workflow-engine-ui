@@ -4,6 +4,7 @@ import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenc
 import { useForm } from '@/features/forms/hooks'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, SaveRecordsConfig } from '../../types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 export function normaliseSaveRecordsConfig(raw: unknown): SaveRecordsConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<SaveRecordsConfig>
@@ -25,6 +26,7 @@ export interface SaveRecordsFormProps {
 }
 
 export function SaveRecordsForm({ config, variables, nodeContext, onChange }: SaveRecordsFormProps) {
+  const { t } = useI18n()
   const { data: form } = useForm(config.form_id || '')
   const fields = form?.fields ?? []
   const uniqueFields = fields.filter((f) => f.unique)
@@ -35,7 +37,7 @@ export function SaveRecordsForm({ config, variables, nodeContext, onChange }: Sa
     <div className="space-y-4">
       {/* Target form */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Form / Table</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.form_table')}</Label>
         <FormReferenceSelect value={config.form_id || undefined} onChange={(id) => set({ form_id: id ?? '' })} />
       </div>
 
@@ -43,11 +45,11 @@ export function SaveRecordsForm({ config, variables, nodeContext, onChange }: Sa
       {config.form_id && (
         uniqueFields.length === 0 ? (
           <p className="rounded-lg border border-dashed border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-2.5 text-[11px] text-[hsl(var(--warning))]">
-            This form has no unique fields. Mark at least one field unique in the form builder to use save_records.
+            {t('workflows.node_forms.no_unique_save')}
           </p>
         ) : (
           <p className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-2.5 text-[11px] text-[hsl(var(--muted-foreground))]">
-            Matches on: {uniqueFields.map((f) => f.label || f.name).join(', ')}
+            {t('workflows.node_forms.matches_on', { fields: uniqueFields.map((f) => f.label || f.name).join(', ') })}
           </p>
         )
       )}
@@ -56,22 +58,22 @@ export function SaveRecordsForm({ config, variables, nodeContext, onChange }: Sa
 
       {/* Source list */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Records to save</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.records_to_save')}</Label>
         <ExpressionField
           value={config.source_expr ?? ''}
           onChange={(v) => set({ source_expr: v })}
           variables={variables}
           nodeContext={nodeContext}
           placeholder='e.g. NodeOutputs["transform1"]["records"]'
-          label="records to save"
+          label={t('workflows.node_forms.records_to_save')}
         />
         <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-          Must resolve to a list of records shaped to this form's fields — e.g. a Transform node's <span className="font-mono">records</span> output. All records are upserted in one call.
+          {t('workflows.node_forms.outputs_save_records')}
         </p>
       </div>
 
       <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-        Outputs <span className="font-mono">records</span>, <span className="font-mono">created</span>, <span className="font-mono">updated</span>, and <span className="font-mono">count</span> to downstream nodes.
+        {t('workflows.node_forms.outputs_save_records')}
       </p>
     </div>
   )

@@ -14,6 +14,7 @@ import { TeamListLayout } from '../components/TeamListLayout'
 import { UserFormDrawer } from '../components/UserFormDrawer'
 import type { TeamUser } from '@/features/users/types'
 import type { Invitation } from '@/features/invitations/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 const PAGE_SIZE = 10
 
@@ -22,6 +23,7 @@ type Row =
   | { kind: 'invitation'; id: string; name: string; email: string; status: 'Pending'; invitation: Invitation }
 
 export function UsersSection() {
+  const t = useTranslation()
   const { data: users, isLoading: usersLoading } = useTeamUsers()
   const { data: invitations, isLoading: invitationsLoading } = useInvitations()
   const { data: apps } = useApps()
@@ -75,12 +77,12 @@ export function UsersSection() {
   }
 
   const columns: DataTableColumn[] = [
-    { key: 'name', label: 'Name' },
-    { key: 'email', label: 'Email' },
+    { key: 'name', label: t('common.name') },
+    { key: 'email', label: t('auth.email') },
     {
-      key: 'status', label: 'Status',
+      key: 'status', label: t('common.status'),
       render: (row) => (
-        <Badge variant={row.status === 'Active' ? 'success' : 'warning'}>{row.status as string}</Badge>
+        <Badge variant={row.status === 'Active' ? 'success' : 'warning'}>{row.status === 'Active' ? t('team.active') : t('common.pending')}</Badge>
       ),
     },
     {
@@ -92,13 +94,13 @@ export function UsersSection() {
           return (
             <div className="flex justify-end gap-1">
               <Button
-                variant="ghost" size="icon" title="Resend invitation"
+                variant="ghost" size="icon" title={t('team.resend_invitation')}
                 disabled={resendMutation.isPending} onClick={() => resendMutation.mutate(r.invitation.id)}
               >
                 <RotateCw size={14} />
               </Button>
               <Button
-                variant="ghost" size="icon" title="Revoke invitation" className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
+                variant="ghost" size="icon" title={t('team.revoke_invitation')} className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
                 onClick={() => setRevokeTarget(r)}
               >
                 <XCircle size={14} />
@@ -109,13 +111,13 @@ export function UsersSection() {
         return (
           <div className="flex justify-end gap-1">
             <Button
-              variant="ghost" size="icon" title="Edit user"
+              variant="ghost" size="icon" title={t('team.edit_user')}
               onClick={() => setManageAccessTarget(r.user)}
             >
               <Pencil size={14} />
             </Button>
             <Button
-              variant="ghost" size="icon" title="Revoke access" className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
+              variant="ghost" size="icon" title={t('team.revoke_access')} className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
               onClick={() => setRevokeTarget(r)}
             >
               <Trash2 size={14} />
@@ -137,14 +139,14 @@ export function UsersSection() {
       onSelectApp={handleSelectApp}
       search={search}
       onSearchChange={handleSearchChange}
-      searchPlaceholder="Search Users..."
-      primaryAction={canWrite ? { label: '+ Add User', onClick: () => setFormOpen(true) } : undefined}
+      searchPlaceholder={t('team.search_users')}
+      primaryAction={canWrite ? { label: t('team.add_user'), onClick: () => setFormOpen(true) } : undefined}
     >
       <DataTable
         columns={columns}
         rows={pagedRows as unknown as Record<string, unknown>[]}
         getRowId={(row) => (row as unknown as Row).id}
-        emptyMessage="No one has access yet."
+        emptyMessage={t('team.no_access')}
       />
       <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
 
@@ -162,13 +164,13 @@ export function UsersSection() {
       <ConfirmDialog
         open={!!revokeTarget}
         onOpenChange={(o) => !o && setRevokeTarget(null)}
-        title={revokeTarget?.kind === 'invitation' ? 'Revoke invitation?' : 'Revoke access?'}
+        title={revokeTarget?.kind === 'invitation' ? t('team.revoke_invitation_title') : t('team.revoke_access_title')}
         description={
           revokeTarget?.kind === 'invitation'
-            ? `${revokeTarget.email} will no longer be able to accept this invitation.`
-            : `${revokeTarget?.email} will lose access to this workspace.`
+            ? t('team.revoke_invitation_description', { email: revokeTarget.email })
+            : t('team.revoke_access_description', { email: revokeTarget?.email ?? '' })
         }
-        confirmLabel="Revoke"
+        confirmLabel={t('team.revoke')}
         destructive
         loading={revokeAccessMutation.isPending || revokeInviteMutation.isPending}
         onConfirm={handleConfirmRevoke}

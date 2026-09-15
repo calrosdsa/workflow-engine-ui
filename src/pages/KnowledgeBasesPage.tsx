@@ -12,8 +12,10 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { CreateKnowledgeBasePayload, KnowledgeBaseSummary, Provider } from '@/features/knowledge/types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 export function KnowledgeBasesPage() {
+  const { t, locale } = useI18n()
   const { appId } = useParams({ strict: false }) as { appId?: string }
   const { data: kbs, isLoading } = useKnowledgeBases()
   const deleteMutation = useDeleteKnowledgeBase()
@@ -30,11 +32,11 @@ export function KnowledgeBasesPage() {
     const name = pendingDelete.name
     deleteMutation.mutate(pendingDelete.id, {
       onSuccess: () => {
-        toast.success(`"${name}" deleted`)
+        toast.success(t('knowledge.list.deleted', { name }))
         setPendingDelete(null)
       },
       onError: (e) => {
-        toast.error('Could not delete knowledge base', {
+        toast.error(t('knowledge.list.delete_error'), {
           description: e instanceof Error ? e.message : undefined,
         })
       },
@@ -45,12 +47,12 @@ export function KnowledgeBasesPage() {
     <div className="p-6 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Knowledge Bases</h1>
-          <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">{ordered.length} knowledge base{ordered.length === 1 ? '' : 's'}</p>
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">{t('knowledge.list.title')}</h1>
+          <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">{t(ordered.length === 1 ? 'knowledge.list.count_one' : 'knowledge.list.count_other', { count: ordered.length })}</p>
         </div>
         <div className="flex items-center gap-2">
           {canWrite && (
-            <Button onClick={() => setCreateOpen(true)} className="gap-1.5"><Plus size={16} />New Knowledge Base</Button>
+            <Button onClick={() => setCreateOpen(true)} className="gap-1.5"><Plus size={16} />{t('knowledge.list.new')}</Button>
           )}
         </div>
       </div>
@@ -66,6 +68,7 @@ export function KnowledgeBasesPage() {
               appId={appId ?? ''}
               canWrite={canWrite}
               onDelete={() => setPendingDelete(kb)}
+              locale={locale}
             />
           ))}
         </div>
@@ -76,9 +79,9 @@ export function KnowledgeBasesPage() {
       <ConfirmDialog
         open={!!pendingDelete}
         onOpenChange={(open) => { if (!open) setPendingDelete(null) }}
-        title="Delete this knowledge base?"
-        description={pendingDelete ? `"${pendingDelete.name}" and every document in it will be permanently deleted — this can't be undone, and it may be in use by other applications.` : undefined}
-        confirmLabel="Delete"
+        title={t('knowledge.list.delete_title')}
+        description={pendingDelete ? t('knowledge.list.delete_description', { name: pendingDelete.name }) : undefined}
+        confirmLabel={t('common.delete')}
         destructive
         loading={deleteMutation.isPending}
         onConfirm={confirmDelete}
@@ -89,14 +92,15 @@ export function KnowledgeBasesPage() {
 
 const PROVIDER_LABELS: Record<Provider, string> = { openai: 'OpenAI', gemini: 'Gemini', voyage: 'Voyage' }
 
-function KnowledgeBaseRow({ kb, appId, canWrite, onDelete }: { kb: KnowledgeBaseSummary; appId: string; canWrite: boolean; onDelete: () => void }) {
+function KnowledgeBaseRow({ kb, appId, canWrite, onDelete, locale }: { kb: KnowledgeBaseSummary; appId: string; canWrite: boolean; onDelete: () => void; locale: string }) {
+  const t = useI18n().t
   return (
     <div className="group flex items-center gap-3 px-4 py-3">
       <BookOpen size={16} className="shrink-0 text-[hsl(var(--primary))]" />
       <div className="min-w-0 flex-1">
         <div className="truncate font-medium text-[hsl(var(--foreground))]">{kb.name}</div>
         <p className="mt-0.5 truncate text-xs text-[hsl(var(--muted-foreground))]">
-          {PROVIDER_LABELS[kb.provider]} · {kb.credential_name} · Updated {new Date(kb.updated_at).toLocaleDateString()}
+          {PROVIDER_LABELS[kb.provider]} · {kb.credential_name} · {t('knowledge.list.updated', { date: new Date(kb.updated_at).toLocaleDateString(locale) })}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
@@ -123,11 +127,12 @@ function KnowledgeBaseRow({ kb, appId, canWrite, onDelete }: { kb: KnowledgeBase
 }
 
 function EmptyState({ canWrite, onCreate }: { canWrite: boolean; onCreate: () => void }) {
+  const t = useI18n().t
   return (
     <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center">
-      <p className="mb-4 text-[hsl(var(--muted-foreground))]">No knowledge bases yet</p>
+      <p className="mb-4 text-[hsl(var(--muted-foreground))]">{t('knowledge.list.no_bases')}</p>
       {canWrite && (
-        <Button variant="outline" onClick={onCreate} className="gap-1.5"><Plus size={16} />Create your first knowledge base</Button>
+        <Button variant="outline" onClick={onCreate} className="gap-1.5"><Plus size={16} />{t('knowledge.list.create_first')}</Button>
       )}
     </div>
   )
@@ -144,18 +149,19 @@ const EMPTY_PAYLOAD: CreateKnowledgeBasePayload = {
 function CreateKnowledgeBaseDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const [form, setForm] = useState<CreateKnowledgeBasePayload>(EMPTY_PAYLOAD)
   const createMutation = useCreateKnowledgeBase()
+  const t = useI18n().t
 
   const canSubmit = form.name.trim() !== '' && form.llm_model_id !== '' && form.embedding_model_id !== ''
 
   const submit = () => {
     createMutation.mutate(form, {
       onSuccess: () => {
-        toast.success(`"${form.name}" created`)
+        toast.success(t('knowledge.list.created', { name: form.name }))
         onOpenChange(false)
         setForm(EMPTY_PAYLOAD)
       },
       onError: (e) => {
-        toast.error('Could not create knowledge base', {
+        toast.error(t('knowledge.list.create_error'), {
           description: e instanceof Error ? e.message : undefined,
         })
       },
@@ -166,26 +172,22 @@ function CreateKnowledgeBaseDialog({ open, onOpenChange }: { open: boolean; onOp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-lg">
         <DialogHeader>
-          <DialogTitle>New Knowledge Base</DialogTitle>
-          <DialogDescription>
-            Pick a saved LLM provider and embedding provider — the API key is resolved server-side and never leaves
-            the backend. This knowledge base belongs to the app you're currently working in; you can share it with
-            other apps afterward from its Sharing Settings.
-          </DialogDescription>
+          <DialogTitle>{t('knowledge.list.new')}</DialogTitle>
+          <DialogDescription>{t('knowledge.list.new_description')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 px-6 py-4">
           <div>
-            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name</Label>
+            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('common.name')}</Label>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Support Docs" />
           </div>
           <div>
-            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Description (optional)</Label>
+            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('knowledge.list.description_optional')}</Label>
             <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Product support articles and FAQs" />
           </div>
 
           <div>
-            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">LLM Model</Label>
+            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('knowledge.list.llm_model')}</Label>
             <ModelPicker
               value={form.llm_model_id || undefined}
               onChange={(id) => setForm({ ...form, llm_model_id: id ?? '' })}
@@ -194,23 +196,23 @@ function CreateKnowledgeBaseDialog({ open, onOpenChange }: { open: boolean; onOp
           </div>
 
           <div>
-            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Embedding Model</Label>
+            <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('knowledge.list.embedding_model')}</Label>
             <ModelPicker
               value={form.embedding_model_id || undefined}
               onChange={(id) => setForm({ ...form, embedding_model_id: id ?? '' })}
               capability="embedding"
             />
             <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
-              Fixed once created — changing the embedding model later requires a new knowledge base.
+              {t('knowledge.list.embedding_fixed')}
             </p>
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={createMutation.isPending}>Cancel</Button>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={createMutation.isPending}>{t('common.cancel')}</Button>
           <Button size="sm" className="gap-1.5" disabled={!canSubmit || createMutation.isPending} onClick={submit}>
             {createMutation.isPending ? <Spinner className="h-4 w-4" /> : <Plus size={14} />}
-            Create
+            {t('common.create')}
           </Button>
         </DialogFooter>
       </DialogContent>

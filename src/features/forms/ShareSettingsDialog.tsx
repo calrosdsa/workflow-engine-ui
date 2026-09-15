@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useSharing, useSharingUsage, useSetSharing } from './hooks'
 import type { FormVisibility, FormAppUsage } from './types'
 
@@ -18,11 +19,15 @@ interface ShareSettingsDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-const VISIBILITY_OPTIONS: { value: FormVisibility; label: string; description: string }[] = [
-  { value: 'full_access', label: 'No Restrictions', description: 'Every other app can view, use, create, edit, and delete this data.' },
-  { value: 'read_only', label: 'Read Only Access', description: 'Every other app can view and use this data, but not modify it.' },
-  { value: 'private', label: "Won't Share", description: 'Not shared with anyone outside this app.' },
-]
+// Local to this one component — see LinkSharedFormDialog's grantLabels(t)
+// for the same t()-taking-factory shape applied to a sibling dialog.
+function visibilityOptions(t: ReturnType<typeof useTranslation>): { value: FormVisibility; label: string; description: string }[] {
+  return [
+    { value: 'full_access', label: t('forms.share_settings_dialog.option_full_access'), description: t('forms.share_settings_dialog.option_full_access_hint') },
+    { value: 'read_only', label: t('forms.share_settings_dialog.option_read_only'), description: t('forms.share_settings_dialog.option_read_only_hint') },
+    { value: 'private', label: t('forms.share_settings_dialog.option_private'), description: t('forms.share_settings_dialog.option_private_hint') },
+  ]
+}
 
 const RANK: Record<FormVisibility, number> = { private: 0, read_only: 1, full_access: 2 }
 
@@ -33,6 +38,7 @@ const RANK: Record<FormVisibility, number> = { private: 0, read_only: 1, full_ac
  *  that needed its own permanent home on a page that doesn't otherwise
  *  exist for a form. */
 export function ShareSettingsDialog({ formId, open, onOpenChange }: ShareSettingsDialogProps) {
+  const t = useTranslation()
   const { data: sharing, isLoading } = useSharing(formId, open)
   const usageMutation = useSharingUsage(formId)
   const setSharingMutation = useSetSharing(formId)
@@ -45,10 +51,10 @@ export function ShareSettingsDialog({ formId, open, onOpenChange }: ShareSetting
         // check ran clean, but another app started referencing this form
         // before this save landed. Every other failure is a genuine error.
         if (e instanceof HTTPError && e.response.status === 409) {
-          toast.error('This form is now in use elsewhere — refresh and try again.')
+          toast.error(t('forms.share_settings_dialog.in_use_toast'))
           return
         }
-        toast.error('Could not update sharing settings.')
+        toast.error(t('forms.share_settings_dialog.update_failed_toast'))
       },
     })
   }
@@ -71,7 +77,7 @@ export function ShareSettingsDialog({ formId, open, onOpenChange }: ShareSetting
         }
       },
       onError: () => {
-        toast.error('Could not verify usage across every app — try again.')
+        toast.error(t('forms.share_settings_dialog.verify_failed_toast'))
       },
     })
   }
@@ -89,9 +95,9 @@ export function ShareSettingsDialog({ formId, open, onOpenChange }: ShareSetting
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="w-full max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><Share2 size={16} /> Share Settings</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><Share2 size={16} /> {t('forms.share_settings_dialog.title')}</DialogTitle>
           <DialogDescription>
-            Choose what other apps under this client can do with this form's data.
+            {t('forms.share_settings_dialog.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -104,7 +110,7 @@ export function ShareSettingsDialog({ formId, open, onOpenChange }: ShareSetting
               onValueChange={(v) => requestChange(v as FormVisibility)}
               className="flex flex-col gap-2"
             >
-              {VISIBILITY_OPTIONS.map((opt) => (
+              {visibilityOptions(t).map((opt) => (
                 <label
                   key={opt.value}
                   className="flex cursor-pointer items-start gap-2 rounded-lg border border-[hsl(var(--border))] p-3"
@@ -124,22 +130,22 @@ export function ShareSettingsDialog({ formId, open, onOpenChange }: ShareSetting
           )}
           {(usageMutation.isPending || setSharingMutation.isPending) && (
             <div className="mt-3 flex items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]">
-              <Spinner className="h-3 w-3" /> Updating…
+              <Spinner className="h-3 w-3" /> {t('forms.share_settings_dialog.updating')}
             </div>
           )}
         </div>
 
         <DialogFooter>
-          <Button size="sm" variant="outline" onClick={() => handleOpenChange(false)}>Close</Button>
+          <Button size="sm" variant="outline" onClick={() => handleOpenChange(false)}>{t('common.close')}</Button>
         </DialogFooter>
       </DialogContent>
 
       <ConfirmDialog
         open={!!pendingUsage}
         onOpenChange={(o) => { if (!o) setPendingUsage(null) }}
-        title="This form is in use elsewhere"
-        description={pendingUsage ? describeUsage(pendingUsage.apps) : undefined}
-        confirmLabel="Change anyway"
+        title={t('forms.share_settings_dialog.in_use_title')}
+        description={pendingUsage ? describeUsage(pendingUsage.apps, t) : undefined}
+        confirmLabel={t('forms.share_settings_dialog.change_anyway')}
         destructive
         loading={setSharingMutation.isPending}
         onConfirm={() => {
@@ -151,7 +157,11 @@ export function ShareSettingsDialog({ formId, open, onOpenChange }: ShareSetting
   )
 }
 
-function describeUsage(apps: FormAppUsage[]): string {
-  const parts = apps.map((a) => `${a.app_name} — ${a.workflows.length} workflow${a.workflows.length === 1 ? '' : 's'} (${a.workflows.join(', ')})`)
-  return `Changing this could break access for: ${parts.join('; ')}. This can't be undone automatically — continue?`
+function describeUsage(apps: FormAppUsage[], t: ReturnType<typeof useTranslation>): string {
+  const parts = apps.map((a) =>
+    t(a.workflows.length === 1 ? 'forms.share_settings_dialog.usage_line_one' : 'forms.share_settings_dialog.usage_line_many', {
+      app: a.app_name, count: a.workflows.length, list: a.workflows.join(', '),
+    }),
+  )
+  return t('forms.share_settings_dialog.usage_prefix', { apps: parts.join('; ') })
 }

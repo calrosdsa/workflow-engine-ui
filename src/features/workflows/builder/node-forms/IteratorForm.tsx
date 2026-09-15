@@ -4,6 +4,7 @@ import { Switch } from '@/components/ui/switch'
 import { ExpressionField } from '@/features/form-builder/config/ExpressionField'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, IteratorConfig } from '../../types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 // iterator — no normalisation needed; the config shape has been stable
 // since the loop-body feature shipped and is safe to cast directly.
@@ -19,28 +20,29 @@ export interface IteratorFormProps {
 }
 
 export function IteratorForm({ config, variables, nodeContext, onChange }: IteratorFormProps) {
+  const { t } = useI18n()
   const set = (patch: Partial<IteratorConfig>) => onChange({ ...config, ...patch })
 
   return (
     <div className="space-y-4">
       {/* Source list */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Source List</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.source_list')}</Label>
         <ExpressionField
           value={config.source_expr ?? ''}
           onChange={(v) => set({ source_expr: v })}
           variables={variables}
           nodeContext={nodeContext}
           placeholder='e.g. NodeOutputs["fetch"]["records"]'
-          label="source list"
+          label={t('workflows.node_forms.source_list')}
         />
-        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Must resolve to a list. The body runs once per element.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.source_iterator_help')}</p>
       </div>
 
       {/* Item / index var names */}
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Item Var</Label>
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.item_var')}</Label>
           <Input
             value={config.item_var ?? 'item'}
             onChange={(e) => set({ item_var: e.target.value })}
@@ -49,7 +51,7 @@ export function IteratorForm({ config, variables, nodeContext, onChange }: Itera
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Index Var</Label>
+          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.index_var')}</Label>
           <Input
             value={config.index_var ?? 'index'}
             onChange={(e) => set({ index_var: e.target.value })}
@@ -66,35 +68,35 @@ export function IteratorForm({ config, variables, nodeContext, onChange }: Itera
 
       {/* Filter condition */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Filter (optional)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.filter_optional')}</Label>
         <ExpressionField
           value={config.filter_expr ?? ''}
           onChange={(v) => set({ filter_expr: v })}
           variables={variables}
           nodeContext={nodeContext}
           placeholder='e.g. Vars["item"]["active"] == true'
-          label="filter condition"
+          label={t('workflows.node_forms.filter_condition')}
         />
-        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Run the body only when this is true (skip the element otherwise).</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.run_when_true')}</p>
       </div>
 
       {/* Stop condition */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Stop When (optional)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.stop_when')}</Label>
         <ExpressionField
           value={config.stop_expr ?? ''}
           onChange={(v) => set({ stop_expr: v })}
           variables={variables}
           nodeContext={nodeContext}
           placeholder='e.g. Vars["index"] >= 10'
-          label="stop condition"
+          label={t('workflows.node_forms.stop_condition')}
         />
-        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Stop the loop early when this becomes true.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.stop_early')}</p>
       </div>
 
       {/* Max iterations */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Max Iterations</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.max_iterations')}</Label>
         <Input
           type="number"
           min={0}
@@ -110,9 +112,9 @@ export function IteratorForm({ config, variables, nodeContext, onChange }: Itera
       {/* Continue on error */}
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-0.5">
-          <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Continue on Error</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.continue_on_error')}</Label>
           <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-            If an item's body fails, skip it and keep going instead of stopping the loop. Failed items are listed on the iterator node.
+            {t('workflows.node_forms.continue_error_help')}
           </p>
         </div>
         <Switch

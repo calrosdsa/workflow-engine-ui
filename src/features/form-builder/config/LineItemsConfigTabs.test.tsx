@@ -23,6 +23,7 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { render, fireEvent, cleanup, screen, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LineItemsConfigTabs } from './ConfigPanel'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import { createElement } from '../factory'
 import type { FormElement } from '../schema'
 
@@ -33,7 +34,7 @@ afterEach(() => cleanup())
 // though these tests never let their queries resolve.
 function renderWithQueryClient(ui: React.ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+  return render(<QueryClientProvider client={client}><I18nProvider>{ui}</I18nProvider></QueryClientProvider>)
 }
 
 describe('LineItemsConfigTabs — new elements default to adopted mode', () => {
@@ -62,7 +63,9 @@ describe('LineItemsConfigTabs — mode-switch data-orphaning warning (FR-C1-004)
     const element: FormElement = { ...createElement('line_items'), sourceMode: 'generated', childFormId: 'child_123' }
     let patch: Partial<FormElement> | null = null
     render(
-      <LineItemsConfigTabs element={element} formId="form_1" onChange={(p) => { patch = p }} />,
+      <I18nProvider>
+        <LineItemsConfigTabs element={element} formId="form_1" onChange={(p) => { patch = p }} />
+      </I18nProvider>,
     )
 
     fireEvent.click(screen.getByRole('combobox'))
@@ -83,7 +86,9 @@ describe('LineItemsConfigTabs — mode-switch data-orphaning warning (FR-C1-004)
     const element: FormElement = { ...createElement('line_items'), sourceMode: 'generated', childFormId: 'child_123' }
     let patch: Partial<FormElement> | null = null
     render(
-      <LineItemsConfigTabs element={element} formId="form_1" onChange={(p) => { patch = p }} />,
+      <I18nProvider>
+        <LineItemsConfigTabs element={element} formId="form_1" onChange={(p) => { patch = p }} />
+      </I18nProvider>,
     )
 
     fireEvent.click(screen.getByRole('combobox'))
@@ -99,7 +104,9 @@ describe('LineItemsConfigTabs — mode-switch data-orphaning warning (FR-C1-004)
     const element: FormElement = { ...createElement('line_items'), sourceMode: 'generated', childFormId: 'child_123' }
     let patchCalled = false
     render(
-      <LineItemsConfigTabs element={element} formId="form_1" onChange={() => { patchCalled = true }} />,
+      <I18nProvider>
+        <LineItemsConfigTabs element={element} formId="form_1" onChange={() => { patchCalled = true }} />
+      </I18nProvider>,
     )
 
     fireEvent.click(screen.getByRole('combobox'))
@@ -116,7 +123,9 @@ describe('LineItemsConfigTabs — mode-switch data-orphaning warning (FR-C1-004)
     const element: FormElement = { ...createElement('line_items'), childFormId: 'child_123' }
     delete (element as Partial<FormElement>).sourceMode
     render(
-      <LineItemsConfigTabs element={element} formId="form_1" onChange={() => {}} />,
+      <I18nProvider>
+        <LineItemsConfigTabs element={element} formId="form_1" onChange={() => {}} />
+      </I18nProvider>,
     )
 
     fireEvent.click(screen.getByRole('combobox'))

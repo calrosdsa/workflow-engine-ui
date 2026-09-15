@@ -5,6 +5,7 @@ import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } fro
 import { useForms, useForm } from '@/features/forms/hooks'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
 import { generatedLineItemsChildren } from '@/features/form-builder/lineItemsSync'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { ReportBlockConfigPanelProps } from '../../report-block-contract'
 import type { NumberFormat } from '../../types'
 import { ColumnNumberFormat } from '../ColumnNumberFormat'
@@ -32,6 +33,7 @@ import type { RelatedBlockConfig } from './schema'
 // identical "which child forms does this form's Line Items grids resolve
 // to" question.
 export function RelatedBlockConfigPanel({ config, onChange }: ReportBlockConfigPanelProps<RelatedBlockConfig>) {
+  const t = useTranslation()
   const { data: forms } = useForms()
   const { data: parentForm } = useForm(config.parent_form_id)
   const { data: childForm } = useForm(config.child_form_id)
@@ -67,12 +69,12 @@ export function RelatedBlockConfigPanel({ config, onChange }: ReportBlockConfigP
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
-        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Parent form</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.blocks.related.parent_form_label')}</Label>
         <SelectMenu
           value={config.parent_form_id}
           onValueChange={(parent_form_id) => onChange({ ...config, parent_form_id, child_form_id: '', columns: [] })}
         >
-          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Choose a form…" /></SelectTrigger>
+          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('reports.choose_form_placeholder')} /></SelectTrigger>
           <SelectContent>
             {(forms ?? []).filter((f) => !f.is_line_items).map((f) => (
               <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>
@@ -83,16 +85,16 @@ export function RelatedBlockConfigPanel({ config, onChange }: ReportBlockConfigP
 
       {config.parent_form_id && (
         <div className="flex flex-col gap-1.5">
-          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Line Items child</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.blocks.related.line_items_child_label')}</Label>
           <SelectMenu
             value={config.child_form_id}
             onValueChange={(child_form_id) => onChange({ ...config, child_form_id, columns: [] })}
           >
-            <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Choose a child form…" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('reports.blocks.related.choose_child_form_placeholder')} /></SelectTrigger>
             <SelectContent>
               {eligibleChildren.length === 0 ? (
                 <div className="px-2 py-1.5 text-[12px] text-[hsl(var(--muted-foreground))]">
-                  No Line Items children found on this form.
+                  {t('reports.blocks.related.no_children')}
                 </div>
               ) : (
                 eligibleChildren.map((el) => (
@@ -107,7 +109,7 @@ export function RelatedBlockConfigPanel({ config, onChange }: ReportBlockConfigP
       {childForm && (
         <div className="flex flex-col gap-1.5">
           <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-            Child columns <span className="font-normal">(none checked = every field)</span>
+            {t('reports.blocks.related.child_columns_label')} <span className="font-normal">({t('reports.blocks.columns_hint_suffix')})</span>
           </Label>
           <div className="flex flex-col gap-1 rounded-md border border-[hsl(var(--border))] p-2">
             {childForm.fields.filter((f) => f.type !== 'parent_link').map((f) => {
@@ -135,14 +137,14 @@ export function RelatedBlockConfigPanel({ config, onChange }: ReportBlockConfigP
 
       <div className="flex flex-col gap-1.5">
         <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-          Rows per parent <span className="font-normal">(optional)</span>
+          {t('reports.blocks.related.rows_per_parent_label')} <span className="font-normal">({t('common.optional')})</span>
         </Label>
         <Input
           type="number"
           min={0}
           value={config.limit ?? ''}
           onChange={(e) => onChange({ ...config, limit: e.target.value ? Number(e.target.value) : undefined })}
-          placeholder="Unlimited"
+          placeholder={t('reports.blocks.unlimited_placeholder')}
           className="h-8 text-sm"
         />
       </div>

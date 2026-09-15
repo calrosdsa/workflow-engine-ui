@@ -3,6 +3,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { cn } from '@/lib/utils'
 import { ComponentCard } from './ComponentCard'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { PageColumn } from '../schema'
 
 interface ColumnDropZoneProps {
@@ -17,6 +18,7 @@ interface ColumnDropZoneProps {
 // subscription of its own (only useDroppable's per-drag-session isOver),
 // so a skipped render here is a genuinely full skip.
 export const ColumnDropZone = memo(function ColumnDropZone({ column, sectionId }: ColumnDropZoneProps) {
+  const t = useTranslation()
   const { setNodeRef, isOver } = useDroppable({
     id: `column:${column.id}`,
     data: { kind: 'column', columnId: column.id, sectionId },
@@ -46,7 +48,7 @@ export const ColumnDropZone = memo(function ColumnDropZone({ column, sectionId }
           'flex min-h-[72px] items-center justify-center rounded-md text-center text-[11px] transition-colors',
           isOver ? 'text-indigo-500' : 'text-slate-300',
         )}>
-          {isOver ? 'Drop here' : 'Drag components here'}
+          {isOver ? t('builder.pages.canvas.drop_here') : t('builder.pages.canvas.drag_components_here')}
         </div>
       )}
     </div>

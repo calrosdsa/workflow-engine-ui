@@ -7,6 +7,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { render, cleanup, screen, fireEvent } from '@testing-library/react'
 import { FilterBuilder, newGroup, type ViewerFilterContext } from './FilterBuilder'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import type { FieldDef } from '@/features/forms/types'
 import type { FilterGroup, FilterCondition } from '../types'
 
@@ -46,15 +47,19 @@ function groupWith(condition: Partial<FilterCondition>): FilterGroup {
   return g
 }
 
+// FilterBuilder calls useTranslation, which throws outside an I18nProvider
+// ancestor — real provider, no props, same as InsertDataMenu.test.tsx.
 function renderViewer(condition: Partial<FilterCondition>, onChange: (g: FilterGroup) => void = () => {}) {
   return render(
-    <FilterBuilder
-      group={groupWith(condition)}
-      fields={targetFields}
-      variables={[]}
-      viewerModes={viewerModes}
-      onChange={onChange}
-    />,
+    <I18nProvider>
+      <FilterBuilder
+        group={groupWith(condition)}
+        fields={targetFields}
+        variables={[]}
+        viewerModes={viewerModes}
+        onChange={onChange}
+      />
+    </I18nProvider>,
   )
 }
 

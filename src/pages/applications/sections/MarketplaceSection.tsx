@@ -17,36 +17,38 @@ import {
 import { usePermission } from '@/features/auth/permissions'
 import { extractApiError } from '@/lib/api'
 import type { Listing, ListingStatus, ListingVisibility } from '@/features/marketplace/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
-const STATUS_META: Record<ListingStatus, { label: string; icon: typeof Clock; className: string; blurb: string }> = {
+const STATUS_META: Record<ListingStatus, { labelKey: string; icon: typeof Clock; className: string; blurbKey: string }> = {
   draft: {
-    label: 'Draft', icon: FileEdit,
+    labelKey: 'marketplace.draft', icon: FileEdit,
     className: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
-    blurb: 'Not shared with anyone yet. Submit it when you\'re ready.',
+    blurbKey: 'marketplace.draft_blurb',
   },
   pending_review: {
-    label: 'Awaiting review', icon: Clock,
+    labelKey: 'marketplace.awaiting_review', icon: Clock,
     className: 'bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]',
-    blurb: 'Submitted for review. It stays hidden from the marketplace until the admin team approves it.',
+    blurbKey: 'marketplace.review_blurb',
   },
   approved: {
-    label: 'Live', icon: CheckCircle2,
+    labelKey: 'marketplace.live', icon: CheckCircle2,
     className: 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]',
-    blurb: 'Published and installable.',
+    blurbKey: 'marketplace.live_blurb',
   },
   rejected: {
-    label: 'Rejected', icon: XCircle,
+    labelKey: 'marketplace.rejected', icon: XCircle,
     className: 'bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))]',
-    blurb: 'The admin team sent this back. Edit it to address the feedback — saving returns it to draft so you can resubmit.',
+    blurbKey: 'marketplace.rejected_blurb',
   },
   unpublished: {
-    label: 'Unpublished', icon: EyeOff,
+    labelKey: 'marketplace.unpublished', icon: EyeOff,
     className: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
-    blurb: 'Withdrawn from the marketplace. Anyone who already installed it keeps their copy.',
+    blurbKey: 'marketplace.unpublished_blurb',
   },
 }
 
 export function MarketplaceSection() {
+  const t = useTranslation()
   const { data: listing, isLoading } = useListing()
   const canWrite = usePermission('marketplace:write')
 
@@ -55,11 +57,9 @@ export function MarketplaceSection() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
       <div>
-        <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Marketplace</h2>
+        <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">{t('marketplace.title')}</h2>
         <p className="text-sm text-[hsl(var(--muted-foreground))]">
-          Publish this app as an installable template — share it privately with specific people, or list it publicly
-          for anyone (which the admin team reviews first). A listing captures a snapshot of the app at publish time
-          and doesn't track later changes until you re-publish.
+          {t('marketplace.publish_description')}
         </p>
       </div>
 
@@ -73,19 +73,19 @@ export function MarketplaceSection() {
 }
 
 function UnpublishedState({ canWrite }: { canWrite: boolean }) {
+  const t = useTranslation()
   const [open, setOpen] = useState(false)
   return (
     <>
       <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center">
         <Store size={24} className="mb-3 text-[hsl(var(--muted-foreground))]" />
-        <p className="mb-1 text-sm font-medium text-[hsl(var(--foreground))]">This app isn't published</p>
+        <p className="mb-1 text-sm font-medium text-[hsl(var(--foreground))]">{t('marketplace.not_published')}</p>
         <p className="mb-5 max-w-sm text-[12px] text-[hsl(var(--muted-foreground))]">
-          Publishing creates a listing pinned to a snapshot of this app's current state. Nothing is shared until you
-          submit it.
+          {t('marketplace.not_published_description')}
         </p>
         {canWrite && (
           <Button size="sm" className="gap-1.5" onClick={() => setOpen(true)}>
-            <Store size={13} /> Publish to marketplace
+            <Store size={13} /> {t('marketplace.publish_to_marketplace')}
           </Button>
         )}
       </div>
@@ -95,6 +95,7 @@ function UnpublishedState({ canWrite }: { canWrite: boolean }) {
 }
 
 function ListingPanel({ listing, canWrite }: { listing: Listing; canWrite: boolean }) {
+  const t = useTranslation()
   const [editOpen, setEditOpen] = useState(false)
   const [confirmUnpublish, setConfirmUnpublish] = useState(false)
   const submitMutation = useSubmitListing()
@@ -108,9 +109,9 @@ function ListingPanel({ listing, canWrite }: { listing: Listing; canWrite: boole
   const handleSubmit = async () => {
     try {
       const res = await submitMutation.mutateAsync()
-      toast.success(res.status === 'approved' ? 'Listing is live' : 'Submitted for review')
+      toast.success(res.status === 'approved' ? t('marketplace.listing_live') : t('marketplace.submitted_review'))
     } catch (e) {
-      toast.error('Could not submit', { description: extractApiError(e) })
+      toast.error(t('marketplace.could_not_publish'), { description: extractApiError(e) })
     }
   }
 
@@ -119,11 +120,11 @@ function ListingPanel({ listing, canWrite }: { listing: Listing; canWrite: boole
       const res = await resnapshotMutation.mutateAsync()
       toast.success(
         res.status === 'draft'
-          ? 'Re-published from current state — resubmit for review'
-          : 'Re-published from current state',
+          ? t('marketplace.republished_resubmit')
+          : t('marketplace.republished_current'),
       )
     } catch (e) {
-      toast.error('Could not re-publish', { description: extractApiError(e) })
+      toast.error(t('marketplace.could_not_republish'), { description: extractApiError(e) })
     }
   }
 
@@ -137,12 +138,12 @@ function ListingPanel({ listing, canWrite }: { listing: Listing; canWrite: boole
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className="font-medium text-[hsl(var(--foreground))]">{listing.name}</p>
-              <Badge variant="outline" className={meta.className}>{meta.label}</Badge>
+              <Badge variant="outline" className={meta.className}>{t(meta.labelKey)}</Badge>
               <Badge variant="outline" className="gap-1 text-[hsl(var(--muted-foreground))]">
-                {isPrivate ? <><Lock size={10} /> Private</> : <><Globe size={10} /> Public</>}
+                {isPrivate ? <><Lock size={10} /> {t('marketplace.private')}</> : <><Globe size={10} /> {t('marketplace.public')}</>}
               </Badge>
             </div>
-            <p className="mt-1 text-[13px] text-[hsl(var(--muted-foreground))]">{meta.blurb}</p>
+            <p className="mt-1 text-[13px] text-[hsl(var(--muted-foreground))]">{t(meta.blurbKey)}</p>
             {listing.description && (
               <p className="mt-2 text-[13px] text-[hsl(var(--foreground))]">{listing.description}</p>
             )}
@@ -156,7 +157,7 @@ function ListingPanel({ listing, canWrite }: { listing: Listing; canWrite: boole
         {listing.status === 'rejected' && listing.rejection_reason && (
           <div className="mt-4 flex items-start gap-2 rounded-md border border-[hsl(var(--destructive))]/30 bg-[hsl(var(--destructive))]/10 px-3 py-2 text-[12px] text-[hsl(var(--destructive))]">
             <AlertCircle size={13} className="mt-0.5 shrink-0" />
-            <span><span className="font-medium">Reviewer feedback:</span> {listing.rejection_reason}</span>
+            <span><span className="font-medium">{t('marketplace.reviewer_feedback')}</span> {listing.rejection_reason}</span>
           </div>
         )}
 
@@ -165,19 +166,19 @@ function ListingPanel({ listing, canWrite }: { listing: Listing; canWrite: boole
             {listing.status === 'draft' && (
               <Button size="sm" className="gap-1.5" onClick={handleSubmit} disabled={submitMutation.isPending}>
                 {submitMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-                {isPrivate ? 'Share privately' : 'Submit for review'}
+                {isPrivate ? t('marketplace.share_privately') : t('marketplace.submit_review')}
               </Button>
             )}
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEditOpen(true)}>
-              <FileEdit size={13} /> Edit details
+              <FileEdit size={13} /> {t('marketplace.edit_details')}
             </Button>
             <Button
               variant="outline" size="sm" className="gap-1.5"
               onClick={handleResnapshot} disabled={resnapshotMutation.isPending}
-              title="Update the listing to match this app's current state"
+              title={t('marketplace.update_listing_title')}
             >
               {resnapshotMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
-              Re-publish current state
+              {t('marketplace.republish_current')}
             </Button>
             {listing.status !== 'unpublished' && (
               <Button
@@ -185,7 +186,7 @@ function ListingPanel({ listing, canWrite }: { listing: Listing; canWrite: boole
                 className="ml-auto gap-1.5 text-[hsl(var(--destructive))]"
                 onClick={() => setConfirmUnpublish(true)}
               >
-                <EyeOff size={13} /> Unpublish
+                <EyeOff size={13} /> {t('marketplace.unpublish')}
               </Button>
             )}
           </div>
@@ -199,29 +200,28 @@ function ListingPanel({ listing, canWrite }: { listing: Listing; canWrite: boole
       <Dialog open={confirmUnpublish} onOpenChange={setConfirmUnpublish}>
         <DialogContent className="w-full max-w-sm">
           <DialogHeader>
-            <DialogTitle>Unpublish this listing?</DialogTitle>
+            <DialogTitle>{t('marketplace.unpublish_title')}</DialogTitle>
             <DialogDescription>
-              It stops appearing in the marketplace and can no longer be installed. Anyone who already installed it
-              keeps their copy — this doesn't affect them.
+              {t('marketplace.unpublish_description')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setConfirmUnpublish(false)} disabled={unpublishMutation.isPending}>Cancel</Button>
+            <Button variant="outline" size="sm" onClick={() => setConfirmUnpublish(false)} disabled={unpublishMutation.isPending}>{t('common.close')}</Button>
             <Button
               variant="destructive" size="sm" className="gap-1.5"
               disabled={unpublishMutation.isPending}
               onClick={async () => {
                 try {
                   await unpublishMutation.mutateAsync()
-                  toast.success('Listing unpublished')
+                  toast.success(t('marketplace.listing_unpublished'))
                   setConfirmUnpublish(false)
                 } catch (e) {
-                  toast.error('Could not unpublish', { description: extractApiError(e) })
+                  toast.error(t('marketplace.unpublish_failed'), { description: extractApiError(e) })
                 }
               }}
             >
               {unpublishMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <EyeOff size={13} />}
-              Unpublish
+              {t('marketplace.unpublish')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -238,6 +238,7 @@ function ListingFormDialog({
   mode: 'publish' | 'edit'
   listing?: Listing
 }) {
+  const t = useTranslation()
   const publishMutation = usePublishListing()
   const updateMutation = useUpdateListing()
   const mutation = mode === 'publish' ? publishMutation : updateMutation
@@ -268,10 +269,10 @@ function ListingFormDialog({
   const handleSave = async () => {
     try {
       await mutation.mutateAsync({ name, description, category, visibility })
-      toast.success(mode === 'publish' ? 'Listing created as a draft' : 'Listing updated')
+      toast.success(mode === 'publish' ? t('marketplace.listing_created') : t('marketplace.listing_updated'))
       onOpenChange(false)
     } catch (e) {
-      toast.error(mode === 'publish' ? 'Could not publish' : 'Could not update', { description: extractApiError(e) })
+      toast.error(mode === 'publish' ? t('marketplace.could_not_publish') : t('marketplace.could_not_update'), { description: extractApiError(e) })
     }
   }
 
@@ -279,20 +280,20 @@ function ListingFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-md">
         <DialogHeader>
-          <DialogTitle>{mode === 'publish' ? 'Publish to marketplace' : 'Edit listing'}</DialogTitle>
+          <DialogTitle>{mode === 'publish' ? t('marketplace.publish_listing') : t('marketplace.edit_listing')}</DialogTitle>
           <DialogDescription>
             {mode === 'publish'
-              ? "Captures a snapshot of this app as it is right now. It starts as a draft — nothing is shared until you submit it."
-              : "These details are what people browsing the marketplace see. They don't change the app itself."}
+              ? t('marketplace.publish_dialog_description')
+              : t('marketplace.edit_dialog_description')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 px-6 py-2">
           <div>
-            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('common.name')}</label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="CRM Starter Template" />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Description</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('common.description')}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -302,29 +303,28 @@ function ListingFormDialog({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Category</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('marketplace.category')}</label>
             <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Sales" />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Visibility</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('marketplace.visibility')}</label>
             <Select value={visibility} onChange={(e) => setVisibility(e.target.value as ListingVisibility)}>
-              <option value="private">Private — only people you share it with</option>
-              <option value="public">Public — anyone, after admin review</option>
+              <option value="private">{t('marketplace.private_option')}</option>
+              <option value="public">{t('marketplace.public_option')}</option>
             </Select>
           </div>
           {willNeedReReview && (
             <p className="flex items-start gap-1.5 text-[12px] text-[hsl(var(--warning))]">
               <AlertCircle size={13} className="mt-0.5 shrink-0" />
-              This listing is live. Saving returns it to draft and it'll need to be reviewed again before it's
-              installable.
+              {t('marketplace.live_rereview')}
             </p>
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>Cancel</Button>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>{t('common.close')}</Button>
           <Button size="sm" className="gap-1.5" onClick={handleSave} disabled={!name || mutation.isPending}>
             {mutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Store size={13} />}
-            {mode === 'publish' ? 'Create listing' : 'Save'}
+            {mode === 'publish' ? t('marketplace.create_listing') : t('common.save')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -333,6 +333,7 @@ function ListingFormDialog({
 }
 
 function GrantsPanel({ canWrite }: { canWrite: boolean }) {
+  const t = useTranslation()
   const { data: grants, isLoading } = useGrants(true)
   const createMutation = useCreateGrant()
   const revokeMutation = useRevokeGrant()
@@ -341,18 +342,18 @@ function GrantsPanel({ canWrite }: { canWrite: boolean }) {
   const handleShare = async () => {
     try {
       await createMutation.mutateAsync({ email })
-      toast.success(`Shared with ${email}`)
+      toast.success(`${t('marketplace.shared_with')} ${email}`)
       setEmail('')
     } catch (e) {
-      toast.error('Could not share', { description: extractApiError(e) })
+      toast.error(t('marketplace.could_not_share'), { description: extractApiError(e) })
     }
   }
 
   return (
     <div className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5">
-      <p className="font-medium text-[hsl(var(--foreground))]">Shared with</p>
+      <p className="font-medium text-[hsl(var(--foreground))]">{t('marketplace.shared_with')}</p>
       <p className="mt-0.5 text-[13px] text-[hsl(var(--muted-foreground))]">
-        Only these accounts can see and install this listing. They'll find it in their own Marketplace.
+        {t('marketplace.shared_with_description')}
       </p>
 
       {canWrite && (
@@ -366,7 +367,7 @@ function GrantsPanel({ canWrite }: { canWrite: boolean }) {
           />
           <Button size="sm" className="shrink-0 gap-1.5" onClick={handleShare} disabled={!email || createMutation.isPending}>
             {createMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-            Share
+            {t('marketplace.share')}
           </Button>
         </div>
       )}
@@ -375,7 +376,7 @@ function GrantsPanel({ canWrite }: { canWrite: boolean }) {
         {isLoading ? (
           <div className="flex h-16 items-center justify-center"><Spinner /></div>
         ) : !grants?.length ? (
-          <p className="text-[12px] text-[hsl(var(--muted-foreground))]">Not shared with anyone yet.</p>
+          <p className="text-[12px] text-[hsl(var(--muted-foreground))]">{t('marketplace.not_shared')}</p>
         ) : (
           <div className="divide-y divide-[hsl(var(--border))] rounded-md border border-[hsl(var(--border))]">
             {grants.map((g) => (
@@ -394,13 +395,13 @@ function GrantsPanel({ canWrite }: { canWrite: boolean }) {
                   <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                     <Button
                       variant="ghost" size="sm" className="gap-1 text-xs"
-                      title="Copy the share link"
+                      title={t('marketplace.copy_share_link')}
                       onClick={() => {
                         navigator.clipboard?.writeText(`${window.location.origin}/marketplace?share=${g.token}`)
-                        toast.success('Share link copied')
+                        toast.success(t('marketplace.share_link_copied'))
                       }}
                     >
-                      <Copy size={12} /> Link
+                      <Copy size={12} /> {t('marketplace.link')}
                     </Button>
                     {canWrite && (
                       <Button
@@ -410,13 +411,13 @@ function GrantsPanel({ canWrite }: { canWrite: boolean }) {
                         onClick={async () => {
                           try {
                             await revokeMutation.mutateAsync(g.id)
-                            toast.success('Share revoked')
+                            toast.success(t('marketplace.share_revoked'))
                           } catch (e) {
-                            toast.error('Could not revoke', { description: extractApiError(e) })
+                            toast.error(t('marketplace.could_not_revoke'), { description: extractApiError(e) })
                           }
                         }}
                       >
-                        <Trash2 size={12} /> Revoke
+                        <Trash2 size={12} /> {t('team.revoke')}
                       </Button>
                     )}
                   </div>

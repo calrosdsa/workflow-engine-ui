@@ -30,8 +30,8 @@ export function FormsPage() {
     <div className="relative flex h-full flex-col p-6">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Form Builder</h1>
-          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">{forms?.length ?? 0} forms</p>
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">{t('forms.page.title')}</h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">{t('common.forms', { count: forms?.length ?? 0 })}</p>
         </div>
         <fieldset className="flex items-center gap-2">
           <legend className="sr-only">{t('forms.view.legend')}</legend>
@@ -64,10 +64,10 @@ export function FormsPage() {
       {!forms?.length ? (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center">
           <Database size={32} className="text-[hsl(var(--muted-foreground))]/60 mb-3" />
-          <p className="text-[hsl(var(--muted-foreground))] mb-4">No forms yet. Create one to auto-generate a Postgres table.</p>
+          <p className="text-[hsl(var(--muted-foreground))] mb-4">{t('forms.page.no_forms')}</p>
           {canWrite && (
             <Button variant="outline" onClick={() => setAddOpen(true)}>
-              <Plus size={16} />Create your first form
+              <Plus size={16} />{t('forms.page.create_first')}
             </Button>
           )}
         </div>
@@ -84,11 +84,11 @@ export function FormsPage() {
       <div className="absolute bottom-6 right-6 flex flex-col items-end gap-2">
         {canWrite && (
           <Button className="rounded-full shadow-md" onClick={() => setAddOpen(true)}>
-            <Plus size={16} />Add Form
+            <Plus size={16} />{t('forms.page.add_form')}
           </Button>
         )}
         <Button variant="outline" className="rounded-full bg-[hsl(var(--card))] shadow-md" onClick={() => setHelpOpen(true)}>
-          <HelpCircle size={16} />What is a Form?
+          <HelpCircle size={16} />{t('forms.page.what_is_form')}
         </Button>
       </div>
 
@@ -97,13 +97,8 @@ export function FormsPage() {
       <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
         <DialogContent className="w-full max-w-md">
           <DialogHeader>
-            <DialogTitle>What is a Form?</DialogTitle>
-            <DialogDescription>
-              A Form defines a data table: its fields become Postgres columns, and its layout drives the
-              record entry/edit screens. Forms can be nested as <strong>dependent forms</strong> under a
-              parent — use the ⋯ menu on any form to add one, copy it, share it into another app, or
-              detach it from its parent.
-            </DialogDescription>
+            <DialogTitle>{t('forms.page.what_is_form')}</DialogTitle>
+            <DialogDescription>{t('forms.page.help')}</DialogDescription>
           </DialogHeader>
         </DialogContent>
       </Dialog>

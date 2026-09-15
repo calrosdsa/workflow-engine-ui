@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import type { ShowMessageConfig, MessageType } from '../../types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 export function normaliseShowMessageConfig(raw: unknown): ShowMessageConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<ShowMessageConfig>
@@ -27,31 +28,32 @@ export interface ShowMessageFormProps {
 }
 
 export function ShowMessageForm({ config, onChange }: ShowMessageFormProps) {
+  const { t } = useI18n()
   const set = (patch: Partial<ShowMessageConfig>) => onChange({ ...config, ...patch })
 
   return (
     <div className="space-y-4">
       {/* Message type */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Message Type</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.message_type')}</Label>
         <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
-          {MESSAGE_TYPES.map((t) => (
+          {MESSAGE_TYPES.map((messageType) => (
             <button
-              key={t.value}
+              key={messageType.value}
               type="button"
-              onClick={() => set({ message_type: t.value })}
+              onClick={() => set({ message_type: messageType.value })}
               className={cn(
                 'flex-1 rounded-md py-1 text-[11px] font-medium transition-colors',
-                config.message_type === t.value ? `${t.activeClass} shadow-sm` : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
+                config.message_type === messageType.value ? `${messageType.activeClass} shadow-sm` : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
               )}
             >
-              {t.label}
+              {messageType.value === 'success' ? t('common.success') : messageType.value === 'error' ? t('common.error') : t('common.info')}
             </button>
           ))}
         </div>
         {config.message_type === 'error' && (
           <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-            Inside a Trigger's Before mode, an error message here blocks the write. In After/AfterAsync/on-demand runs it's a non-fatal warning.
+            {t('workflows.node_forms.message_error_help')}
           </p>
         )}
       </div>
@@ -62,7 +64,7 @@ export function ShowMessageForm({ config, onChange }: ShowMessageFormProps) {
           node's expression assignment — this field itself is a literal
           string end to end. */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Message</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.message')}</Label>
         <div className="relative">
           <MessageSquare size={11} className="absolute left-2.5 top-2.5 text-[hsl(var(--primary))]" />
           <textarea
@@ -74,7 +76,7 @@ export function ShowMessageForm({ config, onChange }: ShowMessageFormProps) {
           />
         </div>
         <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-          Plain text or HTML only — not evaluated as an expression. For a dynamic value, build the string with a Set Variable node first.
+          {t('workflows.node_forms.message_help')}
         </p>
       </div>
 
@@ -86,18 +88,18 @@ export function ShowMessageForm({ config, onChange }: ShowMessageFormProps) {
           onChange={(e) => set({ is_html: e.target.checked })}
           className="h-3.5 w-3.5 rounded border-[hsl(var(--border))] text-[hsl(var(--primary))] focus:ring-[hsl(var(--primary))]/40"
         />
-        Message contains HTML
+        {t('workflows.node_forms.html_message')}
       </label>
 
       {/* Timeout */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Auto-dismiss Timeout (ms)</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.auto_dismiss')}</Label>
         <Input
           type="number"
           min={0}
           value={config.timeout_ms || ''}
           onChange={(e) => set({ timeout_ms: e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0) })}
-          placeholder="0 = no auto-dismiss"
+          placeholder={t('workflows.node_forms.no_auto_dismiss')}
           className="h-8 w-40 text-[12px]"
         />
       </div>

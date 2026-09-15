@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 async function extractError(err: unknown): Promise<string> {
   if (err && typeof err === 'object' && 'response' in err) {
@@ -27,6 +28,7 @@ async function extractError(err: unknown): Promise<string> {
 }
 
 export function FormRecordsPage() {
+  const { t, locale } = useI18n()
   const { formId } = useParams({ from: '/shell/applications/$appId/forms/$formId/records' })
   const { data: form, isLoading: loadingForm } = useForm(formId)
   const { data: records, isLoading: loadingRecords } = useFormRecords(formId)
@@ -36,23 +38,23 @@ export function FormRecordsPage() {
   const [createError, setCreateError] = useState<string | null>(null)
 
   if (loadingForm || loadingRecords) return <div className="flex h-64 items-center justify-center"><Spinner /></div>
-  if (!form) return <p className="p-6 text-[hsl(var(--destructive))]">Form not found</p>
+  if (!form) return <p className="p-6 text-[hsl(var(--destructive))]">{t('records.not_found')}</p>
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">{form.name}</h1>
-          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1 font-mono">{form.slug} · {records?.length ?? 0} records</p>
+          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1 font-mono">{form.slug} · {t('common.records', { count: records?.length ?? 0 })}</p>
         </div>
         <Button onClick={() => setShowCreate(!showCreate)}>
-          <Plus size={16} />{showCreate ? 'Cancel' : 'New Record'}
+          <Plus size={16} />{showCreate ? t('common.cancel') : t('records.new')}
         </Button>
       </div>
 
       {showCreate && (
         <Card>
-          <CardHeader><CardTitle className="text-sm">New Record</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-sm">{t('records.new')}</CardTitle></CardHeader>
           <CardContent>
             {createError && (
               <div className="mb-3 rounded-md bg-[hsl(var(--destructive))]/10 border border-[hsl(var(--destructive))]/30 px-3 py-2 text-sm text-[hsl(var(--destructive))]">
@@ -73,7 +75,7 @@ export function FormRecordsPage() {
                 })
               }}
               submitting={createMutation.isPending}
-              submitLabel="Save Record"
+              submitLabel={t('records.save')}
             />
           </CardContent>
         </Card>
@@ -81,7 +83,7 @@ export function FormRecordsPage() {
 
       {!records?.length ? (
         <div className="rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center text-[hsl(var(--muted-foreground))]">
-          No records yet.
+          {t('records.no_records')}
         </div>
       ) : (
         <div className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-hidden">
@@ -105,7 +107,7 @@ export function FormRecordsPage() {
                       </td>
                     ))}
                     <td className="px-4 py-3 text-sm text-[hsl(var(--muted-foreground))] whitespace-nowrap">
-                      {rec.created_at ? new Date(String(rec.created_at)).toLocaleDateString() : '—'}
+                      {rec.created_at ? new Date(String(rec.created_at)).toLocaleDateString(locale) : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <Button

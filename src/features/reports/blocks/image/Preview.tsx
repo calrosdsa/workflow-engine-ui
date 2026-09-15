@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { contentApi } from '@/features/content/api'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { ReportBlockRendererProps } from '../../report-block-contract'
 import type { ImageBlockConfig } from './schema'
 
@@ -13,6 +14,7 @@ import type { ImageBlockConfig } from './schema'
 // 2026-08-30) — a broken/inaccessible URL just fails to load here the same
 // way any <img> tag would, which is itself useful design-time feedback.
 export function ImageBlockPreview({ config }: ReportBlockRendererProps<ImageBlockConfig>) {
+  const t = useTranslation()
   const { data: presigned } = useQuery({
     queryKey: ['content-presigned-url', config.content_id],
     queryFn: () => contentApi.presignedUrl(config.content_id!),
@@ -22,13 +24,13 @@ export function ImageBlockPreview({ config }: ReportBlockRendererProps<ImageBloc
   const src = config.source === 'url' ? config.url : presigned?.url
 
   if (!src) {
-    return <p className="p-3 text-xs italic text-[hsl(var(--muted-foreground))]">No image selected</p>
+    return <p className="p-3 text-xs italic text-[hsl(var(--muted-foreground))]">{t('reports.blocks.image.no_image_selected')}</p>
   }
 
   return (
     <div className="flex h-full items-center justify-center overflow-hidden p-2">
       {/* eslint-disable-next-line jsx-a11y/img-redundant-alt */}
-      <img src={src} alt={config.alt || 'Report image'} className="max-h-full max-w-full object-contain" />
+      <img src={src} alt={config.alt || t('reports.blocks.image.default_alt')} className="max-h-full max-w-full object-contain" />
     </div>
   )
 }

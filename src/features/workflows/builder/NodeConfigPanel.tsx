@@ -53,6 +53,7 @@ import {
   type NodeExecutionSettings,
 } from './configuration-workbench'
 import type { GraphNode, IteratorConfig, NodeType, TriggerConfig } from '../types'
+import { useI18n, useTranslation } from '@/features/i18n/I18nProvider'
 
 type CompactPane = 'input' | 'parameters' | 'output'
 type ConfigurationTab = 'parameters' | 'settings'
@@ -91,6 +92,7 @@ const EVALUATES_FOR_REAL = new Set(['set_variable', 'condition'])
 // and safe data handling instead of folding those concerns into each form.
 
 export function NodeConfigPanel() {
+  const t = useTranslation()
   const {
     nodes, edges, selectedNodeId, variables, updateNodeConfig, updateNodeLabel,
     updateNodeWorkbench, configPanelOpen, toggleConfigPanel, closeActiveSidebar,
@@ -395,7 +397,7 @@ export function NodeConfigPanel() {
     >
       <div
         className="node-workbench node-workbench-wide relative flex h-full w-full max-w-[1600px] flex-col overflow-hidden rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl shadow-black/40"
-        aria-label="Node configuration workbench"
+        aria-label={t('workflows.workbench.aria')}
       >
         {!node ? (
           <EmptyWorkbench onClose={toggleConfigPanel} />
@@ -422,7 +424,7 @@ export function NodeConfigPanel() {
               <div id="node-workbench-help" className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 px-4 py-3 text-[12px] text-[hsl(var(--muted-foreground))]">
                 <p className="font-medium text-[hsl(var(--foreground))]">{builtIn?.label ?? packageEntry?.display_name ?? node.data.type}</p>
                 <p className="mt-1 leading-relaxed">{builtIn?.description ?? packageEntry?.summary ?? 'This saved node type is not installed locally. Its existing configuration remains available read-only.'}</p>
-                <p className="mt-2 text-[11px]">Parameters configure this node. Settings are design-time metadata until matching execution policies are enabled by the server.</p>
+                <p className="mt-2 text-[11px]">{t('workflows.workbench.parameters_help')}</p>
               </div>
             )}
 
@@ -443,8 +445,8 @@ export function NodeConfigPanel() {
             <div ref={workbenchColumnsRef} className="node-workbench-columns flex min-h-0 flex-1">
               <section style={{ flexBasis: `${inputPaneWidth}%` }} className={cn('node-workbench-pane node-workbench-input min-w-0 border-r border-[hsl(var(--border))]', compactPane !== 'input' && 'node-workbench-hidden-compact')} aria-label="Input context">
                 <DataPane
-                  title="Input"
-                  subtitle="Captured values and design-time context"
+                  title={t('workflows.workbench.input_context')}
+                  subtitle={t('workflows.workbench.captured_context')}
                   value={inputData}
                   emptyMessage="No upstream data is available yet."
                   onInsertPath={(path) => insertExpressionPath(path)}
@@ -453,11 +455,11 @@ export function NodeConfigPanel() {
 
               <button type="button" aria-label="Resize input pane" onPointerDown={beginResize('input')} onKeyDown={(event) => { if (event.key === 'ArrowLeft') setInputPaneWidth((width) => Math.max(18, width - 2)); if (event.key === 'ArrowRight') setInputPaneWidth((width) => Math.min(38, width + 2)) }} className="node-workbench-splitter" />
 
-              <section className={cn('node-workbench-pane node-workbench-parameters min-w-0', compactPane !== 'parameters' && 'node-workbench-hidden-compact')} aria-label="Node parameters and settings">
+              <section className={cn('node-workbench-pane node-workbench-parameters min-w-0', compactPane !== 'parameters' && 'node-workbench-hidden-compact')} aria-label={t('workflows.workbench.parameters_settings')}>
                 <div className="flex h-full min-h-0 flex-col">
                   <div className="flex shrink-0 items-center gap-1 border-b border-[hsl(var(--border))] px-4 py-2">
-                    <button type="button" onClick={() => setConfigurationTab('parameters')} data-active={configurationTab === 'parameters'} className="node-workbench-tab rounded-md px-2.5 py-1.5 text-xs font-semibold">Parameters</button>
-                    <button type="button" onClick={() => setConfigurationTab('settings')} data-active={configurationTab === 'settings'} className="node-workbench-tab rounded-md px-2.5 py-1.5 text-xs font-semibold">Settings</button>
+                    <button type="button" onClick={() => setConfigurationTab('parameters')} data-active={configurationTab === 'parameters'} className="node-workbench-tab rounded-md px-2.5 py-1.5 text-xs font-semibold">{t('workflows.workbench.parameters')}</button>
+                    <button type="button" onClick={() => setConfigurationTab('settings')} data-active={configurationTab === 'settings'} className="node-workbench-tab rounded-md px-2.5 py-1.5 text-xs font-semibold">{t('common.settings')}</button>
                     {issues.length > 0 && <span className="ml-auto rounded-full bg-[hsl(var(--destructive))]/10 px-2 py-0.5 text-[10px] font-semibold text-[hsl(var(--destructive))]">{issues.length} issue{issues.length === 1 ? '' : 's'}</span>}
                   </div>
 
@@ -488,7 +490,7 @@ export function NodeConfigPanel() {
 
               <button type="button" aria-label="Resize output pane" onPointerDown={beginResize('output')} onKeyDown={(event) => { if (event.key === 'ArrowLeft') setOutputPaneWidth((width) => Math.min(38, width + 2)); if (event.key === 'ArrowRight') setOutputPaneWidth((width) => Math.max(18, width - 2)) }} className="node-workbench-splitter" />
 
-              <section style={{ flexBasis: `${outputPaneWidth}%` }} className={cn('node-workbench-pane node-workbench-output min-w-0 border-l border-[hsl(var(--border))]', compactPane !== 'output' && 'node-workbench-hidden-compact')} aria-label="Node output">
+              <section style={{ flexBasis: `${outputPaneWidth}%` }} className={cn('node-workbench-pane node-workbench-output min-w-0 border-l border-[hsl(var(--border))]', compactPane !== 'output' && 'node-workbench-hidden-compact')} aria-label={t('workflows.workbench.output')}>
                 <OutputPane
                   displayedOutput={displayedOutput}
                   run={run}
@@ -513,11 +515,11 @@ export function NodeConfigPanel() {
               </p>
               <div className="flex shrink-0 items-center gap-2">
                 {run.phase === 'running' ? (
-                  <Button variant="outline" size="sm" onClick={cancelStep} className="h-8 gap-1.5 rounded-full text-xs"><Square size={12} />Cancel</Button>
+                  <Button variant="outline" size="sm" onClick={cancelStep} className="h-8 gap-1.5 rounded-full text-xs"><Square size={12} />{t('common.cancel')}</Button>
                 ) : (
                   <Button size="sm" onClick={runStep} className="h-8 gap-1.5 rounded-full bg-[hsl(var(--foreground))] text-xs text-[hsl(var(--background))] hover:bg-[hsl(var(--foreground))]/90">
                     {run.phase === 'failed' || run.phase === 'cancelled' ? <RotateCcw size={12} /> : <Play size={12} />}
-                    {EXECUTES_FOR_REAL.has(node.data.type) ? 'Execute step' : EVALUATES_FOR_REAL.has(node.data.type) ? 'Evaluate step' : 'Validate step'}
+                    {EXECUTES_FOR_REAL.has(node.data.type) ? t('workflows.workbench.execute_step') : EVALUATES_FOR_REAL.has(node.data.type) ? t('workflows.workbench.evaluate_step') : t('workflows.workbench.validate_step')}
                   </Button>
                 )}
               </div>
@@ -530,11 +532,12 @@ export function NodeConfigPanel() {
 }
 
 function EmptyWorkbench({ onClose }: { onClose: () => void }) {
+  const t = useTranslation()
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[hsl(var(--muted))]"><Settings2 size={22} className="text-[hsl(var(--muted-foreground))]" /></div>
-      <div><p className="text-sm font-medium text-[hsl(var(--foreground))]">Select a node to configure it</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">Input, parameters, and output stay together here.</p></div>
-      <Button variant="outline" size="sm" onClick={onClose} className="rounded-full">Close workbench</Button>
+      <div><p className="text-sm font-medium text-[hsl(var(--foreground))]">{t('workflows.workbench.select_node')}</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{t('workflows.workbench.together')}</p></div>
+      <Button variant="outline" size="sm" onClick={onClose} className="rounded-full">{t('workflows.workbench.close')}</Button>
     </div>
   )
 }
@@ -555,30 +558,31 @@ function WorkbenchHeader({ node, icon: Icon, kind, readiness, issueCount, runnin
   onPin: () => void
   canPin: boolean
 }) {
+  const t = useTranslation()
   const state = readiness === 'ready'
-    ? { label: 'Ready', className: 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]' }
+    ? { label: t('common.ready'), className: 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]' }
     : readiness === 'disabled'
-      ? { label: 'Disabled', className: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]' }
-      : { label: `${issueCount || 1} to set up`, className: 'bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]' }
+      ? { label: t('common.disabled'), className: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]' }
+      : { label: t('workflows.workbench.to_set_up', { count: issueCount || 1 }), className: 'bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]' }
   return (
     <header className="flex shrink-0 items-center gap-3 border-b border-[hsl(var(--border))] px-4 py-3">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--muted))] ring-1 ring-[hsl(var(--border))]">
         {Icon ? <Icon size={17} strokeWidth={2.25} className="text-[hsl(var(--primary))]" /> : <Plug size={17} className="text-[hsl(var(--muted-foreground))]" />}
       </div>
       <div className="min-w-0 flex-1">
-        <Input value={node.label} onChange={(event) => onLabelChange(event.target.value)} aria-label="Node label" className="h-7 border-0 bg-transparent px-0 text-sm font-semibold shadow-none focus-visible:ring-1" />
+        <Input value={node.label} onChange={(event) => onLabelChange(event.target.value)} aria-label={t('workflows.workbench.node_label')} className="h-7 border-0 bg-transparent px-0 text-sm font-semibold shadow-none focus-visible:ring-1" />
         <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[10px] text-[hsl(var(--muted-foreground))]">
           <code className="truncate">{node.type}</code>{kind && <span className="rounded border border-[hsl(var(--border))] px-1 py-px uppercase">{kind}</span>}
           <span className={cn('rounded-full px-1.5 py-0.5 font-semibold', state.className)}>{state.label}</span>
-          {unsaved && <span className="rounded-full bg-[hsl(var(--warning))]/10 px-1.5 py-0.5 font-semibold text-[hsl(var(--warning))]">Unsaved edits</span>}
-          {resultIsStale && <span className="rounded-full bg-[hsl(var(--warning))]/10 px-1.5 py-0.5 font-semibold text-[hsl(var(--warning))]">Result stale</span>}
-          {running && <span className="flex items-center gap-1 text-[hsl(var(--primary))]"><Loader2 size={10} className="animate-spin" />Running</span>}
+          {unsaved && <span className="rounded-full bg-[hsl(var(--warning))]/10 px-1.5 py-0.5 font-semibold text-[hsl(var(--warning))]">{t('common.unsaved_edits')}</span>}
+          {resultIsStale && <span className="rounded-full bg-[hsl(var(--warning))]/10 px-1.5 py-0.5 font-semibold text-[hsl(var(--warning))]">{t('workflows.workbench.result_stale')}</span>}
+          {running && <span className="flex items-center gap-1 text-[hsl(var(--primary))]"><Loader2 size={10} className="animate-spin" />{t('common.running')}</span>}
         </div>
       </div>
-      <button type="button" onClick={onPin} disabled={!canPin} title={canPin ? 'Pin the captured output for design-time work' : 'Run or preview this node before pinning its output'} className="node-workbench-icon-button disabled:cursor-not-allowed disabled:opacity-40"><Pin size={14} /></button>
-      <button type="button" onClick={onToggleHelp} aria-expanded={helpOpen} title="Show node guidance" className="node-workbench-icon-button"><CircleHelp size={15} /></button>
-      <a href="https://github.com/jorge/workflow-engine/blob/main/internal/graph/catalog.go" target="_blank" rel="noreferrer" title="Open node catalog documentation" className="text-[10px] font-semibold text-[hsl(var(--primary))] underline-offset-2 hover:underline">Docs</a>
-      <button type="button" onClick={onClose} title="Close node editor" className="node-workbench-icon-button"><X size={16} /></button>
+      <button type="button" onClick={onPin} disabled={!canPin} title={canPin ? t('workflows.workbench.pin_output') : t('workflows.workbench.pin_requires_run')} className="node-workbench-icon-button disabled:cursor-not-allowed disabled:opacity-40"><Pin size={14} /></button>
+      <button type="button" onClick={onToggleHelp} aria-expanded={helpOpen} title={t('workflows.workbench.show_guidance')} className="node-workbench-icon-button"><CircleHelp size={15} /></button>
+      <a href="https://github.com/jorge/workflow-engine/blob/main/internal/graph/catalog.go" target="_blank" rel="noreferrer" title={t('workflows.workbench.open_docs')} className="text-[10px] font-semibold text-[hsl(var(--primary))] underline-offset-2 hover:underline">Docs</a>
+      <button type="button" onClick={onClose} title={t('workflows.workbench.close_editor')} className="node-workbench-icon-button"><X size={16} /></button>
     </header>
   )
 }
@@ -593,6 +597,7 @@ function ParametersPane({ node, builtIn, packageEntry, variables, nodeContext, i
   triggerPresets: TriggerPresetInfo[]
   onChange: (configuration: unknown) => void
 }) {
+  const t = useTranslation()
   if (builtIn) {
     // Cast widens past NodeFormProps' fixed shape so trigger's own extra
     // triggerPresets prop can reach it — safe for every other built-in form
@@ -616,25 +621,26 @@ function ParametersPane({ node, builtIn, packageEntry, variables, nodeContext, i
   }
   return (
     <div className="space-y-3">
-      <div className="flex items-start gap-2 rounded-lg border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/10 p-3"><Unplug size={15} className="mt-0.5 shrink-0 text-[hsl(var(--warning))]" /><p className="text-xs leading-relaxed text-[hsl(var(--warning))]">This node type is not currently registered. Its stored configuration is kept read-only so it can be recovered safely.</p></div>
+      <div className="flex items-start gap-2 rounded-lg border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/10 p-3"><Unplug size={15} className="mt-0.5 shrink-0 text-[hsl(var(--warning))]" /><p className="text-xs leading-relaxed text-[hsl(var(--warning))]">{t('workflows.workbench.missing_node')}</p></div>
       <pre className="max-h-80 overflow-auto rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-3 text-[11px] text-[hsl(var(--muted-foreground))]">{JSON.stringify(redactSensitiveData(node.configuration), null, 2)}</pre>
     </div>
   )
 }
 
 function SettingsPane({ settings, issues, onChange }: { settings: NodeExecutionSettings; issues: FieldValidationIssue[]; onChange: (patch: Partial<NodeExecutionSettings>) => void }) {
+  const t = useTranslation()
   const issueFor = (path: string) => issues.find((issue) => issue.path === path)?.message
   const updateRetry = (patch: Partial<NodeExecutionSettings['retry']>) => onChange({ retry: { ...settings.retry, ...patch } })
   return (
     <div className="space-y-5">
-      <p className="rounded-lg border border-[hsl(var(--primary))]/20 bg-[hsl(var(--primary))]/5 px-3 py-2 text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]">These are saved design-time settings. They do not change the existing server execution contract until policy support is available.</p>
-      <ToggleSetting label="Disable this node" description="Keep its configuration without using it in draft previews." checked={settings.disabled} onCheckedChange={(disabled) => onChange({ disabled })} />
-      <div className="space-y-2"><Label className="text-xs font-semibold">Retry policy</Label><div className="grid grid-cols-2 gap-3"><Field label="Attempts" issue={issueFor('settings.retry.maxAttempts')}><Input id="node-workbench-settings.retry.maxAttempts" type="number" min={0} max={10} value={settings.retry.maxAttempts} onChange={(event) => updateRetry({ maxAttempts: Number(event.target.value) })} aria-invalid={!!issueFor('settings.retry.maxAttempts')} /></Field><Field label="Delay (ms)" issue={issueFor('settings.retry.delayMs')}><Input id="node-workbench-settings.retry.delayMs" type="number" min={0} value={settings.retry.delayMs} onChange={(event) => updateRetry({ delayMs: Number(event.target.value) })} aria-invalid={!!issueFor('settings.retry.delayMs')} /></Field></div></div>
-      <Field label="Timeout (ms)" issue={issueFor('settings.timeoutMs')}><Input id="node-workbench-settings.timeoutMs" type="number" min={100} max={3600000} value={settings.timeoutMs ?? ''} placeholder="Use node default" onChange={(event) => onChange({ timeoutMs: event.target.value === '' ? undefined : Number(event.target.value) })} aria-invalid={!!issueFor('settings.timeoutMs')} /></Field>
-      <ToggleSetting label="Continue on error" description="Record a local preview error without blocking the rest of the draft session." checked={settings.continueOnError} onCheckedChange={(continueOnError) => onChange({ continueOnError })} />
-      <ToggleSetting label="Always output data" description="Keep an empty output shape available to downstream design-time work." checked={settings.alwaysOutputData} onCheckedChange={(alwaysOutputData) => onChange({ alwaysOutputData })} />
-      <div className="space-y-1.5"><Label htmlFor="node-workbench-settings.errorRouting" className="text-xs font-semibold">Error routing</Label><Select id="node-workbench-settings.errorRouting" value={settings.errorRouting} onChange={(event) => onChange({ errorRouting: event.target.value as NodeExecutionSettings['errorRouting'] })} className="h-8 text-xs"><option value="stop">Stop workflow</option><option value="continue">Continue</option><option value="route">Route to error branch</option></Select></div>
-      <Field label="Notes" issue={issueFor('settings.notes')}><Textarea id="node-workbench-settings.notes" value={settings.notes} maxLength={1001} onChange={(event) => onChange({ notes: event.target.value })} placeholder="Explain why this node exists or how to run it." className="min-h-20 text-xs" aria-invalid={!!issueFor('settings.notes')} /></Field>
+      <p className="rounded-lg border border-[hsl(var(--primary))]/20 bg-[hsl(var(--primary))]/5 px-3 py-2 text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]">{t('workflows.workbench.settings_description')}</p>
+      <ToggleSetting label={t('workflows.workbench.disable_node')} description={t('workflows.workbench.disable_node_description')} checked={settings.disabled} onCheckedChange={(disabled) => onChange({ disabled })} />
+      <div className="space-y-2"><Label className="text-xs font-semibold">{t('workflows.workbench.retry_policy')}</Label><div className="grid grid-cols-2 gap-3"><Field label={t('workflows.workbench.attempts')} issue={issueFor('settings.retry.maxAttempts')}><Input id="node-workbench-settings.retry.maxAttempts" type="number" min={0} max={10} value={settings.retry.maxAttempts} onChange={(event) => updateRetry({ maxAttempts: Number(event.target.value) })} aria-invalid={!!issueFor('settings.retry.maxAttempts')} /></Field><Field label={t('workflows.workbench.delay')} issue={issueFor('settings.retry.delayMs')}><Input id="node-workbench-settings.retry.delayMs" type="number" min={0} value={settings.retry.delayMs} onChange={(event) => updateRetry({ delayMs: Number(event.target.value) })} aria-invalid={!!issueFor('settings.retry.delayMs')} /></Field></div></div>
+      <Field label={t('workflows.workbench.timeout')} issue={issueFor('settings.timeoutMs')}><Input id="node-workbench-settings.timeoutMs" type="number" min={100} max={3600000} value={settings.timeoutMs ?? ''} placeholder={t('workflows.workbench.node_default')} onChange={(event) => onChange({ timeoutMs: event.target.value === '' ? undefined : Number(event.target.value) })} aria-invalid={!!issueFor('settings.timeoutMs')} /></Field>
+      <ToggleSetting label={t('workflows.workbench.continue_on_error')} description={t('workflows.workbench.continue_on_error_description')} checked={settings.continueOnError} onCheckedChange={(continueOnError) => onChange({ continueOnError })} />
+      <ToggleSetting label={t('workflows.workbench.always_output')} description={t('workflows.workbench.always_output_description')} checked={settings.alwaysOutputData} onCheckedChange={(alwaysOutputData) => onChange({ alwaysOutputData })} />
+      <div className="space-y-1.5"><Label htmlFor="node-workbench-settings.errorRouting" className="text-xs font-semibold">{t('workflows.workbench.error_routing')}</Label><Select id="node-workbench-settings.errorRouting" value={settings.errorRouting} onChange={(event) => onChange({ errorRouting: event.target.value as NodeExecutionSettings['errorRouting'] })} className="h-8 text-xs"><option value="stop">{t('workflows.workbench.stop_workflow')}</option><option value="continue">{t('workflows.workbench.continue')}</option><option value="route">{t('workflows.workbench.route_error')}</option></Select></div>
+      <Field label={t('workflows.workbench.notes')} issue={issueFor('settings.notes')}><Textarea id="node-workbench-settings.notes" value={settings.notes} maxLength={1001} onChange={(event) => onChange({ notes: event.target.value })} placeholder={t('workflows.workbench.notes_placeholder')} className="min-h-20 text-xs" aria-invalid={!!issueFor('settings.notes')} /></Field>
     </div>
   )
 }
@@ -648,8 +654,9 @@ function Field({ label, issue, children }: { label: string; issue?: string; chil
 }
 
 function ValidationSummary({ issues, onSelect }: { issues: FieldValidationIssue[]; onSelect: (issue: FieldValidationIssue) => void }) {
-  if (issues.length === 0) return <div className="flex items-center gap-2 rounded-lg bg-[hsl(var(--success))]/10 px-3 py-2 text-[11px] text-[hsl(var(--success))]"><CheckCircle2 size={13} />Configuration is ready for a preview.</div>
-  return <div className="rounded-lg border border-[hsl(var(--destructive))]/20 bg-[hsl(var(--destructive))]/5 p-3"><div className="flex items-center gap-1.5 text-xs font-semibold text-[hsl(var(--destructive))]"><AlertCircle size={13} />Before you run</div><ul className="mt-2 space-y-1.5">{issues.map((issue, index) => <li key={`${issue.path}-${index}`}><button type="button" onClick={() => onSelect(issue)} className="text-left text-[11px] text-[hsl(var(--muted-foreground))] underline decoration-[hsl(var(--destructive))]/40 underline-offset-2 hover:text-[hsl(var(--foreground))]"><code className="mr-1 text-[hsl(var(--destructive))]">{issue.path.replace(/^(parameters|settings)\./, '')}</code>{issue.message}</button></li>)}</ul></div>
+  const t = useTranslation()
+  if (issues.length === 0) return <div className="flex items-center gap-2 rounded-lg bg-[hsl(var(--success))]/10 px-3 py-2 text-[11px] text-[hsl(var(--success))]"><CheckCircle2 size={13} />{t('workflows.workbench.ready_preview')}</div>
+  return <div className="rounded-lg border border-[hsl(var(--destructive))]/20 bg-[hsl(var(--destructive))]/5 p-3"><div className="flex items-center gap-1.5 text-xs font-semibold text-[hsl(var(--destructive))]"><AlertCircle size={13} />{t('workflows.workbench.before_run')}</div><ul className="mt-2 space-y-1.5">{issues.map((issue, index) => <li key={`${issue.path}-${index}`}><button type="button" onClick={() => onSelect(issue)} className="text-left text-[11px] text-[hsl(var(--muted-foreground))] underline decoration-[hsl(var(--destructive))]/40 underline-offset-2 hover:text-[hsl(var(--foreground))]"><code className="mr-1 text-[hsl(var(--destructive))]">{issue.path.replace(/^(parameters|settings)\./, '')}</code>{issue.message}</button></li>)}</ul></div>
 }
 
 function OutputPane({ displayedOutput, run, resultIsStale, mockDraft, mockError, onMockChange, onApplyMock, onClearMock, onClearPin }: {
@@ -663,8 +670,36 @@ function OutputPane({ displayedOutput, run, resultIsStale, mockDraft, mockError,
   onClearMock: () => void
   onClearPin: () => void
 }) {
-  return <div className="flex h-full min-h-0 flex-col"><DataPane title="Output" subtitle={displayedOutput ? `${sourceLabel(displayedOutput.source)} · ${countDataItems(displayedOutput.value)} item${countDataItems(displayedOutput.value) === 1 ? '' : 's'}` : 'No output captured'} value={displayedOutput?.value} emptyMessage={run.phase === 'failed' ? run.error ?? 'The step failed.' : run.phase === 'running' ? 'Step is running…' : 'Run or preview this node to inspect its output.'} status={run} stale={resultIsStale} allowDownload />
-    <ScrollArea className="max-h-52 shrink-0 border-t border-[hsl(var(--border))]"><div className="space-y-2 p-3"><div className="flex items-center justify-between gap-2"><Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Mock output</Label><div className="flex gap-1"><button type="button" onClick={onApplyMock} className="text-[11px] font-semibold text-[hsl(var(--primary))]">Apply</button>{mockDraft && <button type="button" onClick={onClearMock} className="text-[11px] text-[hsl(var(--muted-foreground))]">Clear</button>}{displayedOutput?.source === 'pinned' && <button type="button" onClick={onClearPin} className="text-[11px] text-[hsl(var(--muted-foreground))]">Unpin</button>}</div></div><Textarea value={mockDraft} onChange={(event) => onMockChange(event.target.value)} placeholder={'{\n  "example": true\n}'} className="min-h-20 font-mono text-[11px]" aria-invalid={!!mockError} />{mockError && <p className="text-[11px] text-[hsl(var(--destructive))]">{mockError}</p>}<p className="text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]">Mock and pinned data are saved as UI metadata. Sensitive values are redacted in viewers and copied output.</p></div></ScrollArea></div>
+  const t = useTranslation()
+  const itemCount = displayedOutput ? countDataItems(displayedOutput.value) : 0
+  const subtitle = displayedOutput
+    ? `${sourceLabel(displayedOutput.source, t)} · ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`
+    : t('workflows.workbench.output_captured')
+  const emptyMessage = run.phase === 'failed'
+    ? run.error ?? t('workflows.workbench.step_failed')
+    : run.phase === 'running'
+      ? t('workflows.workbench.step_running')
+      : t('workflows.workbench.inspect_output')
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <DataPane title={t('workflows.workbench.output')} subtitle={subtitle} value={displayedOutput?.value} emptyMessage={emptyMessage} status={run} stale={resultIsStale} allowDownload />
+      <ScrollArea className="max-h-52 shrink-0 border-t border-[hsl(var(--border))]">
+        <div className="space-y-2 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.workbench.mock_output')}</Label>
+            <div className="flex gap-1">
+              <button type="button" onClick={onApplyMock} className="text-[11px] font-semibold text-[hsl(var(--primary))]">{t('common.apply')}</button>
+              {mockDraft && <button type="button" onClick={onClearMock} className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('common.clear')}</button>}
+              {displayedOutput?.source === 'pinned' && <button type="button" onClick={onClearPin} className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('workflows.workbench.unpin')}</button>}
+            </div>
+          </div>
+          <Textarea value={mockDraft} onChange={(event) => onMockChange(event.target.value)} placeholder={'{\n  "example": true\n}'} className="min-h-20 font-mono text-[11px]" aria-invalid={!!mockError} />
+          {mockError && <p className="text-[11px] text-[hsl(var(--destructive))]">{mockError}</p>}
+          <p className="text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]">{t('workflows.workbench.mock_hint')}</p>
+        </div>
+      </ScrollArea>
+    </div>
+  )
 }
 
 function DataPane({ title, subtitle, value, emptyMessage, onInsertPath, status, stale, allowDownload = false }: {
@@ -677,6 +712,7 @@ function DataPane({ title, subtitle, value, emptyMessage, onInsertPath, status, 
   stale?: boolean
   allowDownload?: boolean
 }) {
+  const t = useTranslation()
   const [view, setView] = useState<'schema' | 'table' | 'json'>('schema')
   const [query, setQuery] = useState('')
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
@@ -695,20 +731,50 @@ function DataPane({ title, subtitle, value, emptyMessage, onInsertPath, status, 
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a'); link.href = url; link.download = 'node-output.json'; link.click(); URL.revokeObjectURL(url)
   }
-  return <div className="flex min-h-0 flex-1 flex-col"><div className="shrink-0 border-b border-[hsl(var(--border))] px-3 py-2.5"><div className="flex items-start justify-between gap-2"><div><p className="text-xs font-semibold text-[hsl(var(--foreground))]">{title}</p><p className="mt-0.5 text-[10px] text-[hsl(var(--muted-foreground))]">{subtitle}</p></div><div className="flex gap-1"><button type="button" onClick={() => void copy()} disabled={value === undefined} title="Copy redacted data" className="node-workbench-icon-button disabled:opacity-40"><Copy size={13} /></button>{allowDownload && <button type="button" onClick={download} disabled={value === undefined} title="Download redacted JSON" className="node-workbench-icon-button disabled:opacity-40"><Download size={13} /></button>}</div></div>{status && status.phase !== 'idle' && <RunStatus run={status} stale={stale} />}</div>{value === undefined ? <div className="flex flex-1 items-center justify-center p-5 text-center text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]">{emptyMessage}</div> : <><div className="flex shrink-0 items-center gap-1 border-b border-[hsl(var(--border))] px-3 py-2"><div className="flex rounded-md bg-[hsl(var(--muted))] p-0.5">{([['schema', PanelLeft], ['table', Table2], ['json', FileCode2]] as const).map(([name, ViewIcon]) => <button key={name} type="button" onClick={() => setView(name)} data-active={view === name} className="node-workbench-view-tab" title={`${name} view`}><ViewIcon size={12} /><span>{name}</span></button>)}</div><div className="relative min-w-0 flex-1"><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search fields" className="h-7 pr-7 text-[11px]" />{query && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-[hsl(var(--muted-foreground))]">{matches.length}</span>}</div></div><ScrollArea className="min-h-0 flex-1"><div className="p-3">{view === 'json' ? <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]">{JSON.stringify(safeValue, null, 2)}</pre> : view === 'table' ? <DataTable value={safeValue} query={query} /> : <SchemaRows value={safeValue} query={query} onInsertPath={onInsertPath} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />}</div></ScrollArea></>}</div>
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="shrink-0 border-b border-[hsl(var(--border))] px-3 py-2.5">
+        <div className="flex items-start justify-between gap-2">
+          <div><p className="text-xs font-semibold text-[hsl(var(--foreground))]">{title}</p><p className="mt-0.5 text-[10px] text-[hsl(var(--muted-foreground))]">{subtitle}</p></div>
+          <div className="flex gap-1">
+            <button type="button" onClick={() => void copy()} disabled={value === undefined} title={t('workflows.workbench.copy_redacted')} className="node-workbench-icon-button disabled:opacity-40"><Copy size={13} /></button>
+            {allowDownload && <button type="button" onClick={download} disabled={value === undefined} title={t('workflows.workbench.download_json')} className="node-workbench-icon-button disabled:opacity-40"><Download size={13} /></button>}
+          </div>
+        </div>
+        {status && status.phase !== 'idle' && <RunStatus run={status} stale={stale} />}
+      </div>
+      {value === undefined ? (
+        <div className="flex flex-1 items-center justify-center p-5 text-center text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]">{emptyMessage}</div>
+      ) : (
+        <>
+          <div className="flex shrink-0 items-center gap-1 border-b border-[hsl(var(--border))] px-3 py-2">
+            <div className="flex rounded-md bg-[hsl(var(--muted))] p-0.5">
+              {([['schema', PanelLeft], ['table', Table2], ['json', FileCode2]] as const).map(([name, ViewIcon]) => (
+                <button key={name} type="button" onClick={() => setView(name)} data-active={view === name} className="node-workbench-view-tab" title={`${name} view`}><ViewIcon size={12} /><span>{name}</span></button>
+              ))}
+            </div>
+            <div className="relative min-w-0 flex-1"><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('workflows.workbench.search_fields')} className="h-7 pr-7 text-[11px]" />{query && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-[hsl(var(--muted-foreground))]">{matches.length}</span>}</div>
+          </div>
+          <ScrollArea className="min-h-0 flex-1"><div className="p-3">{view === 'json' ? <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]">{JSON.stringify(safeValue, null, 2)}</pre> : view === 'table' ? <DataTable value={safeValue} query={query} /> : <SchemaRows value={safeValue} query={query} onInsertPath={onInsertPath} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />}</div></ScrollArea>
+        </>
+      )}
+    </div>
+  )
 }
 
 function RunStatus({ run, stale }: { run: StepRun; stale?: boolean }) {
-  const state = run.phase === 'succeeded' ? 'Succeeded' : run.phase === 'failed' ? 'Failed' : run.phase === 'cancelled' ? 'Cancelled' : 'Running'
+  const t = useTranslation()
+  const state = run.phase === 'succeeded' ? t('common.completed') : run.phase === 'failed' ? t('common.failed') : run.phase === 'cancelled' ? t('common.cancelled') : t('common.running')
   const tone = run.phase === 'succeeded' ? 'text-[hsl(var(--success))]' : run.phase === 'failed' ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--warning))]'
-  return <div className={cn('mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px]', tone)}><span className="font-semibold">{state}</span>{run.source && <span>{sourceLabel(run.source)}</span>}{run.durationMs !== undefined && <span>{run.durationMs}ms</span>}{run.requestId && <code>{run.requestId}</code>}{stale && <span>Stale after config change</span>}{run.error && <span className="w-full leading-relaxed">{run.error}</span>}</div>
+  return <div className={cn('mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px]', tone)}><span className="font-semibold">{state}</span>{run.source && <span>{sourceLabel(run.source, t)}</span>}{run.durationMs !== undefined && <span>{run.durationMs}ms</span>}{run.requestId && <code>{run.requestId}</code>}{stale && <span>{t('workflows.workbench.stale_after_change')}</span>}{run.error && <span className="w-full leading-relaxed">{run.error}</span>}</div>
 }
 
 function DataTable({ value, query }: { value: unknown; query: string }) {
+  const t = useTranslation()
   const rows = Array.isArray(value) ? value : typeof value === 'object' && value !== null ? Object.entries(value).map(([key, val]) => ({ field: key, value: val })) : [{ field: 'value', value }]
   const filtered = rows.filter((row) => !query || `${'field' in row ? row.field : ''} ${JSON.stringify(row)}`.toLowerCase().includes(query.toLowerCase()))
-  if (filtered.length === 0) return <p className="py-4 text-center text-[11px] text-[hsl(var(--muted-foreground))]">No matching fields.</p>
-  return <div className="overflow-auto rounded-md border border-[hsl(var(--border))]"><table className="w-full text-left text-[11px]"><thead className="bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]"><tr>{Array.isArray(value) ? <><th className="px-2 py-1.5">#</th><th className="px-2 py-1.5">Value</th></> : <><th className="px-2 py-1.5">Field</th><th className="px-2 py-1.5">Value</th></>}</tr></thead><tbody>{filtered.slice(0, 100).map((row, index) => <tr key={index} className="border-t border-[hsl(var(--border))]"><td className="px-2 py-1.5 font-mono text-[hsl(var(--muted-foreground))]">{Array.isArray(value) ? index : (row as { field: string }).field}</td><td className="max-w-52 truncate px-2 py-1.5 font-mono text-[hsl(var(--foreground))]">{formatData((row as { value?: unknown }).value ?? row)}</td></tr>)}</tbody></table></div>
+  if (filtered.length === 0) return <p className="py-4 text-center text-[11px] text-[hsl(var(--muted-foreground))]">{t('workflows.workbench.no_matching_fields')}</p>
+  return <div className="overflow-auto rounded-md border border-[hsl(var(--border))]"><table className="w-full text-left text-[11px]"><thead className="bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]"><tr>{Array.isArray(value) ? <><th className="px-2 py-1.5">#</th><th className="px-2 py-1.5">{t('common.value')}</th></> : <><th className="px-2 py-1.5">{t('common.fields')}</th><th className="px-2 py-1.5">{t('common.value')}</th></>}</tr></thead><tbody>{filtered.slice(0, 100).map((row, index) => <tr key={index} className="border-t border-[hsl(var(--border))]"><td className="px-2 py-1.5 font-mono text-[hsl(var(--muted-foreground))]">{Array.isArray(value) ? index : (row as { field: string }).field}</td><td className="max-w-52 truncate px-2 py-1.5 font-mono text-[hsl(var(--foreground))]">{formatData((row as { value?: unknown }).value ?? row)}</td></tr>)}</tbody></table></div>
 }
 
 function SchemaRows({ value, query, onInsertPath, path = '', collapsed, onToggleCollapsed }: {
@@ -719,6 +785,7 @@ function SchemaRows({ value, query, onInsertPath, path = '', collapsed, onToggle
   collapsed: Set<string>
   onToggleCollapsed: (path: string) => void
 }) {
+  const t = useTranslation()
   if (Array.isArray(value)) return <div className="space-y-1">{value.slice(0, 20).map((item, index) => <SchemaRows key={index} value={item} query={query} onInsertPath={onInsertPath} path={`${path}[${index}]`} collapsed={collapsed} onToggleCollapsed={onToggleCollapsed} />)}</div>
   if (typeof value === 'object' && value !== null) return <div className="space-y-1">{Object.entries(value as Record<string, unknown>).map(([key, child]) => {
     const childPath = path ? `${path}.${key}` : key
@@ -739,7 +806,7 @@ function SchemaRows({ value, query, onInsertPath, path = '', collapsed, onToggle
                 type="button"
                 onClick={() => onToggleCollapsed(childPath)}
                 aria-expanded={showChildren}
-                title={collapsed.has(childPath) ? 'Expand' : 'Collapse'}
+                title={collapsed.has(childPath) ? t('common.expand') : t('common.collapse')}
                 className="flex h-4 w-4 shrink-0 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
               >
                 <ChevronRight size={11} className={cn('transition-transform duration-150', showChildren && 'rotate-90')} />
@@ -749,7 +816,7 @@ function SchemaRows({ value, query, onInsertPath, path = '', collapsed, onToggle
             )}
             <code className="min-w-0 flex-1 truncate text-[11px] text-[hsl(var(--foreground))]">{childPath}</code>
             <span className="rounded bg-[hsl(var(--muted))] px-1 text-[9px] text-[hsl(var(--muted-foreground))]">{dataType(child)}</span>
-            {onInsertPath && <button type="button" onClick={() => onInsertPath(childPath)} title="Insert expression path" className="node-workbench-icon-button h-5 w-5"><Clipboard size={10} /></button>}
+            {onInsertPath && <button type="button" onClick={() => onInsertPath(childPath)} title={t('workflows.workbench.insert_path')} className="node-workbench-icon-button h-5 w-5"><Clipboard size={10} /></button>}
           </div>
         )}
         {showChildren && (
@@ -844,6 +911,9 @@ function setupIssuePath(type: string): string {
 
 function configurationFingerprintFor(value: unknown) { return configurationFingerprint(value) }
 function previewRequestId(nodeId: string) { return `preview-${nodeId.slice(0, 6)}-${Date.now().toString(36)}` }
-function sourceLabel(source: string) { return source === 'live' ? 'Live test' : source === 'draft' ? 'Configuration check' : source === 'mock' ? 'Mock data' : 'Pinned data' }
+function sourceLabel(source: string, t?: ReturnType<typeof useI18n>['t']) {
+  if (!t) return source === 'live' ? 'Live test' : source === 'draft' ? 'Configuration check' : source === 'mock' ? 'Mock data' : 'Pinned data'
+  return source === 'live' ? t('workflows.workbench.source_live') : source === 'draft' ? t('workflows.workbench.source_check') : source === 'mock' ? t('workflows.workbench.source_mock') : t('workflows.workbench.source_pinned')
+}
 function dataType(value: unknown) { return Array.isArray(value) ? `array(${value.length})` : value === null ? 'null' : typeof value }
 function formatData(value: unknown) { const text = typeof value === 'string' ? value : JSON.stringify(value); return text.length > 100 ? `${text.slice(0, 100)}…` : text }

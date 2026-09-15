@@ -15,6 +15,7 @@ import {
   Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
 } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useAuthStore } from '@/stores/auth'
 import { useTeamUsers } from '@/features/users/hooks'
 import type { TeamUser } from '@/features/users/types'
@@ -34,6 +35,7 @@ interface UserSelectProps {
 }
 
 export function UserSelect({ value, onChange, appId: appIdProp }: UserSelectProps) {
+  const t = useTranslation()
   const activeAppId = useAuthStore((s) => s.activeMembership?.app_id) ?? ''
   const appId = appIdProp ?? activeAppId
   const { data: users, isLoading } = useTeamUsers()
@@ -72,12 +74,12 @@ export function UserSelect({ value, onChange, appId: appIdProp }: UserSelectProp
               <User size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
               <span className="truncate">
                 {isLoading && !selected
-                  ? 'Loading users…'
+                  ? t('form_config.loading_users')
                   : selected
                     ? userLabel(selected)
                     : isBroken
-                      ? 'Unavailable user'
-                      : 'Select User'}
+                      ? t('form_config.unavailable_user')
+                      : t('form_config.select_user')}
               </span>
             </span>
             <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
@@ -89,15 +91,15 @@ export function UserSelect({ value, onChange, appId: appIdProp }: UserSelectProp
               itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
             }
           >
-            <CommandInput placeholder="Search people…" />
+            <CommandInput placeholder={t('form_config.search_people_placeholder')} />
             <CommandList>
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
-                  <Loader2 size={13} className="animate-spin" /> Loading users…
+                  <Loader2 size={13} className="animate-spin" /> {t('form_config.loading_users')}
                 </div>
               ) : (
                 <>
-                  <CommandEmpty>No users found.</CommandEmpty>
+                  <CommandEmpty>{t('form_config.no_users_found')}</CommandEmpty>
                   <CommandGroup>
                     {options.map((u) => (
                       <CommandItem
@@ -126,8 +128,7 @@ export function UserSelect({ value, onChange, appId: appIdProp }: UserSelectProp
       {isBroken && (
         <p className="text-[10px] text-[hsl(var(--warning))] flex items-center gap-1">
           <AlertTriangle size={11} className="shrink-0" />
-          The stored user (<span className="font-mono">{value}</span>) no longer matches a visible user.
-          It's preserved until you pick a new one.
+          {t('form_config.stale_user_notice_prefix')}<span className="font-mono">{value}</span>{t('form_config.stale_user_notice_suffix')}
         </p>
       )}
       {value && (
@@ -137,7 +138,7 @@ export function UserSelect({ value, onChange, appId: appIdProp }: UserSelectProp
             onClick={() => onChange('')}
             className="flex items-center gap-1 text-[10px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           >
-            <X size={10} /> Clear
+            <X size={10} /> {t('common.clear')}
           </button>
         </div>
       )}

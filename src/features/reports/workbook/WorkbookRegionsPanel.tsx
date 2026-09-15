@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { cn } from '@/lib/utils'
 import { StyleEditor } from '../StyleEditor'
 import { allReportBlocks, getReportBlock } from '../report-block-registry'
@@ -41,7 +42,16 @@ interface WorkbookRegionsPanelProps {
 // The Workbook is the report's sole authoring surface. This panel owns the
 // semantic layer beside the grid: creating data regions, configuring their
 // source/output, styling them, and binding them to selected worksheet cells.
+//
+// A block type's own label/description live in the report-block-registry
+// (report-block-contract.ts) as plain English, set at module-load time with
+// no I18nProvider in scope — so this panel translates them itself, by
+// re-deriving the key from the block's `type` (`reports.blocks.<type>.label`
+// / `.description`) rather than reading `.label`/`.description` directly.
+// The registry's own literals become an unused fallback. See index.tsx in
+// each blocks/<type>/ directory for the type string each key is keyed on.
 export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumberFormat, onBeforeChange }: WorkbookRegionsPanelProps) {
+  const t = useTranslation()
   const definition = useReportStore((state) => state.definition)
   const selectedBlockId = useReportStore((state) => state.selectedBlockId)
   const addBlock = useReportStore((state) => state.addBlock)
@@ -88,14 +98,14 @@ export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumb
   }
 
   return (
-    <aside className="flex h-full w-96 shrink-0 flex-col border-l border-[hsl(var(--border))] bg-[hsl(var(--card))]" aria-label="Report data and regions">
+    <aside className="flex h-full w-96 shrink-0 flex-col border-l border-[hsl(var(--border))] bg-[hsl(var(--card))]" aria-label={t('reports.regions.panel_aria')}>
       <div className="border-b border-[hsl(var(--border))] px-4 py-3">
         <div className="flex items-center gap-2">
           <Database size={15} className="text-[hsl(var(--primary))]" />
-          <h2 className="text-xs font-semibold text-[hsl(var(--foreground))]">Report data</h2>
+          <h2 className="text-xs font-semibold text-[hsl(var(--foreground))]">{t('reports.regions.title')}</h2>
         </div>
         <p className="mt-1 text-[11px] leading-4 text-[hsl(var(--muted-foreground))]">
-          Add semantic regions, configure their data, then place them on selected cells.
+          {t('reports.regions.subtitle')}
         </p>
       </div>
 
@@ -108,14 +118,14 @@ export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumb
             existing order below, unchanged, for when nothing is selected
             yet or the author wants to manage them directly. */}
         {selectedBlock && (
-          <section className="space-y-4 border-b border-[hsl(var(--border))] p-4" aria-label="Selected region settings">
+          <section className="space-y-4 border-b border-[hsl(var(--border))] p-4" aria-label={t('reports.regions.selected_settings_aria')}>
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <p className="truncate text-xs font-semibold text-[hsl(var(--foreground))]">{selectedDefinition?.label ?? selectedBlock.type}</p>
+                <p className="truncate text-xs font-semibold text-[hsl(var(--foreground))]">{selectedDefinition ? t(`reports.blocks.${selectedBlock.type}.label`) : selectedBlock.type}</p>
                 <p className="truncate text-[10px] text-[hsl(var(--muted-foreground))]">{selectedBlock.id}</p>
               </div>
               <div className="flex items-center gap-1">
-                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" aria-label="Duplicate region" onClick={() => mutateRegionSafely(() => duplicateBlockById(selectedBlock.id))}>
+                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" aria-label={t('reports.regions.duplicate_aria')} onClick={() => mutateRegionSafely(() => duplicateBlockById(selectedBlock.id))}>
                   <Copy size={13} />
                 </Button>
                 <Button
@@ -123,9 +133,9 @@ export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumb
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 text-[hsl(var(--destructive))]"
-                  aria-label="Remove region"
+                  aria-label={t('reports.regions.remove_aria')}
                   onClick={() => {
-                    if (window.confirm('Remove this region from the report?')) {
+                    if (window.confirm(t('reports.regions.remove_confirm'))) {
                       mutateRegionSafely(() => removeBlock(selectedBlock.id))
                     }
                   }}
@@ -136,9 +146,9 @@ export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumb
             </div>
 
             <div className="space-y-3 rounded-md border border-[hsl(var(--border))] p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Placement</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('reports.regions.placement_heading')}</p>
               <div className="space-y-1.5">
-                <Label htmlFor="report-region-sheet" className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Sheet</Label>
+                <Label htmlFor="report-region-sheet" className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.regions.sheet_label')}</Label>
                 <select
                   id="report-region-sheet"
                   value={selectedSheetID}
@@ -150,38 +160,38 @@ export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumb
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <CoordinateInput id="report-region-row" label="Row" value={selectedBlock.layout.row + 1} onChange={(value) => updateLayout({ row: Math.max(0, value - 1) })} />
-                <CoordinateInput id="report-region-column" label="Column" value={selectedBlock.layout.col + 1} onChange={(value) => updateLayout({ col: Math.max(0, value - 1) })} />
-                <CoordinateInput id="report-region-height" label="Height" value={Math.max(1, selectedBlock.layout.row_span || 1)} onChange={(value) => updateLayout({ row_span: Math.max(1, value) })} />
-                <CoordinateInput id="report-region-width" label="Width" value={Math.max(1, selectedBlock.layout.col_span || 1)} onChange={(value) => updateLayout({ col_span: Math.max(1, value) })} />
+                <CoordinateInput id="report-region-row" label={t('reports.regions.row_label')} value={selectedBlock.layout.row + 1} onChange={(value) => updateLayout({ row: Math.max(0, value - 1) })} />
+                <CoordinateInput id="report-region-column" label={t('reports.regions.column_label')} value={selectedBlock.layout.col + 1} onChange={(value) => updateLayout({ col: Math.max(0, value - 1) })} />
+                <CoordinateInput id="report-region-height" label={t('reports.regions.height_label')} value={Math.max(1, selectedBlock.layout.row_span || 1)} onChange={(value) => updateLayout({ row_span: Math.max(1, value) })} />
+                <CoordinateInput id="report-region-width" label={t('reports.regions.width_label')} value={Math.max(1, selectedBlock.layout.col_span || 1)} onChange={(value) => updateLayout({ col_span: Math.max(1, value) })} />
               </div>
 
               {getSelection && (
                 <Button type="button" variant="outline" size="sm" onClick={placeAtSelection} className="w-full text-xs">
-                  Place at selected cells
+                  {t('reports.regions.place_at_selection')}
                 </Button>
               )}
             </div>
 
             <div className="space-y-2 rounded-md border border-[hsl(var(--border))] p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Reference name</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('reports.regions.reference_name_heading')}</p>
               <input
                 id="report-region-name"
                 type="text"
                 value={selectedBlock.name ?? ''}
-                placeholder="e.g. Charges"
+                placeholder={t('reports.regions.reference_name_placeholder')}
                 onChange={(event) => mutateRegionSafely(() => updateBlockName(selectedBlock.id, event.target.value))}
                 className="h-8 w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2 text-xs text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
               />
               <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
                 {selectedBlock.name
-                  ? `Reference this region from any cell — e.g. =SUM(${selectedBlock.name}[Amount])`
-                  : 'Name this region to reference its columns from a cell formula.'}
+                  ? t('reports.regions.reference_hint', { name: selectedBlock.name })
+                  : t('reports.regions.reference_hint_empty')}
               </p>
             </div>
 
             <div className="space-y-3 rounded-md border border-[hsl(var(--border))] p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Data and content</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('reports.regions.data_content_heading')}</p>
               {selectedDefinition ? (
                 <selectedDefinition.ConfigPanel
                   config={selectedDefinition.parseConfig(selectedBlock.config)}
@@ -189,15 +199,15 @@ export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumb
                 />
               ) : (
                 <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-                  This region type is unavailable. Its saved configuration and placement are preserved.
+                  {t('reports.regions.unavailable_type')}
                 </p>
               )}
             </div>
 
             <details className="rounded-md border border-[hsl(var(--border))] p-3">
-              <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Region formatting</summary>
+              <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('reports.regions.formatting_summary')}</summary>
               <p className="mt-1 text-[11px] leading-4 text-[hsl(var(--muted-foreground))]">
-                Applies to this region in previews and supported exports. Cell formatting remains available in the workbook toolbar.
+                {t('reports.regions.formatting_hint')}
               </p>
               <div className="mt-3">
                 <StyleEditor
@@ -221,11 +231,12 @@ export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumb
 
         <section className="border-b border-[hsl(var(--border))] p-3" aria-labelledby="insert-static-heading">
           <h3 id="insert-static-heading" className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-            Insert
+            {t('reports.regions.insert_heading')}
           </h3>
           <div className="grid grid-cols-2 gap-1.5">
             {allReportBlocks().filter((b) => !DATA_SOURCE_BLOCK_TYPES.has(b.type)).map((blockDefinition) => {
               const Icon = blockDefinition.icon
+              const label = t(`reports.blocks.${blockDefinition.type}.label`)
               return (
                 <Button
                   key={blockDefinition.type}
@@ -233,36 +244,36 @@ export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumb
                   variant="outline"
                   size="sm"
                   className="h-auto min-h-9 justify-start gap-2 px-2 py-1.5 text-xs"
-                  aria-label={`Add ${blockDefinition.label} region`}
-                  title={blockDefinition.description}
+                  aria-label={t('reports.regions.add_region_aria', { label })}
+                  title={t(`reports.blocks.${blockDefinition.type}.description`)}
                   onClick={() => addRegion(blockDefinition.type)}
                 >
                   <Plus size={12} className="shrink-0 text-[hsl(var(--primary))]" />
                   <Icon size={13} className="shrink-0" />
-                  <span className="truncate">{blockDefinition.label}</span>
+                  <span className="truncate">{label}</span>
                 </Button>
               )
             })}
           </div>
           <p className="mt-2 text-[10px] leading-4 text-[hsl(var(--muted-foreground))]">
-            To place data, select cells in the sheet and use <strong>Insert data</strong> above the grid.
+            {t('reports.regions.insert_hint_prefix')} <strong>{t('reports.regions.insert_data_term')}</strong> {t('reports.regions.insert_hint_suffix')}
           </p>
         </section>
 
         {readNumberFormat && applyNumberFormat && (
           <section className="border-b border-[hsl(var(--border))] p-3" aria-labelledby="number-format-heading">
-            <h3 id="number-format-heading" className="sr-only">Number format</h3>
+            <h3 id="number-format-heading" className="sr-only">{t('reports.regions.number_format_heading')}</h3>
             <NumberFormatSection read={readNumberFormat} apply={applyNumberFormat} getSelection={getSelection} />
           </section>
         )}
 
         <section className="border-b border-[hsl(var(--border))] p-2" aria-labelledby="regions-heading">
           <h3 id="regions-heading" className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-            Regions
+            {t('reports.regions.regions_heading')}
           </h3>
           {definition.blocks.length === 0 ? (
             <p className="px-2 py-3 text-xs text-[hsl(var(--muted-foreground))]">
-              Select worksheet cells and add your first region.
+              {t('reports.regions.empty_regions')}
             </p>
           ) : (
             <div className="space-y-1">
@@ -284,8 +295,8 @@ export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumb
                   >
                     <GripVertical size={13} className="shrink-0 opacity-50" />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-xs font-medium">{blockDefinition?.label ?? block.type} · {block.id}</span>
-                      <span className="block text-[10px] opacity-70">{sheetName(sheets, block.sheet_id)} · R{block.layout.row + 1} C{block.layout.col + 1}</span>
+                      <span className="block truncate text-xs font-medium">{blockDefinition ? t(`reports.blocks.${block.type}.label`) : block.type} · {block.id}</span>
+                      <span className="block text-[10px] opacity-70">{sheetName(sheets, block.sheet_id, t('reports.regions.sheet_fallback'))} · R{block.layout.row + 1} C{block.layout.col + 1}</span>
                     </span>
                   </button>
                 )
@@ -298,8 +309,8 @@ export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumb
   )
 }
 
-function sheetName(sheets: Array<{ id: string; name: string }>, sheetID?: string): string {
-  return sheets.find((sheet) => sheet.id === sheetID)?.name ?? sheets[0]?.name ?? 'Sheet'
+function sheetName(sheets: Array<{ id: string; name: string }>, sheetID: string | undefined, fallback: string): string {
+  return sheets.find((sheet) => sheet.id === sheetID)?.name ?? sheets[0]?.name ?? fallback
 }
 
 function CoordinateInput({ id, label, value, onChange }: {

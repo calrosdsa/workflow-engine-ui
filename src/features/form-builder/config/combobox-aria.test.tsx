@@ -19,6 +19,7 @@
 // pattern really did break; do not silence it by adding the literal prop.
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import { FormReferenceSelect } from './FormReferenceSelect'
 
 Element.prototype.hasPointerCapture = () => false
@@ -43,7 +44,7 @@ vi.mock('@/features/forms/hooks', () => ({
 
 describe('combobox pattern — runtime ARIA (oxlint false-positive guard)', () => {
   it('omits aria-controls while closed, which is Radix\'s deliberate behavior', () => {
-    render(<FormReferenceSelect value="" onChange={() => {}} />)
+    render(<I18nProvider><FormReferenceSelect value="" onChange={() => {}} /></I18nProvider>)
     const trigger = screen.getByRole('combobox')
 
     // Radix emits `aria-controls={open ? contentId : undefined}`. Pointing at
@@ -54,7 +55,7 @@ describe('combobox pattern — runtime ARIA (oxlint false-positive guard)', () =
   })
 
   it('wires aria-controls to the real popover element once open', () => {
-    render(<FormReferenceSelect value="" onChange={() => {}} />)
+    render(<I18nProvider><FormReferenceSelect value="" onChange={() => {}} /></I18nProvider>)
     const trigger = screen.getByRole('combobox')
     fireEvent.click(trigger)
 
@@ -72,7 +73,7 @@ describe('combobox pattern — runtime ARIA (oxlint false-positive guard)', () =
   })
 
   it('declares aria-haspopup="dialog", which ARIA 1.2 permits for combobox', () => {
-    render(<FormReferenceSelect value="" onChange={() => {}} />)
+    render(<I18nProvider><FormReferenceSelect value="" onChange={() => {}} /></I18nProvider>)
 
     // Recorded so a future session does not "correct" this to listbox: the
     // popup genuinely is a dialog containing the listbox, and ARIA 1.2 allows

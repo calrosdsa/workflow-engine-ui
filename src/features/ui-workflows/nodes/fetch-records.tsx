@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input'
 import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenceSelect'
 import { registerUiWorkflowNode, type UiWorkflowNodeConfigPanelProps } from '../node-registry'
 import { Field } from './panel-kit'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { ALL_PLATFORMS } from '../types'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
 
@@ -52,9 +53,10 @@ export function parseFetchRecordsConfig(raw: unknown): FetchRecordsStepConfig {
 }
 
 function FetchRecordsPanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<FetchRecordsStepConfig>) {
+  const t = useTranslation()
   return (
     <div className="space-y-2">
-      <Field label="Form" hint="Searched as the current viewer — their own form permissions apply.">
+      <Field label={t('ui_workflows.panel.form_label')} hint={t('ui_workflows.panel.fetch_records.form_hint')}>
         <FormReferenceSelect
           value={config.form_id}
           // The picker can clear its selection; the config keeps form_id a
@@ -62,15 +64,15 @@ function FetchRecordsPanel({ config, onChange }: UiWorkflowNodeConfigPanelProps<
           onChange={(form_id) => onChange({ ...config, form_id: form_id ?? '' })}
         />
       </Field>
-      <Field label="Store results in" hint="A second variable with “_count” appended holds the total number of matches.">
+      <Field label={t('ui_workflows.panel.fetch_records.store_results_label')} hint={t('ui_workflows.panel.fetch_records.store_results_hint')}>
         <Input
           value={config.output_variable}
           onChange={(e) => onChange({ ...config, output_variable: e.target.value })}
-          placeholder="records"
+          placeholder={t('ui_workflows.panel.fetch_records.store_results_placeholder')}
           className="h-8 font-mono text-[11px]"
         />
       </Field>
-      <Field label="How many" hint={`At most ${MAX_PAGE_SIZE}.`}>
+      <Field label={t('ui_workflows.panel.fetch_records.how_many_label')} hint={t('ui_workflows.panel.fetch_records.how_many_hint', { max: MAX_PAGE_SIZE })}>
         <Input
           type="number"
           value={config.page_size}

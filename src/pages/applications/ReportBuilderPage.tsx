@@ -12,6 +12,7 @@ import { PreviewButton } from '@/features/reports/PreviewButton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 interface ReportBuilderPageProps {
   appId: string
@@ -36,6 +37,7 @@ function isWorkbookTarget(target: EventTarget | null): boolean {
 }
 
 export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
+  const t = useTranslation()
   const navigate = useNavigate()
   const { data: report, isLoading } = useReport(reportId)
   const updateMutation = useUpdateReport(reportId)
@@ -103,7 +105,7 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
       }
       return true
     } catch (e: unknown) {
-      setSaveError(e instanceof Error ? e.message : 'Save failed')
+      setSaveError(e instanceof Error ? e.message : t('common.save_failed'))
       return false
     }
   }
@@ -172,12 +174,12 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
 
   useEffect(() => {
     if (!justSaved) return
-    const t = setTimeout(() => setJustSaved(false), 1600)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setJustSaved(false), 1600)
+    return () => clearTimeout(timer)
   }, [justSaved])
 
   const handleBack = () => {
-    if (dirty && !window.confirm('You have unsaved changes. Leave without saving?')) return
+    if (dirty && !window.confirm(t('common.confirm_leave_unsaved'))) return
     navigate({ to: '/applications/$appId/configuration', params: { appId }, search: { tab: 'reports' } })
   }
 
@@ -192,8 +194,8 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
           variant="ghost" size="icon"
           className="h-8 w-8 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           onClick={handleBack}
-          aria-label="Back to reports"
-          title="Back to reports"
+          aria-label={t('reports.builder.back')}
+          title={t('reports.builder.back')}
         >
           <ArrowLeft size={16} />
         </Button>
@@ -212,7 +214,7 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
           {dirty && (
             <span className="flex items-center gap-1 rounded-full bg-[hsl(var(--warning))]/10 px-2 py-0.5 text-[10px] font-medium text-[hsl(var(--warning))]">
               <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--warning))]" />
-              Unsaved
+              {t('common.unsaved')}
             </span>
           )}
         </div>
@@ -225,8 +227,8 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
             className="h-8 w-8 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] disabled:opacity-30"
             onClick={handleUndo}
             disabled={!canUndo}
-            aria-label="Undo"
-            title="Undo (Ctrl+Z)"
+            aria-label={t('common.undo')}
+            title={t('common.undo')}
           >
             <Undo2 size={16} />
           </Button>
@@ -235,8 +237,8 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
             className="h-8 w-8 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] disabled:opacity-30"
             onClick={handleRedo}
             disabled={!canRedo}
-            aria-label="Redo"
-            title="Redo (Ctrl+Shift+Z)"
+            aria-label={t('common.redo')}
+            title={t('common.redo')}
           >
             <Redo2 size={16} />
           </Button>
@@ -256,9 +258,9 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
           </span>
         )}
 
-        <Button size="sm" onClick={handleSave} disabled={isSaving} title="Save (Ctrl+S)">
+        <Button size="sm" onClick={handleSave} disabled={isSaving} title={t('reports.builder.save_title')}>
           {isSaving ? <Spinner className="h-4 w-4" /> : justSaved ? <Check size={13} /> : <Save size={13} />}
-          {justSaved ? 'Saved' : 'Save'}
+          {justSaved ? t('common.saved') : t('common.save')}
         </Button>
       </header>
 

@@ -1,5 +1,6 @@
 import { AlertTriangle } from 'lucide-react'
 import { useMenus } from '@/features/menus/hooks'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 interface MenuSlugSelectProps {
   value: string
@@ -15,6 +16,7 @@ interface MenuSlugSelectProps {
 // factored into its own small component since the page-builder's button
 // component needs the identical picker.
 export function MenuSlugSelect({ value, onChange, excludeMenuId }: MenuSlugSelectProps) {
+  const t = useTranslation()
   const { data: allMenus, isLoading } = useMenus()
   const otherMenus = (allMenus ?? []).filter((m) => m.id !== excludeMenuId)
   // A <select> with a value that doesn't match any <option> just silently
@@ -31,16 +33,16 @@ export function MenuSlugSelect({ value, onChange, excludeMenuId }: MenuSlugSelec
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700"
       >
-        <option value="">Select a menu…</option>
+        <option value="">{t('page_config.select_menu_placeholder')}</option>
         {otherMenus.map((m) => (
           <option key={m.id} value={m.slug}>{m.name}</option>
         ))}
-        {isBroken && <option value={value}>{value} (missing)</option>}
+        {isBroken && <option value={value}>{value} {t('page_config.menu_missing_suffix')}</option>}
       </select>
       {isBroken && (
         <div className="flex items-center gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
           <AlertTriangle size={12} className="shrink-0" />
-          <span>This menu no longer exists — pick a new target.</span>
+          <span>{t('page_config.menu_missing_warning')}</span>
         </div>
       )}
     </div>

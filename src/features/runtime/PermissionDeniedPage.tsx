@@ -1,6 +1,7 @@
 import { ShieldAlert, LogIn } from 'lucide-react'
 import { useParams } from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/auth'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { RuntimeLink } from './RuntimeLink'
 
 // The direct-hit-the-URL safety net for the route-load-time 403 half of
@@ -11,6 +12,7 @@ import { RuntimeLink } from './RuntimeLink'
 // menus) from "signed in but this role lacks the permission" (plain denial,
 // no prompt to offer).
 export function PermissionDeniedPage() {
+  const t = useTranslation()
   const session = useAuthStore((s) => s.session)
   const { clientId, appId } = useParams({ strict: false }) as { clientId?: string; appId?: string }
 
@@ -18,16 +20,16 @@ export function PermissionDeniedPage() {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center animate-in fade-in-0 duration-300">
         <LogIn size={36} style={{ color: 'hsl(var(--muted-foreground))' }} className="opacity-60" />
-        <h2 className="text-base font-semibold">Sign in to continue</h2>
+        <h2 className="text-base font-semibold">{t('runtime.permission_denied.sign_in_heading')}</h2>
         <p className="max-w-sm text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
-          This section requires an account with access. Sign in to view it.
+          {t('runtime.permission_denied.sign_in_body')}
         </p>
         <RuntimeLink
           to={`/${clientId ?? ''}/${appId ?? ''}/login?returnTo=${encodeURIComponent(window.location.pathname)}`}
           className="mt-1 inline-flex items-center rounded-md px-4 py-2 text-sm font-medium transition-colors duration-150 ease-out hover:bg-[hsl(var(--primary))]/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))]"
           style={{ backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}
         >
-          Sign in
+          {t('auth.sign_in')}
         </RuntimeLink>
       </div>
     )
@@ -36,9 +38,9 @@ export function PermissionDeniedPage() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center animate-in fade-in-0 duration-300">
       <ShieldAlert size={36} style={{ color: 'hsl(var(--muted-foreground))' }} className="opacity-60" />
-      <h2 className="text-base font-semibold">You don't have access to this section</h2>
+      <h2 className="text-base font-semibold">{t('runtime.permission_denied.denied_heading')}</h2>
       <p className="max-w-sm text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
-        Contact an administrator if you believe this is a mistake.
+        {t('runtime.permission_denied.denied_body')}
       </p>
     </div>
   )

@@ -7,6 +7,7 @@ import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } fro
 import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenceSelect'
 import { registerUiWorkflowNode, type UiWorkflowNodeConfigPanelProps } from '../node-registry'
 import { Field, FieldPicker } from './panel-kit'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { buildRecordValues } from '../values'
 import { ALL_PLATFORMS } from '../types'
 
@@ -69,14 +70,15 @@ export function parseWriteRecordConfig(raw: unknown): WriteRecordStepConfig {
 function WriteRecordPanel({ config, onChange, fields, mode }: UiWorkflowNodeConfigPanelProps<WriteRecordStepConfig> & {
   mode: 'create' | 'update'
 }) {
+  const t = useTranslation()
   const setWrite = (i: number, patch: Partial<RecordFieldWrite>) =>
     onChange({ ...config, values: config.values.map((w, idx) => (idx === i ? { ...w, ...patch } : w)) })
 
   return (
     <div className="space-y-2">
       <Field
-        label="Form"
-        hint={mode === 'update' ? 'Leave unset to update the record this workflow is acting on.' : undefined}
+        label={t('ui_workflows.panel.form_label')}
+        hint={mode === 'update' ? t('ui_workflows.panel.write_record.form_hint_update') : undefined}
       >
         <FormReferenceSelect
           value={config.form_id}
@@ -85,10 +87,10 @@ function WriteRecordPanel({ config, onChange, fields, mode }: UiWorkflowNodeConf
       </Field>
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Set fields</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('ui_workflows.panel.write_record.set_fields_label')}</Label>
         {config.values.length === 0 && (
           <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-            Nothing set yet. Only the fields listed here are written — everything else on the record is left alone.
+            {t('ui_workflows.panel.write_record.nothing_set')}
           </p>
         )}
         {config.values.map((write, i) => (
@@ -99,8 +101,8 @@ function WriteRecordPanel({ config, onChange, fields, mode }: UiWorkflowNodeConf
             <SelectMenu value={write.source} onValueChange={(v) => setWrite(i, { source: v as RecordFieldWrite['source'] })}>
               <SelectTrigger className="h-8 w-24 shrink-0 text-[11px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="static" className="text-[12px]">Value</SelectItem>
-                <SelectItem value="variable" className="text-[12px]">Variable</SelectItem>
+                <SelectItem value="static" className="text-[12px]">{t('common.value')}</SelectItem>
+                <SelectItem value="variable" className="text-[12px]">{t('ui_workflows.panel.variable_label')}</SelectItem>
               </SelectContent>
             </SelectMenu>
             <Input
@@ -112,7 +114,7 @@ function WriteRecordPanel({ config, onChange, fields, mode }: UiWorkflowNodeConf
             />
             <Button
               type="button" variant="ghost" size="sm" className="h-7 w-7 shrink-0 p-0"
-              aria-label="Remove field"
+              aria-label={t('ui_workflows.panel.write_record.remove_field')}
               onClick={() => onChange({ ...config, values: config.values.filter((_, idx) => idx !== i) })}
             >
               <Trash2 size={11} />
@@ -123,21 +125,21 @@ function WriteRecordPanel({ config, onChange, fields, mode }: UiWorkflowNodeConf
           type="button" variant="outline" size="sm" className="h-7 w-full gap-1 text-[11px]"
           onClick={() => onChange({ ...config, values: [...config.values, { field: '', source: 'static', value: '' }] })}
         >
-          <Plus size={11} /> Add field
+          <Plus size={11} /> {t('ui_workflows.panel.write_record.add_field')}
         </Button>
       </div>
 
       {mode === 'create' ? (
-        <Field label="Store new record id in" hint="Lets a later step open or update what this one just made.">
+        <Field label={t('ui_workflows.panel.store_new_id_label')} hint={t('ui_workflows.panel.write_record.store_id_hint_create')}>
           <Input
             value={config.output_variable ?? ''}
             onChange={(e) => onChange({ ...config, output_variable: e.target.value })}
-            placeholder="new_record"
+            placeholder={t('ui_workflows.panel.new_record_placeholder')}
             className="h-8 font-mono text-[11px]"
           />
         </Field>
       ) : (
-        <Field label="Record id from variable" hint="Blank means the record this workflow is acting on.">
+        <Field label={t('ui_workflows.panel.record_id_variable_label')} hint={t('ui_workflows.panel.write_record.record_id_hint_update')}>
           <Input
             value={config.record_id_variable ?? ''}
             onChange={(e) => onChange({ ...config, record_id_variable: e.target.value })}

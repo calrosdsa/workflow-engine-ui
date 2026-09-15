@@ -13,6 +13,7 @@ import { FileFieldInput } from './FileFieldInput'
 import { LineItemsGrid } from './LineItemsGrid'
 import { useAuthStore } from '@/stores/auth'
 import { useRoles } from '@/features/roles/hooks'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { FormElement } from '@/features/form-builder/schema'
 import type { FieldRuntimeState } from './expression-context'
 
@@ -133,6 +134,7 @@ export function FieldInput({ el, field, formId, control, disabled, id, labelledB
   required?: boolean
   invalid?: boolean
 }) {
+  const t = useTranslation()
   // Spread into whichever element is the field's actual focusable control, so
   // the <label htmlFor> above resolves and errors/hints are announced with it.
   const a11y = {
@@ -247,7 +249,7 @@ export function FieldInput({ el, field, formId, control, disabled, id, labelledB
     case 'select':
       return (
         <Select value={(field.value as string) ?? ''} onChange={(e) => field.onChange(e.target.value)} disabled={disabled} {...a11y}>
-          <option value="">Select…</option>
+          <option value="">{t('field_renderer.select_placeholder')}</option>
           {(el.options ?? []).map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
@@ -341,12 +343,13 @@ function RoleFieldInput({ value, onChange, disabled, a11y }: {
    *  <select> rather than to nothing. */
   a11y?: Record<string, unknown>
 }) {
+  const t = useTranslation()
   const appId = useAuthStore((s) => s.activeMembership?.app_id) ?? ''
   const { data: roles, isLoading } = useRoles(appId)
 
   return (
     <Select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled || isLoading} {...a11y}>
-      <option value="">{isLoading ? 'Loading roles…' : 'Select…'}</option>
+      <option value="">{isLoading ? t('field_renderer.loading_roles') : t('field_renderer.select_placeholder')}</option>
       {(roles ?? []).map((r) => (
         <option key={r.id} value={r.id}>{r.name}</option>
       ))}

@@ -26,6 +26,7 @@ import { FieldInput } from './FieldRenderer'
 import { fieldSchema, isFieldStaticallyWritable } from './schema-to-zod'
 import { useUpdateRecord } from '@/features/forms/hooks'
 import { usePermission } from '@/features/auth/permissions'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { FormElement } from '@/features/form-builder/schema'
 import type { FormRecord } from '@/features/forms/types'
 
@@ -92,6 +93,7 @@ export function InlineFieldEditor({ el, record, formId, recordId, advancedReadOn
   onStartEdit: () => void
   onStopEdit: () => void
 }) {
+  const t = useTranslation()
   const canEdit = usePermission(`forms:${formId}:edit`)
   const eligible = isFieldEligible(el, canEdit, advancedReadOnly)
   const [value, setValue] = useState<unknown>(record[el.key])
@@ -108,7 +110,7 @@ export function InlineFieldEditor({ el, record, formId, recordId, advancedReadOn
       <button
         type="button"
         disabled={locked}
-        title={locked ? 'Finish editing the other field first' : undefined}
+        title={locked ? t('inline_field_editor.finish_editing_other_field') : undefined}
         onClick={() => { setValue(record[el.key]); setError(null); onStartEdit() }}
         className="group/field flex w-full items-start gap-1.5 rounded px-1 py-0.5 -mx-1 -my-0.5 text-left transition-colors hover:bg-[hsl(var(--accent))] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
       >
@@ -127,23 +129,23 @@ export function InlineFieldEditor({ el, record, formId, recordId, advancedReadOn
   const save = async () => {
     const result = fieldSchema(el).safeParse(value)
     if (!result.success) {
-      setError(result.error.issues[0]?.message || 'Invalid value')
+      setError(result.error.issues[0]?.message || t('inline_field_editor.invalid_value'))
       return
     }
     setError(null)
     if (valuesEqual(result.data, record[el.key])) {
-      toast.info('No changes to save', { description: `${el.label} is unchanged.` })
+      toast.info(t('inline_field_editor.no_changes_title'), { description: t('inline_field_editor.no_changes_description', { field: el.label }) })
       onStopEdit()
       return
     }
     try {
       await updateRecord.mutateAsync({ recordId, data: { [el.key]: result.data } })
-      toast.success('Saved', { description: `${el.label} was updated.` })
+      toast.success(t('common.saved'), { description: t('inline_field_editor.saved_description', { field: el.label }) })
       onStopEdit()
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to save'
+      const message = e instanceof Error ? e.message : t('common.save_failed')
       setError(message)
-      toast.error('Save failed', { description: message })
+      toast.error(t('inline_field_editor.save_failed_title'), { description: message })
     }
   }
 
@@ -166,7 +168,7 @@ export function InlineFieldEditor({ el, record, formId, recordId, advancedReadOn
           type="button"
           onClick={save}
           disabled={updateRecord.isPending}
-          title="Save"
+          title={t('common.save')}
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[hsl(var(--primary))] transition-colors hover:bg-[hsl(var(--accent))] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Check size={15} />
@@ -175,7 +177,7 @@ export function InlineFieldEditor({ el, record, formId, recordId, advancedReadOn
           type="button"
           onClick={cancel}
           disabled={updateRecord.isPending}
-          title="Cancel"
+          title={t('common.cancel')}
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <X size={15} />

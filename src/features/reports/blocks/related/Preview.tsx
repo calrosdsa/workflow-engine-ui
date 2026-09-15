@@ -1,4 +1,5 @@
 import { useForm } from '@/features/forms/hooks'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { ReportBlockRendererProps } from '../../report-block-contract'
 import type { RelatedBlockConfig } from './schema'
 
@@ -9,11 +10,12 @@ import type { RelatedBlockConfig } from './schema'
 // child table per parent row) so an author can confirm the relationship is
 // wired correctly before generating a real report.
 export function RelatedBlockPreview({ config }: ReportBlockRendererProps<RelatedBlockConfig>) {
+  const t = useTranslation()
   const { data: parentForm } = useForm(config.parent_form_id)
   const { data: childForm } = useForm(config.child_form_id)
 
   if (!config.parent_form_id || !config.child_form_id) {
-    return <p className="p-3 text-xs italic text-[hsl(var(--muted-foreground))]">No parent/child form selected</p>
+    return <p className="p-3 text-xs italic text-[hsl(var(--muted-foreground))]">{t('reports.blocks.related.no_forms_selected')}</p>
   }
 
   const parentColumns = parentForm?.fields.map((f) => f.label) ?? []
@@ -24,7 +26,7 @@ export function RelatedBlockPreview({ config }: ReportBlockRendererProps<Related
   return (
     <div className="flex h-full flex-col p-3">
       <p className="mb-2 text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-        {parentForm?.name ?? 'Loading…'} → {childForm?.name ?? 'Loading…'} · related
+        {parentForm?.name ?? t('common.loading')} → {childForm?.name ?? t('common.loading')} · {t('reports.blocks.related.preview_kind')}
       </p>
       <div className="overflow-hidden rounded border border-[hsl(var(--border))]">
         <table className="w-full text-[11px]">
@@ -43,7 +45,7 @@ export function RelatedBlockPreview({ config }: ReportBlockRendererProps<Related
             </tr>
             <tr>
               <td colSpan={Math.max(1, Math.min(5, parentColumns.length))} className="border-t border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 px-2 py-1">
-                <span className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">↳ {childForm?.name ?? 'child'}: </span>
+                <span className="text-[10px] font-medium text-[hsl(var(--muted-foreground))]">↳ {childForm?.name ?? t('reports.blocks.related.child_fallback')}: </span>
                 <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{childColumns.slice(0, 4).join(' · ')}</span>
               </td>
             </tr>

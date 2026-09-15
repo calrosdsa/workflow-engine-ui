@@ -9,6 +9,7 @@ import { useBuilderStore } from '../store'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, ConditionConfig, FilterGroup } from '../../types'
 import type { FieldType } from '@/features/forms/types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 // condition — no normalisation needed; the config shape has been stable
 // since the DAG redesign and is safe to cast directly (the structured
@@ -71,6 +72,7 @@ export interface ConditionFormProps {
 }
 
 export function ConditionForm({ config, variables, nodeContext, onChange }: ConditionFormProps) {
+  const { t } = useI18n()
   const [editorOpen, setEditorOpen] = useState(false)
   // Expression mode only when an expression was actually authored — the
   // structured builder is the default for new nodes.
@@ -89,10 +91,10 @@ export function ConditionForm({ config, variables, nodeContext, onChange }: Cond
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-          Condition
+          {t('workflows.node_forms.condition')}
         </Label>
         <div className="flex overflow-hidden rounded-lg border border-[hsl(var(--border))]">
-          {([['builder', ListFilter, 'Builder'], ['expression', Code2, 'Expression']] as const).map(([m, Icon, lbl]) => (
+          {([['builder', ListFilter, t('workflows.node_forms.builder')], ['expression', Code2, t('workflows.node_forms.expression')]] as const).map(([m, Icon, lbl]) => (
             <button
               key={m}
               onClick={() => setMode(m)}
@@ -139,7 +141,7 @@ export function ConditionForm({ config, variables, nodeContext, onChange }: Cond
             className="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium text-[hsl(var(--primary))] transition-colors hover:bg-[hsl(var(--primary))]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
           >
             <Code2 size={11} />
-            Open editor
+            {t('workflows.node_forms.open_editor')}
           </button>
         </>
       )}
@@ -158,11 +160,11 @@ export function ConditionForm({ config, variables, nodeContext, onChange }: Cond
         <div className="flex items-center gap-2">
           <Split size={12} className={cn('transition-colors', twoWay ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--muted-foreground))]')} />
           <div>
-            <p className="text-[11px] font-medium text-[hsl(var(--foreground))]">Two-path branch</p>
+            <p className="text-[11px] font-medium text-[hsl(var(--foreground))]">{t('workflows.node_forms.two_path')}</p>
             <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
               {twoWay
-                ? 'Routes to a true or false output.'
-                : 'Off: continues only when the condition is true.'}
+                ? t('workflows.node_forms.routes_true_false')
+                : t('workflows.node_forms.true_only')}
             </p>
           </div>
         </div>
@@ -180,7 +182,7 @@ export function ConditionForm({ config, variables, nodeContext, onChange }: Cond
         onChange={(expr) => onChange({ expression: expr })}
         variables={variables}
         nodeContext={nodeContext}
-        label="condition"
+        label={t('workflows.node_forms.condition')}
       />
     </div>
   )

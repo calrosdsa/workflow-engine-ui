@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ImageOff } from 'lucide-react'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { WidgetRendererProps } from '../../widget-contract'
 import type { ImageWidgetConfig } from './schema'
 
@@ -11,6 +12,7 @@ const WIDTH_CLASSES: Record<ImageWidgetConfig['width'], string> = {
 }
 
 export function ImageRenderer({ config }: WidgetRendererProps<ImageWidgetConfig>) {
+  const t = useTranslation()
   // Tracks the src that actually failed, not just "did any error ever
   // happen" — so correcting the URL in the config panel and having it
   // load successfully clears the broken state instead of it sticking
@@ -18,13 +20,13 @@ export function ImageRenderer({ config }: WidgetRendererProps<ImageWidgetConfig>
   const [failedSrc, setFailedSrc] = useState<string | null>(null)
 
   if (!config.src) {
-    return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No image URL set yet.</div>
+    return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('builder.dashboard_image.no_url')}</div>
   }
   if (failedSrc === config.src) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-1.5 p-3 text-center">
         <ImageOff size={18} style={{ color: 'hsl(var(--muted-foreground))' }} />
-        <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Couldn't load this image.</p>
+        <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('builder.dashboard_image.load_error')}</p>
       </div>
     )
   }

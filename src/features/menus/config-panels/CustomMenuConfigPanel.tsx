@@ -8,6 +8,7 @@ import { CompactToolbox } from '@/features/page-builder/CompactToolbox'
 import { ComponentPropertiesPanel } from '@/features/page-builder/config/ComponentPropertiesPanel'
 import { Button } from '@/components/ui/button'
 import { pageSchemaToDashboard } from '@/features/dashboard/convertFromPageSchema'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useCreateMenu } from '../hooks'
 import { EmbedConfigPanel } from './EmbedConfigPanel'
 import type { Menu, CustomMenuConfig } from '../types'
@@ -28,6 +29,7 @@ interface CustomMenuConfigPanelProps {
 // Switching modes does NOT clear the other mode's data — only `mode` itself
 // changes, so toggling back and forth in the builder never loses work.
 export function CustomMenuConfigPanel({ menu, onChange }: CustomMenuConfigPanelProps) {
+  const t = useTranslation()
   const config = menu.config as CustomMenuConfig
   const mode = config.mode ?? 'page'
 
@@ -93,7 +95,7 @@ export function CustomMenuConfigPanel({ menu, onChange }: CustomMenuConfigPanelP
             mode === 'page' ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]'
           }`}
         >
-          <LayoutTemplate size={12} /> Page Builder
+          <LayoutTemplate size={12} /> {t('menus.config_panels.custom.mode_page')}
         </button>
         <button
           type="button"
@@ -102,7 +104,7 @@ export function CustomMenuConfigPanel({ menu, onChange }: CustomMenuConfigPanelP
             mode === 'embed' ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]'
           }`}
         >
-          <Link2 size={12} /> Embed a Webpage
+          <Link2 size={12} /> {t('menus.config_panels.custom.mode_embed')}
         </button>
       </div>
 
@@ -133,10 +135,10 @@ export function CustomMenuConfigPanel({ menu, onChange }: CustomMenuConfigPanelP
           <div className="flex items-center justify-between rounded-md border border-dashed border-[hsl(var(--border))] p-3">
             <div className="min-w-0">
               <p className="flex items-center gap-1.5 text-[11px] font-medium text-[hsl(var(--foreground))]/80">
-                <LayoutDashboard size={12} className="text-[hsl(var(--primary))]" /> New: Dashboard canvas
+                <LayoutDashboard size={12} className="text-[hsl(var(--primary))]" /> {t('menus.config_panels.custom.convert_title')}
               </p>
               <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-                Copy this page into a new drag-and-drop dashboard — charts, tables, and widgets included. The original page is kept as-is.
+                {t('menus.config_panels.custom.convert_hint')}
               </p>
             </div>
             <Button
@@ -148,11 +150,11 @@ export function CustomMenuConfigPanel({ menu, onChange }: CustomMenuConfigPanelP
               onClick={handleConvert}
             >
               {createMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : convertState === 'done' ? <Check size={12} /> : null}
-              {convertState === 'done' ? 'Converted' : 'Convert to Dashboard'}
+              {convertState === 'done' ? t('menus.config_panels.custom.convert_done') : t('menus.config_panels.custom.convert_button')}
             </Button>
           </div>
           {convertState === 'error' && (
-            <p className="text-[11px] text-[hsl(var(--destructive))]">Could not create the dashboard — try again.</p>
+            <p className="text-[11px] text-[hsl(var(--destructive))]">{t('menus.config_panels.custom.convert_error')}</p>
           )}
         </div>
       )}

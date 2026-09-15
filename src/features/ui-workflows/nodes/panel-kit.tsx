@@ -8,6 +8,7 @@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { FieldDef } from '@/features/forms/types'
 
 export function Field({ label, hint, children }: {
@@ -24,13 +25,6 @@ export function Field({ label, hint, children }: {
   )
 }
 
-/** The value-source picker several nodes share: a literal, a run variable, or
- *  a field off the record in context. Deliberately no expression option —
- *  Expr has no client evaluator, so an expression would cost a round-trip per
- *  value, which is the same reason conditions are structured trees. */
-export const VALUE_SOURCE_HINT =
-  'A typed-in value, a variable an earlier step set, or a field on the record this workflow is acting on.'
-
 /** Picks one of the attached form's fields.
  *
  *  Falls back to a free-text input when the surface has no field list —
@@ -42,19 +36,20 @@ export function FieldPicker({ fields, value, onChange }: {
   value: string
   onChange: (next: string) => void
 }) {
+  const t = useTranslation()
   if (fields.length === 0) {
     return (
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="field_name"
+        placeholder={t('ui_workflows.field_picker.field_name_placeholder')}
         className="h-8 font-mono text-[11px]"
       />
     )
   }
   return (
     <SelectMenu value={value} onValueChange={onChange}>
-      <SelectTrigger className="h-8 text-[12px]"><SelectValue placeholder="Pick a field…" /></SelectTrigger>
+      <SelectTrigger className="h-8 text-[12px]"><SelectValue placeholder={t('ui_workflows.field_picker.pick_field_placeholder')} /></SelectTrigger>
       <SelectContent>
         {fields.map((f) => (
           <SelectItem key={f.name} value={f.name} className="text-[12px]">

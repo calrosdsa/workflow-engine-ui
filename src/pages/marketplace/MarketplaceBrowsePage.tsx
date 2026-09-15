@@ -15,16 +15,18 @@ import { usePermission } from '@/features/auth/permissions'
 import { useAuthStore } from '@/stores/auth'
 import { extractApiError } from '@/lib/api'
 import type { PublicListing, InstallResult } from '@/features/marketplace/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
-const RESOURCE_LABELS: Record<string, string> = {
-  forms: 'Forms', workflows: 'Workflows', menus: 'Menus',
-  roles: 'Roles', agents: 'Agents', credentials: 'Credentials',
+const RESOURCE_LABEL_KEYS: Record<string, string> = {
+  forms: 'marketplace.forms', workflows: 'marketplace.workflows', menus: 'marketplace.menus',
+  roles: 'marketplace.roles', agents: 'marketplace.agents', credentials: 'marketplace.credentials',
 }
 
 // Browsing is a primary, bookmarkable destination (a full page under the
 // global shell, alongside Home/Team/Model Providers) rather than a modal
 // picker — you arrive here to look around, not mid-flow inside another task.
 export function MarketplaceBrowsePage() {
+  const t = useTranslation()
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const { data: listings, isLoading } = useBrowseMarketplace({ search })
@@ -32,10 +34,9 @@ export function MarketplaceBrowsePage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Marketplace</h1>
+        <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">{t('marketplace.title')}</h1>
         <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
-          Install a published app as a new application in your account. Installing copies the app's design — forms,
-          workflows, menus, roles, and agents — and never its data: installed forms start empty.
+          {t('marketplace.browse_description')}
         </p>
       </div>
 
@@ -44,7 +45,7 @@ export function MarketplaceBrowsePage() {
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search listings…"
+          placeholder={t('marketplace.search')}
           className="pl-9"
         />
       </div>
@@ -55,12 +56,12 @@ export function MarketplaceBrowsePage() {
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center">
           <Store size={32} className="mb-3 text-[hsl(var(--muted-foreground))]/60" />
           <p className="text-sm font-medium text-[hsl(var(--foreground))]">
-            {search ? 'No listings match your search' : 'Nothing published yet'}
+            {search ? t('marketplace.no_match') : t('marketplace.nothing_published')}
           </p>
           <p className="mt-1 max-w-sm text-[12px] text-[hsl(var(--muted-foreground))]">
             {search
-              ? 'Try a different search term.'
-              : 'Public listings appear here once approved. Privately shared listings appear only for the account they were shared with.'}
+              ? t('marketplace.try_search')
+              : t('marketplace.public_listing_hint')}
           </p>
         </div>
       ) : (
@@ -77,6 +78,7 @@ export function MarketplaceBrowsePage() {
 }
 
 function ListingCard({ listing, onOpen }: { listing: PublicListing; onOpen: () => void }) {
+  const t = useTranslation()
   return (
     <Card
       role="button"
@@ -90,18 +92,18 @@ function ListingCard({ listing, onOpen }: { listing: PublicListing; onOpen: () =
           <CardTitle className="text-base">{listing.name}</CardTitle>
           {listing.visibility === 'private' ? (
             <Badge variant="outline" className="shrink-0 gap-1 bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]">
-              <Lock size={10} /> Shared with you
+              <Lock size={10} /> {t('marketplace.shared_with_you')}
             </Badge>
           ) : (
             <Badge variant="outline" className="shrink-0 gap-1 text-[hsl(var(--muted-foreground))]">
-              <Globe size={10} /> Public
+              <Globe size={10} /> {t('marketplace.public')}
             </Badge>
           )}
         </div>
-        <CardDescription className="line-clamp-2">{listing.description || 'No description.'}</CardDescription>
+        <CardDescription className="line-clamp-2">{listing.description || t('marketplace.no_description')}</CardDescription>
         <div className="mt-2 flex items-center gap-3 text-[11px] text-[hsl(var(--muted-foreground))]">
           {listing.category && <span>{listing.category}</span>}
-          <span>{listing.install_count} install{listing.install_count === 1 ? '' : 's'}</span>
+          <span>{listing.install_count === 1 ? t('marketplace.install_count_one') : t('marketplace.install_count_other', { count: listing.install_count })}</span>
         </div>
       </CardHeader>
     </Card>
@@ -109,6 +111,7 @@ function ListingCard({ listing, onOpen }: { listing: PublicListing; onOpen: () =
 }
 
 function ListingDetailDialog({ listingId, onOpenChange }: { listingId: string | null; onOpenChange: (open: boolean) => void }) {
+  const t = useTranslation()
   const { data: listing, isLoading } = usePublicListing(listingId)
   const canInstall = usePermission('marketplace:install')
   const [installOpen, setInstallOpen] = useState(false)
@@ -124,7 +127,7 @@ function ListingDetailDialog({ listingId, onOpenChange }: { listingId: string | 
             {listing && (
               <DialogDescription>
                 {listing.category ? `${listing.category} · ` : ''}
-                {listing.install_count} install{listing.install_count === 1 ? '' : 's'}
+                {listing.install_count === 1 ? t('marketplace.install_count_one') : t('marketplace.install_count_other', { count: listing.install_count })}
               </DialogDescription>
             )}
           </DialogHeader>
@@ -141,13 +144,13 @@ function ListingDetailDialog({ listingId, onOpenChange }: { listingId: string | 
                 {resourceEntries.length > 0 && (
                   <div>
                     <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-                      <Layers size={12} /> What you'll get
+                      <Layers size={12} /> {t('marketplace.what_you_get')}
                     </p>
                     <div className="grid grid-cols-2 gap-2 text-[12px]">
                       {resourceEntries.map(([resource, count]) => (
                         <div key={resource} className="rounded-md border border-[hsl(var(--border))] px-2.5 py-1.5">
                           <span className="font-medium text-[hsl(var(--foreground))]">{count}</span>{' '}
-                          <span className="text-[hsl(var(--muted-foreground))]">{RESOURCE_LABELS[resource] ?? resource}</span>
+                          <span className="text-[hsl(var(--muted-foreground))]">{t(RESOURCE_LABEL_KEYS[resource] ?? resource)}</span>
                         </div>
                       ))}
                     </div>
@@ -156,19 +159,17 @@ function ListingDetailDialog({ listingId, onOpenChange }: { listingId: string | 
 
                 <p className="flex items-start gap-1.5 text-[12px] text-[hsl(var(--muted-foreground))]">
                   <AlertCircle size={13} className="mt-0.5 shrink-0" />
-                  Installing creates a brand-new app in your account. No records are copied — installed forms start
-                  empty — and credential values are never included, so anything the source app connected to will need
-                  reconfiguring here.
+                  {t('marketplace.install_warning')}
                 </p>
               </div>
             )}
           </div>
 
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Close</Button>
+            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>{t('marketplace.close')}</Button>
             {canInstall && listing && (
               <Button size="sm" className="gap-1.5" onClick={() => setInstallOpen(true)}>
-                <Download size={13} /> Install
+                <Download size={13} /> {t('marketplace.install')}
               </Button>
             )}
           </DialogFooter>
@@ -205,6 +206,7 @@ function InstallDialog({
   defaultName: string
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useTranslation()
   const navigate = useNavigate()
   const setActiveMembership = useAuthStore((s) => s.setActiveMembership)
   const installMutation = useInstallListing()
@@ -230,12 +232,12 @@ function InstallDialog({
       if (res.warnings?.length) {
         setResult(res)
       } else {
-        toast.success(`Installed "${res.name}"`)
+        toast.success(t('marketplace.installed_toast', { name: res.name }))
         handleClose(false)
         openInstalledApp(res.app_id)
       }
     } catch (e) {
-      toast.error('Install failed', { description: extractApiError(e) })
+      toast.error(t('marketplace.install_failed'), { description: extractApiError(e) })
     }
   }
 
@@ -253,11 +255,10 @@ function InstallDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 size={16} className="text-[hsl(var(--success))]" />
-              Installed "{result.name}"
+              {t('marketplace.installed_title', { name: result.name })}
             </DialogTitle>
             <DialogDescription>
-              The app was created, but some references couldn't carry over and need your attention before it will
-              run correctly.
+              {t('marketplace.installed_warning')}
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[40vh] overflow-y-auto border-y border-[hsl(var(--border))] px-6 py-3">
@@ -273,9 +274,9 @@ function InstallDialog({
             </ul>
           </div>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => handleClose(false)}>Close</Button>
+            <Button variant="outline" size="sm" onClick={() => handleClose(false)}>{t('marketplace.close')}</Button>
             <Button size="sm" onClick={() => { handleClose(false); openInstalledApp(result.app_id) }}>
-              Open app
+              {t('marketplace.open_app')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -287,14 +288,14 @@ function InstallDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="w-full max-w-md">
         <DialogHeader>
-          <DialogTitle>Install as a new app</DialogTitle>
+          <DialogTitle>{t('marketplace.install_new_title')}</DialogTitle>
           <DialogDescription>
-            Creates a new application in your account from this listing. Your existing apps are untouched.
+            {t('marketplace.install_new_description')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 px-6 py-2">
           <div>
-            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('common.name')}</label>
             <Input
               value={name}
               onChange={(e) => {
@@ -304,15 +305,15 @@ function InstallDialog({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Slug</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('marketplace.slug')}</label>
             <Input value={slug} onChange={(e) => setSlug(e.target.value)} className="font-mono" />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={() => handleClose(false)} disabled={installMutation.isPending}>Cancel</Button>
+          <Button variant="outline" size="sm" onClick={() => handleClose(false)} disabled={installMutation.isPending}>{t('common.close')}</Button>
           <Button size="sm" className="gap-1.5" onClick={handleInstall} disabled={!name || !slug || installMutation.isPending}>
             {installMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
-            Install
+            {t('marketplace.install')}
           </Button>
         </DialogFooter>
       </DialogContent>

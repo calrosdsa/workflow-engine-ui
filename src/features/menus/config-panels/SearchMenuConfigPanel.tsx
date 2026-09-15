@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useForm } from '@/features/forms/hooks'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { ColumnsPicker } from '../saved-views/ColumnsPicker'
 import type { Menu, SearchMenuConfig, FilterGroup, SortRule } from '../types'
 
@@ -34,6 +35,7 @@ function ensureSortIds(sort: SortRule[] | undefined): SortRule[] {
 }
 
 export function SearchMenuConfigPanel({ menu, onChange }: SearchMenuConfigPanelProps) {
+  const t = useTranslation()
   const config = menu.config as SearchMenuConfig
   const { data: form } = useForm(config.form_id)
   const viewerModes = useCurrentUserAttrs()
@@ -44,7 +46,7 @@ export function SearchMenuConfigPanel({ menu, onChange }: SearchMenuConfigPanelP
   return (
     <div className="space-y-4">
       <div>
-        <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Target form</Label>
+        <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('menus.config_panels.target_form_label')}</Label>
         <FormReferenceSelect
           value={config.form_id}
           onChange={(formId) => patch({ form_id: formId ?? '', columns: [] })}
@@ -53,10 +55,10 @@ export function SearchMenuConfigPanel({ menu, onChange }: SearchMenuConfigPanelP
 
       {form && (
         <div>
-          <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Columns</Label>
+          <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('common.columns')}</Label>
           {form.fields.length === 0 ? (
             <p className="rounded-md border border-[hsl(var(--border))] p-2 text-[11px] text-[hsl(var(--muted-foreground))]">
-              This form has no data fields yet.
+              {t('menus.config_panels.search.columns_no_fields')}
             </p>
           ) : (
             <>
@@ -78,7 +80,7 @@ export function SearchMenuConfigPanel({ menu, onChange }: SearchMenuConfigPanelP
                 onChange={(columns) => patch({ columns })}
               />
               <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
-                Drag to set the order columns appear in. Viewers can reorder their own view without changing this default.
+                {t('menus.config_panels.search.columns_hint')}
               </p>
             </>
           )}
@@ -87,11 +89,9 @@ export function SearchMenuConfigPanel({ menu, onChange }: SearchMenuConfigPanelP
 
       {form && (
         <div>
-          <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Default filter</Label>
+          <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('menus.config_panels.search.default_filter_label')}</Label>
           <p className="mb-1.5 text-[11px] text-[hsl(var(--muted-foreground))]">
-            A condition's value can come from the current user's own account record — "Owner = current user" — for
-            a "my records" menu. This is UX scoping, resolved server-side but not a security boundary: a viewer can
-            still edit or clear it from their own filter popover unless the field/form itself restricts access.
+            {t('menus.config_panels.search.default_filter_hint')}
           </p>
           <FilterBuilder
             group={ensureGroupIds(config.default_filter)}
@@ -105,7 +105,7 @@ export function SearchMenuConfigPanel({ menu, onChange }: SearchMenuConfigPanelP
 
       {form && (
         <div>
-          <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Default sort</Label>
+          <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('menus.config_panels.search.default_sort_label')}</Label>
           <SortRuleList
             rules={ensureSortIds(config.default_sort)}
             fields={form.fields.map((f) => ({ name: f.name, label: f.label }))}
@@ -115,7 +115,7 @@ export function SearchMenuConfigPanel({ menu, onChange }: SearchMenuConfigPanelP
       )}
 
       <div>
-        <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Page size</Label>
+        <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('menus.config_panels.search.page_size_label')}</Label>
         <Input
           type="number"
           min={1}
@@ -134,6 +134,7 @@ function SortRuleList({ rules, fields, onChange }: {
   fields: { name: string; label: string }[]
   onChange: (rules: SortRule[]) => void
 }) {
+  const t = useTranslation()
   const addRule = () => onChange([...rules, { id: nanoid(), field: fields[0]?.name ?? '', dir: 'asc' }])
   const updateRule = (id: string, patch: Partial<SortRule>) =>
     onChange(rules.map((r) => (r.id === id ? { ...r, ...patch } : r)))
@@ -154,8 +155,8 @@ function SortRuleList({ rules, fields, onChange }: {
           <SelectMenu value={r.dir} onValueChange={(v) => updateRule(r.id, { dir: v as 'asc' | 'desc' })}>
             <SelectTrigger className="h-7 w-32 shrink-0 text-[11px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="asc" className="text-xs">Ascending</SelectItem>
-              <SelectItem value="desc" className="text-xs">Descending</SelectItem>
+              <SelectItem value="asc" className="text-xs">{t('common.asc')}</SelectItem>
+              <SelectItem value="desc" className="text-xs">{t('common.desc')}</SelectItem>
             </SelectContent>
           </SelectMenu>
           <button
@@ -172,7 +173,7 @@ function SortRuleList({ rules, fields, onChange }: {
         onClick={addRule}
         className="w-full rounded-md border border-dashed border-[hsl(var(--border))] py-1 text-[11px] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--muted-foreground))]/40"
       >
-        + Sort rule
+        + {t('menus.config_panels.search.add_sort_rule')}
       </button>
     </div>
   )

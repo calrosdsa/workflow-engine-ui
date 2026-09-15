@@ -17,6 +17,7 @@ import { nanoid } from '../nanoid'
 import { useWorkflow } from '../../hooks'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, SubflowConfig, SubflowOutputMapping, VariableAssignment, AssignMode } from '../../types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 // normaliseSubflowConfig fills in defaults for a freshly-added node (empty
 // definition_id, sync=true, no mappings) and coerces legacy pre-mapping rows
@@ -41,6 +42,7 @@ export interface SubflowFormProps {
 }
 
 export function SubflowForm({ config, variables, nodeContext = [], onChange }: SubflowFormProps) {
+  const { t } = useI18n()
   const { data: target } = useWorkflow(config.definition_id || '')
   const targetVars = target?.definition.variables ?? []
 
@@ -49,14 +51,14 @@ export function SubflowForm({ config, variables, nodeContext = [], onChange }: S
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Workflow to Run</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.workflow_to_run')}</Label>
         <WorkflowReferenceSelect value={config.definition_id || undefined} onChange={(id) => set({ definition_id: id ?? '' })} />
       </div>
 
       <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Run Mode</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.run_mode')}</Label>
         <div className="grid grid-cols-2 gap-1.5">
           <button
             type="button"
@@ -66,7 +68,7 @@ export function SubflowForm({ config, variables, nodeContext = [], onChange }: S
               config.sync ? 'border-[hsl(var(--primary))]/50 bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]' : 'border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--muted-foreground))]/40',
             )}
           >
-            <Hourglass size={13} /> Wait for it
+            <Hourglass size={13} /> {t('workflows.node_forms.wait_for_it')}
           </button>
           <button
             type="button"
@@ -76,19 +78,19 @@ export function SubflowForm({ config, variables, nodeContext = [], onChange }: S
               !config.sync ? 'border-[hsl(var(--primary))]/50 bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]' : 'border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--muted-foreground))]/40',
             )}
           >
-            <Zap size={13} /> Fire and forget
+            <Zap size={13} /> {t('workflows.node_forms.fire_forget')}
           </button>
         </div>
         <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
           {config.sync
-            ? 'This node waits for the called workflow to finish before continuing — its output can be mapped back below.'
-            : 'This node starts the called workflow and continues immediately, without waiting for it to finish.'}
+            ? t('workflows.node_forms.wait_help')
+            : t('workflows.node_forms.fire_help')}
         </p>
       </div>
 
       {!config.definition_id ? (
         <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
-          Pick a workflow above to configure input/output mappings.
+          {t('workflows.node_forms.pick_workflow_mappings')}
         </p>
       ) : (
         <>
@@ -133,6 +135,7 @@ function InputMappingsSection({ mappings, targetVars, callerVars, nodeContext, o
   nodeContext: NodeOutputSchema[]
   onChange: (m: VariableAssignment[]) => void
 }) {
+  const { t } = useI18n()
   const [editorOpen, setEditorOpen] = useState<string | null>(null)
 
   const update = (id: string, patch: Partial<VariableAssignment>) => {
@@ -147,14 +150,14 @@ function InputMappingsSection({ mappings, targetVars, callerVars, nodeContext, o
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Input Mappings</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.input_mappings')}</Label>
         <span className="rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))]">{mappings.length}</span>
       </div>
-      <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Set the called workflow's variables before it starts.</p>
+      <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.mapping_input_help')}</p>
 
       {targetVars.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
-          The selected workflow has no declared variables to map into.
+          {t('workflows.node_forms.no_target_variables')}
         </div>
       ) : (
         <>
@@ -178,7 +181,7 @@ function InputMappingsSection({ mappings, targetVars, callerVars, nodeContext, o
             ))}
           </div>
           <Button variant="outline" size="sm" onClick={add} className="w-full gap-1.5 border-dashed text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">
-            <Plus size={13} /> Add Input Mapping
+            <Plus size={13} /> {t('workflows.node_forms.add_input_mapping')}
           </Button>
         </>
       )}
@@ -191,7 +194,7 @@ function InputMappingsSection({ mappings, targetVars, callerVars, nodeContext, o
           onChange={(expr) => update(opening.id, { expression: expr })}
           variables={callerVars}
           nodeContext={nodeContext}
-          label={opening.variable_name || 'expression'}
+          label={opening.variable_name || t('workflows.node_forms.expression')}
         />
       )}
     </div>
@@ -211,6 +214,7 @@ function OutputMappingsSection({ mappings, targetVars, callerVars, onChange }: {
   callerVars: VariableDecl[]
   onChange: (m: SubflowOutputMapping[]) => void
 }) {
+  const { t } = useI18n()
   const update = (id: string, patch: Partial<SubflowOutputMapping>) => {
     onChange(mappings.map((m) => (m.id === id ? { ...m, ...patch } : m)))
   }
@@ -220,16 +224,16 @@ function OutputMappingsSection({ mappings, targetVars, callerVars, onChange }: {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Output Mappings</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.output_mappings')}</Label>
         <span className="rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))]">{mappings.length}</span>
       </div>
-      <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Copy the called workflow's final variables back into this one's.</p>
+      <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.mapping_output_help')}</p>
 
       {(targetVars.length === 0 || callerVars.length === 0) ? (
         <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
           {targetVars.length === 0
-            ? 'The selected workflow has no declared variables to read from.'
-            : 'Declare variables in this workflow first to have somewhere to store the result.'}
+            ? t('workflows.node_forms.no_source_variables')
+            : t('workflows.node_forms.no_caller_variables')}
         </div>
       ) : (
         <>
@@ -244,7 +248,7 @@ function OutputMappingsSection({ mappings, targetVars, callerVars, onChange }: {
                   onChange={(e) => update(m.id, { source_variable: e.target.value })}
                   className="w-0 flex-1 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2 py-1.5 text-[12px] font-medium text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
                 >
-                  <option value="">Called var…</option>
+                  <option value="">{t('workflows.node_forms.called_var')}</option>
                   {targetVars.map((v) => (
                     <option key={v.name} value={v.name}>{v.name} ({v.type})</option>
                   ))}
@@ -255,7 +259,7 @@ function OutputMappingsSection({ mappings, targetVars, callerVars, onChange }: {
                   onChange={(e) => update(m.id, { target_variable: e.target.value })}
                   className="w-0 flex-1 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2 py-1.5 text-[12px] font-medium text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
                 >
-                  <option value="">This var…</option>
+                  <option value="">{t('workflows.node_forms.this_var')}</option>
                   {callerVars.map((v) => (
                     <option key={v.name} value={v.name}>{v.name} ({v.type})</option>
                   ))}
@@ -263,7 +267,7 @@ function OutputMappingsSection({ mappings, targetVars, callerVars, onChange }: {
                 <button
                   onClick={() => remove(m.id)}
                   className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
-                  title="Remove mapping"
+                  title={t('common.remove')}
                 >
                   <Trash2 size={12} />
                 </button>
@@ -271,7 +275,7 @@ function OutputMappingsSection({ mappings, targetVars, callerVars, onChange }: {
             ))}
           </div>
           <Button variant="outline" size="sm" onClick={add} className="w-full gap-1.5 border-dashed text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">
-            <Plus size={13} /> Add Output Mapping
+            <Plus size={13} /> {t('workflows.node_forms.add_output_mapping')}
           </Button>
         </>
       )}
@@ -301,6 +305,7 @@ function MappingRow({
   onOpenEditor: () => void
   onDelete: () => void
 }) {
+  const { t } = useI18n()
   const selVar = targetOptions.find((v) => v.name === targetName)
 
   return (
@@ -315,7 +320,7 @@ function MappingRow({
             onChange={(e) => onTargetChange(e.target.value)}
             className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2.5 py-1.5 text-[12px] font-medium text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
           >
-            <option value="">Called workflow's variable…</option>
+            <option value="">{t('workflows.node_forms.called_workflow_var')}</option>
             {targetOptions.map((v) => (
               <option key={v.name} value={v.name}>{v.name} ({v.type})</option>
             ))}
@@ -324,7 +329,7 @@ function MappingRow({
         <button
           onClick={onDelete}
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
-          title="Remove mapping"
+          title={t('common.remove')}
         >
           <Trash2 size={12} />
         </button>
@@ -342,7 +347,7 @@ function MappingRow({
             )}
           >
             {m === 'literal' ? <Settings size={10} /> : <Code2 size={10} />}
-            {m === 'literal' ? 'Static' : 'Expression'}
+            {m === 'literal' ? t('workflows.node_forms.static') : t('workflows.node_forms.expression')}
           </button>
         ))}
       </div>
@@ -364,7 +369,7 @@ function MappingRow({
           </div>
           <button
             onClick={onOpenEditor}
-            title="Open expression editor"
+            title={t('workflows.builder.open_expression')}
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] transition-colors hover:border-[hsl(var(--primary))]/50 hover:bg-[hsl(var(--primary))]/10 hover:text-[hsl(var(--primary))]"
           >
             <Code2 size={13} />
@@ -380,6 +385,7 @@ function LiteralInput({ varType, value, onChange }: {
   value: unknown
   onChange: (v: unknown) => void
 }) {
+  const { t } = useI18n()
   const str = value === undefined || value === null ? '' : String(value)
 
   if (varType === 'boolean') {
@@ -390,8 +396,8 @@ function LiteralInput({ varType, value, onChange }: {
         className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2.5 py-1.5 text-[12px] text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
       >
         <option value="">—</option>
-        <option value="true">true</option>
-        <option value="false">false</option>
+        <option value="true">{t('common.yes')}</option>
+        <option value="false">{t('common.no')}</option>
       </select>
     )
   }
@@ -405,7 +411,7 @@ function LiteralInput({ varType, value, onChange }: {
       type={inputTypeMap[varType] ?? 'text'}
       step={varType === 'float' ? '0.01' : undefined}
       value={str}
-      placeholder={varType === 'string' ? 'Enter value…' : undefined}
+      placeholder={varType === 'string' ? t('workflows.node_forms.enter_value') : undefined}
       onChange={(e) => {
         const raw = e.target.value
         if (raw === '') { onChange(''); return }

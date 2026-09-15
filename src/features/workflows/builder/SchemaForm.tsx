@@ -19,6 +19,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { CredentialSelect } from '@/features/app-settings/CredentialSelect'
 import type { CredentialType } from '@/features/app-settings/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { FieldValidationIssue } from './configuration-workbench'
 
 /** A deliberately loose JSON Schema type — this form only ever reads a
@@ -89,6 +90,7 @@ export function defaultsForSchema(schema: JSONSchema): Record<string, unknown> {
 }
 
 export function SchemaForm({ schema, value, onChange, issues = [] }: SchemaFormProps) {
+  const t = useTranslation()
   const config = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>
   const properties = schema.properties ?? {}
   const required = useMemo(() => new Set(schema.required ?? []), [schema.required])
@@ -101,7 +103,7 @@ export function SchemaForm({ schema, value, onChange, issues = [] }: SchemaFormP
   if (entries.length === 0) {
     return (
       <p className="text-[12px] text-[hsl(var(--muted-foreground))]">
-        This connector declares no configurable fields.
+        {t('workflows.builder.no_configurable_fields')}
       </p>
     )
   }
@@ -152,6 +154,7 @@ function SchemaField({ fieldKey, prop, value, required, issue, onChange }: Schem
 }
 
 function FieldControl({ fieldKey, prop, value, onChange, issue }: Omit<SchemaFieldProps, 'required'>) {
+  const t = useTranslation()
   const widget = prop['x-workflow-engine-widget']
   const common = { id: `node-workbench-parameters.${fieldKey}`, 'aria-invalid': !!issue }
 
@@ -174,7 +177,7 @@ function FieldControl({ fieldKey, prop, value, onChange, issue }: Omit<SchemaFie
         onChange={(e) => onChange(coerceEnumValue(e.target.value, prop.enum!))}
         className="h-8 text-[12px]"
       >
-        <option value="" disabled>Select…</option>
+        <option value="" disabled>{t('workflows.builder.select_option_placeholder')}</option>
         {prop.enum.map((opt) => (
           <option key={String(opt)} value={String(opt)}>{String(opt)}</option>
         ))}

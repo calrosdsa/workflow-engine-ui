@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Database, Table2, Link2 } from 'lucide-react'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { FormActions } from './FormActions'
 import { getFormLinkStatus } from './form-link-status'
 import type { FormDefinition } from './types'
@@ -104,6 +105,7 @@ function TreeTrunk({ count }: { count: number }) {
 }
 
 function FormNode({ appId, node, canWrite }: { appId: string; node: TreeNode; canWrite: boolean }) {
+  const t = useTranslation()
   const { form, children } = node
 
   // A form borrowed from another app (see api/forms/links.go). This app may
@@ -130,7 +132,7 @@ function FormNode({ appId, node, canWrite }: { appId: string; node: TreeNode; ca
           <Link2
             size={15}
             className="shrink-0 text-[hsl(var(--muted-foreground))]"
-            aria-label="Shared from another app"
+            aria-label={t('forms.list.shared_from_another_app')}
           />
         ) : (
           <Database size={15} className="shrink-0 text-[hsl(var(--primary))]" />
@@ -143,7 +145,7 @@ function FormNode({ appId, node, canWrite }: { appId: string; node: TreeNode; ca
           <p className="truncate text-[13px] font-medium text-[hsl(var(--foreground))]">{form.name}</p>
           {isLinked ? (
             <p className="truncate text-[11px] text-[hsl(var(--muted-foreground))]">
-              Shared from another app{isReadOnlyLink ? ' · read only' : ''}
+              {isReadOnlyLink ? t('forms.list.shared_read_only') : t('forms.list.shared_from_another_app')}
             </p>
           ) : form.description ? (
             <p className="truncate text-[11px] text-[hsl(var(--muted-foreground))]">{form.description}</p>
@@ -154,7 +156,7 @@ function FormNode({ appId, node, canWrite }: { appId: string; node: TreeNode; ca
           to="/applications/$appId/forms/$formId/records"
           params={{ appId, formId: form.id }}
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
-          title="View records"
+          title={t('forms.tree.view_records')}
         >
           <Table2 size={14} />
         </Link>

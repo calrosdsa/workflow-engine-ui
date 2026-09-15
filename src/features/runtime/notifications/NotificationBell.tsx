@@ -2,6 +2,7 @@ import { Bell, Check } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { runtimeRouter } from '@/runtime-router'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useUnreadCount, useNotifications, useMarkRead, useMarkAllRead } from './hooks'
 import type { Notification } from './api'
 
@@ -12,14 +13,20 @@ const SEVERITY_DOT: Record<Notification['severity'], string> = {
   error: 'bg-red-500',
 }
 
-function timeAgo(iso: string): string {
+// Deliberately terse ("5m ago", not "5 minutes ago") — matches the compact
+// space this renders in (a notification-list timestamp). Kept translatable
+// rather than left as a hardcoded English format: word order/spacing around
+// a relative-time value isn't guaranteed to match across locales even for a
+// short form. Distinct from runtime.dashboard_chart.synced_*, which bakes in
+// its own "Synced " prefix for an unrelated surface.
+function timeAgo(iso: string, t: ReturnType<typeof useTranslation>): string {
   const diffMs = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(diffMs / 60_000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
+  if (mins < 1) return t('runtime.notifications.just_now')
+  if (mins < 60) return t('runtime.notifications.minutes_ago', { n: mins })
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  return `${Math.floor(hours / 24)}d ago`
+  if (hours < 24) return t('runtime.notifications.hours_ago', { n: hours })
+  return t('runtime.notifications.days_ago', { n: Math.floor(hours / 24) })
 }
 
 interface NotificationBellProps {
@@ -28,6 +35,7 @@ interface NotificationBellProps {
 }
 
 export function NotificationBell({ clientId, appId }: NotificationBellProps) {
+  const t = useTranslation()
   const { data: unread } = useUnreadCount(true)
   const { data: notifications, isLoading } = useNotifications(true)
   const markRead = useMarkRead()
@@ -47,7 +55,7 @@ export function NotificationBell({ clientId, appId }: NotificationBellProps) {
     <Popover>
       <PopoverTrigger asChild>
         <button
-          aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
+          aria-label={unreadCount > 0 ? t('runtime.notifications.unread_count', { count: unreadCount }) : t('runtime.notifications.title')}
           className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] pointer-coarse:h-11 pointer-coarse:w-11"
         >
           <Bell size={15} />
@@ -64,22 +72,22 @@ export function NotificationBell({ clientId, appId }: NotificationBellProps) {
         container={document.getElementById('runtime-root') ?? document.body}
       >
         <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-3 py-2">
-          <span className="text-xs font-semibold">Notifications</span>
+          <span className="text-xs font-semibold">{t('runtime.notifications.title')}</span>
           {unreadCount > 0 && (
             <button
               onClick={() => markAllRead.mutate()}
               className="flex items-center gap-1 text-[11px] text-[hsl(var(--muted-foreground))] transition-colors hover:text-[hsl(var(--foreground))]"
             >
               <Check size={11} />
-              Mark all read
+              {t('runtime.notifications.mark_all_read')}
             </button>
           )}
         </div>
         <div className="max-h-80 overflow-y-auto">
           {isLoading ? (
-            <p className="p-4 text-center text-[11px] text-[hsl(var(--muted-foreground))]">Loading…</p>
+            <p className="p-4 text-center text-[11px] text-[hsl(var(--muted-foreground))]">{t('common.loading')}</p>
           ) : !notifications || notifications.length === 0 ? (
-            <p className="p-4 text-center text-[11px] text-[hsl(var(--muted-foreground))]">You're all caught up.</p>
+            <p className="p-4 text-center text-[11px] text-[hsl(var(--muted-foreground))]">{t('runtime.notifications.all_caught_up')}</p>
           ) : (
             notifications.map((n) => (
               <button
@@ -93,7 +101,7 @@ export function NotificationBell({ clientId, appId }: NotificationBellProps) {
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{n.title}</span>
                   {n.body && <span className="block truncate text-[hsl(var(--muted-foreground))]">{n.body}</span>}
-                  <span className="block text-[10px] text-[hsl(var(--muted-foreground))]">{timeAgo(n.created_at)}</span>
+                  <span className="block text-[10px] text-[hsl(var(--muted-foreground))]">{timeAgo(n.created_at, t)}</span>
                 </span>
               </button>
             ))

@@ -10,6 +10,7 @@ import { ExpressionField } from '@/features/form-builder/config/ExpressionField'
 import { cn } from '@/lib/utils'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, SendToSessionConfig, ValueMode } from '../../types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 export function normaliseSendToSessionConfig(raw: unknown): SendToSessionConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<SendToSessionConfig>
@@ -24,6 +25,7 @@ export function normaliseSendToSessionConfig(raw: unknown): SendToSessionConfig 
 }
 
 function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMode) => void }) {
+  const { t } = useI18n()
   return (
     <div className="flex gap-1 rounded-lg bg-[hsl(var(--muted))] p-1">
       {(['static', 'expression'] as const).map((m) => (
@@ -36,7 +38,7 @@ function ModeToggle({ mode, onChange }: { mode: ValueMode; onChange: (m: ValueMo
             mode === m ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
           )}
         >
-          {m === 'static' ? 'Static' : 'Expression'}
+          {m === 'static' ? t('workflows.node_forms.static') : t('workflows.node_forms.expression')}
         </button>
       ))}
     </div>
@@ -51,12 +53,13 @@ export interface SendToSessionFormProps {
 }
 
 export function SendToSessionForm({ config, variables, nodeContext, onChange }: SendToSessionFormProps) {
+  const { t } = useI18n()
   const set = (patch: Partial<SendToSessionConfig>) => onChange({ ...config, ...patch })
 
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Session ID</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.session_id')}</Label>
         <ModeToggle mode={config.session_id_mode ?? 'static'} onChange={(m) => set({ session_id_mode: m })} />
         {config.session_id_mode === 'expression' ? (
           <ExpressionField
@@ -65,7 +68,7 @@ export function SendToSessionForm({ config, variables, nodeContext, onChange }: 
             variables={variables}
             nodeContext={nodeContext}
             placeholder="e.g. NodeOutputs.agent1.node_output.session_id"
-            label="Session ID"
+            label={t('workflows.node_forms.session_id')}
           />
         ) : (
           <Input
@@ -75,13 +78,13 @@ export function SendToSessionForm({ config, variables, nodeContext, onChange }: 
             className="h-8 font-mono text-[12px]"
           />
         )}
-        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">The target Agent session to post into — often a variable populated by an earlier Run Agent node.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.session_help')}</p>
       </div>
 
       <div className="h-px bg-[hsl(var(--border))]" />
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Content</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.content')}</Label>
         <ModeToggle mode={config.content_mode ?? 'static'} onChange={(m) => set({ content_mode: m })} />
         {config.content_mode === 'expression' ? (
           <ExpressionField
@@ -90,7 +93,7 @@ export function SendToSessionForm({ config, variables, nodeContext, onChange }: 
             variables={variables}
             nodeContext={nodeContext}
             placeholder="e.g. Vars.result_text"
-            label="Content"
+            label={t('workflows.node_forms.content')}
           />
         ) : (
           <textarea
@@ -101,7 +104,7 @@ export function SendToSessionForm({ config, variables, nodeContext, onChange }: 
             className="w-full resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-3 py-2 text-[12px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/60 focus:border-[hsl(var(--primary))] focus:bg-[hsl(var(--card))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
           />
         )}
-        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">The message text posted into the session — no Agent run is started.</p>
+        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.session_content_help')}</p>
       </div>
     </div>
   )

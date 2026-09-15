@@ -13,6 +13,7 @@ import {
   Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
 } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useAuthStore } from '@/stores/auth'
 import { useTeamUsers } from '@/features/users/hooks'
 import type { TeamUser } from '@/features/users/types'
@@ -31,6 +32,7 @@ interface UserMultiSelectProps {
 }
 
 export function UserMultiSelect({ value, onChange, appId: appIdProp }: UserMultiSelectProps) {
+  const t = useTranslation()
   const activeAppId = useAuthStore((s) => s.activeMembership?.app_id) ?? ''
   const appId = appIdProp ?? activeAppId
   const { data: users, isLoading } = useTeamUsers()
@@ -64,10 +66,10 @@ export function UserMultiSelect({ value, onChange, appId: appIdProp }: UserMulti
               <User size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
               <span className="truncate">
                 {isLoading
-                  ? 'Loading users…'
+                  ? t('form_config.loading_users')
                   : selected.length === 0
-                    ? 'Select User'
-                    : `${selected.length} selected`}
+                    ? t('form_config.select_user')
+                    : t('form_config.n_selected', { count: selected.length })}
               </span>
             </span>
             <ChevronsUpDown size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
@@ -79,15 +81,15 @@ export function UserMultiSelect({ value, onChange, appId: appIdProp }: UserMulti
               itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
             }
           >
-            <CommandInput placeholder="Search people…" />
+            <CommandInput placeholder={t('form_config.search_people_placeholder')} />
             <CommandList>
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
-                  <Loader2 size={13} className="animate-spin" /> Loading users…
+                  <Loader2 size={13} className="animate-spin" /> {t('form_config.loading_users')}
                 </div>
               ) : (
                 <>
-                  <CommandEmpty>No users found.</CommandEmpty>
+                  <CommandEmpty>{t('form_config.no_users_found')}</CommandEmpty>
                   <CommandGroup>
                     {options.map((u) => {
                       const isSelected = value.includes(u.id)
@@ -125,7 +127,7 @@ export function UserMultiSelect({ value, onChange, appId: appIdProp }: UserMulti
                 type="button"
                 onClick={() => toggle(u.id)}
                 className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
-                title="Remove"
+                title={t('common.remove')}
               >
                 <X size={11} />
               </button>

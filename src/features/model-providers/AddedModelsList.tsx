@@ -9,8 +9,10 @@ import { useProviderInstances, useDeleteInstance } from './hooks'
 import { InstanceModelsList } from './InstanceModelsList'
 import { PROVIDER_LOGOS } from './logos'
 import type { ProviderInstance } from './types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 export function AddedModelsList({ canWrite }: { canWrite: boolean }) {
+  const t = useTranslation()
   const { data: instances, isLoading } = useProviderInstances()
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [pendingDelete, setPendingDelete] = useState<ProviderInstance | null>(null)
@@ -30,16 +32,16 @@ export function AddedModelsList({ canWrite }: { canWrite: boolean }) {
     const name = pendingDelete.name
     deleteMutation.mutate(pendingDelete.id, {
       onSuccess: () => {
-        toast.success(`"${name}" removed`)
+        toast.success(`${name} — ${t('common.remove')}`)
         setPendingDelete(null)
       },
       onError: (e) => {
         if (e instanceof HTTPError && e.response.status === 409) {
-          toast.error(`"${name}" is still used by one or more agents — remove or reassign them first.`)
+          toast.error(`${name} — ${t('model_providers.in_use')}`)
           setPendingDelete(null)
           return
         }
-        toast.error('Could not remove provider', { description: e instanceof Error ? e.message : undefined })
+        toast.error(t('model_providers.remove_failed'), { description: e instanceof Error ? e.message : undefined })
       },
     })
   }
@@ -52,10 +54,10 @@ export function AddedModelsList({ canWrite }: { canWrite: boolean }) {
 
   return (
     <div>
-      <h2 className="mb-3 text-sm font-semibold text-[hsl(var(--foreground))]">Added models</h2>
+      <h2 className="mb-3 text-sm font-semibold text-[hsl(var(--foreground))]">{t('model_providers.added')}</h2>
       {rows.length === 0 ? (
         <div className="rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-8 text-center text-[13px] text-[hsl(var(--muted-foreground))]">
-          No providers added yet — pick one from Available models to get started.
+          {t('model_providers.no_added')}
         </div>
       ) : (
         <div className="space-y-2">
@@ -71,7 +73,7 @@ export function AddedModelsList({ canWrite }: { canWrite: boolean }) {
                   <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[hsl(var(--foreground))]">{inst.name}</span>
                   <Button variant="outline" size="sm" className="h-7 gap-1 px-2 text-[11px]" onClick={() => toggle(inst.id)}>
                     {isOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                    {isOpen ? 'Hide models' : 'View models'}
+                    {isOpen ? t('common.collapse') : t('common.expand')}
                   </Button>
                   {canWrite && (
                     <Button
@@ -79,8 +81,8 @@ export function AddedModelsList({ canWrite }: { canWrite: boolean }) {
                       size="icon"
                       className="h-7 w-7 text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
                       onClick={() => setPendingDelete(inst)}
-                      aria-label={`Remove ${inst.name}`}
-                      title={`Remove ${inst.name}`}
+                      aria-label={t('model_providers.remove', { name: inst.name })}
+                      title={t('model_providers.remove', { name: inst.name })}
                     >
                       <Trash2 size={14} />
                     </Button>
@@ -96,9 +98,9 @@ export function AddedModelsList({ canWrite }: { canWrite: boolean }) {
       <ConfirmDialog
         open={!!pendingDelete}
         onOpenChange={(open) => { if (!open) setPendingDelete(null) }}
-        title="Remove this provider?"
-        description={pendingDelete ? `"${pendingDelete.name}" and every model under it will no longer be available — this can't be undone.` : undefined}
-        confirmLabel="Remove"
+        title={t('model_providers.remove_title')}
+        description={pendingDelete ? t('model_providers.remove_description', { name: pendingDelete.name }) : undefined}
+        confirmLabel={t('common.remove')}
         destructive
         loading={deleteMutation.isPending}
         onConfirm={confirmDelete}

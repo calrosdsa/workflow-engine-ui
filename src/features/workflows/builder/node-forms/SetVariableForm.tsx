@@ -8,6 +8,7 @@ import { ExpressionEditor } from '../ExpressionEditor'
 import { nanoid } from '../nanoid'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, SetVariableConfig, VariableAssignment, AssignMode } from '../../types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 // Normalise legacy single-assignment payload into the new shape
 export function normaliseSetVariableConfig(raw: unknown): SetVariableConfig {
@@ -42,6 +43,7 @@ export interface SetVariableFormProps {
 }
 
 export function SetVariableForm({ config, variables, nodeContext, onChange }: SetVariableFormProps) {
+  const t = useTranslation()
   const [editorOpen, setEditorOpen] = useState<string | null>(null) // assignment id
 
   const assignments = config.assignments ?? []
@@ -71,7 +73,7 @@ export function SetVariableForm({ config, variables, nodeContext, onChange }: Se
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-          Variable Assignments
+          {t('workflows.set_variable.assignments')}
         </Label>
         <span className="rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))]">
           {assignments.length}
@@ -80,13 +82,13 @@ export function SetVariableForm({ config, variables, nodeContext, onChange }: Se
 
       {variables.length === 0 && (
         <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-xs text-[hsl(var(--muted-foreground))]">
-          Declare variables in the Variables panel first.
+          {t('workflows.set_variable.declare_first')}
         </div>
       )}
 
       {assignments.length === 0 && variables.length > 0 && (
         <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-4 text-center text-xs text-[hsl(var(--muted-foreground))]">
-          No assignments yet — click Add below.
+          {t('workflows.set_variable.no_assignments')}
         </div>
       )}
 
@@ -100,6 +102,7 @@ export function SetVariableForm({ config, variables, nodeContext, onChange }: Se
             onChange={(patch) => update(a.id, patch)}
             onDelete={() => remove(a.id)}
             onOpenEditor={() => setEditorOpen(a.id)}
+            t={t}
           />
         ))}
       </div>
@@ -112,7 +115,7 @@ export function SetVariableForm({ config, variables, nodeContext, onChange }: Se
         className="w-full gap-1.5 border-dashed text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
       >
         <Plus size={13} />
-        Add Variable
+        {t('workflows.set_variable.add_variable')}
       </Button>
 
       {/* Expression editor dialog */}
@@ -124,7 +127,7 @@ export function SetVariableForm({ config, variables, nodeContext, onChange }: Se
           onChange={(expr) => update(openingAssignment.id, { expression: expr })}
           variables={variables}
           nodeContext={nodeContext}
-          label={openingAssignment.variable_name || 'expression'}
+          label={openingAssignment.variable_name || t('workflows.node_forms.expression')}
         />
       )}
     </div>
@@ -142,9 +145,10 @@ interface AssignmentRowProps {
   onChange: (patch: Partial<VariableAssignment>) => void
   onDelete: () => void
   onOpenEditor: () => void
+  t: ReturnType<typeof useTranslation>
 }
 
-function AssignmentRow({ index, assignment, variables, onChange, onDelete, onOpenEditor }: AssignmentRowProps) {
+function AssignmentRow({ index, assignment, variables, onChange, onDelete, onOpenEditor, t }: AssignmentRowProps) {
   const selVar = variables.find((v) => v.name === assignment.variable_name)
 
   return (
@@ -160,7 +164,7 @@ function AssignmentRow({ index, assignment, variables, onChange, onDelete, onOpe
             onChange={(e) => onChange({ variable_name: e.target.value, literal_value: '' })}
             className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2.5 py-1.5 text-[12px] font-medium text-[hsl(var(--foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/15"
           >
-            <option value="">Select variable…</option>
+            <option value="">{t('workflows.set_variable.select_variable')}</option>
             {variables.map((v) => (
               <option key={v.name} value={v.name}>{v.name} ({v.type})</option>
             ))}
@@ -169,7 +173,7 @@ function AssignmentRow({ index, assignment, variables, onChange, onDelete, onOpe
         <button
           onClick={onDelete}
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
-          title="Remove assignment"
+          title={t('workflows.set_variable.remove_assignment')}
         >
           <Trash2 size={12} />
         </button>
@@ -190,7 +194,7 @@ function AssignmentRow({ index, assignment, variables, onChange, onDelete, onOpe
             )}
           >
             {m === 'literal' ? <Settings size={10} /> : <Code2 size={10} />}
-            {m === 'literal' ? 'Static' : 'Expression'}
+            {m === 'literal' ? t('workflows.node_forms.static') : t('workflows.node_forms.expression')}
           </button>
         ))}
       </div>
@@ -218,7 +222,7 @@ function AssignmentRow({ index, assignment, variables, onChange, onDelete, onOpe
             </div>
             <button
               onClick={onOpenEditor}
-              title="Open expression editor"
+              title={t('workflows.node_forms.open_editor')}
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] transition-colors hover:border-[hsl(var(--primary))]/50 hover:bg-[hsl(var(--primary))]/10 hover:text-[hsl(var(--primary))]"
             >
               <Code2 size={13} />
@@ -239,6 +243,7 @@ function LiteralInput({ varType, value, onChange }: {
   value: unknown
   onChange: (v: unknown) => void
 }) {
+  const t = useTranslation()
   const str = value === undefined || value === null ? '' : String(value)
 
   if (varType === 'boolean') {
@@ -264,7 +269,7 @@ function LiteralInput({ varType, value, onChange }: {
       type={inputTypeMap[varType] ?? 'text'}
       step={varType === 'float' ? '0.01' : undefined}
       value={str}
-      placeholder={varType === 'string' ? 'Enter value…' : undefined}
+      placeholder={varType === 'string' ? t('workflows.set_variable.enter_value') : undefined}
       onChange={(e) => {
         const raw = e.target.value
         if (raw === '') { onChange(''); return }

@@ -1,6 +1,7 @@
 import { Plus, Trash2, GripVertical } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { slugifyKey } from '../factory'
 import type { SelectOption } from '../schema'
 
@@ -10,6 +11,7 @@ interface OptionsEditorProps {
 }
 
 export function OptionsEditor({ options, onChange }: OptionsEditorProps) {
+  const t = useTranslation()
   const update = (i: number, patch: Partial<SelectOption>) => {
     onChange(options.map((o, idx) => (idx === i ? { ...o, ...patch } : o)))
   }
@@ -32,26 +34,26 @@ export function OptionsEditor({ options, onChange }: OptionsEditorProps) {
               const wasAuto = opt.value === slugifyKey(opt.label)
               update(i, wasAuto ? { label: newLabel, value: slugifyKey(newLabel) } : { label: newLabel })
             }}
-            placeholder="Label"
+            placeholder={t('form_config.label')}
             className="h-7 text-xs"
           />
           <Input
             value={opt.value}
             onChange={(e) => update(i, { value: e.target.value })}
-            placeholder="value"
+            placeholder={t('form_config.option_value_placeholder')}
             className="h-7 w-28 font-mono text-[11px] text-[hsl(var(--muted-foreground))]"
           />
           <button
             onClick={() => remove(i)}
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive))]/10 hover:text-[hsl(var(--destructive))]"
-            title="Remove option"
+            title={t('form_config.remove_option')}
           >
             <Trash2 size={12} />
           </button>
         </div>
       ))}
       <Button variant="outline" size="sm" onClick={add} className="w-full gap-1.5 border-dashed text-[hsl(var(--muted-foreground))]">
-        <Plus size={12} /> Add Option
+        <Plus size={12} /> {t('form_config.add_option')}
       </Button>
     </div>
   )

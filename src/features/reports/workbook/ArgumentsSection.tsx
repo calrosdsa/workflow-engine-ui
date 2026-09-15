@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useForms } from '@/features/forms/hooks'
+import { useTranslation, type I18nContextValue } from '@/features/i18n/I18nProvider'
 import { cn } from '@/lib/utils'
 import {
   createArgument,
@@ -22,29 +23,42 @@ import {
 import { useReportStore } from '../store'
 import type { ArgumentType, CompareOp, ReportArgument, ReportDataSource } from '../types'
 
-const TYPE_LABELS: Record<ArgumentType, string> = {
-  text: 'Text',
-  number: 'Number',
-  date: 'Date',
-  boolean: 'Yes / No',
-  reference: 'A record',
+function typeLabels(t: I18nContextValue['t']): Record<ArgumentType, string> {
+  return {
+    text: t('reports.arguments.type_text'),
+    number: t('reports.arguments.type_number'),
+    date: t('reports.arguments.type_date'),
+    boolean: t('reports.arguments.type_boolean'),
+    reference: t('reports.arguments.type_reference'),
+  }
 }
 
-const OP_LABELS: Record<CompareOp, string> = {
-  eq: 'is',
-  neq: 'is not',
-  gt: 'is after / greater than',
-  gte: 'is on or after / at least',
-  lt: 'is before / less than',
-  lte: 'is on or before / at most',
-  contains: 'contains',
-  starts_with: 'starts with',
-  in: 'is any of',
-  is_null: 'is empty',
-  not_null: 'is not empty',
+function opLabels(t: I18nContextValue['t']): Record<CompareOp, string> {
+  return {
+    eq: t('reports.arguments.op_eq'),
+    neq: t('reports.arguments.op_neq'),
+    gt: t('reports.arguments.op_gt'),
+    gte: t('reports.arguments.op_gte'),
+    lt: t('reports.arguments.op_lt'),
+    lte: t('reports.arguments.op_lte'),
+    contains: t('reports.arguments.op_contains'),
+    starts_with: t('reports.arguments.op_starts_with'),
+    in: t('reports.arguments.op_in'),
+    is_null: t('reports.arguments.op_is_null'),
+    not_null: t('reports.arguments.op_not_null'),
+  }
+}
+
+// argumentKeyProblem is called from ArgumentRow's render, not a hook context,
+// so it takes `t` as a parameter rather than calling useI18n() itself.
+function argumentKeyProblem(argument: ReportArgument, all: ReportArgument[], t: I18nContextValue['t']): string | undefined {
+  if (!argument.key.trim()) return t('reports.arguments.key_required')
+  if (all.filter((a) => a.key === argument.key).length > 1) return t('reports.arguments.key_duplicate', { key: argument.key })
+  return undefined
 }
 
 export function ArgumentsSection({ onBeforeChange }: { onBeforeChange?: () => void }) {
+  const t = useTranslation()
   const definition = useReportStore((state) => state.definition)
   const addArgument = useReportStore((state) => state.addArgument)
   const updateArgument = useReportStore((state) => state.updateArgument)
@@ -73,17 +87,16 @@ export function ArgumentsSection({ onBeforeChange }: { onBeforeChange?: () => vo
     <section className="border-b border-[hsl(var(--border))] p-3" aria-labelledby="arguments-heading">
       <div className="mb-2 flex items-center justify-between">
         <h3 id="arguments-heading" className="text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-          Inputs
+          {t('reports.arguments.title')}
         </h3>
         <Button type="button" variant="ghost" size="sm" className="h-6 gap-1 px-1.5 text-[11px]" onClick={add}>
-          <Plus size={11} /> Add
+          <Plus size={11} /> {t('common.add')}
         </Button>
       </div>
 
       {argumentList.length === 0 ? (
         <p className="px-1 py-2 text-[11px] leading-4 text-[hsl(var(--muted-foreground))]">
-          An input is asked for when the report runs, then narrows a data source — one report answers
-          "invoices for August" and "invoices for September" instead of needing two.
+          {t('reports.arguments.empty')}
         </p>
       ) : (
         <div className="space-y-1">
@@ -121,8 +134,10 @@ interface ArgumentRowProps {
 }
 
 function ArgumentRow({ argument, argumentList, sources, open, onToggle, onChange, onRemove, onBeforeChange }: ArgumentRowProps) {
+  const t = useTranslation()
   const { data: formList } = useForms()
-  const keyProblem = argumentKeyProblem(argument, argumentList)
+  const keyProblem = argumentKeyProblem(argument, argumentList, t)
+  const typeLabelMap = typeLabels(t)
 
   return (
     <div className={cn('rounded-md border', open ? 'border-[hsl(var(--primary))]/40' : 'border-[hsl(var(--border))]')}>
@@ -135,7 +150,7 @@ function ArgumentRow({ argument, argumentList, sources, open, onToggle, onChange
             {argument.required && <span className="ml-1 text-[hsl(var(--destructive))]">*</span>}
           </span>
           <span className="block truncate text-[10px] text-[hsl(var(--muted-foreground))]">
-            {TYPE_LABELS[argument.type]}{argument.range ? ' range' : ''} · {argument.key}
+            {argument.range ? t('reports.arguments.type_range', { type: typeLabelMap[argument.type] }) : typeLabelMap[argument.type]} · {argument.key}
           </span>
         </span>
         {keyProblem && <AlertTriangle size={12} className="shrink-0 text-[hsl(var(--destructive))]" />}
@@ -144,13 +159,13 @@ function ArgumentRow({ argument, argumentList, sources, open, onToggle, onChange
       {open && (
         <div className="space-y-3 border-t border-[hsl(var(--border))] p-3">
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Label</Label>
+            <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.arguments.label_field')}</Label>
             <Input value={argument.label} onChange={(e) => onChange({ label: e.target.value })} className="h-8 text-sm" />
-            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">What the person is asked for when the report runs.</p>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('reports.arguments.label_hint')}</p>
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Key</Label>
+            <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.arguments.key_label')}</Label>
             <Input
               value={argument.key}
               onChange={(e) => onChange({ key: e.target.value })}
@@ -161,7 +176,7 @@ function ArgumentRow({ argument, argumentList, sources, open, onToggle, onChange
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Type</Label>
+            <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('common.type')}</Label>
             <SelectMenu
               value={argument.type}
               onValueChange={(type) => {
@@ -178,8 +193,8 @@ function ArgumentRow({ argument, argumentList, sources, open, onToggle, onChange
             >
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {(Object.keys(TYPE_LABELS) as ArgumentType[]).map((t) => (
-                  <SelectItem key={t} value={t} className="text-xs">{TYPE_LABELS[t]}</SelectItem>
+                {(Object.keys(typeLabelMap) as ArgumentType[]).map((argType) => (
+                  <SelectItem key={argType} value={argType} className="text-xs">{typeLabelMap[argType]}</SelectItem>
                 ))}
               </SelectContent>
             </SelectMenu>
@@ -187,16 +202,16 @@ function ArgumentRow({ argument, argumentList, sources, open, onToggle, onChange
 
           {argument.type === 'reference' && (
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Records from</Label>
+              <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.arguments.records_from_label')}</Label>
               <SelectMenu value={argument.form_id ?? ''} onValueChange={(form_id) => onChange({ form_id })}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Choose a form…" /></SelectTrigger>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('reports.choose_form_placeholder')} /></SelectTrigger>
                 <SelectContent>
                   {(formList ?? []).map((f) => <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>)}
                 </SelectContent>
               </SelectMenu>
               {!argument.form_id && (
                 <p className="text-[10px] leading-4 text-[hsl(var(--destructive))]">
-                  A record input needs a form, or there is nothing to pick from.
+                  {t('reports.arguments.reference_form_required')}
                 </p>
               )}
             </div>
@@ -205,10 +220,9 @@ function ArgumentRow({ argument, argumentList, sources, open, onToggle, onChange
           {supportsRange(argument.type) && (
             <label className="flex items-center justify-between gap-2">
               <span className="min-w-0">
-                <span className="block text-[11px] font-medium text-[hsl(var(--foreground))]">Ask for a range</span>
+                <span className="block text-[11px] font-medium text-[hsl(var(--foreground))]">{t('reports.arguments.range_toggle_title')}</span>
                 <span className="block text-[10px] leading-4 text-[hsl(var(--muted-foreground))]">
-                  A from/to pair. There is no "between" operator — a range is compiled into an
-                  at-least plus an at-most condition.
+                  {t('reports.arguments.range_toggle_description')}
                 </span>
               </span>
               <Switch checked={argument.range === true} onCheckedChange={(range) => onChange({ range: range || undefined })} />
@@ -217,9 +231,9 @@ function ArgumentRow({ argument, argumentList, sources, open, onToggle, onChange
 
           <label className="flex items-center justify-between gap-2">
             <span className="min-w-0">
-              <span className="block text-[11px] font-medium text-[hsl(var(--foreground))]">Required</span>
+              <span className="block text-[11px] font-medium text-[hsl(var(--foreground))]">{t('reports.arguments.required_toggle_title')}</span>
               <span className="block text-[10px] leading-4 text-[hsl(var(--muted-foreground))]">
-                The report cannot run without it. Optional inputs left empty simply do not filter.
+                {t('reports.arguments.required_toggle_description')}
               </span>
             </span>
             <Switch checked={argument.required === true} onCheckedChange={(required) => onChange({ required: required || undefined })} />
@@ -229,7 +243,7 @@ function ArgumentRow({ argument, argumentList, sources, open, onToggle, onChange
 
           <div className="flex justify-end">
             <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 px-2 text-[11px] text-[hsl(var(--destructive))]" onClick={onRemove}>
-              <Trash2 size={11} /> Delete input
+              <Trash2 size={11} /> {t('reports.arguments.delete_input')}
             </Button>
           </div>
         </div>
@@ -243,6 +257,8 @@ function BindingsEditor({ argument, sources, onBeforeChange }: {
   sources: ReportDataSource[]
   onBeforeChange?: () => void
 }) {
+  const t = useTranslation()
+  const opLabelMap = opLabels(t)
   const definition = useReportStore((state) => state.definition)
   const addBinding = useReportStore((state) => state.addBinding)
   const updateBinding = useReportStore((state) => state.updateBinding)
@@ -262,7 +278,7 @@ function BindingsEditor({ argument, sources, onBeforeChange }: {
   return (
     <div className="space-y-1.5 rounded-md border border-[hsl(var(--border))] p-2">
       <div className="flex items-center justify-between">
-        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Narrows</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('reports.arguments.narrows_label')}</Label>
         <Button
           type="button"
           variant="ghost"
@@ -274,17 +290,17 @@ function BindingsEditor({ argument, sources, onBeforeChange }: {
           }}
           disabled={sources.length === 0}
         >
-          <Plus size={10} /> Add
+          <Plus size={10} /> {t('common.add')}
         </Button>
       </div>
 
       {sources.length === 0 ? (
         <p className="text-[10px] leading-4 text-[hsl(var(--muted-foreground))]">
-          Add a data source first — an input narrows a source, so it needs one to point at.
+          {t('reports.arguments.no_sources_hint')}
         </p>
       ) : mine.length === 0 ? (
         <p className="text-[10px] leading-4 text-[hsl(var(--muted-foreground))]">
-          Not connected to anything yet, so this input is collected and then ignored.
+          {t('reports.arguments.unbound_hint')}
         </p>
       ) : (
         mine.map(({ binding, index }) => {
@@ -298,7 +314,7 @@ function BindingsEditor({ argument, sources, onBeforeChange }: {
                   value={binding.source_id}
                   onValueChange={(source_id) => guard(() => updateBinding(index, { source_id, field: '' }))}
                 >
-                  <SelectTrigger className="h-7 flex-1 text-[11px]"><SelectValue placeholder="Source…" /></SelectTrigger>
+                  <SelectTrigger className="h-7 flex-1 text-[11px]"><SelectValue placeholder={t('reports.arguments.source_placeholder')} /></SelectTrigger>
                   <SelectContent>
                     {sources.map((s) => <SelectItem key={s.id} value={s.id} className="text-xs">{s.name}</SelectItem>)}
                   </SelectContent>
@@ -308,7 +324,7 @@ function BindingsEditor({ argument, sources, onBeforeChange }: {
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 shrink-0 text-[hsl(var(--destructive))]"
-                  aria-label="Remove binding"
+                  aria-label={t('reports.arguments.remove_binding')}
                   onClick={() => guard(() => removeBinding(index))}
                 >
                   <Trash2 size={11} />
@@ -327,11 +343,11 @@ function BindingsEditor({ argument, sources, onBeforeChange }: {
                     guard(() => updateBinding(index, { field, op }))
                   }}
                 >
-                  <SelectTrigger className="h-7 flex-1 text-[11px]"><SelectValue placeholder="Field…" /></SelectTrigger>
+                  <SelectTrigger className="h-7 flex-1 text-[11px]"><SelectValue placeholder={t('reports.field_placeholder')} /></SelectTrigger>
                   <SelectContent>
                     {/* The record-identity narrowing, offered first because for
                         a reference input it is almost always what is wanted. */}
-                    <SelectItem value={RECORD_ID_FIELD} className="text-xs">The record itself</SelectItem>
+                    <SelectItem value={RECORD_ID_FIELD} className="text-xs">{t('reports.arguments.record_itself')}</SelectItem>
                     {(form?.fields ?? []).map((f) => (
                       <SelectItem key={f.name} value={f.name} className="text-xs">{f.label ?? f.name}</SelectItem>
                     ))}
@@ -347,19 +363,19 @@ function BindingsEditor({ argument, sources, onBeforeChange }: {
                   <SelectContent>
                     {/* No `between` — it does not exist. A range argument
                         overrides this operator with its own gte/lte pair. */}
-                    {ops.map((op) => <SelectItem key={op} value={op} className="text-xs">{OP_LABELS[op]}</SelectItem>)}
+                    {ops.map((op) => <SelectItem key={op} value={op} className="text-xs">{opLabelMap[op]}</SelectItem>)}
                   </SelectContent>
                 </SelectMenu>
               </div>
 
               {argument.range && (
                 <p className="text-[10px] leading-4 text-[hsl(var(--muted-foreground))]">
-                  This is a range, so the operator is set for you — at least the "from" value, at most the "to".
+                  {t('reports.arguments.range_operator_hint')}
                 </p>
               )}
               {!binding.field && (
                 <p className="text-[10px] leading-4 text-[hsl(var(--destructive))]">
-                  Pick a field. An unset field is rejected when the report runs, rather than quietly matching everything.
+                  {t('reports.arguments.unset_field_warning')}
                 </p>
               )}
             </div>
@@ -368,10 +384,4 @@ function BindingsEditor({ argument, sources, onBeforeChange }: {
       )}
     </div>
   )
-}
-
-function argumentKeyProblem(argument: ReportArgument, all: ReportArgument[]): string | undefined {
-  if (!argument.key.trim()) return 'An input needs a key.'
-  if (all.filter((a) => a.key === argument.key).length > 1) return `Another input already uses the key "${argument.key}".`
-  return undefined
 }

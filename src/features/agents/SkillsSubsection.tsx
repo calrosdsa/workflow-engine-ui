@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useMCPServers } from '@/features/agent-mcp/hooks'
 import type { Skill } from './types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 interface SkillsSubsectionProps {
   agentId: string
@@ -25,6 +26,7 @@ interface SkillsSubsectionProps {
 }
 
 export function SkillsSubsection({ agentId, skills, onChange, canWrite }: SkillsSubsectionProps) {
+  const { t } = useI18n()
   const { data: servers } = useMCPServers(agentId)
   const availableTools = (servers ?? []).flatMap((s) => s.tools.map((t) => t.name))
 
@@ -52,21 +54,21 @@ export function SkillsSubsection({ agentId, skills, onChange, canWrite }: Skills
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Skills</h3>
+          <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">{t('agents.skills.title')}</h3>
           <p className="text-xs text-[hsl(var(--muted-foreground))]">
-            Named instructions this Agent can draw on for specific situations. Saved with the rest of this form.
+            {t('agents.skills.description')}
           </p>
         </div>
         {canWrite && (
           <Button size="sm" variant="outline" onClick={() => setCreating(true)} className="shrink-0 gap-1.5">
-            <Plus size={14} />Add skill
+            <Plus size={14} />{t('agents.skills.add')}
           </Button>
         )}
       </div>
 
       {!skills.length ? (
         <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-4 text-center text-xs text-[hsl(var(--muted-foreground))]">
-          No skills defined yet.
+          {t('agents.skills.empty')}
         </div>
       ) : (
         <div className="space-y-2">
@@ -81,7 +83,7 @@ export function SkillsSubsection({ agentId, skills, onChange, canWrite }: Skills
                   <p className="truncate text-xs text-[hsl(var(--muted-foreground))]">{skill.description}</p>
                   <div className="mt-1.5 flex flex-wrap gap-1">
                     {skill.allowed_tools.length === 0 ? (
-                      <Badge variant="secondary" className="text-[10px]">All tools</Badge>
+                      <Badge variant="secondary" className="text-[10px]">{t('agents.skills.all_tools')}</Badge>
                     ) : (
                       skill.allowed_tools.map((t) => (
                         <Badge key={t} variant="outline" className="font-mono text-[10px]">{t}</Badge>
@@ -94,8 +96,8 @@ export function SkillsSubsection({ agentId, skills, onChange, canWrite }: Skills
                     <Button
                       variant="ghost" size="icon"
                       onClick={() => setEditing({ index, skill })}
-                      aria-label={`Edit ${skill.name}`}
-                      title={`Edit ${skill.name}`}
+                      aria-label={t('agents.skills.edit', { name: skill.name })}
+                      title={t('agents.skills.edit', { name: skill.name })}
                     >
                       <Pencil size={14} />
                     </Button>
@@ -103,8 +105,8 @@ export function SkillsSubsection({ agentId, skills, onChange, canWrite }: Skills
                       variant="ghost" size="icon"
                       className="text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10"
                       onClick={() => setPendingDelete(index)}
-                      aria-label={`Delete ${skill.name}`}
-                      title={`Delete ${skill.name}`}
+                      aria-label={t('agents.skills.delete', { name: skill.name })}
+                      title={t('agents.skills.delete', { name: skill.name })}
                     >
                       <Trash2 size={14} />
                     </Button>
@@ -128,9 +130,9 @@ export function SkillsSubsection({ agentId, skills, onChange, canWrite }: Skills
       <ConfirmDialog
         open={pendingDelete !== null}
         onOpenChange={(open) => { if (!open) setPendingDelete(null) }}
-        title="Delete this skill?"
-        description={pendingDelete !== null ? `"${skills[pendingDelete]?.name}" will be removed from this Agent.` : undefined}
-        confirmLabel="Delete"
+        title={t('agents.skills.delete_title')}
+        description={pendingDelete !== null ? t('agents.skills.delete_description', { name: skills[pendingDelete]?.name ?? '' }) : undefined}
+        confirmLabel={t('common.delete')}
         destructive
         onConfirm={confirmDelete}
       />
@@ -149,6 +151,7 @@ function SkillFormDialog({
   onSave: (skill: Skill) => void
   onClose: () => void
 }) {
+  const t = useI18n().t
   const [name, setName] = useState(initial?.name ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [instructions, setInstructions] = useState(initial?.instructions ?? '')
@@ -174,40 +177,38 @@ function SkillFormDialog({
     <Dialog open onOpenChange={(o) => { if (!o) onClose() }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{initial ? 'Edit skill' : 'Add skill'}</DialogTitle>
-          <DialogDescription>
-            Leave Allowed Tools empty to let this skill use the Agent's full tool set.
-          </DialogDescription>
+          <DialogTitle>{initial ? t('agents.skills.edit_skill') : t('agents.skills.add')}</DialogTitle>
+          <DialogDescription>{t('agents.skills.dialog_description')}</DialogDescription>
         </DialogHeader>
 
         <div className="max-h-[60vh] space-y-3 overflow-y-auto px-6 py-2">
           <div>
-            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Name</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Refund Handling" autoFocus />
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('common.name')}</label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('agents.skills.name_placeholder')} autoFocus />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Description</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('common.description')}</label>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Shown to the model — describe when to use this skill"
+              placeholder={t('agents.skills.description_placeholder')}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Instructions</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('agents.skills.instructions')}</label>
             <textarea
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
               rows={4}
-              placeholder="What should the Agent do when this skill applies?"
+              placeholder={t('agents.skills.instructions_placeholder')}
               className="w-full resize-y rounded-md border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 py-2 text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Allowed Tools</label>
+            <label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('agents.skills.allowed_tools')}</label>
             {availableTools.length === 0 ? (
               <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                No tools registered on this Agent yet — this skill will have no tool restriction.
+                {t('agents.skills.no_tools')}
               </p>
             ) : (
               <div className="max-h-32 space-y-1.5 overflow-y-auto rounded-md border border-[hsl(var(--input))] p-2">
@@ -226,9 +227,9 @@ function SkillFormDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={onClose}>{t('common.cancel')}</Button>
           <Button onClick={handleSubmit} disabled={!canSubmit} className="gap-1.5">
-            {initial ? 'Save' : 'Add'}
+            {initial ? t('common.save') : t('common.add')}
           </Button>
         </DialogFooter>
       </DialogContent>

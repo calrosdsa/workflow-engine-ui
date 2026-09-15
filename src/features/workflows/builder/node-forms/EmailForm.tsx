@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { ExpressionEditor } from '../ExpressionEditor'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, EmailConfig } from '../../types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 export function normaliseEmailConfig(raw: unknown): EmailConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<EmailConfig>
@@ -59,6 +60,7 @@ interface TemplateFieldProps {
 function TemplateField({
   label, hint, value, onChange, variables, nodeContext, placeholder, multiline, rows = 8, mono,
 }: TemplateFieldProps) {
+  const t = useTranslation()
   const [editorOpen, setEditorOpen] = useState(false)
   const ref = useRef<FieldEl | null>(null)
   // Captured when the editor opens, because focus moves into the dialog and
@@ -111,7 +113,7 @@ function TemplateField({
           className="h-6 gap-1 px-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10"
         >
           <Braces size={11} />
-          Insert field
+          {t('workflows.node_forms.insert_field')}
         </Button>
       </div>
 
@@ -153,6 +155,7 @@ export interface EmailFormProps {
 }
 
 export function EmailForm({ config, variables, nodeContext, onChange }: EmailFormProps) {
+  const t = useTranslation()
   const set = (patch: Partial<EmailConfig>) => onChange({ ...config, ...patch })
   const shared = { variables, nodeContext }
 
@@ -164,7 +167,7 @@ export function EmailForm({ config, variables, nodeContext, onChange }: EmailFor
         value={config.to}
         onChange={(v) => set({ to: v })}
         placeholder="ops@example.com"
-        hint="One recipient. To email several people, put this node inside a loop over the addresses."
+        hint={t('workflows.node_forms.email_to_hint')}
         mono
       />
 
@@ -174,7 +177,7 @@ export function EmailForm({ config, variables, nodeContext, onChange }: EmailFor
         value={config.reply_to ?? ''}
         onChange={(v) => set({ reply_to: v })}
         placeholder="support@example.com"
-        hint="Every tenant's mail is sent from one platform-wide address, so this is how a reply reaches the right person."
+        hint={t('workflows.node_forms.reply_to_hint')}
         mono
       />
 
@@ -201,10 +204,7 @@ export function EmailForm({ config, variables, nodeContext, onChange }: EmailFor
       <div className="flex gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 p-2.5">
         <Mail size={13} className="mt-0.5 shrink-0 text-[hsl(var(--primary))]" />
         <p className="text-[10px] leading-relaxed text-[hsl(var(--muted-foreground))]">
-          Write the body as HTML. Inserted field values are escaped, so a record containing
-          <span className="font-mono"> &lt;b&gt; </span>
-          arrives as text rather than as markup — put the formatting in the template itself.
-          Attachments and CC/BCC are not supported.
+          {t('workflows.node_forms.email_body_help')}
         </p>
       </div>
     </div>

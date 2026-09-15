@@ -5,6 +5,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenceSelect'
 import { createSection, createParentReferenceField } from '@/features/form-builder/factory'
 import { toBuilder, toPayload } from '@/features/form-builder/serialize'
@@ -32,6 +33,7 @@ interface AddDependentFormDialogProps {
  *  default — many children can point at the same parent, e.g. many Punch
  *  records for one Employee). */
 export function AddDependentFormDialog({ defaultParentId, open, onOpenChange }: AddDependentFormDialogProps) {
+  const t = useTranslation()
   const qc = useQueryClient()
   const { data: allForms } = useForms()
   const [parentId, setParentId] = useState(defaultParentId)
@@ -97,25 +99,25 @@ export function AddDependentFormDialog({ defaultParentId, open, onOpenChange }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-sm">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><ListTree size={16} /> Add Dependent Form</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><ListTree size={16} /> {t('forms.add_dependent_dialog.title')}</DialogTitle>
           <DialogDescription>
-            Links two existing forms as parent/child — no new form is created. The child gets a required Form Reference field pointing back to the parent (added automatically if it doesn't already have one).
+            {t('forms.add_dependent_dialog.description')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 px-6 py-4">
           <div className="space-y-1.5">
-            <label className="text-[12px] font-medium text-slate-600">Parent form</label>
+            <label className="text-[12px] font-medium text-slate-600">{t('forms.add_dependent_dialog.parent_form')}</label>
             <FormReferenceSelect value={parentId} onChange={(id) => setParentId(id ?? '')} excludeId={childId} />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[12px] font-medium text-slate-600">Child form</label>
+            <label className="text-[12px] font-medium text-slate-600">{t('forms.add_dependent_dialog.child_form')}</label>
             <FormReferenceSelect value={childId} onChange={setChildId} excludeId={parentId} />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[12px] font-medium text-slate-600">Relationship</label>
+            <label className="text-[12px] font-medium text-slate-600">{t('forms.add_dependent_dialog.relationship')}</label>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -126,8 +128,8 @@ export function AddDependentFormDialog({ defaultParentId, open, onOpenChange }: 
                     : 'border-slate-200 text-slate-600 hover:border-slate-300'
                 }`}
               >
-                <span className="block font-medium">One-to-many</span>
-                <span className="block text-[11px] text-slate-400">Many child records per parent</span>
+                <span className="block font-medium">{t('forms.add_dependent_dialog.one_to_many')}</span>
+                <span className="block text-[11px] text-slate-400">{t('forms.add_dependent_dialog.one_to_many_hint')}</span>
               </button>
               <button
                 type="button"
@@ -138,8 +140,8 @@ export function AddDependentFormDialog({ defaultParentId, open, onOpenChange }: 
                     : 'border-slate-200 text-slate-600 hover:border-slate-300'
                 }`}
               >
-                <span className="block font-medium">One-to-one</span>
-                <span className="block text-[11px] text-slate-400">At most one child per parent</span>
+                <span className="block font-medium">{t('forms.add_dependent_dialog.one_to_one')}</span>
+                <span className="block text-[11px] text-slate-400">{t('forms.add_dependent_dialog.one_to_one_hint')}</span>
               </button>
             </div>
           </div>
@@ -153,10 +155,10 @@ export function AddDependentFormDialog({ defaultParentId, open, onOpenChange }: 
         </div>
 
         <DialogFooter>
-          <Button size="sm" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button size="sm" variant="outline" onClick={() => onOpenChange(false)}>{t('common.cancel')}</Button>
           <Button size="sm" onClick={handleLink} disabled={!parentId || !childId || saving}>
             {saving ? <Loader2 size={14} className="animate-spin" /> : <ListTree size={14} />}
-            Link Forms
+            {t('forms.add_dependent_dialog.link_forms')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -18,6 +18,7 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { formsApi } from '@/features/forms/api'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { resolveReferenceLabel } from '@/features/forms/runtime/record-title'
+import { useI18n } from '@/features/i18n/I18nProvider'
 import type { FieldDef } from '@/features/forms/types'
 import type { FilterGroup } from '../types'
 
@@ -34,6 +35,7 @@ interface FilterReferenceValuePickerProps {
 }
 
 export function FilterReferenceValuePicker({ targetFormId, displayField, value, onChange, className }: FilterReferenceValuePickerProps) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search, 300)
@@ -79,7 +81,7 @@ export function FilterReferenceValuePicker({ targetFormId, displayField, value, 
         >
           <span className="flex min-w-0 items-center gap-1.5">
             <FileText size={12} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
-            <span className="truncate">{selectedLabel ?? (value || 'select record…')}</span>
+            <span className="truncate">{selectedLabel ?? (value || t('workflows.builder.select_value'))}</span>
           </span>
           <ChevronsUpDown size={12} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
         </Button>
@@ -91,7 +93,7 @@ export function FilterReferenceValuePicker({ targetFormId, displayField, value, 
       >
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder={searchField ? 'Type to search…' : 'Search unavailable — showing first page'}
+            placeholder={searchField ? t('workflows.builder.type_to_search') : t('workflows.builder.search_unavailable')}
             value={search}
             onValueChange={setSearch}
             disabled={!searchField}
@@ -99,11 +101,11 @@ export function FilterReferenceValuePicker({ targetFormId, displayField, value, 
           <CommandList>
             {isLoading ? (
               <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-[hsl(var(--muted-foreground))]">
-                <Loader2 size={13} className="animate-spin" /> Searching…
+                <Loader2 size={13} className="animate-spin" /> {t('workflows.builder.searching')}
               </div>
             ) : (
               <>
-                <CommandEmpty>No records found.</CommandEmpty>
+                <CommandEmpty>{t('workflows.builder.no_records')}</CommandEmpty>
                 <CommandGroup>
                   {options.map((r) => {
                     const id = r.id as string

@@ -5,6 +5,7 @@ import { ValuesEditor } from '../ValuesEditor'
 import { ensureValueIds } from './id-helpers'
 import type { NodeOutputSchema } from '../node-output-schema'
 import type { VariableDecl, UpsertRecordsConfig } from '../../types'
+import { useI18n } from '@/features/i18n/I18nProvider'
 
 export function normaliseUpsertRecordsConfig(raw: unknown): UpsertRecordsConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<UpsertRecordsConfig>
@@ -23,6 +24,7 @@ export interface UpsertRecordsFormProps {
 }
 
 export function UpsertRecordsForm({ config, variables, nodeContext, onChange }: UpsertRecordsFormProps) {
+  const { t } = useI18n()
   const { data: form } = useForm(config.form_id || '')
   const fields = form?.fields ?? []
   const uniqueFields = fields.filter((f) => f.unique)
@@ -33,7 +35,7 @@ export function UpsertRecordsForm({ config, variables, nodeContext, onChange }: 
     <div className="space-y-4">
       {/* Form picker */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Form / Table</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.form_table')}</Label>
         <FormReferenceSelect value={config.form_id || undefined} onChange={(id) => set({ form_id: id ?? '' })} />
       </div>
 
@@ -41,11 +43,11 @@ export function UpsertRecordsForm({ config, variables, nodeContext, onChange }: 
       {config.form_id && (
         uniqueFields.length === 0 ? (
           <p className="rounded-lg border border-dashed border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-2.5 text-[11px] text-[hsl(var(--warning))]">
-            This form has no unique fields. Mark at least one field unique in the form builder to use upsert.
+            {t('workflows.node_forms.no_unique_upsert')}
           </p>
         ) : (
           <p className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-2.5 text-[11px] text-[hsl(var(--muted-foreground))]">
-            Matches on: {uniqueFields.map((f) => f.label || f.name).join(', ')}
+            {t('workflows.node_forms.matches_on', { fields: uniqueFields.map((f) => f.label || f.name).join(', ') })}
           </p>
         )
       )}
@@ -54,9 +56,9 @@ export function UpsertRecordsForm({ config, variables, nodeContext, onChange }: 
 
       {/* Values */}
       <div className="space-y-2">
-        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Field values</Label>
+        <Label className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.field_values')}</Label>
         {!config.form_id ? (
-          <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">Select a form to set field values.</p>
+          <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3 text-center text-[11px] text-[hsl(var(--muted-foreground))]">{t('workflows.node_forms.select_form_values')}</p>
         ) : (
           <ValuesEditor
             values={config.values}
@@ -67,7 +69,7 @@ export function UpsertRecordsForm({ config, variables, nodeContext, onChange }: 
           />
         )}
         <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-          Outputs <span className="font-mono">action</span> ("created" or "updated") and <span className="font-mono">record</span> to downstream nodes.
+          {t('workflows.node_forms.outputs_upsert')}
         </p>
       </div>
     </div>

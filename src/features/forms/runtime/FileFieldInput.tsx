@@ -13,6 +13,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { Upload, X, FileIcon, Loader2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { contentApi } from '@/features/content/api'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { FileFieldValue } from '@/features/content/types'
 import type { FormElement } from '@/features/form-builder/schema'
 
@@ -36,18 +37,19 @@ function formatSize(bytes: number): string {
 // point (see contentApi.upload's own doc comment); this is purely a faster,
 // friendlier error for the common case of picking an oversized or
 // wrong-type file by mistake.
-function preflightCheck(file: File, el: FormElement): string | null {
+function preflightCheck(file: File, el: FormElement, t: ReturnType<typeof useTranslation>): string | null {
   const { maxFileSizeBytes, allowedMimeTypes } = el.validation
   if (maxFileSizeBytes && file.size > maxFileSizeBytes) {
-    return `File exceeds the maximum size of ${formatSize(maxFileSizeBytes)}.`
+    return t('file_field_input.max_size_error', { size: formatSize(maxFileSizeBytes) })
   }
   if (allowedMimeTypes?.length && !allowedMimeTypes.includes(file.type)) {
-    return `File type must be one of: ${allowedMimeTypes.join(', ')}.`
+    return t('file_field_input.type_error', { types: allowedMimeTypes.join(', ') })
   }
   return null
 }
 
 export function FileFieldInput({ el, isImage, formId, field, disabled }: FileFieldInputProps) {
+  const t = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const value = field.value as FileFieldValue | null | undefined
@@ -64,7 +66,7 @@ export function FileFieldInput({ el, isImage, formId, field, disabled }: FileFie
       // not a specific record) — content.Owner scopes to the form, not to
       // any one record instance, so upload works fine on a not-yet-saved
       // Create form the same as an existing record's Edit form.
-      if (!formId) throw new Error('No form context available for this upload.')
+      if (!formId) throw new Error(t('file_field_input.no_form_context'))
       return contentApi.upload({ ownerKind: 'form_record', ownerResourceId: formId }, file, el.key)
     },
     onSuccess: (obj) => {
@@ -76,13 +78,13 @@ export function FileFieldInput({ el, isImage, formId, field, disabled }: FileFie
         size_bytes: obj.size_bytes,
       } satisfies FileFieldValue)
     },
-    onError: (err) => setError(err instanceof Error ? err.message : 'Upload failed'),
+    onError: (err) => setError(err instanceof Error ? err.message : t('file_field_input.upload_failed')),
   })
 
   const handleFiles = (files: FileList | null) => {
     const file = files?.[0]
     if (!file) return
-    const preflightError = preflightCheck(file, el)
+    const preflightError = preflightCheck(file, el, t)
     if (preflightError) {
       setError(preflightError)
       return
@@ -110,7 +112,7 @@ export function FileFieldInput({ el, isImage, formId, field, disabled }: FileFie
     return (
       <div className="flex h-24 flex-col items-center justify-center gap-2 rounded-md border border-dashed border-[hsl(var(--border))] text-[12px] text-[hsl(var(--muted-foreground))]">
         <Loader2 size={16} className="animate-spin" />
-        Uploading…
+        {t('file_field_input.uploading')}
       </div>
     )
   }
@@ -136,7 +138,7 @@ export function FileFieldInput({ el, isImage, formId, field, disabled }: FileFie
                 type="button"
                 onClick={() => field.onChange(null)}
                 className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-                title="Remove image"
+                title={t('file_field_input.remove_image')}
               >
                 <X size={12} />
               </button>
@@ -160,7 +162,7 @@ export function FileFieldInput({ el, isImage, formId, field, disabled }: FileFie
                 type="button"
                 onClick={() => field.onChange(null)}
                 className="shrink-0 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-                title="Remove file"
+                title={t('file_field_input.remove_file')}
               >
                 <X size={12} />
               </button>
@@ -173,7 +175,7 @@ export function FileFieldInput({ el, isImage, formId, field, disabled }: FileFie
             onClick={() => inputRef.current?.click()}
             className="text-[11px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:underline"
           >
-            Replace
+            {t('file_field_input.replace')}
           </button>
         )}
         <input
@@ -198,7 +200,7 @@ export function FileFieldInput({ el, isImage, formId, field, disabled }: FileFie
         className="gap-1.5"
       >
         <Upload size={13} />
-        {isImage ? 'Upload image' : 'Upload file'}
+        {isImage ? t('file_field_input.upload_image') : t('file_field_input.upload_file')}
       </Button>
       <input
         ref={inputRef}

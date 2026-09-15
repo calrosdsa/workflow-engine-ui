@@ -71,6 +71,29 @@ describe('ExecutionLogsDock', () => {
     expect(screen.getByRole('button', { name: /Expand logs/ })).toBeTruthy()
   })
 
+  it('keeps one disclosure button — and keyboard focus — across expand and collapse', async () => {
+    renderDock()
+
+    const toggle = screen.getByRole('button', { name: /Expand logs/ })
+    toggle.focus()
+    fireEvent.click(toggle)
+
+    // The same element, now the collapse control: focus never drops to
+    // <body>, and aria-expanded flips on the element the user is on.
+    const collapse = await screen.findByRole('button', { name: /Collapse logs/ })
+    expect(collapse).toBe(toggle)
+    expect(document.activeElement).toBe(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(document.getElementById(toggle.getAttribute('aria-controls') ?? '')).not.toBeNull()
+    // The resize handle is its own element, never the old bar morphed into it.
+    expect(screen.getByRole('button', { name: 'Resize logs panel' })).not.toBe(toggle)
+
+    fireEvent.click(toggle)
+    expect(document.activeElement).toBe(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(toggle.getAttribute('aria-controls')).toBeNull()
+  })
+
   it('shows a prompt instead of a panel when no run is selected', () => {
     useExecutionOverlayStore.setState({ logsDockOpen: true })
     renderDock(null)

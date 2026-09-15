@@ -1,6 +1,7 @@
 import '@/features/dashboard/widgets'
 import { parseDashboardSchema } from '@/features/dashboard/serialize'
 import { RuntimeGrid } from '@/features/dashboard/canvas/RuntimeGrid'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { Menu, DashboardMenuConfig } from '../types'
 
 interface DashboardMenuRuntimeProps {
@@ -16,11 +17,12 @@ interface DashboardMenuRuntimeProps {
 // to canvas/GridCanvas.tsx), each in mode="runtime" so navigation/polling
 // widgets are fully live.
 export function DashboardMenuRuntime({ menu, clientId, appId, menus, onNavigate }: DashboardMenuRuntimeProps) {
+  const t = useTranslation()
   const config = menu.config as DashboardMenuConfig
   const schema = parseDashboardSchema(config.schema)
 
   if (schema.widgets.length === 0) {
-    return <div className="p-6 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>"{menu.name}" has no widgets yet.</div>
+    return <div className="p-6 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('menus.runtime.dashboard.no_widgets', { name: menu.name })}</div>
   }
 
   return (

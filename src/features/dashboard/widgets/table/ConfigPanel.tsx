@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useForm } from '@/features/forms/hooks'
+import { useTranslation, type I18nContextValue } from '@/features/i18n/I18nProvider'
 import type { WidgetConfigPanelProps } from '../../widget-contract'
 import type { TableWidgetConfig, TableFooterAggregate } from './schema'
 import type { AggregateFn } from '@/features/forms/api'
@@ -17,7 +18,18 @@ import type { FilterGroup, SortRule } from '@/features/workflows/types'
 // this UI never lets an author configure a footer aggregate the backend
 // would reject as non-numeric.
 const NUMERIC_TYPES: FieldType[] = ['integer', 'decimal']
-const FN_LABELS: Record<AggregateFn, string> = { count: 'Count', sum: 'Sum', avg: 'Average', min: 'Min', max: 'Max' }
+
+// Reuses the same common.fn_* words chart/ConfigPanel.tsx's own fnLabels
+// draws from — one owner for "Count"/"Sum"/etc. across both widget types.
+function fnLabels(t: I18nContextValue['t']): Record<AggregateFn, string> {
+  return {
+    count: t('common.fn_count'),
+    sum: t('common.fn_sum'),
+    avg: t('common.fn_avg'),
+    min: t('common.fn_min'),
+    max: t('common.fn_max'),
+  }
+}
 
 // Same field set as features/menus/config-panels/SearchMenuConfigPanel.tsx
 // (form picker, column checkboxes, default filter, default sort, page
@@ -43,6 +55,7 @@ function ensureSortIds(sort: SortRule[] | undefined): SortRule[] {
 }
 
 export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<TableWidgetConfig>) {
+  const t = useTranslation()
   const { data: form } = useForm(config.formId)
   const referenceFields = (form?.fields ?? []).filter((f) => f.type === 'reference')
   const viewerModes = useCurrentUserAttrs()
@@ -57,13 +70,13 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Form</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_table.form')}</Label>
         <FormReferenceSelect value={config.formId} onChange={(formId) => patch({ formId: formId ?? '', columns: [] })} />
       </div>
 
       {form && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Visible columns</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_table.visible_columns')}</Label>
           <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-[hsl(var(--border))] p-2">
             {form.fields.map((f) => (
               <Label key={f.name} className="flex items-center gap-2 text-[12px] font-normal text-[hsl(var(--foreground))]">
@@ -71,14 +84,14 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
                 {f.label || f.name}
               </Label>
             ))}
-            {form.fields.length === 0 && <p className="text-[11px] text-[hsl(var(--muted-foreground))]">This form has no data fields yet.</p>}
+            {form.fields.length === 0 && <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_table.no_fields')}</p>}
           </div>
         </div>
       )}
 
       {form && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Default filter</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_table.default_filter')}</Label>
           <FilterBuilder
             group={ensureGroupIds(config.defaultFilter)}
             fields={form.fields}
@@ -91,7 +104,7 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
 
       {form && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Default sort</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_table.default_sort')}</Label>
           <SortRuleList
             rules={ensureSortIds(config.defaultSort)}
             fields={form.fields.map((f) => ({ name: f.name, label: f.label }))}
@@ -101,7 +114,7 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
       )}
 
       <div className="space-y-1.5">
-        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Rows per page</Label>
+        <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_table.rows_per_page')}</Label>
         <Input
           type="number"
           min={1}
@@ -114,17 +127,17 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
 
       <Label className="flex items-center gap-2 text-[12px] font-normal text-[hsl(var(--foreground))]">
         <Checkbox checked={config.allowUserFilter} onCheckedChange={(c) => patch({ allowUserFilter: c === true })} />
-        Let viewers filter this table
+        {t('builder.dashboard_table.allow_filter')}
       </Label>
 
       <Label className="flex items-center gap-2 text-[12px] font-normal text-[hsl(var(--foreground))]">
         <Checkbox checked={config.rowClick === 'record'} onCheckedChange={(c) => patch({ rowClick: c === true ? 'record' : 'none' })} />
-        Clicking a row opens its details
+        {t('builder.dashboard_table.row_click')}
       </Label>
 
       {form && (
         <div className="space-y-1.5">
-          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">Footer totals</Label>
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_table.footer_totals')}</Label>
           <FooterAggregatesList
             aggregates={config.footerAggregates ?? []}
             numericFields={form.fields.filter((f) => NUMERIC_TYPES.includes(f.type))}
@@ -135,21 +148,20 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
 
       {form && (
         <div className="space-y-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/40 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Record scoping</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_table.record_scoping')}</p>
           <p className="text-[10px] text-[hsl(var(--muted-foreground))]">
-            Only applies when this widget is placed on a form's Detail Page (a "Custom" tab, FR-D2-015) — ignored on an
-            ordinary Dashboard. Pick a reference field on this form that points back at the record the tab is attached to.
+            {t('builder.dashboard_table.record_scoping_hint')}
           </p>
           {referenceFields.length === 0 ? (
-            <p className="text-[11px] text-[hsl(var(--muted-foreground))]">This form has no reference fields.</p>
+            <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_table.no_reference_fields')}</p>
           ) : (
             <SelectMenu
               value={config.scopeToRecord?.fieldName ?? '__none__'}
               onValueChange={(v) => patch({ scopeToRecord: v === '__none__' ? undefined : { fieldName: v } })}
             >
-              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Not scoped" /></SelectTrigger>
+              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('builder.dashboard_table.not_scoped')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__" className="text-xs">Not scoped</SelectItem>
+                <SelectItem value="__none__" className="text-xs">{t('builder.dashboard_table.not_scoped')}</SelectItem>
                 {referenceFields.map((f) => (
                   <SelectItem key={f.name} value={f.name} className="text-xs">{f.label || f.name}</SelectItem>
                 ))}
@@ -167,6 +179,8 @@ function FooterAggregatesList({ aggregates, numericFields, onChange }: {
   numericFields: { name: string; label: string }[]
   onChange: (aggregates: TableFooterAggregate[]) => void
 }) {
+  const t = useTranslation()
+  const labels = fnLabels(t)
   const addAggregate = () => {
     if (numericFields.length === 0) return
     onChange([...aggregates, { field: numericFields[0].name, fn: 'sum' }])
@@ -182,18 +196,18 @@ function FooterAggregatesList({ aggregates, numericFields, onChange }: {
           <SelectMenu value={a.fn} onValueChange={(v) => updateAggregate(i, { fn: v as AggregateFn })}>
             <SelectTrigger className="h-7 w-24 shrink-0 text-[11px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {(Object.keys(FN_LABELS) as AggregateFn[]).map((fn) => (
-                <SelectItem key={fn} value={fn} className="text-xs">{FN_LABELS[fn]}</SelectItem>
+              {(Object.keys(labels) as AggregateFn[]).map((fn) => (
+                <SelectItem key={fn} value={fn} className="text-xs">{labels[fn]}</SelectItem>
               ))}
             </SelectContent>
           </SelectMenu>
           <SelectMenu value={a.field} onValueChange={(v) => updateAggregate(i, { field: v })}>
-            <SelectTrigger className="h-7 min-w-0 flex-1 text-[11px]"><SelectValue placeholder="Field…" /></SelectTrigger>
+            <SelectTrigger className="h-7 min-w-0 flex-1 text-[11px]"><SelectValue placeholder={t('builder.dashboard_table.field_placeholder')} /></SelectTrigger>
             <SelectContent>
               {numericFields.map((f) => (
                 <SelectItem key={f.name} value={f.name} className="text-xs">{f.label || f.name}</SelectItem>
               ))}
-              {numericFields.length === 0 && <SelectItem value="__none__" disabled className="text-xs">No numeric fields</SelectItem>}
+              {numericFields.length === 0 && <SelectItem value="__none__" disabled className="text-xs">{t('builder.dashboard_table.no_numeric_fields')}</SelectItem>}
             </SelectContent>
           </SelectMenu>
           <button type="button" onClick={() => removeAggregate(i)} className="shrink-0 rounded px-1.5 py-1 text-[11px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]">
@@ -202,14 +216,14 @@ function FooterAggregatesList({ aggregates, numericFields, onChange }: {
         </div>
       ))}
       {numericFields.length === 0 ? (
-        <p className="text-[11px] text-[hsl(var(--muted-foreground))]">This form has no numeric fields to total.</p>
+        <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_table.no_numeric_to_total')}</p>
       ) : (
         <button
           type="button"
           onClick={addAggregate}
           className="w-full rounded-md border border-dashed border-[hsl(var(--border))] py-1 text-[11px] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--muted-foreground))]/40"
         >
-          + Footer total
+          + {t('builder.dashboard_table.add_footer_total')}
         </button>
       )}
     </div>
@@ -221,6 +235,7 @@ function SortRuleList({ rules, fields, onChange }: {
   fields: { name: string; label: string }[]
   onChange: (rules: SortRule[]) => void
 }) {
+  const t = useTranslation()
   const addRule = () => onChange([...rules, { id: nanoid(), field: fields[0]?.name ?? '', dir: 'asc' }])
   const updateRule = (id: string, patch: Partial<SortRule>) =>
     onChange(rules.map((r) => (r.id === id ? { ...r, ...patch } : r)))
@@ -241,8 +256,8 @@ function SortRuleList({ rules, fields, onChange }: {
           <SelectMenu value={r.dir} onValueChange={(v) => updateRule(r.id, { dir: v as 'asc' | 'desc' })}>
             <SelectTrigger className="h-7 w-32 shrink-0 text-[11px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="asc" className="text-xs">Ascending</SelectItem>
-              <SelectItem value="desc" className="text-xs">Descending</SelectItem>
+              <SelectItem value="asc" className="text-xs">{t('common.asc')}</SelectItem>
+              <SelectItem value="desc" className="text-xs">{t('common.desc')}</SelectItem>
             </SelectContent>
           </SelectMenu>
           <button type="button" onClick={() => removeRule(r.id)} className="shrink-0 rounded px-1.5 py-1 text-[11px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]">
@@ -255,7 +270,7 @@ function SortRuleList({ rules, fields, onChange }: {
         onClick={addRule}
         className="w-full rounded-md border border-dashed border-[hsl(var(--border))] py-1 text-[11px] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--muted-foreground))]/40"
       >
-        + Sort rule
+        + {t('builder.dashboard_table.add_sort_rule')}
       </button>
     </div>
   )

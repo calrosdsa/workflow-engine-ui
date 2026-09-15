@@ -1,5 +1,6 @@
 import { usePageBuilderStore, findComponent } from '../store'
 import { PAGE_COMPONENT_REGISTRY } from '../component-registry'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 // Property editors now live one-per-type in ComponentForms.tsx, dispatched
 // through component-registry.ts's configPanel field — the same pattern
@@ -12,6 +13,7 @@ import { PAGE_COMPONENT_REGISTRY } from '../component-registry'
 // taking it as a prop, matching ConfigPanel.tsx's own convention.
 
 export function ComponentPropertiesPanel({ currentMenuId }: { currentMenuId?: string }) {
+  const t = useTranslation()
   const schema = usePageBuilderStore((s) => s.schema)
   const selectedComponentId = usePageBuilderStore((s) => s.selectedItemId)
   const updateComponent = usePageBuilderStore((s) => s.updateItem)
@@ -27,7 +29,7 @@ export function ComponentPropertiesPanel({ currentMenuId }: { currentMenuId?: st
     <div className="space-y-4 border-t border-slate-200 bg-white p-4">
       <div className="flex items-center gap-2">
         <Icon size={14} className="text-indigo-500" />
-        <p className="text-xs font-semibold text-slate-700">{reg.label} properties</p>
+        <p className="text-xs font-semibold text-slate-700">{t('builder.pages.canvas.properties_header', { type: t(`builder.pages.${found.item.component}.label`) })}</p>
       </div>
       <reg.configPanel
         component={found.item}

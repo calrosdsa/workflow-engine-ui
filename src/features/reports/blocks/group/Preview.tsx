@@ -1,14 +1,16 @@
 import { useForm } from '@/features/forms/hooks'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { ReportBlockRendererProps } from '../../report-block-contract'
 import type { GroupBlockConfig } from './schema'
 
 // Design-time-only preview — see table/Preview.tsx's identical rationale;
 // no real aggregate query runs here (RecordStore.Aggregate, server-side).
 export function GroupBlockPreview({ config }: ReportBlockRendererProps<GroupBlockConfig>) {
+  const t = useTranslation()
   const { data: form } = useForm(config.form_id)
 
   if (!config.form_id) {
-    return <p className="p-3 text-xs italic text-[hsl(var(--muted-foreground))]">No form selected</p>
+    return <p className="p-3 text-xs italic text-[hsl(var(--muted-foreground))]">{t('reports.blocks.no_form_selected')}</p>
   }
 
   const groupLabel = config.group_by
@@ -22,7 +24,7 @@ export function GroupBlockPreview({ config }: ReportBlockRendererProps<GroupBloc
   return (
     <div className="flex h-full flex-col p-3">
       <p className="mb-2 text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-        {form?.name ?? 'Loading…'} · group/subtotal
+        {form?.name ?? t('common.loading')} · {t('reports.blocks.group.preview_kind')}
       </p>
       <div className="overflow-hidden rounded border border-[hsl(var(--border))]">
         <table className="w-full text-[11px]">

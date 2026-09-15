@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { ChevronRight, Folder, FolderOpen, File, Unlink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { resolveRecordTitle } from '@/features/forms/runtime/record-title'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { FieldDef, FormRecord } from '@/features/forms/types'
 import type { TreeLayoutConfig } from '../types'
 
@@ -152,6 +153,7 @@ interface TreeRowContext {
 // group, roving tabindex, Arrow keys) rather than a flat sequence of
 // independently-tabbable buttons — see moveFocus/flattenVisible below.
 export function TreeLayout({ formId, records, fields, config, onOpenRecord, loading }: TreeLayoutProps) {
+  const t = useTranslation()
   const [collapsed, setCollapsed] = useState<Set<string>>(() => loadCollapsed(formId, config.parentField))
   const [hasInteracted, setHasInteracted] = useState(false)
   const [focusedId, setFocusedId] = useState<string | undefined>(undefined)
@@ -209,10 +211,10 @@ export function TreeLayout({ formId, records, fields, config, onOpenRecord, load
   }
 
   if (loading) {
-    return <div className="p-8 text-center text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading…</div>
+    return <div className="p-8 text-center text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('common.loading')}</div>
   }
   if (records.length === 0) {
-    return <div className="p-8 text-center text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>No records match this view.</div>
+    return <div className="p-8 text-center text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('menus.saved_views.no_records')}</div>
   }
 
   const effectiveFocusedId = focusedId ?? flatVisible[0]?.id ?? ''
@@ -222,11 +224,11 @@ export function TreeLayout({ formId, records, fields, config, onOpenRecord, load
     <div className="flex flex-col gap-1 p-3 text-sm">
       {allParentIds.length > 0 && (
         <div className="mb-1 flex items-center gap-1 px-1.5">
-          <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs" onClick={expandAll}>Expand all</Button>
-          <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs" onClick={collapseAll}>Collapse all</Button>
+          <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs" onClick={expandAll}>{t('menus.saved_views.tree.expand_all')}</Button>
+          <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs" onClick={collapseAll}>{t('menus.saved_views.tree.collapse_all')}</Button>
         </div>
       )}
-      <div role="tree" aria-label="Record hierarchy" className="flex flex-col gap-0.5">
+      <div role="tree" aria-label={t('menus.saved_views.tree.hierarchy_aria_label')} className="flex flex-col gap-0.5">
         {forest.map((node, i) => (
           <TreeRow key={node.record.id as string} node={node} depth={0} posinset={i + 1} setsize={forest.length} ctx={ctx} />
         ))}
@@ -242,6 +244,7 @@ function TreeRow({ node, depth, posinset, setsize, ctx }: {
   setsize: number
   ctx: TreeRowContext
 }) {
+  const t = useTranslation()
   const { fields, groupFieldDef, collapsed, onToggle, onOpenRecord, registerRef, moveFocus, onRowFocus, focusedId, hasInteracted } = ctx
   const id = node.record.id as string
   const hasChildren = node.children.length > 0
@@ -325,9 +328,14 @@ function TreeRow({ node, depth, posinset, setsize, ctx }: {
           : <File size={14} className="shrink-0" style={{ color: 'hsl(var(--muted-foreground))' }} />}
         <span className="truncate" title={title}>{title}</span>
         {node.parentHidden && (
-          <span className="shrink-0" style={{ color: 'hsl(var(--muted-foreground))' }} title="This record's parent isn't included in the current view — shown here as a top-level item, not a true root.">
+          <span className="shrink-0" style={{ color: 'hsl(var(--muted-foreground))' }} title={t('menus.saved_views.tree.parent_hidden_title')}>
             <Unlink size={11} aria-hidden="true" />
-            <span className="sr-only">, parent not shown in this view</span>
+            {/* Deliberately appended, not a standalone sentence: a screen
+               reader reads this sr-only span immediately after the visible
+               title span above, so the leading ", " reads as "{title},
+               parent not shown in this view" — keep it even though it looks
+               like a stray comma in the Localization UI's own editor. */}
+            <span className="sr-only">{t('menus.saved_views.tree.parent_hidden_sr')}</span>
           </span>
         )}
       </div>

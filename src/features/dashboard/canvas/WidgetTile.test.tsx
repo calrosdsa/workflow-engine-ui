@@ -21,6 +21,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { WidgetTile } from './WidgetTile'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import type { WidgetInstance } from '../schema'
 
 afterEach(cleanup)
@@ -34,23 +35,27 @@ const instance: WidgetInstance = {
   title: 'Revenue',
 }
 
+// WidgetTile calls useTranslation, which throws outside an I18nProvider
+// ancestor — real provider, no props, same pattern as InsertDataMenu.test.tsx.
 function renderTile(overrides: Partial<React.ComponentProps<typeof WidgetTile>> = {}) {
   const onSelect = vi.fn()
   const onDuplicate = vi.fn()
   const onDelete = vi.fn()
   const onKeyboardLayoutAction = vi.fn()
   render(
-    <WidgetTile
-      instance={instance}
-      clientId="c1"
-      appId="a1"
-      selected={false}
-      onSelect={onSelect}
-      onDuplicate={onDuplicate}
-      onDelete={onDelete}
-      onKeyboardLayoutAction={onKeyboardLayoutAction}
-      {...overrides}
-    />,
+    <I18nProvider>
+      <WidgetTile
+        instance={instance}
+        clientId="c1"
+        appId="a1"
+        selected={false}
+        onSelect={onSelect}
+        onDuplicate={onDuplicate}
+        onDelete={onDelete}
+        onKeyboardLayoutAction={onKeyboardLayoutAction}
+        {...overrides}
+      />
+    </I18nProvider>,
   )
   return { onSelect, onDuplicate, onDelete, onKeyboardLayoutAction }
 }

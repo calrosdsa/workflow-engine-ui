@@ -52,9 +52,11 @@ interface ExecutionLogsPanelProps {
   /** Rendered at the top of the step-list column (the dock's "Logs" title +
    *  run summary). */
   listHeader?: ReactNode
-  /** Rendered at the far right of the detail header row (the dock's
-   *  collapse button), after the Input/Output switch. */
-  detailActions?: ReactNode
+  /** Keep the right end of the detail header clear for a control the host
+   *  overlays there (the dock's collapse toggle, which lives outside this
+   *  panel so it stays the same element — and keeps focus — across
+   *  expand/collapse). */
+  reserveHeaderEnd?: boolean
   /** Rows per page. The builder dock passes the same page size as the
    *  canvas's run-order fetch (WorkflowBuilderPage) so both share one cached
    *  query instead of firing a second request for the same rows. */
@@ -62,7 +64,7 @@ interface ExecutionLogsPanelProps {
 }
 
 export function ExecutionLogsPanel({
-  executionId, executionStatus, executionFinishedAt, variant = 'card', nodeLabels, listHeader, detailActions, pageSize = DEFAULT_LOG_PAGE_SIZE,
+  executionId, executionStatus, executionFinishedAt, variant = 'card', nodeLabels, listHeader, reserveHeaderEnd = false, pageSize = DEFAULT_LOG_PAGE_SIZE,
 }: ExecutionLogsPanelProps) {
   const t = useTranslation()
   const [page, setPage] = useState(1)
@@ -78,13 +80,21 @@ export function ExecutionLogsPanel({
   // reason (besides the canvas overlay) this second poll is allowed to fire.
   // The builder dock keeps that invariant by unmounting this panel while
   // collapsed rather than threading an `enabled` flag through.
-  const { data, isLoading } = useExecutionLogs(
+  const { data, isLoading, isError } = useExecutionLogs(
     executionId,
     { page, pageSize },
     { enabled: true, executionStatus, finishedAt: executionFinishedAt },
   )
   const logs = data?.logs ?? []
-  const total = data?.total ?? 0
+  // The last total any page reported. `data` is undefined while a newly
+  // requested page loads (and stays so if that fetch fails), so deriving the
+  // page count from it alone would briefly unmount the pager mid-click —
+  // taking keyboard focus with it — or leave no way back from a failed page.
+  const [knownTotal, setKnownTotal] = useState(0)
+  useEffect(() => {
+    if (data) setKnownTotal(data.total)
+  }, [data])
+  const total = data?.total ?? knownTotal
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   // Keep the current selection across a poll refresh when it's still on this
@@ -111,7 +121,11 @@ export function ExecutionLogsPanel({
   return (
     <div
       className={cn(
-        'grid grid-cols-[minmax(13rem,18rem)_minmax(0,1fr)] overflow-hidden bg-[hsl(var(--card))]',
+        // The step list takes ~38% of the width, at most 18rem and at least
+        // 9rem — or 40% when even 9rem would starve the detail column — so
+        // in a narrow canvas column (side panels open) it gives way before
+        // the detail header's Input/Output switch (~8rem with padding) does.
+        'grid grid-cols-[minmax(min(9rem,40%),min(18rem,38%))_minmax(0,1fr)] overflow-hidden bg-[hsl(var(--card))]',
         variant === 'docked' ? 'h-full min-h-0' : 'min-h-[24rem] rounded-lg border border-[hsl(var(--border))]',
       )}
     >
@@ -127,7 +141,7 @@ export function ExecutionLogsPanel({
           )}
           {!isLoading && logs.length === 0 && (
             <p className="px-3.5 py-6 text-center text-[11px] text-[hsl(var(--muted-foreground))]">
-              {t('workflows.executions.logs.empty')}
+              {t(isError ? 'workflows.executions.logs.load_error' : 'workflows.executions.logs.empty')}
             </p>
           )}
           {logs.map((log) => (
@@ -140,7 +154,7 @@ export function ExecutionLogsPanel({
             />
           ))}
         </div>
-        {totalPages > 1 && (
+        {(totalPages > 1 || page > 1) && (
           <div className="flex items-center justify-between gap-2 border-t border-[hsl(var(--border))] px-2.5 py-2 text-[10px] text-[hsl(var(--muted-foreground))]">
             <span>{t('workflows.executions.logs.page_of', { page, totalPages })}</span>
             <div className="flex items-center gap-1">
@@ -164,13 +178,11 @@ export function ExecutionLogsPanel({
             onViewChange={setView}
             display={display}
             onDisplayChange={setDisplay}
-            actions={detailActions}
+            reserveHeaderEnd={reserveHeaderEnd}
           />
         ) : (
           <>
-            {detailActions && (
-              <div className="flex h-10 shrink-0 items-center justify-end gap-1.5 border-b border-[hsl(var(--border))] px-3">{detailActions}</div>
-            )}
+            {reserveHeaderEnd && <div className="h-10 shrink-0 border-b border-[hsl(var(--border))]" />}
             <p className="p-4 text-sm text-[hsl(var(--muted-foreground))]">{t('workflows.executions.logs.select_step_hint')}</p>
           </>
         )}
@@ -193,10 +205,22 @@ export function statusSummary(t: Translate, status: ExecutionStatus | ExecutionL
 }
 
 function stepLabel(log: ExecutionNodeLog, nodeLabels: Record<string, string> | undefined, t: Translate): string {
-  if (log.kind === 'loop_chunk') return loopChunkLabel(log, t)
   const canvasLabel = nodeLabels?.[log.node_id]
+  // A loop chunk's node_id is its Iterator's, so two iterators' chunks stay
+  // distinguishable by that iterator's canvas name ("For each invoice — …").
+  // `||`, not `??`: a node whose name was cleared in the builder has label ''.
+  if (log.kind === 'loop_chunk') return loopChunkLabel(log, canvasLabel || t('workflows.executions.logs.loop_body_label'), t)
   if (canvasLabel) return canvasLabel
   return log.kind === 'trigger' ? t('workflows.executions.logs.trigger_label') : defaultLabel(log.node_type)
+}
+
+// The engine logs a trigger's payload (its variables and trigger record) as
+// the row's INPUT (trigger_log.go), but what a trigger produces — the data
+// its first step receives — is its output, and that's where n8n shows it.
+// Older/other rows that do carry an output are shown as-is.
+function stepPayloads(log: ExecutionNodeLog): { input: unknown; output: unknown } {
+  if (log.kind === 'trigger' && log.output == null && log.input != null) return { input: null, output: log.input }
+  return { input: log.input, output: log.output }
 }
 
 // Same icon (and accent colour) the canvas node itself shows — a step in this
@@ -256,9 +280,10 @@ function LogRow({ log, label, selected, onClick }: { log: ExecutionNodeLog; labe
 // "chunk 1000 of 8"). Displaying the item range instead avoids needing the
 // backend's chunk-size constant at all, and stays correct across
 // Continue-As-New hops the same way chunk_index itself does.
-function loopChunkLabel(log: ExecutionNodeLog, t: Translate): string {
+function loopChunkLabel(log: ExecutionNodeLog, label: string, t: Translate): string {
   const hasRange = log.chunk_index != null && log.item_count != null
   const vars = {
+    label,
     startItem: hasRange ? log.chunk_index! + 1 : '—',
     endItem: hasRange ? log.chunk_index! + log.item_count! : '—',
     items: log.item_count ?? '—',
@@ -274,38 +299,38 @@ function loopChunkLabel(log: ExecutionNodeLog, t: Translate): string {
 const SEGMENT_LIST = 'h-7 gap-0.5 rounded-md border bg-[hsl(var(--muted))] p-0.5'
 const SEGMENT_TRIGGER = 'mb-0 h-6 rounded border-0 px-2.5 py-0 text-xs data-[state=active]:bg-[hsl(var(--card))] data-[state=active]:shadow-sm'
 
-function LogDetail({ log, label, view, onViewChange, display, onDisplayChange, actions }: {
+function LogDetail({ log, label, view, onViewChange, display, onDisplayChange, reserveHeaderEnd }: {
   log: ExecutionNodeLog
   label: string
   view: LogView
   onViewChange: (view: LogView) => void
   display: PayloadDisplay
   onDisplayChange: (display: PayloadDisplay) => void
-  actions?: ReactNode
+  reserveHeaderEnd: boolean
 }) {
   const t = useTranslation()
   const { Icon, color } = stepIcon(log)
+  const { input, output } = stepPayloads(log)
 
   return (
     <Tabs value={view} onValueChange={(next) => onViewChange(next as LogView)} className="flex min-h-0 flex-1 flex-col">
-      <header className="flex h-10 shrink-0 items-center gap-2 border-b border-[hsl(var(--border))] px-3">
+      {/* Wraps instead of clipping: in a narrow column the Input/Output
+          switch drops to a second line rather than being cut off. The step
+          name keeps a floor; the outcome text shrinks first. */}
+      <header className={cn(
+        'flex min-h-10 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-[hsl(var(--border))] py-1.5 pl-3',
+        reserveHeaderEnd ? 'pr-12' : 'pr-3',
+      )}>
         <Icon size={15} className="shrink-0 text-[hsl(var(--muted-foreground))]" style={color ? { color } : undefined} />
-        {/* Both texts may shrink (so the Input/Output switch and the host's
-            collapse button never get pushed out of a narrow column), but the
-            step name keeps a floor — it's the one thing this header must
-            always show. */}
         <h3 className="min-w-[3rem] truncate text-[13px] font-semibold text-[hsl(var(--foreground))]" title={log.node_id}>{label}</h3>
         <span className="min-w-0 truncate text-xs text-[hsl(var(--muted-foreground))]">{statusSummary(t, log.status, log.duration_ms)}</span>
         {log.attempt > 1 && (
           <span className="shrink-0 whitespace-nowrap text-xs text-[hsl(var(--muted-foreground))]">{t('workflows.executions.logs.attempt_label', { attempt: log.attempt })}</span>
         )}
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
-          <TabsList className={SEGMENT_LIST}>
-            <TabsTrigger value="input" className={SEGMENT_TRIGGER}>{t('workflows.executions.logs.input_tab')}</TabsTrigger>
-            <TabsTrigger value="output" className={SEGMENT_TRIGGER}>{t('workflows.executions.logs.output_tab')}</TabsTrigger>
-          </TabsList>
-          {actions}
-        </div>
+        <TabsList className={cn(SEGMENT_LIST, 'ml-auto shrink-0')}>
+          <TabsTrigger value="input" className={SEGMENT_TRIGGER}>{t('workflows.executions.logs.input_tab')}</TabsTrigger>
+          <TabsTrigger value="output" className={SEGMENT_TRIGGER}>{t('workflows.executions.logs.output_tab')}</TabsTrigger>
+        </TabsList>
       </header>
 
       <div className="min-h-0 flex-1 space-y-3 overflow-auto p-3">
@@ -316,10 +341,17 @@ function LogDetail({ log, label, view, onViewChange, display, onDisplayChange, a
           </div>
         )}
         <TabsContent value="input" className="mt-0">
-          <PayloadView log={log} payload={log.input} sectionLabel={t('workflows.executions.logs.input_tab')} display={display} onDisplayChange={onDisplayChange} />
+          <PayloadView
+            log={log}
+            payload={input}
+            sectionLabel={t('workflows.executions.logs.input_tab')}
+            display={display}
+            onDisplayChange={onDisplayChange}
+            emptyMessage={log.kind === 'trigger' ? t('workflows.executions.logs.trigger_no_input') : undefined}
+          />
         </TabsContent>
         <TabsContent value="output" className="mt-0">
-          <PayloadView log={log} payload={log.output} sectionLabel={t('workflows.executions.logs.output_tab')} display={display} onDisplayChange={onDisplayChange} />
+          <PayloadView log={log} payload={output} sectionLabel={t('workflows.executions.logs.output_tab')} display={display} onDisplayChange={onDisplayChange} />
         </TabsContent>
       </div>
     </Tabs>
@@ -328,15 +360,38 @@ function LogDetail({ log, label, view, onViewChange, display, onDisplayChange, a
 
 const DISPLAY_BUTTON = 'rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]'
 
-function PayloadView({ log, payload, sectionLabel, display, onDisplayChange }: {
+// A loop chunk's logged input is a bounded SAMPLE of its items, not the
+// items themselves (loop_chunk.go sampleChunkItems): `items` for a small
+// chunk, else `first_items` + `last_items`, alongside the chunk's real
+// `item_count`. The sampled rows are what the table shows; JSON still shows
+// the whole logged object, note and all.
+function loopSample(log: ExecutionNodeLog, payload: unknown): { rows: unknown[]; total: number; ends: { first: number; last: number } | null } | null {
+  if (log.kind !== 'loop_chunk' || typeof payload !== 'object' || payload === null || Array.isArray(payload)) return null
+  const p = payload as Record<string, unknown>
+  const first = Array.isArray(p.first_items) ? p.first_items : null
+  const last = Array.isArray(p.last_items) ? p.last_items : null
+  const rows = Array.isArray(p.items) ? p.items : first || last ? [...(first ?? []), ...(last ?? [])] : null
+  if (!rows) return null
+  const total = typeof p.item_count === 'number' ? p.item_count : log.item_count ?? rows.length
+  // First/last samples sit back to back in the table, so the notice has to
+  // say which items they are — rows 4–6 are really the chunk's LAST items.
+  const ends = Array.isArray(p.items) ? null : { first: first?.length ?? 0, last: last?.length ?? 0 }
+  return { rows, total, ends }
+}
+
+function PayloadView({ log, payload, sectionLabel, display, onDisplayChange, emptyMessage }: {
   log: ExecutionNodeLog
   payload: unknown
   sectionLabel: string
   display: PayloadDisplay
   onDisplayChange: (display: PayloadDisplay) => void
+  /** Replaces the generic "no data captured" text (e.g. a trigger has no input). */
+  emptyMessage?: string
 }) {
   const t = useTranslation()
-  const shape = log.dropped_payload || payload === null || payload === undefined ? null : detectPayloadShape(payload)
+  const empty = log.dropped_payload || payload === null || payload === undefined
+  const sample = empty ? null : loopSample(log, payload)
+  const shape = empty ? null : detectPayloadShape(sample ? sample.rows : payload)
   const showTable = shape?.kind === 'table' && display === 'table'
 
   return (
@@ -378,13 +433,15 @@ function PayloadView({ log, payload, sectionLabel, display, onDisplayChange }: {
         </p>
       ) : !shape ? (
         <p className="rounded-md bg-[hsl(var(--muted))] px-3 py-2 text-xs italic text-[hsl(var(--muted-foreground))]">
-          {t('workflows.executions.logs.no_data')}
+          {emptyMessage ?? t('workflows.executions.logs.no_data')}
         </p>
       ) : (
         <>
-          {log.kind === 'loop_chunk' && Array.isArray(payload) && (
+          {sample && sample.rows.length < sample.total && (
             <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">
-              {t('workflows.executions.logs.sample_notice', { shown: payload.length, total: log.item_count ?? payload.length })}
+              {sample.ends
+                ? t('workflows.executions.logs.sample_notice_ends', { first: sample.ends.first, last: sample.ends.last, total: sample.total })
+                : t('workflows.executions.logs.sample_notice', { shown: sample.rows.length, total: sample.total })}
             </p>
           )}
           {showTable && shape.kind === 'table' ? (
@@ -437,7 +494,9 @@ const MAX_NESTED_VALUE_DEPTH = 4
 // the same obvious "one line per key" reading as an object does.
 function NestedFieldValue({ value, depth = 0 }: { value: unknown; depth?: number }) {
   if (value === null || value === undefined) return <span className="text-[hsl(var(--muted-foreground))]">—</span>
-  if (typeof value === 'boolean') return <>{value ? 'Yes' : 'No'}</>
+  // The literal value, as the JSON view and n8n show it — not a relabelled
+  // (and untranslated) Yes/No.
+  if (typeof value === 'boolean') return <>{String(value)}</>
   if (typeof value !== 'object' || Array.isArray(value) || depth >= MAX_NESTED_VALUE_DEPTH) {
     return typeof value === 'object' ? <>{JSON.stringify(value)}</> : <>{String(value)}</>
   }

@@ -32,6 +32,7 @@ import { validateUiWorkflow } from './parse'
 import { UiWorkflowJsonEditor } from './UiWorkflowJsonEditor'
 import { UI_WORKFLOW_VERSION, type UiWorkflow, type UiWorkflowStep } from './types'
 import type { FieldDef } from '@/features/forms/types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 export interface UiWorkflowEditorProps {
   value: UiWorkflow
@@ -45,6 +46,7 @@ export interface UiWorkflowEditorProps {
 }
 
 export function UiWorkflowEditor({ value, onChange, fields = [], help }: UiWorkflowEditorProps) {
+  const t = useTranslation()
   // JSON stays reachable rather than being replaced by the step list. It is
   // the only way to edit a step type this build doesn't have a panel for, the
   // fastest way to paste a graph an agent produced, and the honest answer when
@@ -64,12 +66,12 @@ export function UiWorkflowEditor({ value, onChange, fields = [], help }: UiWorkf
           onClick={() => setAsJson((j) => !j)}
           className="h-6 shrink-0 gap-1 text-[11px]"
         >
-          <Code2 size={11} />{asJson ? 'Steps' : 'JSON'}
+          <Code2 size={11} />{asJson ? t('ui_workflows.steps') : t('ui_workflows.json')}
         </Button>
       </div>
 
       {asJson ? (
-        <UiWorkflowJsonEditor value={value} onChange={onChange} label="Steps (JSON)" />
+        <UiWorkflowJsonEditor value={value} onChange={onChange} label={t('ui_workflows.steps_json')} />
       ) : (
         <StepList
           steps={value.steps}
@@ -91,7 +93,7 @@ export function UiWorkflowEditor({ value, onChange, fields = [], help }: UiWorkf
         <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
           {/* A graph is only as portable as its least portable step, so this is
               the intersection rather than a per-step list. */}
-          Runs on: {platforms.length > 0 ? platforms.join(', ') : 'nothing — one of these steps runs nowhere'}
+          {t('ui_workflows.runs_on')}: {platforms.length > 0 ? platforms.join(', ') : t('ui_workflows.runs_nowhere')}
         </p>
       )}
     </div>
@@ -110,6 +112,7 @@ interface StepListProps {
 }
 
 function StepList({ steps, fields, onChange, depth = 0 }: StepListProps) {
+  const t = useTranslation()
   const add = (type: string) => {
     const def = getUiWorkflowNode(type)
     if (!def) return
@@ -133,7 +136,7 @@ function StepList({ steps, fields, onChange, depth = 0 }: StepListProps) {
     <div className="space-y-2">
       {steps.length === 0 && (
         <p className="rounded-lg border border-dashed border-[hsl(var(--border))] px-3 py-4 text-center text-[12px] text-[hsl(var(--muted-foreground))]">
-          No steps yet — add one below.
+          {t('ui_workflows.no_steps')}
         </p>
       )}
 
@@ -157,20 +160,21 @@ function StepList({ steps, fields, onChange, depth = 0 }: StepListProps) {
 }
 
 function AddStepButton({ onAdd }: { onAdd: (type: string) => void }) {
+  const t = useTranslation()
   const nodes = selectableUiWorkflowNodes()
   // Grouped by what the step is allowed to touch, which is the distinction an
   // author actually reasons about — and the one the security boundary follows.
   const groups: { label: string; category: string }[] = [
-    { label: 'Interface', category: 'interface' },
-    { label: 'Data', category: 'data' },
-    { label: 'Flow', category: 'flow' },
+    { label: t('ui_workflows.interface'), category: 'interface' },
+    { label: t('ui_workflows.data'), category: 'data' },
+    { label: t('ui_workflows.flow'), category: 'flow' },
   ]
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button type="button" variant="outline" size="sm" className="w-full gap-1.5 text-[12px]">
-          <Plus size={13} /> Add step
+          <Plus size={13} /> {t('ui_workflows.add_step')}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-72">
@@ -185,9 +189,9 @@ function AddStepButton({ onAdd }: { onAdd: (type: string) => void }) {
               {inGroup.map((n) => (
                 <DropdownMenuItem key={n.type} onClick={() => onAdd(n.type)} className="flex-col items-start gap-0.5">
                   <span className="flex items-center gap-1.5 text-[12px]">
-                    <n.icon size={12} />{n.label}
+                    <n.icon size={12} />{t(`ui_workflows.node.${n.type}.label`)}
                   </span>
-                  <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{n.description}</span>
+                  <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{t(`ui_workflows.node.${n.type}.description`)}</span>
                 </DropdownMenuItem>
               ))}
             </div>
@@ -210,6 +214,7 @@ interface StepCardProps {
 }
 
 function StepCard({ step, fields, depth, isFirst, isLast, onConfigChange, onMove, onRemove }: StepCardProps) {
+  const t = useTranslation()
   const [open, setOpen] = useState(true)
   const def = getUiWorkflowNode(step.type)
 
@@ -222,14 +227,13 @@ function StepCard({ step, fields, depth, isFirst, isLast, onConfigChange, onMove
       <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-3">
         <p className="flex items-center gap-1.5 text-[12px] font-medium">
           <TriangleAlert size={13} className="text-[hsl(var(--muted-foreground))]" />
-          Unknown step “{step.type}”
+          {t('ui_workflows.unknown_step')}: “{step.type}”
         </p>
         <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
-          This app doesn’t know this step type, so it can’t be edited here and will be skipped when the workflow runs.
-          It is kept as-is when you save.
+          {t('ui_workflows.unknown_step_help')}
         </p>
         <Button type="button" variant="ghost" size="sm" onClick={onRemove} className="mt-1.5 h-6 gap-1 text-[11px]">
-          <Trash2 size={11} /> Remove
+          <Trash2 size={11} /> {t('common.delete')}
         </Button>
       </div>
     )
@@ -239,6 +243,17 @@ function StepCard({ step, fields, depth, isFirst, isLast, onConfigChange, onMove
   const Panel = def.ConfigPanel
   const childLists = def.childStepLists?.(step.config) ?? []
   const labels = def.childStepLabels ?? []
+  // Registry child labels ('If true'/'Otherwise') are string literals set at
+  // module load, before any I18nProvider exists, so they can't be translated
+  // where they're defined — only here, where `t` is in scope. Falls back to
+  // the registry's raw label (then the generic "Branch N") for any branching
+  // node that hasn't had per-index keys added yet, so this stays additive
+  // rather than a breaking change to the registry contract.
+  const childLabel = (index: number) => {
+    const key = `ui_workflows.node.${def.type}.child_label.${index}`
+    const translated = t(key)
+    return translated !== key ? translated : (labels[index] ?? t('ui_workflows.branch', { count: index + 1 }))
+  }
 
   return (
     <div className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
@@ -250,21 +265,21 @@ function StepCard({ step, fields, depth, isFirst, isLast, onConfigChange, onMove
           className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-[12px] font-medium"
         >
           <Icon size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
-          <span className="truncate">{def.label}</span>
+          <span className="truncate">{t(`ui_workflows.node.${def.type}.label`)}</span>
           {def.deprecated && (
             <span className="shrink-0 rounded bg-[hsl(var(--muted))] px-1 text-[10px] text-[hsl(var(--muted-foreground))]">
-              retired
+              {t('ui_workflows.retired')}
             </span>
           )}
         </button>
         <div className="flex shrink-0 items-center gap-0.5">
-          <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0" disabled={isFirst} onClick={() => onMove(-1)} aria-label="Move up">
+          <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0" disabled={isFirst} onClick={() => onMove(-1)} aria-label={t('ui_workflows.move_up')}>
             <ChevronUp size={12} />
           </Button>
-          <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0" disabled={isLast} onClick={() => onMove(1)} aria-label="Move down">
+          <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0" disabled={isLast} onClick={() => onMove(1)} aria-label={t('ui_workflows.move_down')}>
             <ChevronDown size={12} />
           </Button>
-          <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onRemove} aria-label="Remove step">
+          <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onRemove} aria-label={t('ui_workflows.remove_step')}>
             <Trash2 size={12} />
           </Button>
         </div>
@@ -275,7 +290,7 @@ function StepCard({ step, fields, depth, isFirst, isLast, onConfigChange, onMove
           {Panel ? (
             <Panel config={step.config as never} onChange={onConfigChange} fields={fields} />
           ) : (
-            <p className="text-[11px] text-[hsl(var(--muted-foreground))]">This step has no settings.</p>
+            <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('ui_workflows.no_settings')}</p>
           )}
 
           {/* Nested branches, driven entirely by the registry — this block
@@ -283,7 +298,7 @@ function StepCard({ step, fields, depth, isFirst, isLast, onConfigChange, onMove
           {childLists.map((list, index) => (
             <div key={index} className={depth < 2 ? 'border-l-2 border-[hsl(var(--border))] pl-2.5' : ''}>
               <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-                {labels[index] ?? `Branch ${index + 1}`}
+                {childLabel(index)}
               </p>
               <StepList
                 steps={list}

@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { useCreateInstance, useVerifyProvider } from './hooks'
 import { PROVIDER_LOGOS, PROVIDER_LABELS } from './logos'
 import type { ProviderType } from './types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 interface AddProviderDialogProps {
   providerType: ProviderType | null
@@ -22,6 +23,7 @@ interface AddProviderDialogProps {
 // seeds every catalog model for this vendor automatically (see
 // api/providers.Handler.Create).
 export function AddProviderDialog({ providerType, onOpenChange }: AddProviderDialogProps) {
+  const t = useTranslation()
   const [name, setName] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [verifyResult, setVerifyResult] = useState<{ ok: boolean; error?: string } | null>(null)
@@ -63,11 +65,11 @@ export function AddProviderDialog({ providerType, onOpenChange }: AddProviderDia
       { name: name.trim(), provider_type: providerType, api_key: apiKey.trim() },
       {
         onSuccess: () => {
-          toast.success(`"${name.trim()}" added`)
+          toast.success(`${name.trim()} — ${t('common.add')}`)
           handleOpenChange(false)
         },
         onError: (e) => {
-          toast.error('Could not add provider', { description: e instanceof Error ? e.message : undefined })
+          toast.error(t('model_providers.add_failed'), { description: e instanceof Error ? e.message : undefined })
         },
       },
     )
@@ -82,43 +84,42 @@ export function AddProviderDialog({ providerType, onOpenChange }: AddProviderDia
             {label}
           </DialogTitle>
           <DialogDescription>
-            Add a credentialed connection to {label} — every current {label} model becomes available afterward, each
-            individually enabled or disabled from the Added Models list.
+            {t('model_providers.add_connection', { provider: label })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 px-6 py-4">
           <div>
             <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">
-              Instance name<span className="text-[hsl(var(--destructive))]"> *</span>
+              {t('model_providers.instance_name')}<span className="text-[hsl(var(--destructive))]"> *</span>
             </Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Please input the instance name!"
+              placeholder={t('model_providers.instance_placeholder')}
               autoFocus
             />
           </div>
 
           <div>
             <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">
-              API Key<span className="text-[hsl(var(--destructive))]"> *</span>
+              {t('model_providers.api_key')}<span className="text-[hsl(var(--destructive))]"> *</span>
             </Label>
             <Input
               type="password"
               value={apiKey}
               onChange={(e) => { setApiKey(e.target.value); setVerifyResult(null) }}
-              placeholder="Please enter the API key"
+              placeholder={t('model_providers.api_key_placeholder')}
             />
             {providerType === 'voyage' && (
               <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
-                Voyage has no free key-check endpoint — Verify makes one tiny, real (billed) embedding call.
+                {t('model_providers.voyage_hint')}
               </p>
             )}
             {verifyResult && (
               <p className={`mt-1.5 flex items-center gap-1 text-[11px] ${verifyResult.ok ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--destructive))]'}`}>
                 {verifyResult.ok ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                {verifyResult.ok ? 'Key verified' : verifyResult.error}
+                {verifyResult.ok ? t('model_providers.key_verified') : verifyResult.error}
               </p>
             )}
           </div>
@@ -133,15 +134,15 @@ export function AddProviderDialog({ providerType, onOpenChange }: AddProviderDia
             disabled={apiKey.trim() === '' || verifyMutation.isPending}
           >
             {verifyMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : null}
-            Verify
+            {t('model_providers.verify')}
           </Button>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => handleOpenChange(false)} disabled={createMutation.isPending}>
-              Cancel
+              {t('common.close')}
             </Button>
             <Button size="sm" className="gap-1.5" onClick={handleSubmit} disabled={!canSubmit || createMutation.isPending}>
               {createMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : null}
-              Ok
+              {t('model_providers.ok')}
             </Button>
           </div>
         </DialogFooter>

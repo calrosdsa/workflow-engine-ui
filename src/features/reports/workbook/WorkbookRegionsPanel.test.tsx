@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import '@/features/reports/blocks'
+import { I18nProvider } from '@/features/i18n/I18nProvider'
 import { useReportStore } from '../store'
 import type { ReportDefinition } from '../types'
 import { WorkbookRegionsPanel } from './WorkbookRegionsPanel'
@@ -198,7 +199,10 @@ describe('WorkbookRegionsPanel', () => {
   })
 })
 
+// DataSourcesSection (rendered inside the panel) calls useTranslation, which
+// throws outside an I18nProvider ancestor — real provider, no props, same as
+// InsertDataMenu.test.tsx.
 function renderPanel(panel: ReactNode) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(<QueryClientProvider client={queryClient}>{panel}</QueryClientProvider>)
+  return render(<QueryClientProvider client={queryClient}><I18nProvider>{panel}</I18nProvider></QueryClientProvider>)
 }

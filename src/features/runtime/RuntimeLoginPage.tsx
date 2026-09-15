@@ -10,12 +10,21 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
-const schema = z.object({
-  credential: z.string().min(1, 'Email is required'),
-  password: z.string().min(1, 'Password is required'),
-})
-type FormValues = z.infer<typeof schema>
+// z.object is called at module scope, before any component (and its
+// useTranslation()) exists — same shape as AddFormDialog.tsx's buildChoices(t)
+// factory, just returning a zod schema instead of an options array.
+// auth.email_required/auth.password_required reused directly: this schema
+// is a structural mirror of features/auth/LoginPage.tsx's own (per this
+// file's own top comment), which already seeded that exact pair.
+function buildSchema(t: ReturnType<typeof useTranslation>) {
+  return z.object({
+    credential: z.string().min(1, t('auth.email_required')),
+    password: z.string().min(1, t('auth.password_required')),
+  })
+}
+type FormValues = z.infer<ReturnType<typeof buildSchema>>
 
 // A runtime-scoped sign-in form — same shared auth hooks/api as the
 // builder's LoginPage, but redirects back into the RUNTIME route the user
@@ -23,6 +32,7 @@ type FormValues = z.infer<typeof schema>
 // PermissionDeniedPage links here rather than crossing into the separate
 // index.html bundle, so the runtime stays self-contained.
 export function RuntimeLoginPage() {
+  const t = useTranslation()
   const { clientId, appId } = useParams({ strict: false }) as { clientId: string; appId: string }
   const search = useSearch({ strict: false }) as { returnTo?: string }
   const login = useLogin()
@@ -31,7 +41,7 @@ export function RuntimeLoginPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) })
+  } = useForm<FormValues>({ resolver: zodResolver(buildSchema(t)) })
 
   async function onSubmit(values: FormValues) {
     try {
@@ -54,13 +64,13 @@ export function RuntimeLoginPage() {
     >
       <Card className="w-full max-w-sm animate-in fade-in-0 duration-300">
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
-          <CardDescription>Sign in to continue to this application</CardDescription>
+          <CardTitle>{t('auth.sign_in')}</CardTitle>
+          <CardDescription>{t('runtime.login.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <div className="space-y-1.5">
-              <Label htmlFor="credential">Email</Label>
+              <Label htmlFor="credential">{t('auth.email')}</Label>
               <Input
                 id="credential"
                 type="email"
@@ -77,7 +87,7 @@ export function RuntimeLoginPage() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('auth.password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -99,12 +109,12 @@ export function RuntimeLoginPage() {
                 style={{ backgroundColor: 'hsl(var(--destructive) / 0.1)', color: 'hsl(var(--destructive))' }}
               >
                 <AlertCircle size={14} className="shrink-0" />
-                Invalid credentials. Please try again.
+                {t('auth.invalid_credentials')}
               </div>
             )}
             <Button type="submit" className="w-full" disabled={login.isPending}>
               {login.isPending && <Spinner className="h-4 w-4 border-current" />}
-              {login.isPending ? 'Signing in…' : 'Sign in'}
+              {login.isPending ? t('auth.signing_in') : t('auth.sign_in')}
             </Button>
           </form>
         </CardContent>

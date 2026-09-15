@@ -13,11 +13,13 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useForms } from '@/features/forms/hooks'
 import { iterLineItemElements } from './lineItemsSync'
 import type { FormElement } from './schema'
 
 export function ElementPreview({ element }: { element: FormElement }) {
+  const t = useTranslation()
   const required = element.behavior.required === 'always'
 
   // Presentational components render without the label wrapper.
@@ -28,15 +30,15 @@ export function ElementPreview({ element }: { element: FormElement }) {
       return <div style={{ height: element.height ?? 24 }} aria-hidden />
     case 'heading': {
       const sizes = { 1: 'text-xl', 2: 'text-lg', 3: 'text-base' }
-      return <p className={cn('font-semibold text-[hsl(var(--foreground))]', sizes[element.level ?? 2])}>{element.content || 'Heading'}</p>
+      return <p className={cn('font-semibold text-[hsl(var(--foreground))]', sizes[element.level ?? 2])}>{element.content || t('builder.canvas.preview_heading_default')}</p>
     }
     case 'paragraph':
-      return <p className="text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">{element.content || 'Paragraph text.'}</p>
+      return <p className="text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">{element.content || t('builder.canvas.preview_paragraph_default')}</p>
     case 'hidden':
       return (
         <div className="flex items-center gap-2 rounded-md border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-2.5 py-1.5 text-[11px] text-[hsl(var(--muted-foreground))]">
           <span className="font-mono">{element.key}</span>
-          <span className="rounded bg-[hsl(var(--border))] px-1.5 py-0.5 text-[9px] uppercase">hidden</span>
+          <span className="rounded bg-[hsl(var(--border))] px-1.5 py-0.5 text-[9px] uppercase">{t('builder.canvas.preview_hidden_badge')}</span>
         </div>
       )
   }
@@ -58,6 +60,7 @@ export function ElementPreview({ element }: { element: FormElement }) {
 }
 
 function FieldControl({ element }: { element: FormElement }) {
+  const t = useTranslation()
   const ph = element.placeholder
   const disabled = element.behavior.disabled || element.behavior.readOnly === 'always'
 
@@ -81,18 +84,18 @@ function FieldControl({ element }: { element: FormElement }) {
       return <Textarea placeholder={ph} disabled={disabled} className="text-sm" rows={element.component === 'richtext' ? 4 : 3} />
 
     case 'date':
-      return <FakeInput icon={<Calendar size={13} />} text={ph || 'Select date'} />
+      return <FakeInput icon={<Calendar size={13} />} text={ph || t('builder.canvas.preview_select_date')} />
     case 'time':
-      return <FakeInput icon={<Clock size={13} />} text={ph || 'Select time'} />
+      return <FakeInput icon={<Clock size={13} />} text={ph || t('builder.canvas.preview_select_time')} />
     case 'datetime':
-      return <FakeInput icon={<Calendar size={13} />} text={ph || 'Select date & time'} />
+      return <FakeInput icon={<Calendar size={13} />} text={ph || t('builder.canvas.preview_select_datetime')} />
 
     case 'select': case 'autocomplete': case 'role':
       return (
         <FakeInput
           icon={element.component === 'autocomplete' ? <Search size={13} /> : undefined}
           trailing={<ChevronDown size={14} className="text-[hsl(var(--muted-foreground))]" />}
-          text={ph || (element.component === 'role' ? 'Select a role…' : 'Select…')}
+          text={ph || (element.component === 'role' ? t('builder.canvas.preview_select_role') : t('builder.canvas.preview_select_generic'))}
         />
       )
     case 'form':
@@ -105,7 +108,7 @@ function FieldControl({ element }: { element: FormElement }) {
           {(element.options ?? []).slice(0, 2).map((o) => (
             <span key={o.value} className="rounded bg-[hsl(var(--primary))]/15 px-1.5 py-0.5 text-[11px] text-[hsl(var(--primary))]">{o.label}</span>
           ))}
-          <span className="text-[12px] text-[hsl(var(--muted-foreground))]">{ph || 'Select…'}</span>
+          <span className="text-[12px] text-[hsl(var(--muted-foreground))]">{ph || t('builder.canvas.preview_select_generic')}</span>
         </div>
       )
 
@@ -113,14 +116,14 @@ function FieldControl({ element }: { element: FormElement }) {
       return (
         <div className="flex items-center gap-2">
           <Checkbox disabled={disabled} />
-          <span className="text-[12px] text-[hsl(var(--muted-foreground))]">{element.placeholder || 'Checkbox option'}</span>
+          <span className="text-[12px] text-[hsl(var(--muted-foreground))]">{element.placeholder || t('builder.canvas.preview_checkbox_option')}</span>
         </div>
       )
     case 'switch':
       return (
         <div className="flex items-center gap-2">
           <Switch disabled={disabled} />
-          <span className="text-[12px] text-[hsl(var(--muted-foreground))]">{element.placeholder || 'Toggle'}</span>
+          <span className="text-[12px] text-[hsl(var(--muted-foreground))]">{element.placeholder || t('builder.canvas.preview_toggle')}</span>
         </div>
       )
     case 'radio':
@@ -136,9 +139,9 @@ function FieldControl({ element }: { element: FormElement }) {
       )
 
     case 'file':
-      return <DropArea icon={<Upload size={16} />} text="Click or drag a file to upload" />
+      return <DropArea icon={<Upload size={16} />} text={t('builder.canvas.preview_upload_file')} />
     case 'image':
-      return <DropArea icon={<ImageIcon size={16} />} text="Click or drag an image to upload" />
+      return <DropArea icon={<ImageIcon size={16} />} text={t('builder.canvas.preview_upload_image')} />
 
     default:
       return <Input placeholder={ph} disabled={disabled} className="h-8 text-sm" />
@@ -148,25 +151,26 @@ function FieldControl({ element }: { element: FormElement }) {
 // Renders a form-reference field, displaying the referenced form's NAME (never
 // its id). Warns when the stored reference points at a missing/deleted form.
 function FormRefControl({ formRef }: { formRef?: string }) {
+  const t = useTranslation()
   const { data: forms, isLoading } = useForms()
   const selected = (forms ?? []).find((f) => f.id === formRef)
   const isBroken = !!formRef && !isLoading && !selected
 
   if (!formRef) {
-    return <FakeInput icon={<FileText size={13} />} trailing={<ChevronDown size={14} className="text-[hsl(var(--muted-foreground))]" />} text="No form referenced" />
+    return <FakeInput icon={<FileText size={13} />} trailing={<ChevronDown size={14} className="text-[hsl(var(--muted-foreground))]" />} text={t('builder.canvas.preview_no_form_referenced')} />
   }
   if (isBroken) {
     return (
       <div className="flex h-8 items-center gap-2 rounded-md border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/15 px-2.5 text-[12px] text-[hsl(var(--warning))]">
         <AlertTriangle size={13} className="shrink-0" />
-        <span className="flex-1 truncate">Referenced form unavailable</span>
+        <span className="flex-1 truncate">{t('builder.canvas.preview_form_unavailable')}</span>
       </div>
     )
   }
   return (
     <div className="flex h-8 items-center gap-2 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 text-[12px] text-[hsl(var(--muted-foreground))]">
       <FileText size={13} className="shrink-0 text-[hsl(var(--primary))]" />
-      <span className="flex-1 truncate">{isLoading ? 'Loading…' : selected?.name}</span>
+      <span className="flex-1 truncate">{isLoading ? t('common.loading') : selected?.name}</span>
       <ChevronDown size={14} className="text-[hsl(var(--muted-foreground))]" />
     </div>
   )
@@ -178,11 +182,12 @@ function FormRefControl({ formRef }: { formRef?: string }) {
 // for the row-editor's own sections/columns) — flatten them here the same
 // way LineItemsGrid.tsx does for the real table.
 function LineItemsControl({ element }: { element: FormElement }) {
+  const t = useTranslation()
   const columns = [...iterLineItemElements(element.lineItemColumns ?? [])]
   if (columns.length === 0) {
     return (
       <div className="flex h-16 items-center justify-center rounded-md border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 text-[12px] text-[hsl(var(--muted-foreground))]">
-        No columns configured yet
+        {t('builder.canvas.preview_no_columns')}
       </div>
     )
   }
