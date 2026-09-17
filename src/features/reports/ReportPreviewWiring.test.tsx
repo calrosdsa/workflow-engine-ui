@@ -48,13 +48,16 @@ function withOneBlock(base: ReportDefinition): ReportDefinition {
 }
 
 // The exact glue ReportBuilderPage.tsx wires: a ref shared between the
-// button's onPreview and the panel's imperative open() handle.
-function PreviewHarness({ definition }: { definition: ReportDefinition }) {
+// button's onPreview and the panel's imperative open() handle, PLUS
+// PreviewButton's onBeforeChange and the panel's own getDefinition — both
+// flush-then-read the store rather than trusting a React prop, which is
+// what the RF-304 staleness regression below pins.
+function PreviewHarness({ definition, onBeforeChange }: { definition: ReportDefinition; onBeforeChange?: () => void }) {
   const previewPanelRef = useRef<ReportPreviewPanelHandle>(null)
   return (
     <>
-      <PreviewButton onPreview={(argumentValues) => previewPanelRef.current?.open(argumentValues)} />
-      <ReportPreviewPanel ref={previewPanelRef} definition={definition} />
+      <PreviewButton onBeforeChange={onBeforeChange} onPreview={(argumentValues) => previewPanelRef.current?.open(argumentValues)} />
+      <ReportPreviewPanel ref={previewPanelRef} definition={definition} getDefinition={() => useReportStore.getState().definition} />
     </>
   )
 }
@@ -79,5 +82,39 @@ describe('PreviewButton + ReportPreviewPanel — wired the way ReportBuilderPage
 
     await waitFor(() => expect(document.querySelector('iframe')).not.toBeNull())
     expect(previewMock).toHaveBeenCalledWith(definition, 'pdf', undefined, expect.any(AbortSignal))
+  })
+
+  // RF-304 regression: PreviewButton.handlePreview calls onBeforeChange()
+  // (flushing a live canvas edit into the store) and then, still inside the
+  // SAME synchronous click handler, calls onPreview() -> panel.open(). React
+  // defers the panel's `definition` PROP update until after the handler
+  // returns, even though Zustand's setState already updated the store
+  // synchronously — so open() must read the store itself (via getDefinition)
+  // rather than trust the definition prop closed over at the last render.
+  // An earlier version of ReportPreviewPanel did the latter and silently
+  // dropped whatever onBeforeChange had just flushed from every preview.
+  it('picks up a store change flushed by onBeforeChange within the same click, even though the definition prop has not re-rendered yet', async () => {
+    previewMock.mockResolvedValue({ blob: textBlob('%PDF-1.4'), filename: 'a.pdf', rowCount: 2 })
+    const initial = withOneBlock(emptyReportDefinition('R'))
+    useReportStore.getState().loadDefinition(initial)
+
+    render(
+      <I18nProvider>
+        <PreviewHarness
+          definition={initial}
+          onBeforeChange={() => { useReportStore.getState().updateName('Flushed name') }}
+        />
+      </I18nProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview' }))
+
+    await waitFor(() => expect(document.querySelector('iframe')).not.toBeNull())
+    expect(previewMock).toHaveBeenCalledTimes(1)
+    const [sentDefinition] = previewMock.mock.calls[0] as [ReportDefinition]
+    // The flushed name must be in the generated definition, not silently
+    // dropped because React hadn't re-rendered the panel's `definition`
+    // prop yet at the moment open() ran.
+    expect(sentDefinition.name).toBe('Flushed name')
   })
 })

@@ -65,7 +65,19 @@ export interface ReportPreviewPanelHandle {
 }
 
 interface ReportPreviewPanelProps {
+  // Reactive — drives the initial format seed and the `stale` comparison
+  // below, both of which need to re-render when the store changes.
   definition: ReportDefinition
+  // Imperative "read the live definition right now" escape hatch, flushing
+  // any in-progress canvas edit first — see PreviewButton.handlePreview for
+  // the established pattern this mirrors. Every generation trigger
+  // (open/refresh/format-switch) must call this instead of closing over
+  // `definition`: a click handler that flushes a store update and then
+  // triggers generation in the SAME synchronous call stack would otherwise
+  // see the pre-flush `definition` prop, because React defers the prop
+  // update until after the handler returns even though the store update
+  // itself is synchronous (RF-304 regression — see ReportPreviewWiring.test.tsx).
+  getDefinition: () => ReportDefinition
 }
 
 interface Rendered {
@@ -79,7 +91,7 @@ interface Rendered {
 }
 
 export const ReportPreviewPanel = forwardRef<ReportPreviewPanelHandle, ReportPreviewPanelProps>(
-  function ReportPreviewPanel({ definition }, ref) {
+  function ReportPreviewPanel({ definition, getDefinition }, ref) {
     const t = useTranslation()
     const [collapsed, setCollapsed] = useState(true)
     const [height, setHeight] = useState(DEFAULT_HEIGHT)
@@ -164,15 +176,15 @@ export const ReportPreviewPanel = forwardRef<ReportPreviewPanelHandle, ReportPre
       open: (argVals) => {
         setCollapsed(false)
         setArgumentValues(argVals)
-        runGeneration(format, argVals, definition)
+        runGeneration(format, argVals, getDefinition())
       },
-    }), [format, definition, runGeneration])
+    }), [format, getDefinition, runGeneration])
 
-    const handleRefresh = () => runGeneration(format, argumentValues, definition)
+    const handleRefresh = () => runGeneration(format, argumentValues, getDefinition())
 
     const handleFormatChange = (f: ExportFormat) => {
       setFormat(f)
-      runGeneration(f, argumentValues, definition)
+      runGeneration(f, argumentValues, getDefinition())
     }
 
     const handleDownload = () => {

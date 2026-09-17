@@ -65,7 +65,7 @@ function renderPanel(def: ReportDefinition) {
   const ref = createRef<ReportPreviewPanelHandle>()
   const view = render(
     <I18nProvider>
-      <ReportPreviewPanel ref={ref} definition={def} />
+      <ReportPreviewPanel ref={ref} definition={def} getDefinition={() => def} />
     </I18nProvider>,
   )
   return { ...view, ref }
@@ -157,9 +157,10 @@ describe('ReportPreviewPanel — staleness and refresh (RF-303)', () => {
     await waitFor(() => expect(document.querySelector('iframe')).not.toBeNull())
     expect(previewMock).toHaveBeenCalledTimes(1)
 
+    const edited = { ...def, name: 'Acme Invoice (edited)' }
     rerender(
       <I18nProvider>
-        <ReportPreviewPanel ref={ref} definition={{ ...def, name: 'Acme Invoice (edited)' }} />
+        <ReportPreviewPanel ref={ref} definition={edited} getDefinition={() => edited} />
       </I18nProvider>,
     )
 
@@ -265,5 +266,68 @@ describe('ReportPreviewPanel — collapse preserves state', () => {
     fireEvent.click(screen.getByRole('button', { name: /expand preview/i }))
     expect(document.querySelector('iframe')).not.toBeNull()
     expect(previewMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('ReportPreviewPanel — every generation trigger reads getDefinition() fresh (RF-304)', () => {
+  // getDefinition is deliberately wired to return a DIFFERENT object than the
+  // reactive `definition` prop in every test below — a stand-in for the real
+  // bug this pins: a click handler (PreviewButton's onBeforeChange, or a
+  // future Refresh-time flush) can synchronously update the store within the
+  // same call stack a generation trigger fires in, and React defers the
+  // `definition` PROP update until after that handler returns. Before this
+  // fix, open()/handleRefresh()/handleFormatChange() all closed over
+  // `definition` for the call into reportsApi.preview, so a just-flushed
+  // edit was silently dropped from every preview and refresh. See
+  // ReportPreviewWiring.test.tsx for the end-to-end version of this same
+  // regression through the real PreviewButton + Zustand store.
+  function renderWithDivergentGetDefinition(def: ReportDefinition, fresh: ReportDefinition) {
+    const ref = createRef<ReportPreviewPanelHandle>()
+    const view = render(
+      <I18nProvider>
+        <ReportPreviewPanel ref={ref} definition={def} getDefinition={() => fresh} />
+      </I18nProvider>,
+    )
+    return { ...view, ref }
+  }
+
+  it('open() generates against getDefinition(), not the stale definition prop', async () => {
+    previewMock.mockResolvedValue({ blob: textBlob('%PDF'), filename: 'a.pdf', rowCount: 1 })
+    const stale = definition('pdf')
+    const fresh = { ...stale, name: 'Fresh from the store' }
+    const { ref } = renderWithDivergentGetDefinition(stale, fresh)
+    act(() => { ref.current!.open() })
+
+    await waitFor(() => expect(document.querySelector('iframe')).not.toBeNull())
+    expect(previewMock).toHaveBeenCalledWith(fresh, 'pdf', undefined, expect.anything())
+  })
+
+  it('handleRefresh() generates against getDefinition(), not the stale definition prop', async () => {
+    previewMock.mockResolvedValue({ blob: textBlob('%PDF'), filename: 'a.pdf', rowCount: 1 })
+    const stale = definition('pdf')
+    const fresh = { ...stale, name: 'Fresh from the store' }
+    const { ref } = renderWithDivergentGetDefinition(stale, fresh)
+    act(() => { ref.current!.open() })
+    await waitFor(() => expect(document.querySelector('iframe')).not.toBeNull())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+
+    await waitFor(() => expect(previewMock).toHaveBeenCalledTimes(2))
+    expect(previewMock).toHaveBeenNthCalledWith(2, fresh, 'pdf', undefined, expect.anything())
+  })
+
+  it('handleFormatChange() generates against getDefinition(), not the stale definition prop', async () => {
+    previewMock.mockResolvedValue({ blob: textBlob('%PDF'), filename: 'a.pdf', rowCount: 1 })
+    const stale = definition('pdf')
+    const fresh = { ...stale, name: 'Fresh from the store' }
+    const { ref } = renderWithDivergentGetDefinition(stale, fresh)
+    act(() => { ref.current!.open() })
+    await waitFor(() => expect(document.querySelector('iframe')).not.toBeNull())
+
+    fireEvent.click(screen.getByText('PDF'))
+    fireEvent.click(screen.getByRole('option', { name: 'Markdown' }))
+
+    await waitFor(() => expect(previewMock).toHaveBeenCalledTimes(2))
+    expect(previewMock).toHaveBeenNthCalledWith(2, fresh, 'markdown', undefined, expect.anything())
   })
 })
