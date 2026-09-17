@@ -11,9 +11,11 @@ vi.mock('sonner', () => ({
   toast: { error: (...args: unknown[]) => toastError(...args) },
 }))
 
-// Only the format-support disclosure test needs this to actually resolve
-// (FormatSupportNote returns null while capabilities is undefined, which
-// is also what every other test here implicitly relies on staying inert).
+// Real per-test assertions never touch this data (only the format-support
+// disclosure test below reads it) — this exists so FormatSupportNote
+// resolves to something rather than sitting on an unmocked, never-settling
+// fetch, which every OTHER test here tolerates by simply never querying
+// for what FormatSupportNote renders.
 vi.mock('./api', () => ({
   metaApi: {
     rendererCapabilities: () => Promise.resolve([

@@ -91,10 +91,18 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
     // they show only while that panel is open. Both are already rejected
     // by the backend's own Validate, so this is a friendlier message
     // in place of a raw 400, checked here (not fixed) since neither has a
-    // safe auto-repair (see page-setup.ts's own doc comment).
+    // safe auto-repair (see page-setup.ts's own doc comment). This can
+    // also fire for a report authored via API/MCP whose page setup this
+    // panel never validated (PageSetupSection.tsx's own comment on why
+    // this section can't assume UI-only authorship) — the backend would
+    // reject that save regardless, so the "Page Setup" prefix exists to
+    // point an author toward the actual problem even when they got here
+    // editing something unrelated, not to soften a NEW restriction.
     const pageProblems = validatePageSetup(definitionToSave.settings.page)
     if (pageProblems.length > 0) {
-      setSaveError(pageProblems.map((p) => t(p.key, p.params)).join('; '))
+      setSaveError(t('reports.builder.save_blocked_page_setup', {
+        detail: pageProblems.map((p) => t(p.key, p.params)).join('; '),
+      }))
       return false
     }
     try {

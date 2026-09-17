@@ -3166,6 +3166,7 @@ export const en = {
   // a bare reports.* key is shared across more than one of them.
   'reports.builder.back': 'Back to reports',
   'reports.builder.save_title': 'Save (Ctrl+S)',
+  'reports.builder.save_blocked_page_setup': 'Page Setup: {{detail}}',
   'reports.choose_form_placeholder': 'Choose a form…',
   'reports.field_placeholder': 'Field…',
 
