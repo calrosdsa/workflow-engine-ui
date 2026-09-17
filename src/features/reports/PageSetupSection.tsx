@@ -23,6 +23,7 @@ import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } fro
 import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useRendererCapabilities } from './hooks'
 import { unknownTokens } from './page-setup'
+import { PAPER_SIZE_MM } from './workbook/page-breaks'
 import type {
   PageBand,
   PageMargins,
@@ -52,16 +53,6 @@ export interface PageSetupSectionProps {
 
 const FIELD_LABEL = 'text-[11px] font-medium text-[hsl(var(--muted-foreground))]'
 const DEFAULT_MARGIN_MM = 15
-
-// Physical page sizes a non-custom paper_size resolves to, in millimeters —
-// used only for this panel's own inline margin-sanity check. The backend's
-// Validate is the real authority on what actually renders; disagreeing with
-// it here would just mean a stale warning, never a wrong save.
-const PAPER_SIZE_MM: Record<Exclude<PageSize, 'custom'>, { width: number; height: number }> = {
-  a4: { width: 210, height: 297 },
-  letter: { width: 215.9, height: 279.4 },
-  legal: { width: 215.9, height: 355.6 },
-}
 
 function regionToRange(region: ReportBlockRegion): PrintCellRange {
   return {
