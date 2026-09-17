@@ -288,7 +288,7 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
             onBeforeChange={synchronizeWorkbookBeforeDefinitionChange}
           />
         </div>
-        <ReportPreviewPanel ref={previewPanelRef} definition={definition} />
+        <ReportPreviewPanel key={reportId} ref={previewPanelRef} definition={definition} />
       </div>
     </div>
   )

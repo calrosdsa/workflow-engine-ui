@@ -213,6 +213,22 @@ describe('ReportPreviewPanel — staleness and refresh (RF-303)', () => {
   })
 })
 
+describe('ReportPreviewPanel — argument values survive a format switch', () => {
+  it('reuses the argument values collected at open() when the format is switched', async () => {
+    previewMock.mockResolvedValue({ blob: textBlob('%PDF'), filename: 'a.pdf', rowCount: 1 })
+    const { ref } = renderPanel(definition('pdf'))
+    act(() => { ref.current!.open({ region: 'west' }) })
+    await waitFor(() => expect(document.querySelector('iframe')).not.toBeNull())
+    expect(previewMock).toHaveBeenNthCalledWith(1, expect.anything(), 'pdf', { region: 'west' }, expect.anything())
+
+    fireEvent.click(screen.getByText('PDF'))
+    fireEvent.click(screen.getByRole('option', { name: 'Markdown' }))
+
+    await waitFor(() => expect(previewMock).toHaveBeenCalledTimes(2))
+    expect(previewMock).toHaveBeenNthCalledWith(2, expect.anything(), 'markdown', { region: 'west' }, expect.anything())
+  })
+})
+
 describe('ReportPreviewPanel — collapse preserves state', () => {
   it('keeps the rendered PDF mounted (not torn down) when the panel is collapsed and re-expanded', async () => {
     previewMock.mockResolvedValue({ blob: textBlob('%PDF'), filename: 'a.pdf', rowCount: 1 })
