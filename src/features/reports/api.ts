@@ -1,5 +1,57 @@
 import { api } from '@/lib/api'
-import type { ReportDefinitionRow, ReportDefinition, ExportFormat, NumberFormat } from './types'
+import type { BlockLayout, ReportDefinitionRow, ReportDefinition, ExportFormat, NumberFormat } from './types'
+
+// Mirrors internal/reports's Diagnostic/DiagnosticSeverity/DiagnosticKind
+// (Go, diagnostics.go) exactly (RF-304).
+export type DiagnosticSeverity = 'error' | 'warning' | 'info'
+export type DiagnosticKind = 'overlap' | 'dropped_merge' | 'spill' | 'formula_error'
+
+export interface Diagnostic {
+  kind: DiagnosticKind
+  severity: DiagnosticSeverity
+  message: string
+  sheet_id?: string
+  // Reuses BlockLayout's {row, col, row_span, col_span} shape — the exact
+  // same shape ReportBlockRegion.layout already is, so a Diagnostic's own
+  // location can be handed straight to WorkbookSurfaceHandle.focusRegion
+  // as `{ sheet_id: diagnostic.sheet_id, layout: diagnostic.location }`
+  // with no reshaping.
+  location?: BlockLayout
+}
+
+// Mirrors internal/reports.ElementInspection/SheetInspection/InspectResult
+// (Go, inspect.go) field-for-field. Served by POST /report-definitions/
+// preview with inspect: true instead of the rendered file — see
+// reportsApi.inspect below.
+export interface ElementInspection {
+  id: string
+  name?: string
+  kind: string
+  authored: BlockLayout
+  resolved: BlockLayout
+}
+
+export interface SheetInspection {
+  id: string
+  name: string
+  row_count: number
+  col_count: number
+  elements: ElementInspection[]
+  overlaps?: { row: number; col: number }[]
+  dropped_merges?: { start_row: number; end_row: number; start_col: number; end_col: number }[]
+  diagnostics?: Diagnostic[]
+}
+
+export interface InspectResult {
+  format: ExportFormat
+  // GridDiagnostics/GridDiagnosticsNote's own Go doc comment covers why
+  // overlaps/dropped_merges/diagnostics can be legitimately empty for a
+  // format that doesn't render through the shared positioned grid (XLSX,
+  // CSV, XLS) rather than meaning "nothing was found."
+  grid_diagnostics: boolean
+  grid_diagnostics_note?: string
+  sheets: SheetInspection[]
+}
 
 // Mirrors internal/reports.FormatCapabilities + ReportFormatCapabilities
 // (Go) field-for-field. Served by GET /meta/catalog's reports.
@@ -145,6 +197,22 @@ export const reportsApi = {
     const rowCount = Number(res.headers.get('X-Report-Row-Count') ?? '0')
     return { blob, filename, rowCount }
   },
+
+  // The SAME endpoint as preview() above, with inspect: true — the response
+  // is JSON layout/diagnostic facts (InspectResult) instead of the rendered
+  // file's bytes (api/reports/handler.go's Preview branches on req.Inspect).
+  // RF-304's diagnostics panel is the first frontend caller; nothing called
+  // this endpoint's inspect path before it.
+  inspect: (
+    definition: ReportDefinition,
+    format?: ExportFormat,
+    argumentValues?: Record<string, unknown>,
+    signal?: AbortSignal,
+  ): Promise<InspectResult> =>
+    api.post('report-definitions/preview', {
+      json: { definition, format, arguments: argumentValues, inspect: true },
+      signal,
+    }).json<InspectResult>(),
 
   // Resolves a SAVED report into its on-screen JSON shape (api/reports/
   // handler.go's Runtime) — the "report" menu type's own runtime viewer.

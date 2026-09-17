@@ -94,6 +94,11 @@ export interface WorkbookSurfaceHandle {
   /** The format on the selection's anchor cell, so the panel can show what
    *  is currently set rather than always opening blank. */
   selectedNumberFormat: () => NumberFormat | undefined
+  /** Moves the active selection to region and scrolls it into view — the
+   *  inverse of getSelection, used by the diagnostics panel (RF-304) to
+   *  jump to a finding's located cell/range. A no-op (not an error) if the
+   *  sheet doesn't exist or the underlying Univer call isn't available. */
+  focusRegion: (region: ReportBlockRegion) => void
 }
 
 interface TableHostSheet {
@@ -109,15 +114,42 @@ interface NumberFormattableRange {
   setNumberFormat?: (pattern: string) => unknown
 }
 
+// The same real FRange object every getRange overload returns — this file
+// previously only narrowed it to getCellRect/setValue (a formula cell's
+// shape); focusRegion (RF-304) is the first caller that needs to hand the
+// range back to setActiveRange rather than read from it.
+interface FocusableRange {
+  getCellRect?: () => DOMRect
+  // Narrowed to the shape this file writes — a formula cell. The real
+  // signature is (ICellData | CellValue), which this satisfies.
+  setValue?: (value: { f: string }) => unknown
+}
+
 interface EditableSheet {
   getSheetId: () => string
   getActiveRange: () => NumberFormattableRange | null
-  getRange?: (row: number, column: number) => {
-    getCellRect?: () => DOMRect
-    // Narrowed to the shape this file writes — a formula cell. The real
-    // signature is (ICellData | CellValue), which this satisfies.
-    setValue?: (value: { f: string }) => unknown
-  } | null
+  // Real Univer signature accepts an optional (numRows, numColumns) pair —
+  // widened from (row, column) only, so focusRegion can ask for a whole
+  // region in one call instead of just its anchor cell.
+  getRange?: (row: number, column: number, numRows?: number, numColumns?: number) => FocusableRange | null
+  // Moves the active selection to `range` — the inverse of getActiveRange,
+  // used by focusRegion (RF-304) to jump to a diagnostic's location. Real
+  // Univer signature: FWorksheet.setActiveRange(range: FRange): FWorksheet.
+  // The parameter is deliberately `any`, not FocusableRange: FRange is a
+  // real class with 100+ internal fields, so a function typed to take one
+  // can never structurally satisfy taking our narrow shim type instead
+  // (TypeScript's contravariant parameter check correctly rejects it) —
+  // this file only ever calls setActiveRange with the exact object getRange
+  // just returned, never constructs one itself, so the real safety this
+  // parameter would buy doesn't apply here the way it does for a value this
+  // file builds by hand (e.g. getRange's own `{ f: string }` narrowing).
+  setActiveRange?: (range: any) => unknown
+  // Scrolls the viewport so (row, column) is visible — setActiveRange alone
+  // moves the selection but doesn't guarantee it's on screen. Lives on the
+  // sheets-ui facade mixin (FWorksheetUIMixin), not the base sheets one
+  // getActiveRange/setActiveRange come from, but @univerjs/sheets-ui is
+  // already a dependency of the sheets-core preset this file instantiates.
+  scrollToCell?: (row: number, column: number, duration?: number) => unknown
 }
 
 interface ActiveWorkbookHandle {
@@ -125,6 +157,11 @@ interface ActiveWorkbookHandle {
   getActiveSheet?: () => EditableSheet
   getSheetBySheetId?: (sheetId: string) => TableHostSheet | null
   endEditingAsync?: (save?: boolean) => Promise<boolean>
+  // Real Univer signature: FWorkbook.setActiveSheet(sheet: FWorksheet |
+  // string): FWorksheet — takes a bare sheet-id string, so switching to a
+  // diagnostic's sheet before focusing its region is one call. Used by
+  // focusRegion (RF-304).
+  setActiveSheet?: (sheetId: string) => EditableSheet
 }
 
 // The editor remains an adapter: Univer owns interactions, but ReportWorkbook
@@ -260,6 +297,16 @@ export const UniverWorkbookSurface = forwardRef<WorkbookSurfaceHandle, UniverWor
           col_span: range.endColumn - range.startColumn + 1,
         },
       }
+    },
+    focusRegion: (region) => {
+      const workbook = activeWorkbookRef.current
+      const sheet = workbook?.setActiveSheet?.(region.sheet_id)
+      const range = sheet?.getRange?.(
+        region.layout.row, region.layout.col, region.layout.row_span, region.layout.col_span,
+      )
+      if (!sheet || !range) return
+      sheet.setActiveRange?.(range)
+      sheet.scrollToCell?.(region.layout.row, region.layout.col)
     },
   }), [definition.workbook])
 

@@ -8,6 +8,8 @@ import { pruneIncompleteFilters } from '@/features/reports/data-sources'
 import { validatePageSetup } from '@/features/reports/page-setup'
 import { UniverWorkbookSurface, type WorkbookSurfaceHandle } from '@/features/reports/workbook/UniverWorkbookSurface'
 import { WorkbookRegionsPanel } from '@/features/reports/workbook/WorkbookRegionsPanel'
+import { DiagnosticsPanel } from '@/features/reports/workbook/DiagnosticsPanel'
+import { ReportRightRail } from '@/features/reports/workbook/ReportRightRail'
 import { ReportSettingsPanel } from '@/features/reports/ReportSettingsPanel'
 import { PreviewButton } from '@/features/reports/PreviewButton'
 import { ReportPreviewPanel, type ReportPreviewPanelHandle } from '@/features/reports/ReportPreviewPanel'
@@ -301,11 +303,26 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
             onEdited={handleWorkbookEdited}
             onBeforeChange={synchronizeWorkbookBeforeDefinitionChange}
           />
-          <WorkbookRegionsPanel
-            getSelection={() => workbookSurfaceRef.current?.getSelection()}
-            readNumberFormat={() => workbookSurfaceRef.current?.selectedNumberFormat()}
-            applyNumberFormat={(format) => workbookSurfaceRef.current?.applyNumberFormat(format)}
-            onBeforeChange={synchronizeWorkbookBeforeDefinitionChange}
+          <ReportRightRail
+            regions={
+              <WorkbookRegionsPanel
+                getSelection={() => workbookSurfaceRef.current?.getSelection()}
+                readNumberFormat={() => workbookSurfaceRef.current?.selectedNumberFormat()}
+                applyNumberFormat={(format) => workbookSurfaceRef.current?.applyNumberFormat(format)}
+                onBeforeChange={synchronizeWorkbookBeforeDefinitionChange}
+              />
+            }
+            diagnostics={
+              <DiagnosticsPanel
+                key={reportId}
+                definition={definition}
+                getDefinition={() => {
+                  synchronizeWorkbookBeforeDefinitionChange()
+                  return useReportStore.getState().definition
+                }}
+                onFocusRegion={(region) => workbookSurfaceRef.current?.focusRegion(region)}
+              />
+            }
           />
         </div>
         <ReportPreviewPanel

@@ -212,6 +212,34 @@ describe('UniverWorkbookSurface', () => {
     })
   })
 
+  it('focuses a region by switching sheets, setting the active range, and scrolling to it (RF-304)', () => {
+    const setActiveRange = vi.fn()
+    const scrollToCell = vi.fn()
+    const range = { startRow: 3, endRow: 5, startColumn: 1, endColumn: 2 }
+    const setActiveSheet = vi.fn(() => ({
+      getRange: vi.fn(() => range),
+      setActiveRange,
+      scrollToCell,
+    }))
+    univer.createWorkbook.mockReturnValue({ save: vi.fn(), setActiveSheet })
+    const ref = createRef<WorkbookSurfaceHandle>()
+    renderSurface(<UniverWorkbookSurface ref={ref} definition={definition} />)
+
+    ref.current?.focusRegion({ sheet_id: 'charges', layout: { row: 3, col: 1, row_span: 3, col_span: 2 } })
+
+    expect(setActiveSheet).toHaveBeenCalledWith('charges')
+    expect(setActiveRange).toHaveBeenCalledWith(range)
+    expect(scrollToCell).toHaveBeenCalledWith(3, 1)
+  })
+
+  it('does nothing (not an error) when the underlying Univer calls are unavailable', () => {
+    univer.createWorkbook.mockReturnValue({ save: vi.fn() }) // no setActiveSheet
+    const ref = createRef<WorkbookSurfaceHandle>()
+    renderSurface(<UniverWorkbookSurface ref={ref} definition={definition} />)
+
+    expect(() => ref.current?.focusRegion({ sheet_id: 'nope', layout: { row: 0, col: 0, row_span: 1, col_span: 1 } })).not.toThrow()
+  })
+
   it('keeps the live editor mounted for changes that do not alter a drawn region', () => {
     const workbookDefinition: ReportDefinition = {
       ...definition,

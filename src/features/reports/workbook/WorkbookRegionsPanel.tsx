@@ -98,7 +98,13 @@ export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumb
   }
 
   return (
-    <aside className="flex h-full w-96 shrink-0 flex-col border-l border-[hsl(var(--border))] bg-[hsl(var(--card))]" aria-label={t('reports.regions.panel_aria')}>
+    // As of RF-304, the w-96/border-l/bg-card chrome and the sibling
+    // Diagnostics tab this panel now shares its column with live in
+    // ReportRightRail — this stays a plain flex-col content region rather
+    // than owning its own <aside>, so ReportRightRail's own <aside> is the
+    // one and only right-rail wrapper (no nested/duplicated border or
+    // width). aria-label moves to ReportRightRail's TabsTrigger instead.
+    <div className="flex h-full min-h-0 flex-1 flex-col">
       <div className="border-b border-[hsl(var(--border))] px-4 py-3">
         <div className="flex items-center gap-2">
           <Database size={15} className="text-[hsl(var(--primary))]" />
@@ -305,7 +311,7 @@ export function WorkbookRegionsPanel({ getSelection, readNumberFormat, applyNumb
           )}
         </section>
       </ScrollArea>
-    </aside>
+    </div>
   )
 }
 

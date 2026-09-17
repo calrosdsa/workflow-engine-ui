@@ -914,6 +914,26 @@ export const en = {
   'reports.preview.stale_badge': 'Preview out of date',
   'reports.preview.stale_hint': 'The sheet has changed since this preview was generated.',
   'reports.preview.refresh_failed': "Couldn't refresh — showing the last successful preview.",
+  // RF-304's right rail and diagnostics tab — see ReportRightRail.tsx and
+  // DiagnosticsPanel.tsx for the on-demand-only rationale this mirrors from
+  // the preview panel above.
+  'reports.right_rail.aria': 'Report data and diagnostics',
+  'reports.right_rail.data_tab': 'Data',
+  'reports.right_rail.diagnostics_tab': 'Diagnostics',
+  'reports.diagnostics.title': 'Diagnostics',
+  'reports.diagnostics.run': 'Run diagnostics',
+  'reports.diagnostics.rerun': 'Re-run diagnostics',
+  'reports.diagnostics.running': 'Checking the workbook…',
+  'reports.diagnostics.no_run_yet': 'No diagnostics run yet',
+  'reports.diagnostics.no_run_yet_hint': 'Checks for overlapping cells, dropped merges, spilled regions, and formula errors in the resolved layout.',
+  'reports.diagnostics.failed': "Couldn't run diagnostics",
+  'reports.diagnostics.refresh_failed': "Couldn't refresh — showing the last successful results.",
+  'reports.diagnostics.stale_badge': 'Out of date',
+  'reports.diagnostics.clean': 'No issues found.',
+  'reports.diagnostics.run_dialog_title': 'Run diagnostics',
+  'reports.diagnostics.severity.error': 'Errors',
+  'reports.diagnostics.severity.warning': 'Warnings',
+  'reports.diagnostics.severity.info': 'Info',
   // FORMAT_LABELS (reports/types.ts) — read by ReportSettingsPanel.tsx,
   // ReportPreviewDialog.tsx, and forms/runtime/custom-actions/export-report/
   // ConfigPanel.tsx (a different vertical, custom-actions' own
