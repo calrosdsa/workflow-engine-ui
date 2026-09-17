@@ -5,6 +5,7 @@ import '@/features/reports/blocks'
 import { useReport, useUpdateReport } from '@/features/reports/hooks'
 import { useReportStore } from '@/features/reports/store'
 import { pruneIncompleteFilters } from '@/features/reports/data-sources'
+import { validatePageSetup } from '@/features/reports/page-setup'
 import { UniverWorkbookSurface, type WorkbookSurfaceHandle } from '@/features/reports/workbook/UniverWorkbookSurface'
 import { WorkbookRegionsPanel } from '@/features/reports/workbook/WorkbookRegionsPanel'
 import { ReportSettingsPanel } from '@/features/reports/ReportSettingsPanel'
@@ -85,6 +86,17 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
     // The backend rejects those outright, so without this an author cannot
     // save mid-edit (see pruneIncompleteFilters).
     const definitionToSave = pruneIncompleteFilters(workbook ? { ...definition, version: 2, workbook } : definition)
+    // Page Setup's own inline warnings (custom paper size missing a
+    // dimension, an unrecognized header/footer token) are easy to miss —
+    // they show only while that panel is open. Both are already rejected
+    // by the backend's own Validate, so this is a friendlier message
+    // in place of a raw 400, checked here (not fixed) since neither has a
+    // safe auto-repair (see page-setup.ts's own doc comment).
+    const pageProblems = validatePageSetup(definitionToSave.settings.page)
+    if (pageProblems.length > 0) {
+      setSaveError(pageProblems.map((p) => t(p.key, p.params)).join('; '))
+      return false
+    }
     try {
       await updateMutation.mutateAsync({ name: definitionToSave.name, definition: definitionToSave })
       const latestWorkbook = workbookSurfaceRef.current?.save()

@@ -101,6 +101,16 @@ export const ReportPreviewPanel = forwardRef<ReportPreviewPanelHandle, ReportPre
     // the old one revoked) by each new successful PDF render — not
     // accumulated, since this panel can live through many refreshes.
     const currentUrlRef = useRef<string | null>(null)
+    // "View PDF instead" (the not-viewable-format fallback below) unmounts
+    // itself the instant its own click's generation succeeds — the format
+    // switches to 'pdf' and rendered.url becomes non-null, swapping this
+    // whole block for the <iframe>. If that button still has focus at that
+    // moment, refocus the always-mounted Refresh button instead of letting
+    // focus fall to document.body. Only checked (not just assumed) at that
+    // one transition, not on every successful generation, so an ordinary
+    // refresh never steals focus from wherever the author actually is.
+    const viewPdfBtnRef = useRef<HTMLButtonElement>(null)
+    const refreshBtnRef = useRef<HTMLButtonElement>(null)
 
     useEffect(() => () => {
       abortRef.current?.abort()
@@ -127,9 +137,11 @@ export const ReportPreviewPanel = forwardRef<ReportPreviewPanelHandle, ReportPre
             if (currentUrlRef.current) URL.revokeObjectURL(currentUrlRef.current)
             currentUrlRef.current = url
           }
+          const viewPdfHadFocus = document.activeElement === viewPdfBtnRef.current
           setRendered({ blob, filename, rowCount, url, text })
           setRenderedForDefinition(forDefinition)
           setPending(false)
+          if (viewPdfHadFocus) refreshBtnRef.current?.focus()
         } catch (e) {
           // Aborted because a newer generation superseded this one — the
           // newer call owns pending/error/rendered now, so this one must
@@ -268,6 +280,7 @@ export const ReportPreviewPanel = forwardRef<ReportPreviewPanelHandle, ReportPre
                 </SelectContent>
               </SelectMenu>
               <Button
+                ref={refreshBtnRef}
                 variant="outline" size="sm" className="h-8 gap-1.5"
                 onClick={handleRefresh}
                 title={t('reports.preview.refresh')}
@@ -328,7 +341,7 @@ export const ReportPreviewPanel = forwardRef<ReportPreviewPanelHandle, ReportPre
                         <Download size={14} />
                         {t('reports.preview.download_to_view')}
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-8" onClick={() => handleFormatChange('pdf')}>
+                      <Button ref={viewPdfBtnRef} size="sm" variant="ghost" className="h-8" onClick={() => handleFormatChange('pdf')}>
                         {t('reports.preview.view_pdf_instead')}
                       </Button>
                     </div>

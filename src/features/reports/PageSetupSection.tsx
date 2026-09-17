@@ -13,7 +13,7 @@
 //    consumes — including its "stay live and say what's missing" rule
 //    (see that file's own doc comment) rather than silently disabling a
 //    control when nothing is selected.
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -22,6 +22,7 @@ import { ColorPicker } from '@/components/ui/color-picker'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
 import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useRendererCapabilities } from './hooks'
+import { unknownTokens } from './page-setup'
 import type {
   PageBand,
   PageMargins,
@@ -77,22 +78,6 @@ function rangesEqual(a: PrintCellRange, b: PrintCellRange): boolean {
 
 function formatRange(range: PrintCellRange): string {
   return `R${range.start_row + 1}:${range.end_row + 1}, C${range.start_col + 1}:${range.end_col + 1}`
-}
-
-// Every {{token}} a band zone contains, whether or not it's one
-// PAGE_BAND_TOKENS recognizes — the backend rejects an unlisted one at save
-// time (definition.go's Validate), so this panel catches it first rather
-// than letting an author discover it only when Save fails.
-const TOKEN_PATTERN = /\{\{\s*([a-z_]+)\s*\}\}/g
-
-function unknownTokens(text: string | undefined): string[] {
-  if (!text) return []
-  const found = new Set<string>()
-  for (const match of text.matchAll(TOKEN_PATTERN)) {
-    const name = match[1]
-    if (!(PAGE_BAND_TOKENS as readonly string[]).includes(name)) found.add(name)
-  }
-  return [...found]
 }
 
 export function PageSetupSection({ page, onChangePage, sheets, onChangeSheetPrint, getSelection }: PageSetupSectionProps) {
@@ -389,12 +374,14 @@ function FormatSupportNote() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls="format-support-table"
         className="text-[11px] font-medium text-[hsl(var(--muted-foreground))] underline"
       >
         {t('reports.page_setup.format_support_toggle')}
       </button>
       {open && (
-        <table className="mt-2 w-full text-[11px]">
+        <table id="format-support-table" className="mt-2 w-full text-[11px]">
           <thead>
             <tr className="text-left text-[hsl(var(--muted-foreground))]">
               <th className="pr-2 font-medium">{t('reports.page_setup.format_column')}</th>
@@ -527,15 +514,21 @@ interface RowProps {
 }
 
 function PrintAreaRow({ t, current, onSet, onClear }: RowProps & { current: PrintCellRange | undefined; onSet: () => void; onClear: () => void }) {
+  // Clear unmounts itself (the `current &&` block it lives in) the moment
+  // it's clicked, which would otherwise drop keyboard focus to
+  // document.body. "Set from selection" survives every state this row can
+  // be in, so refocusing it keeps a keyboard user anchored in the row they
+  // were just working in instead of losing their place on the page.
+  const setBtnRef = useRef<HTMLButtonElement>(null)
   return (
     <div className="flex flex-col gap-1">
       <Label className={FIELD_LABEL}>{t('reports.page_setup.print_area')}</Label>
       <div className="flex items-center gap-2">
-        <Button type="button" variant="outline" size="sm" className="text-xs" onClick={onSet}>{t('reports.page_setup.set_from_selection')}</Button>
+        <Button ref={setBtnRef} type="button" variant="outline" size="sm" className="text-xs" onClick={onSet}>{t('reports.page_setup.set_from_selection')}</Button>
         {current && (
           <>
             <span className="text-[11px] text-[hsl(var(--muted-foreground))]">{formatRange(current)}</span>
-            <button type="button" onClick={onClear} className="text-[11px] text-[hsl(var(--muted-foreground))] underline">{t('common.clear')}</button>
+            <button type="button" onClick={() => { onClear(); setBtnRef.current?.focus() }} className="text-[11px] text-[hsl(var(--muted-foreground))] underline">{t('common.clear')}</button>
           </>
         )}
       </div>
@@ -544,15 +537,17 @@ function PrintAreaRow({ t, current, onSet, onClear }: RowProps & { current: Prin
 }
 
 function RepeatRowsRow({ t, current, onSet, onClear }: RowProps & { current: { start: number; end: number } | undefined; onSet: () => void; onClear: () => void }) {
+  // Same focus-loss-on-unmount hazard and fix as PrintAreaRow above.
+  const setBtnRef = useRef<HTMLButtonElement>(null)
   return (
     <div className="flex flex-col gap-1">
       <Label className={FIELD_LABEL}>{t('reports.page_setup.repeat_rows')}</Label>
       <div className="flex items-center gap-2">
-        <Button type="button" variant="outline" size="sm" className="text-xs" onClick={onSet}>{t('reports.page_setup.set_from_selection')}</Button>
+        <Button ref={setBtnRef} type="button" variant="outline" size="sm" className="text-xs" onClick={onSet}>{t('reports.page_setup.set_from_selection')}</Button>
         {current && (
           <>
             <span className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('reports.page_setup.rows_range', { start: current.start + 1, end: current.end + 1 })}</span>
-            <button type="button" onClick={onClear} className="text-[11px] text-[hsl(var(--muted-foreground))] underline">{t('common.clear')}</button>
+            <button type="button" onClick={() => { onClear(); setBtnRef.current?.focus() }} className="text-[11px] text-[hsl(var(--muted-foreground))] underline">{t('common.clear')}</button>
           </>
         )}
       </div>
@@ -577,16 +572,21 @@ function PageBreaksRow({ t, current, onToggle }: RowProps & { current: number[];
 }
 
 function KeepTogetherRow({ t, current, onAdd, onRemove }: RowProps & { current: PrintCellRange[]; onAdd: () => void; onRemove: (range: PrintCellRange) => void }) {
+  // Removing a range unmounts its own <li>/button (and the whole <ul> if
+  // it was the last one) regardless of where in the list it sat — same
+  // focus-loss-on-unmount hazard as PrintAreaRow/RepeatRowsRow's Clear,
+  // fixed the same way: refocus the always-mounted "Add selection" button.
+  const addBtnRef = useRef<HTMLButtonElement>(null)
   return (
     <div className="flex flex-col gap-1">
       <Label className={FIELD_LABEL}>{t('reports.page_setup.keep_together')}</Label>
-      <Button type="button" variant="outline" size="sm" className="w-fit text-xs" onClick={onAdd}>{t('reports.page_setup.add_selection')}</Button>
+      <Button ref={addBtnRef} type="button" variant="outline" size="sm" className="w-fit text-xs" onClick={onAdd}>{t('reports.page_setup.add_selection')}</Button>
       {current.length > 0 && (
         <ul className="flex flex-col gap-1">
           {current.map((range, i) => (
             <li key={i} className="flex items-center justify-between text-[11px] text-[hsl(var(--muted-foreground))]">
               <span>{formatRange(range)}</span>
-              <button type="button" onClick={() => onRemove(range)} className="underline">{t('common.remove')}</button>
+              <button type="button" onClick={() => { onRemove(range); addBtnRef.current?.focus() }} className="underline">{t('common.remove')}</button>
             </li>
           ))}
         </ul>

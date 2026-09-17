@@ -229,6 +229,26 @@ describe('ReportPreviewPanel — argument values survive a format switch', () =>
   })
 })
 
+describe('ReportPreviewPanel — keyboard focus survives the not-viewable → iframe transition', () => {
+  it('returns focus to Refresh when "View PDF instead" succeeds and its own button unmounts', async () => {
+    previewMock
+      .mockResolvedValueOnce({ blob: textBlob('PK'), filename: 'a.xlsx', rowCount: 4 })
+      .mockResolvedValueOnce({ blob: textBlob('%PDF'), filename: 'a.pdf', rowCount: 4 })
+    const { ref } = renderPanel(definition('xlsx'))
+    act(() => { ref.current!.open() })
+    await waitFor(() => expect(screen.getByText(/View as PDF/i)).toBeTruthy())
+
+    const viewPdfBtn = screen.getByText(/View as PDF/i).closest('button')!
+    viewPdfBtn.focus()
+    expect(document.activeElement).toBe(viewPdfBtn)
+
+    fireEvent.click(viewPdfBtn)
+    await waitFor(() => expect(document.querySelector('iframe')).not.toBeNull())
+
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Refresh' }))
+  })
+})
+
 describe('ReportPreviewPanel — collapse preserves state', () => {
   it('keeps the rendered PDF mounted (not torn down) when the panel is collapsed and re-expanded', async () => {
     previewMock.mockResolvedValue({ blob: textBlob('%PDF'), filename: 'a.pdf', rowCount: 1 })

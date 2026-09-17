@@ -11,6 +11,17 @@ vi.mock('sonner', () => ({
   toast: { error: (...args: unknown[]) => toastError(...args) },
 }))
 
+// Only the format-support disclosure test needs this to actually resolve
+// (FormatSupportNote returns null while capabilities is undefined, which
+// is also what every other test here implicitly relies on staying inert).
+vi.mock('./api', () => ({
+  metaApi: {
+    rendererCapabilities: () => Promise.resolve([
+      { format: 'pdf', per_cell_style: 'full', merges: 'real', images_embed: true, column_widths: true, padding: true, live_formulas: false, row_heights: 'minimum', freeze: false, page_setup: false, repeat_rows: false, page_numbering: false, watermark: false },
+    ]),
+  },
+}))
+
 afterEach(() => {
   cleanup()
   toastError.mockReset()
@@ -162,5 +173,49 @@ describe('PageSetupSection — print-region controls (selection-gated)', () => {
     renderSection({ sheets: undefined })
     expect(screen.getByText(/no spreadsheet layout yet/)).toBeTruthy()
     expect(screen.queryByText('Set from selection')).toBeNull()
+  })
+})
+
+// Clear/Remove unmount themselves as part of their own click handler
+// (the `current &&` block, or the specific <li>, they live in disappears),
+// which would otherwise drop keyboard focus to document.body. These pin
+// the fix: refocus the row's own always-mounted action button instead.
+describe('PageSetupSection — print-region controls keep keyboard focus on unmount', () => {
+  it('returns focus to "Set from selection" (print area) after Clear removes it', () => {
+    const withArea: SheetPrintSettings = { area: { start_row: 0, end_row: 4, start_col: 0, end_col: 3 } }
+    renderSection({ sheets: [{ ...sheet, print: withArea }], getSelection: () => someSelection })
+
+    const setBtn = screen.getAllByText('Set from selection')[0].closest('button')!
+    fireEvent.click(screen.getAllByText('Clear')[0])
+
+    expect(document.activeElement).toBe(setBtn)
+  })
+
+  it('returns focus to "Set from selection" (repeat rows) after Clear removes it', () => {
+    const withRepeat: SheetPrintSettings = { repeat_rows: { start: 0, end: 2 } }
+    renderSection({ sheets: [{ ...sheet, print: withRepeat }], getSelection: () => someSelection })
+
+    const setBtn = screen.getAllByText('Set from selection')[1].closest('button')!
+    fireEvent.click(screen.getAllByText('Clear')[0])
+
+    expect(document.activeElement).toBe(setBtn)
+  })
+
+  it('returns focus to "Add selection" after Remove deletes a keep-together range', () => {
+    const existing: SheetPrintSettings = { keep_together: [{ start_row: 2, end_row: 4, start_col: 1, end_col: 4 }] }
+    renderSection({ sheets: [{ ...sheet, print: existing }], getSelection: () => someSelection })
+
+    const addBtn = screen.getByText('Add selection').closest('button')!
+    fireEvent.click(screen.getByText('Remove'))
+
+    expect(document.activeElement).toBe(addBtn)
+  })
+
+  it('exposes the format-support disclosure as expandable to assistive tech', async () => {
+    renderSection({ page: {} })
+    const toggle = await screen.findByText('Which formats support these features?')
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
   })
 })
