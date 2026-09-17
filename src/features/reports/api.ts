@@ -1,6 +1,39 @@
 import { api } from '@/lib/api'
 import type { ReportDefinitionRow, ReportDefinition, ExportFormat, NumberFormat } from './types'
 
+// Mirrors internal/reports.FormatCapabilities + ReportFormatCapabilities
+// (Go) field-for-field. Served by GET /meta/catalog's reports.
+// renderer_capabilities — a small slice of a much larger platform-wide
+// catalog response, so this type only names the one field this feature
+// reads rather than modeling the whole Catalog shape.
+//
+// KNOWN LIMITATION (RF-301): the backend builds this from
+// reports.AllRendererCapabilities(), the package-global default writer set
+// — it has no reference to a deployment's actual *reports.Engine, so it
+// cannot see an EngineOptions.Writers[FormatPDF] override. In a
+// REPORT_PDF_RENDERER=chromium deployment, this endpoint still reports
+// PDF's page_setup/repeat_rows/page_numbering/watermark as false even
+// though that deployment's real PDF output honors all four (see
+// chromiumPDFWriter.Capabilities() in chromium_pdf.go). Fixing this
+// properly means threading the composition root's Engine into api/meta's
+// Handler — out of scope here; RendererCapabilitiesNote below phrases the
+// PDF caveat instead of silently shipping the wrong claim.
+export interface ReportFormatCapability {
+  format: ExportFormat
+  per_cell_style: 'full' | 'partial' | 'none'
+  merges: 'real' | 'degraded' | 'none'
+  images_embed: boolean
+  column_widths: boolean
+  padding: boolean
+  live_formulas: boolean
+  row_heights: 'exact' | 'minimum' | 'none'
+  freeze: boolean
+  page_setup: boolean
+  repeat_rows: boolean
+  page_numbering: boolean
+  watermark: boolean
+}
+
 export interface CreateReportPayload {
   name: string
   definition: ReportDefinition
@@ -67,6 +100,17 @@ function filenameFromContentDisposition(header: string | null, fallback: string)
   if (!header) return fallback
   const match = /filename="([^"]+)"/.exec(header)
   return match ? match[1] : fallback
+}
+
+// A slice of GET /meta/catalog, not a report-definitions endpoint — kept in
+// this file anyway since reports is (as of RF-301) the only feature that
+// reads it. See ReportFormatCapability's own doc comment for the shape and
+// its one known staleness gap.
+export const metaApi = {
+  rendererCapabilities: async (): Promise<ReportFormatCapability[]> => {
+    const catalog = await api.get('meta/catalog').json<{ reports?: { renderer_capabilities?: ReportFormatCapability[] } }>()
+    return catalog.reports?.renderer_capabilities ?? []
+  },
 }
 
 export const reportsApi = {

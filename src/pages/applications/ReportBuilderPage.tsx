@@ -248,7 +248,10 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
 
         <PreviewButton onBeforeChange={synchronizeWorkbookBeforeDefinitionChange} />
 
-        <ReportSettingsPanel onBeforeChange={synchronizeWorkbookBeforeDefinitionChange} />
+        <ReportSettingsPanel
+          onBeforeChange={synchronizeWorkbookBeforeDefinitionChange}
+          getSelection={() => workbookSurfaceRef.current?.getSelection()}
+        />
 
         <div className="h-5 w-px bg-[hsl(var(--border))]" />
 

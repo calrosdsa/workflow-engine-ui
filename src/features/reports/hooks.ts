@@ -1,10 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { reportsApi, type CreateReportPayload } from './api'
+import { reportsApi, metaApi, type CreateReportPayload } from './api'
 import type { ExportFormat } from './types'
 
 export const reportKeys = {
   all: ['report-definitions'] as const,
   detail: (id: string) => ['report-definitions', id] as const,
+}
+
+// Static per-deployment data (which writer is registered for which format),
+// not per-report — a long staleTime avoids refetching this on every report
+// the author opens, since it can only change on a redeploy.
+export function useRendererCapabilities() {
+  return useQuery({
+    queryKey: ['meta', 'catalog', 'renderer-capabilities'],
+    queryFn: metaApi.rendererCapabilities,
+    staleTime: 5 * 60 * 1000,
+  })
 }
 
 export function useReports() {

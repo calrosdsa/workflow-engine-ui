@@ -13,16 +13,30 @@ import { useTranslation } from '@/features/i18n/I18nProvider'
 import { useReportStore } from './store'
 import { StyleEditor } from './StyleEditor'
 import { ReportVisibilityEditor } from './ReportVisibilityEditor'
+import { PageSetupSection } from './PageSetupSection'
 import { ALL_FORMATS } from './types'
-import type { ExportFormat, ReportSettings } from './types'
+import type { ExportFormat, ReportBlockRegion, ReportSettings } from './types'
 
 
-export function ReportSettingsPanel({ onBeforeChange }: { onBeforeChange?: () => void }) {
+export function ReportSettingsPanel({
+  onBeforeChange,
+  getSelection,
+}: {
+  onBeforeChange?: () => void
+  /** Threaded straight through to PageSetupSection's print-region controls
+   *  (print area, repeat rows, breaks, keep-together), which read the
+   *  Univer surface's live selection — the same prop WorkbookRegionsPanel
+   *  already receives from ReportBuilderPage, for the identical reason. */
+  getSelection?: () => ReportBlockRegion | undefined
+}) {
   const t = useTranslation()
   const settings = useReportStore((s) => s.definition.settings)
   const visibility = useReportStore((s) => s.definition.visibility)
+  const sheets = useReportStore((s) => s.definition.workbook?.sheets)
   const updateSettings = useReportStore((s) => s.updateSettings)
   const updateStyleDefaults = useReportStore((s) => s.updateStyleDefaults)
+  const updatePageSetup = useReportStore((s) => s.updatePageSetup)
+  const updateSheetPrint = useReportStore((s) => s.updateSheetPrint)
   const updateVisibility = useReportStore((s) => s.updateVisibility)
 
   const allowedFormats = settings.allowed_formats?.length ? settings.allowed_formats : ALL_FORMATS
@@ -108,6 +122,17 @@ export function ReportSettingsPanel({ onBeforeChange }: { onBeforeChange?: () =>
                 {t('reports.settings.style_defaults')} <span className="font-normal normal-case">({t('reports.settings.style_defaults_hint')})</span>
               </p>
               <StyleEditor style={settings.style_defaults ?? {}} onChange={(style) => changeSettings(() => updateStyleDefaults(Object.keys(style).length === 0 ? undefined : style))} />
+            </div>
+
+            <div className="border-t border-[hsl(var(--border))] pt-3">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('reports.settings.page_setup')}</p>
+              <PageSetupSection
+                page={settings.page ?? {}}
+                onChangePage={(page) => changeSettings(() => updatePageSetup(page))}
+                sheets={sheets}
+                onChangeSheetPrint={(sheetId, print) => changeSettings(() => updateSheetPrint(sheetId, print))}
+                getSelection={getSelection}
+              />
             </div>
           </div>
         </ScrollArea>
