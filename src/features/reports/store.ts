@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ReportDefinition, ReportBlock, ReportBlockRegion, ReportVisibility, BlockStyle, ReportSettings, ReportWorkbook, ReportDataSource, ReportArgument, ArgumentBinding } from './types'
+import type { ReportDefinition, ReportBlock, ReportBlockRegion, ReportVisibility, BlockStyle, ReportSettings, ReportWorkbook, ReportDataSource, ReportArgument, ArgumentBinding, PageSetup, SheetPrintSettings } from './types'
 import { emptyReportDefinition } from './types'
 import { createReportBlock, duplicateReportBlock } from './factory'
 import { normalizeFilterGroup } from './data-sources'
@@ -72,6 +72,8 @@ export interface ReportStoreState {
   updateVisibility: (visibility: ReportVisibility) => void
   updateSettings: (patch: Partial<ReportSettings>) => void
   updateStyleDefaults: (style: BlockStyle | undefined) => void
+  updatePageSetup: (page: PageSetup | undefined) => void
+  updateSheetPrint: (sheetId: string, print: SheetPrintSettings | undefined) => void
   syncWorkbookSnapshot: (workbook: ReportWorkbook) => void
 
   undo: () => void
@@ -286,13 +288,18 @@ export const useReportStore = create<ReportStoreState>((set, get) => {
     // Coalesced by which settings field the caller is touching — a select
     // dropdown's default_format/allowed_formats changes are discrete
     // choices (no coalescing needed, always its own history entry), while
-    // style_defaults edits (color pickers, padding inputs) benefit from the
-    // same per-field coalescing updateBlockStyle/updateBlockConfig already
-    // use. updateSettings itself stays generic (any Partial<ReportSettings>
-    // patch) rather than one setter per field, since Settings only has 3
-    // fields today and a 4th would otherwise need its own new action.
+    // style_defaults/page edits (color pickers, margin inputs, header/footer
+    // text typed a character at a time) benefit from the same per-field
+    // coalescing updateBlockStyle/updateBlockConfig already use.
+    // updateSettings itself stays generic (any Partial<ReportSettings>
+    // patch) rather than one setter per field, since a caller that already
+    // has a whole ReportSettings patch (e.g. loading a template) shouldn't
+    // need to fan it out into several calls.
     updateSettings: (patch) => {
-      const coalesceKey = 'style_defaults' in patch ? 'settings:style_defaults' : null
+      const coalesceKey =
+        'style_defaults' in patch ? 'settings:style_defaults' :
+        'page' in patch ? 'settings:page' :
+        null
       mutate((definition) => ({
         ...definition,
         settings: { ...definition.settings, ...patch },
@@ -304,6 +311,39 @@ export const useReportStore = create<ReportStoreState>((set, get) => {
         ...definition,
         settings: { ...definition.settings, style_defaults: style },
       }), 'settings:style_defaults')
+    },
+
+    // Dedicated action (rather than always going through updateSettings)
+    // for the same reason updateStyleDefaults is: a Page Setup panel edits
+    // one field with a known, typed shape, and gets the same coalesced-per-
+    // field undo behavior without spreading a Partial<ReportSettings> at
+    // every call site.
+    updatePageSetup: (page) => {
+      mutate((definition) => ({
+        ...definition,
+        settings: { ...definition.settings, page },
+      }), 'settings:page')
+    },
+
+    // Print settings live on the sheet they apply to (inside
+    // definition.workbook.sheets), not on report-wide Settings — mirrors
+    // how column_widths/row_heights/freeze are per-sheet fields today.
+    // Coalesced per sheet id, like updateDataSource/updateBlockName: a Page
+    // Setup panel's margin/header-text fields are edited one keystroke or
+    // one drag at a time and should undo as a single action.
+    updateSheetPrint: (sheetId, print) => {
+      mutate((definition) => {
+        if (!definition.workbook) return definition
+        return {
+          ...definition,
+          workbook: {
+            ...definition.workbook,
+            sheets: definition.workbook.sheets.map((sheet) =>
+              sheet.id === sheetId ? { ...sheet, print } : sheet,
+            ),
+          },
+        }
+      }, `sheet-print:${sheetId}`)
     },
 
     // Keeps the live Univer snapshot beside the semantic definition without

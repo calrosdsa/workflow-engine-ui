@@ -204,6 +204,9 @@ export interface ReportWorkbookSheet {
   column_widths?: ColumnWidth[]
   row_heights?: RowHeight[]
   freeze?: FreezePane
+  /** This sheet's print settings (print area, repeat rows, manual breaks,
+   *  keep-together ranges) — see {@link SheetPrintSettings}. */
+  print?: SheetPrintSettings
 }
 
 // Version 2 adds a portable spreadsheet template while retaining `blocks`
@@ -217,6 +220,93 @@ export interface ReportSettings {
   default_format?: ExportFormat
   allowed_formats?: ExportFormat[]
   style_defaults?: BlockStyle
+  /** The report's print contract (paper size, margins, orientation, scale,
+   *  header/footer bands, watermark). Absent preserves every writer's
+   *  existing A4 portrait, 15mm-margin behavior — a report never needs to
+   *  opt in just to keep rendering unchanged. */
+  page?: PageSetup
+}
+
+export type PageSize = 'a4' | 'letter' | 'legal' | 'custom'
+export type PageOrientation = 'portrait' | 'landscape'
+export type PageScale = 'actual' | 'fit_width' | 'fit_page'
+
+export interface PageMargins {
+  top_mm: number
+  right_mm: number
+  bottom_mm: number
+  left_mm: number
+}
+
+/** One header or footer line, split into the same three zones Excel/Sheets
+ *  print headers use. Each zone's text may reference {@link PAGE_BAND_TOKENS}. */
+export interface PageBand {
+  left?: string
+  center?: string
+  right?: string
+}
+
+/** The only tokens a {@link PageBand} zone may contain — anything else is
+ *  rejected at save time (backend Validate), not silently left as literal
+ *  `{{...}}` text in the rendered output. */
+export const PAGE_BAND_TOKENS = ['page', 'pages', 'report_name', 'generated_at'] as const
+
+export interface PageWatermark {
+  text: string
+  font_size?: number
+  /** hex, e.g. "#9CA3AF" */
+  color?: string
+  /** 0-1 */
+  opacity?: number
+  /** degrees, counter-clockwise */
+  angle?: number
+}
+
+export interface PageSetup {
+  paper_size?: PageSize
+  /** Required (and only meaningful) when paper_size is 'custom'. */
+  custom_width_mm?: number
+  custom_height_mm?: number
+  orientation?: PageOrientation
+  /** Absent margins default to 15mm on every side — the same default every
+   *  writer already had before this contract existed. A present PageMargins
+   *  is NOT a partial patch: every field is required, matching the backend's
+   *  own *PageMargins pointer tri-state (present-and-whole, or absent). */
+  margins_mm?: PageMargins
+  scale?: PageScale
+  header?: PageBand
+  footer?: PageBand
+  watermark?: PageWatermark
+}
+
+/** An inclusive, zero-based cell range for a sheet's print settings — the
+ *  same start/end shape as {@link WorkbookMerge}. */
+export interface PrintCellRange {
+  start_row: number
+  end_row: number
+  start_col: number
+  end_col: number
+}
+
+/** An inclusive, zero-based row index range — used for `repeat_rows`, which
+ *  names a band of rows rather than a 2D area. */
+export interface PrintIndexRange {
+  start: number
+  end: number
+}
+
+/** One workbook sheet's print-specific behavior: what counts as the
+ *  printable area, which rows repeat on every page, where to force a
+ *  manual break, and which ranges must never split across a page. Absent
+ *  means no print settings beyond the report-wide {@link PageSetup} — the
+ *  whole sheet is the print area, nothing repeats, pagination is automatic. */
+export interface SheetPrintSettings {
+  area?: PrintCellRange
+  repeat_rows?: PrintIndexRange
+  /** Break before this zero-based row. */
+  row_breaks?: number[]
+  keep_together?: PrintCellRange[]
+  show_gridlines?: boolean
 }
 
 // Mirrors internal/reports' data-source and argument schema (FR-J1-005)
