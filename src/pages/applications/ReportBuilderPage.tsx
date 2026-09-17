@@ -9,6 +9,7 @@ import { UniverWorkbookSurface, type WorkbookSurfaceHandle } from '@/features/re
 import { WorkbookRegionsPanel } from '@/features/reports/workbook/WorkbookRegionsPanel'
 import { ReportSettingsPanel } from '@/features/reports/ReportSettingsPanel'
 import { PreviewButton } from '@/features/reports/PreviewButton'
+import { ReportPreviewPanel, type ReportPreviewPanelHandle } from '@/features/reports/ReportPreviewPanel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
@@ -58,6 +59,7 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [justSaved, setJustSaved] = useState(false)
   const workbookSurfaceRef = useRef<WorkbookSurfaceHandle>(null)
+  const previewPanelRef = useRef<ReportPreviewPanelHandle>(null)
   const workbookNeedsSyncRef = useRef(false)
   const handleWorkbookEdited = useCallback(() => {
     workbookNeedsSyncRef.current = true
@@ -246,7 +248,10 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
 
         <div className="h-5 w-px bg-[hsl(var(--border))]" />
 
-        <PreviewButton onBeforeChange={synchronizeWorkbookBeforeDefinitionChange} />
+        <PreviewButton
+          onBeforeChange={synchronizeWorkbookBeforeDefinitionChange}
+          onPreview={(argumentValues) => previewPanelRef.current?.open(argumentValues)}
+        />
 
         <ReportSettingsPanel
           onBeforeChange={synchronizeWorkbookBeforeDefinitionChange}
@@ -267,20 +272,23 @@ export function ReportBuilderPage({ appId, reportId }: ReportBuilderPageProps) {
         </Button>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
-        <UniverWorkbookSurface
-          key={reportId}
-          ref={workbookSurfaceRef}
-          definition={definition}
-          onEdited={handleWorkbookEdited}
-          onBeforeChange={synchronizeWorkbookBeforeDefinitionChange}
-        />
-        <WorkbookRegionsPanel
-          getSelection={() => workbookSurfaceRef.current?.getSelection()}
-          readNumberFormat={() => workbookSurfaceRef.current?.selectedNumberFormat()}
-          applyNumberFormat={(format) => workbookSurfaceRef.current?.applyNumberFormat(format)}
-          onBeforeChange={synchronizeWorkbookBeforeDefinitionChange}
-        />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <UniverWorkbookSurface
+            key={reportId}
+            ref={workbookSurfaceRef}
+            definition={definition}
+            onEdited={handleWorkbookEdited}
+            onBeforeChange={synchronizeWorkbookBeforeDefinitionChange}
+          />
+          <WorkbookRegionsPanel
+            getSelection={() => workbookSurfaceRef.current?.getSelection()}
+            readNumberFormat={() => workbookSurfaceRef.current?.selectedNumberFormat()}
+            applyNumberFormat={(format) => workbookSurfaceRef.current?.applyNumberFormat(format)}
+            onBeforeChange={synchronizeWorkbookBeforeDefinitionChange}
+          />
+        </div>
+        <ReportPreviewPanel ref={previewPanelRef} definition={definition} />
       </div>
     </div>
   )

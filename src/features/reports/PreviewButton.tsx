@@ -1,23 +1,25 @@
 // FR-J1-001's own "Preview" button — generates the CURRENT (possibly
 // unsaved/dirty) canvas state against real data via api/reports/handler.go's
-// Preview route, and shows the result ON SCREEN (ReportPreviewDialog).
+// Preview route, and shows the result ON SCREEN (ReportPreviewPanel, docked
+// below the canvas as of RF-303 — this button no longer renders that panel
+// itself, it only triggers it via onPreview so the panel can stay mounted
+// across the button's own re-renders).
 //
 // It used to immediately download the file instead, per FR-D2-019 RUN-05's
 // "no on-screen viewer" decision. That decision is reversed: a preview you
 // have to open in another application to look at is not a preview, and it
 // gave an author no way to check the generated file against the layout they
-// had just built. Downloading is still one click, from inside the dialog.
+// had just built. Downloading is still one click, from inside the panel.
 //
 // No content_objects row is written server-side (Preview streams the file
 // directly, never calls content.Store.Put), so there is still no persisted
-// artifact — the dialog holds the only copy until it is downloaded.
+// artifact — the panel holds the only copy until it is downloaded.
 import { useState } from 'react'
 import { Eye } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { declaredArguments, needsPrompt } from './arguments'
 import { ReportArgumentsDialog } from './ReportArgumentsDialog'
-import { ReportPreviewDialog } from './ReportPreviewDialog'
 import { hasRenderableContent } from './run-report'
 import { useReportStore } from './store'
 
@@ -32,19 +34,20 @@ export interface PreviewButtonProps {
    *  render path that is supposed to be byte-truthful, fed stale input.
    *  Preview is a read, not a mutation, but the hazard is identical. */
   onBeforeChange?: () => void
+  /** Called once content/argument gating has passed — expands the docked
+   *  ReportPreviewPanel and starts a fresh generation there (typically
+   *  wired to that panel's own imperative `open()` handle). */
+  onPreview: (argumentValues?: Record<string, unknown>) => void
 }
 
-export function PreviewButton({ onBeforeChange }: PreviewButtonProps) {
+export function PreviewButton({ onBeforeChange, onPreview }: PreviewButtonProps) {
   const definition = useReportStore((s) => s.definition)
   const [promptOpen, setPromptOpen] = useState(false)
-  const [previewOpen, setPreviewOpen] = useState(false)
-  const [argumentValues, setArgumentValues] = useState<Record<string, unknown> | undefined>()
   const argumentList = declaredArguments(definition)
 
   const openPreview = (values?: Record<string, unknown>) => {
-    setArgumentValues(values)
     setPromptOpen(false)
-    setPreviewOpen(true)
+    onPreview(values)
   }
 
   const handlePreview = () => {
@@ -95,13 +98,6 @@ export function PreviewButton({ onBeforeChange }: PreviewButtonProps) {
         busy={false}
         onCancel={() => setPromptOpen(false)}
         onConfirm={(values) => openPreview(values)}
-      />
-
-      <ReportPreviewDialog
-        open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        definition={definition}
-        argumentValues={argumentValues}
       />
     </>
   )

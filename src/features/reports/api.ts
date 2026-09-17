@@ -134,9 +134,11 @@ export const reportsApi = {
     definition: ReportDefinition,
     format?: ExportFormat,
     argumentValues?: Record<string, unknown>,
+    signal?: AbortSignal,
   ): Promise<PreviewResult> => {
     const res = await api.post('report-definitions/preview', {
       json: { definition, format, arguments: argumentValues },
+      signal,
     })
     const blob = await res.blob()
     const filename = filenameFromContentDisposition(res.headers.get('Content-Disposition'), 'report')

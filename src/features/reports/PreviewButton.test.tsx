@@ -17,11 +17,6 @@ import { useReportStore } from './store'
 import { emptyReportDefinition } from './types'
 import type { ReportDefinition, ReportArgument } from './types'
 
-const previewMock = vi.fn()
-vi.mock('./api', () => ({
-  reportsApi: { preview: (...args: unknown[]) => previewMock(...args) },
-}))
-
 // sonner renders nothing without a mounted <Toaster/>, so the only way to
 // assert "no error toast fired" (as opposed to "no visible DOM changed") is
 // to spy on the calls directly.
@@ -33,22 +28,23 @@ vi.mock('sonner', () => ({
 afterEach(cleanup)
 
 beforeEach(() => {
-  previewMock.mockReset()
   toastError.mockReset()
-  // Never resolves within these tests — nothing here asserts on the
-  // rendered PREVIEW CONTENT, only on whether the dialog opened at all, so
-  // an in-flight promise is a feature: it keeps the dialog in its loading
-  // state instead of racing a real render.
-  previewMock.mockReturnValue(new Promise(() => {}))
   useReportStore.getState().reset()
 })
 
+// As of RF-303, PreviewButton no longer renders the preview itself (that
+// moved to the always-mounted ReportPreviewPanel, docked in
+// ReportBuilderPage) — it only decides WHETHER to call onPreview, gated on
+// content/argument checks. These tests assert against that call, not
+// against a rendered dialog.
 function renderButton(onBeforeChange?: () => void) {
-  return render(
+  const onPreview = vi.fn()
+  const view = render(
     <I18nProvider>
-      <PreviewButton onBeforeChange={onBeforeChange} />
+      <PreviewButton onBeforeChange={onBeforeChange} onPreview={onPreview} />
     </I18nProvider>,
   )
+  return { ...view, onPreview }
 }
 
 function withOneBlock(base: ReportDefinition): ReportDefinition {
@@ -86,12 +82,12 @@ describe('PreviewButton — flushing the canvas before reading the store', () =>
     const onBeforeChange = () => {
       useReportStore.getState().loadDefinition(withWorkbookFormulaOnly(emptyReportDefinition('R')))
     }
-    renderButton(onBeforeChange)
+    const { onPreview } = renderButton(onBeforeChange)
 
     fireEvent.click(screen.getByRole('button', { name: /preview/i }))
 
     expect(toastError).not.toHaveBeenCalled()
-    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(onPreview).toHaveBeenCalledWith(undefined)
   })
 
   it('calls onBeforeChange exactly once per click', () => {
@@ -112,12 +108,12 @@ describe('PreviewButton — flushing the canvas before reading the store', () =>
     const onBeforeChange = () => {
       useReportStore.getState().loadDefinition(withOneBlock(emptyReportDefinition('R')))
     }
-    renderButton(onBeforeChange)
+    const { onPreview } = renderButton(onBeforeChange)
 
     fireEvent.click(screen.getByRole('button', { name: /preview/i }))
 
     expect(toastError).not.toHaveBeenCalled()
-    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(onPreview).toHaveBeenCalledWith(undefined)
   })
 
   // Same hazard, one layer earlier: a required argument the flush just
@@ -132,18 +128,18 @@ describe('PreviewButton — flushing the canvas before reading the store', () =>
         arguments: argumentList,
       })
     }
-    renderButton(onBeforeChange)
+    const { onPreview } = renderButton(onBeforeChange)
 
     fireEvent.click(screen.getByRole('button', { name: /preview/i }))
 
     expect(screen.getByText('Region')).toBeTruthy()
-    expect(screen.queryByRole('dialog', { name: /region/i })).toBeNull()
+    expect(onPreview).not.toHaveBeenCalled()
   })
 
   it('still shows the empty-report error when the flush adds nothing', () => {
     useReportStore.getState().loadDefinition(emptyReportDefinition('R'))
     const onBeforeChange = vi.fn() // called, but the store stays empty
-    renderButton(onBeforeChange)
+    const { onPreview } = renderButton(onBeforeChange)
 
     fireEvent.click(screen.getByRole('button', { name: /preview/i }))
 
@@ -152,14 +148,14 @@ describe('PreviewButton — flushing the canvas before reading the store', () =>
       'Add a block before previewing',
       expect.objectContaining({ description: expect.any(String) }),
     )
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(onPreview).not.toHaveBeenCalled()
   })
 
   it('works with no onBeforeChange at all (optional prop, no crash)', () => {
     useReportStore.getState().loadDefinition(withOneBlock(emptyReportDefinition('R')))
-    renderButton(undefined)
+    const { onPreview } = renderButton(undefined)
 
     fireEvent.click(screen.getByRole('button', { name: /preview/i }))
-    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(onPreview).toHaveBeenCalledWith(undefined)
   })
 })

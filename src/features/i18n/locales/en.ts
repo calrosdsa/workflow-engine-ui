@@ -902,6 +902,18 @@ export const en = {
     'Your browser has no viewer for this format. Download the file to check it, or switch to PDF to see the page layout on screen.',
   'reports.preview.download_to_view': 'Download to view',
   'reports.preview.view_pdf_instead': 'View as PDF',
+  // RF-303's docked preview panel — collapse/resize/staleness strings the
+  // earlier modal (ReportPreviewDialog) never needed, since it only ever
+  // existed for one open/close cycle.
+  'reports.preview.refresh': 'Refresh',
+  'reports.preview.collapse': 'Collapse preview',
+  'reports.preview.expand': 'Expand preview',
+  'reports.preview.resize_handle': 'Resize preview panel',
+  'reports.preview.no_preview_yet': 'No preview yet',
+  'reports.preview.no_preview_yet_hint': 'Click Preview above to generate one.',
+  'reports.preview.stale_badge': 'Preview out of date',
+  'reports.preview.stale_hint': 'The sheet has changed since this preview was generated.',
+  'reports.preview.refresh_failed': "Couldn't refresh — showing the last successful preview.",
   // FORMAT_LABELS (reports/types.ts) — read by ReportSettingsPanel.tsx,
   // ReportPreviewDialog.tsx, and forms/runtime/custom-actions/export-report/
   // ConfigPanel.tsx (a different vertical, custom-actions' own
