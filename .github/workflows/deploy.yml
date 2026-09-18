@@ -1,0 +1,108 @@
+name: deploy
+
+# Every push to main builds this commit, deploys it to staging and smoke-tests
+# it. Pushing a v* tag deploys the SAME image to production: release.sh
+# refuses a tag staging is not already running.
+#
+# The manifests, the release script and the smoke script all live in
+# calrosdsa/workflow-engine -- per-service build ownership was the decision,
+# cluster-wide manifest ownership was not -- so every deploy job checks that
+# repository out alongside this one.
+#
+# What has to exist first:
+#   - a self-hosted runner labelled app-builder, with docker, kubectl and
+#     kustomize, and a kubeconfig holding a "staging" and a "production"
+#     context
+#   - secrets.GH_READ_TOKEN, able to read calrosdsa/workflow-engine
+#   - vars.STAGING_APP_HOST / STAGING_ADMIN_HOST / PROD_APP_HOST /
+#     PROD_ADMIN_HOST
+#   - both environments seeded once with all six image tags
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+concurrency:
+  group: ui-${{ startsWith(github.ref, 'refs/tags/') && 'production' || 'staging' }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: registry.internal
+
+jobs:
+  test:
+    if: startsWith(github.ref, 'refs/heads/')
+    runs-on: [self-hosted, linux, app-builder]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'   # no .nvmrc in this repository to read
+          cache: npm
+      # npm ci, not npm install: it installs the lockfile exactly and starts
+      # from an empty node_modules. A partially extracted package is what made
+      # tsc fail for a week in September 2026 while the dev server worked.
+      - run: npm ci
+      - run: npx tsc -b
+      - run: npm test
+      - run: npm run lint
+
+  build:
+    needs: test
+    if: startsWith(github.ref, 'refs/heads/')
+    runs-on: [self-hosted, linux, app-builder]
+    steps:
+      - uses: actions/checkout@v4
+      - name: build and push the image at this commit
+        run: |
+          set -euo pipefail
+          docker build -t "$REGISTRY/app-builder/ui:$GITHUB_SHA" .
+          docker push "$REGISTRY/app-builder/ui:$GITHUB_SHA"
+
+  staging:
+    needs: build
+    if: startsWith(github.ref, 'refs/heads/')
+    runs-on: [self-hosted, linux, app-builder]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: calrosdsa/workflow-engine
+          ref: main
+          token: ${{ secrets.GH_READ_TOKEN }}
+          sparse-checkout: deploy/k8s
+          path: engine
+      - name: deploy to staging
+        run: engine/deploy/k8s/scripts/release.sh --env staging --service ui --tag "$GITHUB_SHA"
+      - name: smoke-test staging
+        env:
+          SMOKE_KUBE_CONTEXT: staging
+          SMOKE_ADMIN_USERNAME: ${{ secrets.STAGING_ADMIN_USERNAME }}
+          SMOKE_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+        run: |
+          engine/deploy/k8s/scripts/smoke.sh --with-cluster \
+            --app-host "${{ vars.STAGING_APP_HOST }}" \
+            --admin-host "${{ vars.STAGING_ADMIN_HOST }}"
+
+  production:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: [self-hosted, linux, app-builder]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: calrosdsa/workflow-engine
+          ref: main
+          token: ${{ secrets.GH_READ_TOKEN }}
+          sparse-checkout: deploy/k8s
+          path: engine
+      - name: promote to production
+        run: engine/deploy/k8s/scripts/release.sh --env production --service ui --tag "$GITHUB_SHA"
+      - name: smoke-test production
+        env:
+          SMOKE_KUBE_CONTEXT: production
+          SMOKE_ADMIN_USERNAME: ${{ secrets.PROD_ADMIN_USERNAME }}
+          SMOKE_ADMIN_PASSWORD: ${{ secrets.PROD_ADMIN_PASSWORD }}
+        run: |
+          engine/deploy/k8s/scripts/smoke.sh --with-cluster \
+            --app-host "${{ vars.PROD_APP_HOST }}" \
+            --admin-host "${{ vars.PROD_ADMIN_HOST }}"
