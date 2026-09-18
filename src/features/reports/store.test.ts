@@ -106,4 +106,82 @@ describe('report print settings (RF-102/RF-301)', () => {
     useReportStore.getState().updateSheetPrint('overview', { row_breaks: [1] })
     expect(useReportStore.getState().definition.workbook).toBeUndefined()
   })
+
+  // C-5 (docs/report-builder-improvement-plan.md): every mutation entry
+  // point must flush the live canvas first, or a new panel that forgets to
+  // wire onBeforeChange silently discards unsaved grid edits. Mirrors the
+  // 'report region binding' describe block's own
+  // "includes a synchronized live workbook in the next semantic undo entry"
+  // test at the top of this file, for the print-settings mutations RF-102
+  // added — proving the same flush-survives-undo contract holds for a
+  // field this file's earlier tests never touched.
+  it('includes a synchronized live workbook in the next print-setting undo entry', () => {
+    const editedWorkbook = {
+      ...definition.workbook!,
+      sheets: definition.workbook!.sheets.map((sheet, index) => index === 0
+        ? { ...sheet, cells: [{ row: 0, col: 0, value: 'Unsaved workbook edit' }] }
+        : sheet),
+    }
+    useReportStore.getState().syncWorkbookSnapshot(editedWorkbook)
+    useReportStore.getState().updatePageSetup({ orientation: 'landscape' })
+
+    useReportStore.getState().undo()
+
+    expect(useReportStore.getState().definition.workbook).toEqual(editedWorkbook)
+    expect(useReportStore.getState().definition.settings.page).toBeUndefined()
+  })
+
+  // Regression for a real bug found auditing this file: mutate()'s
+  // coalescing branch (canCoalesce true) only refreshes the existing undo
+  // entry's timestamp, never its definition — a flush landing BETWEEN two
+  // coalesced edits of the SAME field had nowhere to go and undo silently
+  // discarded it, reproduced empirically before syncWorkbookSnapshot's own
+  // fix (patching the current top-of-stack entry) landed. This is a
+  // stricter version of the test above: the flush happens mid-burst, not
+  // before it.
+  it('does not lose a workbook flush that lands BETWEEN two coalesced page-setup edits', () => {
+    useReportStore.getState().updatePageSetup({ orientation: 'landscape' })
+
+    const editedWorkbook = {
+      ...definition.workbook!,
+      sheets: definition.workbook!.sheets.map((sheet, index) => index === 0
+        ? { ...sheet, cells: [{ row: 0, col: 0, value: 'Unsaved mid-burst edit' }] }
+        : sheet),
+    }
+    useReportStore.getState().syncWorkbookSnapshot(editedWorkbook)
+
+    // Same coalesceKey ('settings:page'), well within COALESCE_WINDOW_MS —
+    // this must coalesce with the first call, not push a second undo entry.
+    useReportStore.getState().updatePageSetup({ orientation: 'landscape', scale: 'fit_width' })
+
+    useReportStore.getState().undo()
+
+    const after = useReportStore.getState().definition
+    expect(after.workbook).toEqual(editedWorkbook)
+    // The whole coalesced group undoes as one step, same as every other
+    // coalesced field — the fix must not weaken that guarantee.
+    expect(after.settings.page).toBeUndefined()
+  })
+
+  // Same bug, the redoStack side: undo() pushes the pre-undo definition
+  // onto redoStack, which is just as frozen as an undo entry until
+  // syncWorkbookSnapshot patches it too.
+  it('does not lose a workbook flush that lands between an undo and the following redo', () => {
+    useReportStore.getState().updatePageSetup({ orientation: 'landscape' })
+    useReportStore.getState().undo()
+
+    const editedWorkbook = {
+      ...definition.workbook!,
+      sheets: definition.workbook!.sheets.map((sheet, index) => index === 0
+        ? { ...sheet, cells: [{ row: 0, col: 0, value: 'Unsaved edit after undo' }] }
+        : sheet),
+    }
+    useReportStore.getState().syncWorkbookSnapshot(editedWorkbook)
+
+    useReportStore.getState().redo()
+
+    const after = useReportStore.getState().definition
+    expect(after.workbook).toEqual(editedWorkbook)
+    expect(after.settings.page).toEqual({ orientation: 'landscape' })
+  })
 })

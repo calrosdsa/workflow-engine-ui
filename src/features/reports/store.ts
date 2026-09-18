@@ -348,9 +348,37 @@ export const useReportStore = create<ReportStoreState>((set, get) => {
 
     // Keeps the live Univer snapshot beside the semantic definition without
     // creating a separate undo step. The next semantic mutation records this
-    // synchronized workbook in its own history entry, so undoing that action
-    // cannot resurrect an older grid and discard author cell edits.
+    // synchronized workbook in its own history entry, so undoing (or
+    // redoing) that action cannot resurrect an older grid and discard
+    // author cell edits.
+    //
+    // That guarantee needs an explicit patch to BOTH stacks here, not just a
+    // fresh read at the next mutate()/undo()/redo() call:
+    //  - undoStack: a COALESCED mutation (region/config/style/name/source/
+    //    settings:page/sheet-print) only refreshes its existing undo
+    //    entry's timestamp on a repeat call within COALESCE_WINDOW_MS — it
+    //    never re-captures `definition`, because the whole point of
+    //    coalescing is that a whole burst of same-field edits undoes as the
+    //    ORIGINAL pre-burst snapshot in one step. A flush landing between
+    //    two calls in that burst would otherwise sit only in the CURRENT
+    //    definition, never reach the frozen undo entry, and undo would
+    //    silently discard it.
+    //  - redoStack: undo() itself pushes the pre-undo definition onto
+    //    redoStack (store.ts's own undo()) and that entry is equally frozen
+    //    — a flush after an undo, followed by redo(), would otherwise
+    //    restore that pre-flush snapshot and discard the flush the same way.
+    // Both reproduced empirically before this fix (two coalesced
+    // updatePageSetup calls with a sync between them, for undoStack; an
+    // undo→sync→redo sequence, for redoStack). Patching the workbook field
+    // onto whichever entry is currently on top of EITHER stack keeps that
+    // entry able to restore "everything except this specific mutation's own
+    // field", exactly like the always-fresh non-coalesced case already
+    // does, without needing to know which field any given entry owns.
     syncWorkbookSnapshot: (workbook) => {
+      const topUndo = undoStack[undoStack.length - 1]
+      if (topUndo) topUndo.definition = { ...topUndo.definition, version: 2, workbook }
+      const topRedoIndex = redoStack.length - 1
+      if (topRedoIndex >= 0) redoStack[topRedoIndex] = { ...redoStack[topRedoIndex], version: 2, workbook }
       set((state) => ({
         definition: { ...state.definition, version: 2, workbook },
       }))
