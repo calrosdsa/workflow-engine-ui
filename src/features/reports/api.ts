@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import type { BlockLayout, ReportDefinitionRow, ReportDefinition, ExportFormat, NumberFormat } from './types'
+import type { BlockLayout, ReportDefinitionRow, ReportDefinition, ReportExample, ExportFormat, NumberFormat } from './types'
 
 // Mirrors internal/reports's Diagnostic/DiagnosticSeverity/DiagnosticKind
 // (Go, diagnostics.go) exactly (RF-304).
@@ -162,6 +162,15 @@ export const metaApi = {
   rendererCapabilities: async (): Promise<ReportFormatCapability[]> => {
     const catalog = await api.get('meta/catalog').json<{ reports?: { renderer_capabilities?: ReportFormatCapability[] } }>()
     return catalog.reports?.renderer_capabilities ?? []
+  },
+
+  // RF-401's template picker source: worked examples served at
+  // catalog.reports.examples (api/meta/handler.go's ReportCatalog.Examples,
+  // already populated from reports.Examples() with no frontend-facing
+  // change needed there).
+  examples: async (): Promise<ReportExample[]> => {
+    const catalog = await api.get('meta/catalog').json<{ reports?: { examples?: ReportExample[] } }>()
+    return catalog.reports?.examples ?? []
   },
 }
 

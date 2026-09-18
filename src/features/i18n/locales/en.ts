@@ -3512,4 +3512,14 @@ export const en = {
   'reports.section.run_dialog_title': 'Run "{{name}}"',
   'reports.section.empty_title': 'No reports yet',
   'reports.section.create_first': 'Create your first report',
+  // RF-401/RF-402: the create-from-template picker and its form-mapping step.
+  'reports.section.template_picker.dialog_title': 'New report',
+  'reports.section.template_picker.dialog_description': 'Start blank, or from a worked example you can adapt.',
+  'reports.section.template_picker.blank_label': 'Blank',
+  'reports.section.template_picker.blank_description': 'An empty canvas — for an author who already knows what they want.',
+  'reports.section.template_picker.loading': 'Loading templates…',
+  'reports.section.template_picker.create_error': "Couldn't create the report. Try again.",
+  'reports.section.template_picker.map_description': 'This template needs a real form for each data-backed region before it can run.',
+  'reports.section.template_picker.form_for': 'Form for {{labels}}',
+  'reports.section.template_picker.create': 'Create',
 } satisfies Record<string, string>
