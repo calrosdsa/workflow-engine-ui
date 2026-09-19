@@ -2,7 +2,53 @@ import ky, { HTTPError } from 'ky'
 import type { VariableDecl, HttpRequestConfig } from '@/features/workflows/types'
 import { useAuthStore } from '@/stores/auth'
 
-// All requests go to /api which Vite proxies to localhost:8080. The Vite
+// The engine stamps every response with X-Request-Id: the OTel trace id an
+// operator searches for in Loki/Tempo (internal/middleware/logging.go). For a
+// 5xx it is the customer's only handle, because respond.InternalError sends a
+// fixed "internal error" body and keeps the cause in the logs. Same-origin, so
+// JS can read it without Access-Control-Expose-Headers.
+const REQUEST_ID_HEADER = 'X-Request-Id'
+// A guard, not a parser: the value is rendered in the UI, so anything a proxy
+// or misbehaving upstream injects (spaces, markup, a huge string) is dropped
+// rather than shown. Engine ids are 32 hex chars. No `g` flag: a shared global
+// regex carries lastIndex from one .test() call to the next.
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9-]{8,64}$/
+// 4xx is deliberately left out: those are the caller's mistake and their body
+// already says so, so an id would only be noise on every validation error.
+const REQUEST_ID_MIN_STATUS = 500
+
+/** The server's X-Request-Id for a failed call, or undefined when `error` is
+ *  not an HTTPError, the response carries none (a 502/504 answered by the
+ *  edge proxy has no engine behind it), or the value fails REQUEST_ID_PATTERN.
+ *  ky retries idempotent methods on a 5xx, so this is the LAST attempt's id;
+ *  the earlier attempts' ids exist only in the server logs. */
+export function requestIdOf(error: unknown): string | undefined {
+  if (!(error instanceof HTTPError)) return undefined
+  const id = error.response.headers.get(REQUEST_ID_HEADER)
+  return id !== null && REQUEST_ID_PATTERN.test(id) ? id : undefined
+}
+
+/** The trailing " (<id>)" shown after a server error's message, or "" when
+ *  none applies. Bare and language-neutral on purpose: this file cannot reach
+ *  the i18n t() hook, and a hard-coded English label would bypass it. */
+function requestIdSuffix(error: unknown): string {
+  if (!(error instanceof HTTPError) || error.response.status < REQUEST_ID_MIN_STATUS) return ''
+  const id = requestIdOf(error)
+  return id ? ` (${id})` : ''
+}
+
+/** ky beforeError hook: stamps the request id onto a 5xx HTTPError's own
+ *  message. Most render sites show `e.message` instead of going through
+ *  extractApiError, and would otherwise only see ky's generic "Request
+ *  failed with status code 500" text. Exported so the hook is testable
+ *  without a network round trip. */
+export function appendRequestId({ error }: { error: Error }): Error {
+  const suffix = requestIdSuffix(error)
+  if (suffix) error.message += suffix
+  return error
+}
+
+// All requests go to /api which Vite proxies to localhost:8090. The Vite
 // proxy makes this same-origin from the browser's perspective in dev, so the
 // Limen session cookie is sent automatically with ky's default 'same-origin'
 // credentials — no explicit `credentials: 'include'` needed here. (If UI and
@@ -44,6 +90,7 @@ export const api = ky.create({
         }
       },
     ],
+    beforeError: [appendRequestId],
   },
 })
 
@@ -54,11 +101,14 @@ export const api = ky.create({
  *  own docs are explicit that `err.response.json()`/`.clone()` no longer
  *  work at that point, so `data` (not the response) is the only way to read
  *  it here. Falls back to the raw error's message for a non-HTTP failure
- *  (network down, aborted) or a body that wasn't this JSON shape. */
+ *  (network down, aborted) or a body that wasn't this JSON shape. A 5xx also
+ *  carries the server's request id as a trailing " (<id>)" (see requestIdOf). */
 export function extractApiError(err: unknown): string {
   if (err instanceof HTTPError) {
     const data = err.data as { error?: string } | undefined
-    if (data?.error) return data.error
+    // The id goes on this branch only: the fallback below returns
+    // err.message, which the beforeError hook has already suffixed.
+    if (data?.error) return data.error + requestIdSuffix(err)
   }
   return err instanceof Error ? err.message : String(err)
 }
