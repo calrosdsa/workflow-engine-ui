@@ -21,7 +21,7 @@ export const agentChatApi = {
     api.get(`agent-chat/sessions/${id}/messages`).json<{ messages: ChatMessage[] }>().then(r => r.messages),
   sendMessage:   (id: string, content: string) =>
     api.post(`agent-chat/sessions/${id}/messages`, { json: { content } }).json<SendMessageResult>(),
-  confirm:       (id: string, approved: boolean) =>
-    api.post(`agent-chat/sessions/${id}/confirm`, { json: { approved } }).json<{ ok: boolean }>(),
+  confirm:       (id: string, callId: string, approved: boolean) =>
+    api.post(`agent-chat/sessions/${id}/confirm`, { json: { call_id: callId, approved } }).json<{ ok: boolean }>(),
   mintWSToken:   (id: string) => api.post(`agent-chat/sessions/${id}/ws-token`).json<WSTokenResponse>(),
 }

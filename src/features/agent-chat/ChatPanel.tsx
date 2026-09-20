@@ -24,7 +24,7 @@ import { useTranslation } from '@/features/i18n/I18nProvider'
 function asPendingConfirmation(message: ChatMessage): PendingConfirmation | null {
   if (!Array.isArray(message.tool_calls) || message.tool_calls.length === 0) return null
   const first = message.tool_calls[0] as PendingConfirmation
-  return typeof first?.name === 'string' && typeof first?.status === 'string' ? first : null
+  return typeof first?.id === 'string' && typeof first?.name === 'string' && typeof first?.status === 'string' ? first : null
 }
 
 function timeLabel(iso: string): string {
@@ -285,11 +285,11 @@ function ConfirmationBubble({ confirmation, onConfirm }: ConfirmationBubbleProps
           </p>
         ) : (
           <div className="mt-2 flex gap-2">
-            <Button size="sm" onClick={() => onConfirm.mutate(true)} disabled={onConfirm.isPending}>
+            <Button size="sm" onClick={() => onConfirm.mutate({ callId: confirmation.id, approved: true })} disabled={onConfirm.isPending}>
               <Check size={13} />
               Approve
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onConfirm.mutate(false)} disabled={onConfirm.isPending}>
+            <Button size="sm" variant="outline" onClick={() => onConfirm.mutate({ callId: confirmation.id, approved: false })} disabled={onConfirm.isPending}>
               <X size={13} />
               Deny
             </Button>

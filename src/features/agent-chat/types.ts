@@ -24,6 +24,7 @@ export interface ChatMessage {
 // A message carries this shape (rather than plain text) when the Agent
 // wants to run a tool that requires explicit approval before it proceeds.
 export interface PendingConfirmation {
+  id: string
   name: string
   arguments: Record<string, unknown>
   status: 'pending' | 'approved' | 'denied'
