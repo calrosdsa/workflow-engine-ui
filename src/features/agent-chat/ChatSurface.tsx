@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, CircleHelp, X, Wrench } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { ChatSurface as ChatSurfaceData, ConfirmSurface, FormSurface, ChoiceSurface } from './types'
@@ -73,6 +73,10 @@ function FormSurfaceView({ surface, busy, onSubmit }: { surface: FormSurface; bu
   const inactive = surface.state !== undefined && surface.state !== 'open' && surface.state !== 'pending'
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (surface.state === 'submitted' || surface.state === 'resolved') setSubmitted(true)
+  }, [surface.state])
+
   const submit = async () => {
     const missing = surface.fields.find((field) => {
       const value = values[field.name]
@@ -139,6 +143,10 @@ function ChoiceSurfaceView({ surface, busy, onSubmit }: { surface: ChoiceSurface
   const [submitted, setSubmitted] = useState(surface.state === 'submitted' || surface.state === 'resolved')
   const inactive = surface.state !== undefined && surface.state !== 'open' && surface.state !== 'pending'
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (surface.state === 'submitted' || surface.state === 'resolved') setSubmitted(true)
+  }, [surface.state])
 
   const submit = async () => {
     if (!selected) {
