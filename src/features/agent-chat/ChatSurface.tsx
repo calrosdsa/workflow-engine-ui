@@ -74,7 +74,10 @@ function FormSurfaceView({ surface, busy, onSubmit }: { surface: FormSurface; bu
   const [error, setError] = useState<string | null>(null)
 
   const submit = async () => {
-    const missing = surface.fields.find((field) => field.required && (values[field.name] === undefined || values[field.name] === ''))
+    const missing = surface.fields.find((field) => {
+      const value = values[field.name]
+      return field.required && (value === undefined || value === '' || (typeof value === 'string' && value.trim() === ''))
+    })
     if (missing) {
       setError(t('agent_chat.required_field'))
       return
