@@ -1,6 +1,6 @@
 import type { ChartWidgetConfig } from './schema'
 import type { AggregateGroupResponse } from '@/features/forms/api'
-import { seriesLabel } from './Renderer'
+import { seriesLabel } from './plot'
 import { stripBucketSortPrefix } from './bucket-label'
 
 function csvCell(value: unknown): string {

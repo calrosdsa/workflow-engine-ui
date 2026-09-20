@@ -80,4 +80,52 @@ describe('parseChartConfig', () => {
       formId: '', chartType: 'bar', series: [{ fn: 'count' }], sortBy: 'group', sortDir: 'asc', limit: 20, legend: true,
     })
   })
+
+  it('accepts the donut and combo identities', () => {
+    expect(parseChartConfig({ formId: 'f1', chartType: 'donut' }).chartType).toBe('donut')
+    expect(parseChartConfig({ formId: 'f1', chartType: 'combo' }).chartType).toBe('combo')
+    // The shape variants are knobs, not types — a chartType naming one is
+    // as unrecognized as any other typo and heals to bar.
+    expect(parseChartConfig({ formId: 'f1', chartType: 'stacked_bar' }).chartType).toBe('bar')
+  })
+
+  // The load-bearing property: a chart authored before these knobs existed
+  // must parse back out byte-identical. A persisted `stacked: false` would
+  // dirty every such dashboard on first open.
+  it('leaves every new knob undefined when absent rather than defaulting it', () => {
+    const parsed = parseChartConfig({ formId: 'f1' })
+    expect(parsed.stacked).toBeUndefined()
+    expect(parsed.orientation).toBeUndefined()
+    expect(parsed.axis).toBeUndefined()
+    expect(parsed.dataLabels).toBeUndefined()
+  })
+
+  it('treats a false boolean knob as absent, since false IS the default', () => {
+    expect(parseChartConfig({ formId: 'f1', stacked: false }).stacked).toBeUndefined()
+    expect(parseChartConfig({ formId: 'f1', dataLabels: false }).dataLabels).toBeUndefined()
+  })
+
+  it('heals an unrecognized orientation and series mark', () => {
+    expect(parseChartConfig({ formId: 'f1', orientation: 'sideways' }).orientation).toBeUndefined()
+    expect(parseChartConfig({ formId: 'f1', series: [{ fn: 'count', type: 'scatter' }] }).series[0].type).toBeUndefined()
+    expect(parseChartConfig({ formId: 'f1', series: [{ fn: 'count', type: 'line' }] }).series[0].type).toBe('line')
+  })
+
+  it('keeps the axis bounds it can read and drops the block when none survive', () => {
+    expect(parseChartConfig({ formId: 'f1', axis: { yMin: 0, yMax: 100, yTitle: 'Bs' } }).axis)
+      .toMatchObject({ yMin: 0, yMax: 100, yTitle: 'Bs' })
+    // Nothing readable left means "automatic", which has exactly one
+    // representation: absent.
+    expect(parseChartConfig({ formId: 'f1', axis: { yMin: 'lots', yTitle: '' } }).axis).toBeUndefined()
+    expect(parseChartConfig({ formId: 'f1', axis: {} }).axis).toBeUndefined()
+    expect(parseChartConfig({ formId: 'f1', axis: 'nope' }).axis).toBeUndefined()
+  })
+
+  // 0 is a meaningful bound — the one that stops a bar chart exaggerating
+  // small differences — so it must survive a falsy check.
+  it('keeps a zero axis bound', () => {
+    expect(parseChartConfig({ formId: 'f1', axis: { yMin: 0 } }).axis).toEqual({
+      xTitle: undefined, yTitle: undefined, yMin: 0, yMax: undefined, yLog: undefined,
+    })
+  })
 })

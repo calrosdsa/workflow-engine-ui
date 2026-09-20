@@ -1,14 +1,21 @@
 import { useState, type ReactNode } from 'react'
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, AreaChart, Area,
-  PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ComposedChart, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
+  Legend, LabelList,
 } from 'recharts'
 import { Loader2, AlertCircle, BarChart3 } from 'lucide-react'
 import { useTranslation } from '@/features/i18n/I18nProvider'
+import {
+  CARTESIAN_TYPES, ORIENTABLE_TYPES, STACKABLE_TYPES,
+  DATE_FIELD_TYPES, type ChartWidgetConfig,
+} from './schema'
+import {
+  PALETTE, buildFlatPlot, buildSplitPlot, canUseLog, hasSplit, logFloor,
+  plottedValues, seriesLabel, type PlotSeries,
+} from './plot'
 import type { WidgetRendererProps } from '../../widget-contract'
-import { DATE_FIELD_TYPES, type ChartWidgetConfig } from './schema'
 import { useChartData } from './useChartData'
-import { stripBucketSortPrefix } from './bucket-label'
 import { mergeFilters, rangeToConditions } from './runtime-filter'
 import type { DateRange } from './date-range'
 import { RuntimeToolbar } from './RuntimeToolbar'
@@ -18,29 +25,6 @@ import { formatNumber } from '@/features/forms/runtime/format-value'
 import type { NumberFormat, FieldType } from '@/features/forms/types'
 import type { DateBucket } from '@/features/forms/api'
 import type { FilterGroup } from '@/features/workflows/types'
-
-// Categorical palette fallback (docs/dashboard-system-plan.md section 5.3) —
-// no shared chart-color tokens exist yet in index.css, so this is a small,
-// self-contained default rather than inventing app-wide theme
-// infrastructure for this one widget. A per-series `color` override (see
-// ChartSeries.color) always wins over this fallback.
-const PALETTE = ['#6366f1', '#22c55e', '#f59e0b', '#ec4899', '#06b6d4', '#8b5cf6', '#ef4444', '#14b8a6']
-
-function seriesColor(config: ChartWidgetConfig, index: number): string {
-  return config.series[index]?.color ?? PALETTE[index % PALETTE.length]
-}
-
-// Not translated: this feeds export-csv.ts's CSV column headers via a free
-// function outside React, and the sibling branch (`${fn}(${field})`) is raw,
-// untranslatable technical content — translating only the 'count' case would
-// produce a header row that's half-Spanish. Same exclusion class as
-// FORMAT_LABELS (reports/ReportSettingsPanel.tsx) and argument.label.
-export function seriesLabel(config: ChartWidgetConfig, index: number): string {
-  const s = config.series[index]
-  if (s?.label) return s.label
-  if (!s) return `val_${index}`
-  return s.fn === 'count' ? 'Count' : `${s.fn}(${s.field ?? ''})`
-}
 
 export function ChartRenderer({ config, clientId, appId, menus, mode, parameterFilter }: WidgetRendererProps<ChartWidgetConfig>) {
   const t = useTranslation()
@@ -97,6 +81,17 @@ export function ChartRenderer({ config, clientId, appId, menus, mode, parameterF
   const { data, isLoading, isError, refetch, dataUpdatedAt } = useChartData(effectiveConfig)
   const groups = data?.groups ?? []
 
+  // A second dimension is drawable only on a chart with a category axis; a
+  // pie split into sub-slices is just a pie of the pairs.
+  const isSplit = CARTESIAN_TYPES.includes(config.chartType) && hasSplit(groups)
+  const { rows, series: plotSeries } = isSplit
+    ? buildSplitPlot(config, groups)
+    : buildFlatPlot(config, groups)
+  // A split spends the colour channel on the split values, so measures past
+  // the first cannot be drawn. Told to the viewer rather than dropped in
+  // silence — the failure mode §2.6 of the analytics R&D is about.
+  const droppedSeries = isSplit ? Math.max(0, config.series.length - 1) : 0
+
   // Per-measure formats, straight off the result. Before the response
   // described its own columns, the only way to format a value was to go back
   // to the form definition and guess which field produced it — which is why
@@ -108,15 +103,15 @@ export function ChartRenderer({ config, clientId, appId, menus, mode, parameterF
   const formatMeasure = (value: unknown, index: number) =>
     typeof value === 'number' ? formatNumber(value, measureFormats[index]) : String(value ?? '')
 
-  // Recharts hands the tooltip the series' dataKey, which is this widget's
-  // own positional "val_N" — so each series formats with ITS own measure.
-  // dataKey is widened by recharts to include an accessor function; this
-  // widget only ever sets the string form, so anything else falls back to 0.
+  // Recharts hands the tooltip the series' dataKey, which this widget owns
+  // either way — so the plot itself says which measure to format with,
+  // rather than the key being re-parsed here. dataKey is widened by recharts
+  // to include an accessor function; this widget only ever sets the string
+  // form, so anything else falls back to the first measure.
   const tooltipFormatter = (value: unknown, _name: unknown, item?: { dataKey?: unknown }) => {
     const raw = item?.dataKey
-    const key = typeof raw === 'string' ? raw : ''
-    const i = key.startsWith('val_') ? Number(key.slice(4)) : 0
-    return formatMeasure(value, Number.isFinite(i) ? i : 0)
+    const match = typeof raw === 'string' ? plotSeries.find((p) => p.dataKey === raw) : undefined
+    return formatMeasure(value, match?.measureIndex ?? 0)
   }
 
   // A single Y axis cannot speak two units, so it formats only when every
@@ -159,54 +154,146 @@ export function ChartRenderer({ config, clientId, appId, menus, mode, parameterF
     const numberFormat = measureFormats[0]
       ?? sourceForm?.fields.find((f) => f.name === sourceFieldName)?.number_format
     content = <StatTile config={config} value={groups[0]?.values[0] ?? 0} numberFormat={numberFormat} />
+  } else if (config.chartType === 'pie' || config.chartType === 'donut') {
+    // A donut is a pie with the middle removed — the one difference between
+    // the two, which is why they share this branch rather than a type each.
+    content = (
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={rows}
+            dataKey="val_0"
+            nameKey="key"
+            outerRadius="80%"
+            innerRadius={config.chartType === 'donut' ? '55%' : undefined}
+            // Slice labels are ALWAYS on here, as they have been; dataLabels
+            // upgrades them from the category name to the formatted value
+            // rather than switching them on, so no existing pie loses its
+            // labels by not having opted in.
+            label={config.dataLabels ? (e: { value?: number }) => formatMeasure(e.value, 0) : true}
+            isAnimationActive={false}
+          >
+            {rows.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
+          </Pie>
+          <Tooltip formatter={tooltipFormatter} />
+          {config.legend && <Legend />}
+        </PieChart>
+      </ResponsiveContainer>
+    )
   } else {
-    // Recharts consumes plain objects keyed by name — "key" for the x-axis /
-    // pie label, "val_0".."val_n" for each series, matching the backend's
-    // own positional val_N aliasing (aggregate.go) so no name-based lookup
-    // is needed between the two.
-    const rows = groups.map((g) => {
-      const row: Record<string, string | number> = { key: stripBucketSortPrefix(g.key) }
-      g.values.forEach((v, i) => { row[`val_${i}`] = v })
-      return row
-    })
+    const horizontal = ORIENTABLE_TYPES.includes(config.chartType) && config.orientation === 'horizontal'
+    // Recharts names its layout after the CATEGORY axis's direction, which
+    // is the opposite of how the chart reads: bars that run left-to-right
+    // are layout="vertical". Translated here, once.
+    const rechartsLayout = horizontal ? 'vertical' : 'horizontal'
+    const stacked = config.stacked === true && STACKABLE_TYPES.includes(config.chartType)
 
-    if (config.chartType === 'pie') {
-      content = (
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie data={rows} dataKey="val_0" nameKey="key" outerRadius="80%" label isAnimationActive={false}>
-              {rows.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
-            </Pie>
-            <Tooltip formatter={tooltipFormatter} />
-            {config.legend && <Legend />}
-          </PieChart>
-        </ResponsiveContainer>
-      )
-    } else {
-      const ChartComponent = config.chartType === 'line' ? LineChart : config.chartType === 'area' ? AreaChart : BarChart
-      content = (
-        <ResponsiveContainer width="100%" height="100%">
-          <ChartComponent data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-            <XAxis dataKey="key" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} allowDecimals tickFormatter={(v) => formatNumber(Number(v), axisFormat)} />
-            <Tooltip formatter={tooltipFormatter} />
-            {config.legend && <Legend />}
-            {config.series.map((_, i) => {
-              const color = seriesColor(config, i)
-              const label = seriesLabel(config, i)
-              if (config.chartType === 'line') {
-                return <Line key={i} type="monotone" dataKey={`val_${i}`} name={label} stroke={color} strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
-              }
-              if (config.chartType === 'area') {
-                return <Area key={i} type="monotone" dataKey={`val_${i}`} name={label} stroke={color} fill={color} fillOpacity={0.25} isAnimationActive={false} />
-              }
-              return <Bar key={i} dataKey={`val_${i}`} name={label} fill={color} radius={[3, 3, 0, 0]} isAnimationActive={false} />
-            })}
-          </ChartComponent>
-        </ResponsiveContainer>
-      )
+    // Both log decisions are made from the plotted values and live in
+    // plot.ts, where they are pinned by tests — the floor in particular had
+    // to be taken away from recharts, and that is easy to regress.
+    const plotted = plottedValues({ rows, series: plotSeries })
+    const useLog = config.axis?.yLog === true && canUseLog(plotted)
+
+    const { yMin, yMax, xTitle, yTitle } = config.axis ?? {}
+    const bounded = yMin !== undefined || yMax !== undefined
+    const domain: [number | string, number | string] | undefined =
+      bounded || useLog ? [yMin ?? (useLog ? logFloor(plotted) : 0), yMax ?? 'auto'] : undefined
+
+    const valueAxis = {
+      type: 'number' as const,
+      tick: { fontSize: 11 },
+      allowDecimals: true,
+      tickFormatter: (v: unknown) => formatNumber(Number(v), axisFormat),
+      // allowDataOverflow only where the author actually asked for bounds —
+      // it tells recharts to CLIP to the domain, and on the log axis's
+      // automatic domain that quietly drops the smallest bar off the chart
+      // instead of scaling to fit it.
+      ...(domain ? { domain } : {}),
+      ...(bounded ? { allowDataOverflow: true } : {}),
+      ...(useLog ? { scale: 'log' as const } : {}),
+      ...(yTitle ? { label: { value: yTitle, angle: -90, position: 'insideLeft' as const, style: { fontSize: 11, fill: 'hsl(var(--muted-foreground))' } } } : {}),
     }
+    const categoryAxis = {
+      type: 'category' as const,
+      dataKey: 'key',
+      tick: { fontSize: 11 },
+      ...(xTitle ? { label: { value: xTitle, position: 'insideBottom' as const, offset: -4, style: { fontSize: 11, fill: 'hsl(var(--muted-foreground))' } } } : {}),
+    }
+
+    // Combo is the only type whose marks differ per series, so it is the
+    // only one needing the composed container; the rest keep their own
+    // dedicated chart so nothing changes for a chart authored before this.
+    const ChartComponent = config.chartType === 'combo' ? ComposedChart
+      : config.chartType === 'line' ? LineChart
+      : config.chartType === 'area' ? AreaChart
+      : BarChart
+
+    const labelPosition = stacked ? 'center' : horizontal ? 'right' : 'top'
+    const dataLabel = (s: PlotSeries) => config.dataLabels && (
+      <LabelList
+        dataKey={s.dataKey}
+        position={labelPosition}
+        style={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
+        formatter={(v: unknown) => formatMeasure(v, s.measureIndex)}
+      />
+    )
+
+    content = (
+      <ResponsiveContainer width="100%" height="100%">
+        <ChartComponent
+          data={rows}
+          layout={rechartsLayout}
+          // Data labels sit just outside their mark, so they need room the
+          // default margin does not leave: above the tallest bar, or to the
+          // right of the longest one.
+          margin={{
+            top: config.dataLabels && !horizontal ? 20 : 8,
+            right: config.dataLabels && horizontal ? 44 : 8,
+            left: yTitle ? 8 : 0,
+            bottom: xTitle ? 16 : 8,
+          }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+          {horizontal
+            ? <><XAxis {...valueAxis} /><YAxis {...categoryAxis} width={90} /></>
+            : <><XAxis {...categoryAxis} /><YAxis {...valueAxis} /></>}
+          <Tooltip formatter={tooltipFormatter} />
+          {config.legend && <Legend />}
+          {plotSeries.map((s, i) => {
+            // One stackId for everything means "stack together"; leaving it
+            // undefined is what makes a chart grouped.
+            const stackId = stacked ? 'stack' : undefined
+            const mark = config.chartType === 'combo' ? s.type
+              : config.chartType === 'line' ? 'line'
+              : config.chartType === 'area' ? 'area'
+              : 'bar'
+            if (mark === 'line') {
+              return (
+                <Line key={i} type="monotone" dataKey={s.dataKey} name={s.label} stroke={s.color} strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false}>
+                  {dataLabel(s)}
+                </Line>
+              )
+            }
+            if (mark === 'area') {
+              return (
+                <Area key={i} type="monotone" dataKey={s.dataKey} name={s.label} stroke={s.color} fill={s.color} fillOpacity={0.25} stackId={stackId} isAnimationActive={false}>
+                  {dataLabel(s)}
+                </Area>
+              )
+            }
+            return (
+              // A stacked bar's rounded cap belongs only on the topmost
+              // segment, and which segment that is varies per column — so
+              // stacking squares them all off rather than drawing a rounded
+              // edge in the middle of a stack.
+              <Bar key={i} dataKey={s.dataKey} name={s.label} fill={s.color} radius={stacked ? undefined : horizontal ? [0, 3, 3, 0] : [3, 3, 0, 0]} stackId={stackId} isAnimationActive={false}>
+                {dataLabel(s)}
+              </Bar>
+            )
+          })}
+        </ChartComponent>
+      </ResponsiveContainer>
+    )
   }
 
   // Nothing meaningful for any runtime control to do until the widget is
@@ -241,6 +328,11 @@ export function ChartRenderer({ config, clientId, appId, menus, mode, parameterF
             />
           )}
         />
+      )}
+      {droppedSeries > 0 && (
+        <p className="shrink-0 px-2 pb-1 text-[10px]" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          {t('builder.dashboard_chart.split_extra_series', { n: droppedSeries })}
+        </p>
       )}
       <div className="min-h-0 flex-1">{content}</div>
     </div>
