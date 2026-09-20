@@ -88,3 +88,17 @@ export interface SendMessageResult {
   run_id?: string
   status?: 'queued' | 'running' | 'waiting_for_input' | 'waiting_for_approval' | 'completed' | 'failed' | 'cancelled' | 'timed_out' | 'budget_exceeded'
 }
+
+export interface AgentRun {
+  id: string
+  agent_id: string
+  session_id?: string
+  origin: string
+  status: 'queued' | 'running' | 'waiting_for_input' | 'waiting_for_approval' | 'completed' | 'failed' | 'cancelled' | 'timed_out' | 'budget_exceeded'
+  outcome?: string
+  error?: string
+  started_at: string
+  completed_at?: string
+  created_at: string
+  updated_at: string
+}
