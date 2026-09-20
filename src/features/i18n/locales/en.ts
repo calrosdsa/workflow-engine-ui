@@ -983,6 +983,8 @@ export const en = {
   // Dashboard chart widget's runtime-only viewer controls (RuntimeToolbar.tsx
   // / ChartMenu.tsx) — time range, bucket, ad-hoc filter, and the "..." menu.
   // Never shown in the Dashboard Builder's own config-panel preview.
+  'runtime.dashboard.parameters.clear': 'Clear',
+  'runtime.dashboard.parameters.any': 'Any',
   'runtime.dashboard_chart.synced_just_now': 'Synced just now',
   'runtime.dashboard_chart.synced_minutes_ago': 'Synced {{n}}m ago',
   'runtime.dashboard_chart.synced_hours_ago': 'Synced {{n}}h ago',

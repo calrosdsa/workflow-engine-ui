@@ -18,6 +18,7 @@ import type { ComponentType } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import type { ConfigSchema } from '@/lib/config-schema'
 import type { Menu } from '@/features/menus/types'
+import type { FilterGroup } from '@/features/workflows/types'
 import type { WidgetInstance, WidgetLayout, WidgetChrome } from './schema'
 
 export type WidgetCategory = 'Data' | 'Content' | 'Navigation' | 'Embed'
@@ -47,6 +48,12 @@ export interface WidgetRendererProps<TConfig> {
    *  opt in simply ignores it and renders exactly as it does in a Dashboard
    *  menu today. */
   recordContext?: { formId: string; recordId: string }
+  /** Extra conditions from the dashboard's own parameters, already resolved
+   *  for THIS tile (see parameters.ts). A data-bearing widget ANDs it onto
+   *  its own configured filter — wrap, never replace — and every other
+   *  widget ignores it. Undefined when the dashboard declares no parameters,
+   *  when none are bound to this tile, or when every bound one is unset. */
+  parameterFilter?: FilterGroup
 }
 
 export interface WidgetConfigPanelProps<TConfig> {

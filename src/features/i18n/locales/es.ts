@@ -701,6 +701,8 @@ export const es = {
   'forms.share_settings_dialog.usage_line_one': '{{app}} — {{count}} flujo de trabajo ({{list}})',
   'forms.share_settings_dialog.usage_line_many': '{{app}} — {{count}} flujos de trabajo ({{list}})',
   'forms.share_settings_dialog.change_anyway': 'Cambiar de todas formas',
+  'runtime.dashboard.parameters.clear': 'Limpiar',
+  'runtime.dashboard.parameters.any': 'Cualquiera',
   'runtime.dashboard_chart.synced_just_now': 'Sincronizado justo ahora',
   'runtime.dashboard_chart.synced_minutes_ago': 'Sincronizado hace {{n}} min',
   'runtime.dashboard_chart.synced_hours_ago': 'Sincronizado hace {{n}} h',

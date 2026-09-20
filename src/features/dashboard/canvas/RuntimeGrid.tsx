@@ -17,6 +17,8 @@ import { Responsive, WidthProvider, type Layout as RglLayout } from 'react-grid-
 import 'react-grid-layout/css/styles.css'
 import type { Menu } from '@/features/menus/types'
 import type { DashboardSchema } from '../schema'
+import { resolveParameterFilter, type ParameterValues } from '../parameters'
+import type { FilterGroup } from '@/features/workflows/types'
 import { getWidget } from '../widget-registry'
 import { useIsVisible } from './useIsVisible'
 import { useTranslation } from '@/features/i18n/I18nProvider'
@@ -37,9 +39,13 @@ interface RuntimeGridProps {
    *  tab (FR-D2-015's DashboardMenuRuntime.tsx call site never sets this,
    *  so an ordinary Dashboard menu is unaffected). */
   recordContext?: { formId: string; recordId: string }
+  /** Current values for the dashboard's parameters. Resolved to a per-tile
+   *  FilterGroup here, in ONE place, rather than in each widget — see
+   *  parameters.ts. The detail-tab call site never passes this. */
+  parameterValues?: ParameterValues
 }
 
-export function RuntimeGrid({ schema, clientId, appId, menus, onNavigate, recordContext }: RuntimeGridProps) {
+export function RuntimeGrid({ schema, clientId, appId, menus, onNavigate, recordContext, parameterValues }: RuntimeGridProps) {
   const wideLayout: RglLayout = schema.widgets.map((w) => ({
     i: w.id,
     x: w.layout.x,
@@ -78,7 +84,15 @@ export function RuntimeGrid({ schema, clientId, appId, menus, onNavigate, record
         >
           {schema.widgets.map((instance) => (
             <div key={instance.id} className="h-full">
-              <RuntimeTile instance={instance} clientId={clientId} appId={appId} menus={menus} onNavigate={onNavigate} recordContext={recordContext} />
+              <RuntimeTile
+                instance={instance}
+                clientId={clientId}
+                appId={appId}
+                menus={menus}
+                onNavigate={onNavigate}
+                recordContext={recordContext}
+                parameterFilter={resolveParameterFilter(instance.id, schema.parameters, schema.parameterBindings, parameterValues ?? {})}
+              />
             </div>
           ))}
         </ResponsiveGridLayoutWithWidth>
@@ -87,13 +101,16 @@ export function RuntimeGrid({ schema, clientId, appId, menus, onNavigate, record
   )
 }
 
-function RuntimeTile({ instance, clientId, appId, menus, onNavigate, recordContext }: {
+function RuntimeTile({ instance, clientId, appId, menus, onNavigate, recordContext, parameterFilter }: {
   instance: DashboardSchema['widgets'][number]
   clientId: string
   appId: string
   menus?: Menu[]
   onNavigate?: (slug: string) => void
   recordContext?: { formId: string; recordId: string }
+  /** Already resolved for this tile by the caller — a tile never sees the
+   *  raw parameter values or the bindings. */
+  parameterFilter?: FilterGroup
 }) {
   const t = useTranslation()
   const def = getWidget(instance.type)
@@ -134,6 +151,7 @@ function RuntimeTile({ instance, clientId, appId, menus, onNavigate, recordConte
             onNavigate={onNavigate}
             mode="runtime"
             recordContext={recordContext}
+            parameterFilter={parameterFilter}
           />
         )}
       </div>

@@ -42,7 +42,7 @@ export function seriesLabel(config: ChartWidgetConfig, index: number): string {
   return s.fn === 'count' ? 'Count' : `${s.fn}(${s.field ?? ''})`
 }
 
-export function ChartRenderer({ config, clientId, appId, menus, mode }: WidgetRendererProps<ChartWidgetConfig>) {
+export function ChartRenderer({ config, clientId, appId, menus, mode, parameterFilter }: WidgetRendererProps<ChartWidgetConfig>) {
   const t = useTranslation()
   const isRuntime = mode === 'runtime'
   const isStat = config.chartType === 'stat'
@@ -81,7 +81,11 @@ export function ChartRenderer({ config, clientId, appId, menus, mode }: WidgetRe
   // the raw `config` straight through, so the two paths cannot diverge in
   // how a request gets built; useChartData/buildAggregateRequest are
   // otherwise completely unmodified by this whole feature.
-  const effectiveFilter = mergeFilters(config.filter, rangeFilterGroup, adhocFilter)
+  // The dashboard's parameters narrow this tile the same way the viewer's own
+  // toolbar overrides do: ANDed on top of the authored filter, never
+  // replacing it. Resolved upstream in RuntimeGrid, so this widget never sees
+  // a binding or a raw parameter value.
+  const effectiveFilter = mergeFilters(config.filter, parameterFilter, rangeFilterGroup, adhocFilter)
   const effectiveConfig: ChartWidgetConfig = isRuntime
     ? {
         ...config,

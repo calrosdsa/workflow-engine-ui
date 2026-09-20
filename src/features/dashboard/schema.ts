@@ -58,10 +58,47 @@ export interface DashboardSettings {
   maxWidth?: number
 }
 
+/** One viewer-supplied input a dashboard declares, so a single control can
+ *  narrow many tiles instead of the same filter being pasted into each.
+ *
+ *  This is the report surface's `arguments[]` model lifted across rather than
+ *  a second one invented: a typed, labelled, optionally-defaulted input, with
+ *  the comparison OPERATOR living on the binding instead of here, so one
+ *  parameter can be `gte` against one tile and `eq` against another. Only the
+ *  casing differs — DashboardSchema is UI-owned and camelCase throughout.
+ *
+ *  `reference` and the report model's `range` flag are deliberately not here
+ *  yet; see parameters.ts for what a range would have to decide first. */
+export interface DashboardParameter {
+  /** Stable identifier a binding points at. */
+  key: string
+  label: string
+  type: 'text' | 'number' | 'date' | 'boolean'
+  /** Used when the viewer has supplied nothing. An unset parameter with no
+   *  default narrows NOTHING — see resolveParameterFilter. */
+  default?: string | number | boolean
+}
+
+/** Connects one parameter to one field on one widget, with the comparison to
+ *  make. Mirrors the report definition's ArgumentBinding, with widgetId where
+ *  that has sourceId. */
+export interface ParameterBinding {
+  parameterKey: string
+  widgetId: string
+  /** A field on the widget's own form. */
+  field: string
+  /** Defaults to 'eq' when absent. */
+  op?: string
+}
+
 export interface DashboardSchema {
   version: 1
   settings: DashboardSettings
   widgets: WidgetInstance[]
+  /** Absent on every dashboard authored before parameters existed, which is
+   *  why both of these are optional rather than empty arrays. */
+  parameters?: DashboardParameter[]
+  parameterBindings?: ParameterBinding[]
 }
 
 export const DEFAULT_DASHBOARD_SETTINGS: DashboardSettings = {
@@ -130,5 +167,38 @@ export const DASHBOARD_ENVELOPE_SCHEMA: ConfigSchema = {
       },
     },
     widgets: { type: 'array', description: 'Tiles, per dashboards.widget_envelope.', items: { type: 'object' } },
+    parameters: {
+      type: 'array',
+      description: "Viewer-supplied inputs this dashboard declares, so ONE control narrows many tiles instead of the same filter being repeated in each. The same model a report's `arguments` uses. Optional; omit entirely for a dashboard with no parameters. A parameter the viewer leaves unset narrows NOTHING — it does not match nothing.",
+      items: {
+        type: 'object',
+        required: ['key', 'label', 'type'],
+        properties: {
+          key: { type: 'string', description: 'Stable identifier a binding points at.' },
+          label: { type: 'string', description: 'Shown above the control.' },
+          type: { type: 'string', enum: ['text', 'number', 'date', 'boolean'] },
+          default: { description: 'Used when the viewer supplies nothing. Omit for "no narrowing until they choose".' },
+        },
+      },
+    },
+    parameterBindings: {
+      type: 'array',
+      description: "Connects a parameter to one field on one tile. The comparison operator lives HERE rather than on the parameter, so one parameter can be 'gte' against one tile and 'eq' against another — exactly as a report's argument_bindings work. A binding naming a parameter or widget that no longer exists is skipped at runtime, not an error.",
+      items: {
+        type: 'object',
+        required: ['parameterKey', 'widgetId', 'field'],
+        properties: {
+          parameterKey: { type: 'string', description: "A key from this dashboard's parameters." },
+          widgetId: { type: 'string', description: "A tile's id from this dashboard's widgets." },
+          // Deliberately NOT marked fieldRef: that marker's contract is
+          // "a field on the form this same config's formId names", and a
+          // binding's field belongs to the WIDGET's form, reached via
+          // widgetId. Marking it would claim a validation that does not
+          // happen.
+          field: { type: 'string', description: "A field on that widget's own form." },
+          op: { type: 'string', description: "Comparison to apply; defaults to 'eq'. Same operator vocabulary as any filter condition." },
+        },
+      },
+    },
   },
 }
