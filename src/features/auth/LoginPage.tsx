@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate } from '@tanstack/react-router'
-import { useLogin } from './hooks'
+import { useLoadSession, useLogin } from './hooks'
 import { authApi } from './api'
+import { isMfaChallenge, type MfaChallenge } from './mfa/api'
+import { MfaChallengeCard, MfaEnrollDuringLogin } from './mfa/LoginMfaSteps'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,7 +18,12 @@ type FormValues = { credential: string; password: string }
 export function LoginPage() {
   const navigate = useNavigate()
   const login = useLogin()
+  const loadSession = useLoadSession()
   const t = useTranslation()
+  // Set when sign-in accepted the password but withheld the session pending a
+  // second factor. Holding it in component state (not the auth store) keeps a
+  // half-finished login out of anything that persists across a refresh.
+  const [challenge, setChallenge] = useState<MfaChallenge | null>(null)
   const schema = z.object({
     credential: z.string().min(1, t('auth.email_required')),
     password: z.string().min(1, t('auth.password_required')),
@@ -29,15 +37,44 @@ export function LoginPage() {
 
   async function onSubmit(values: FormValues) {
     try {
-      await login.mutateAsync(values)
+      const result = await login.mutateAsync(values)
+      if (isMfaChallenge(result)) {
+        setChallenge(result)
+        return
+      }
       navigate({ to: '/' })
     } catch {
       // error shown inline via login.isError
     }
   }
 
+  // Runs once the second factor has been accepted and a session finally exists.
+  async function onVerified() {
+    await loadSession()
+    navigate({ to: '/' })
+  }
+
   function signInWithGoogle() {
     window.location.href = authApi.googleAuthorizeUrl()
+  }
+
+  if (challenge) {
+    const Step = challenge.purpose === 'enroll' ? MfaEnrollDuringLogin : MfaChallengeCard
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
+        <Step
+          challenge={challenge}
+          onVerified={onVerified}
+          onCancel={() => {
+            // Drop the challenge and start over. Nothing to revoke: the
+            // pre-verification session was already revoked server-side and the
+            // challenge expires on its own.
+            setChallenge(null)
+            login.reset()
+          }}
+        />
+      </div>
+    )
   }
 
   return (

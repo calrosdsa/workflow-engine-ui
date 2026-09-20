@@ -837,6 +837,71 @@ export const es = {
   'auth.invalid_credentials': 'Credenciales no válidas. Inténtalo de nuevo.',
   'auth.or': 'O',
   'auth.sign_in_google': 'Iniciar sesión con Google',
+
+  // Verificación en dos pasos (MFA).
+  'mfa.challenge_title': 'Verificación en dos pasos',
+  'mfa.challenge_description': 'Introduce el código de 6 dígitos de tu aplicación de autenticación.',
+  'mfa.challenge_recovery_description':
+    'Introduce uno de tus códigos de recuperación. Cada código sirve una sola vez.',
+  'mfa.code': 'Código',
+  'mfa.recovery_code': 'Código de recuperación',
+  'mfa.verify': 'Verificar',
+  'mfa.verifying': 'Verificando…',
+  'mfa.invalid_code':
+    'No se aceptó ese código. Revisa tu aplicación de autenticación e inténtalo de nuevo.',
+  'mfa.trust_device': 'Confiar en este dispositivo durante 30 días',
+  'mfa.trust_device_hint':
+    'No se te pedirá un código en este dispositivo hasta que pasen los 30 días. No lo uses en un ordenador compartido.',
+  'mfa.use_recovery_code_instead': 'Usar un código de recuperación',
+  'mfa.use_authenticator_instead': 'Usar mi aplicación de autenticación',
+  'mfa.back_to_sign_in': 'Volver al inicio de sesión',
+  'mfa.enroll_required_title': 'Configura la verificación en dos pasos',
+  'mfa.enroll_required_description': 'Tu cuenta requiere verificación en dos pasos para continuar.',
+  'mfa.loading_secret': 'Preparando tu clave de configuración…',
+  'mfa.enroll_start_failed': 'No se pudo iniciar la configuración. Inténtalo de nuevo.',
+  'mfa.enter_code_to_confirm': 'Introduce el código de tu aplicación para confirmar',
+  'mfa.finish_setup': 'Finalizar configuración',
+  'mfa.scan_instructions':
+    'Escanea esto con una aplicación de autenticación como Google Authenticator, 1Password o Authy.',
+  'mfa.or_enter_key_manually': 'O introduce esta clave manualmente si no puedes escanear:',
+  'mfa.copy': 'Copiar',
+  'mfa.security_title': 'Seguridad de la cuenta',
+  'mfa.security_description':
+    'Verificación en dos pasos, códigos de recuperación y dispositivos de confianza.',
+  'mfa.status_failed': 'No se pudieron cargar tus ajustes de seguridad.',
+  'mfa.enroll_title': 'Verificación en dos pasos',
+  'mfa.enroll_description':
+    'Añade un segundo factor para que una contraseña robada no baste para entrar como tú.',
+  'mfa.begin_setup': 'Configurar la verificación en dos pasos',
+  'mfa.required_by': 'Tu organización exige verificación en dos pasos antes del {date}.',
+  'mfa.required_now': 'Tu organización exige verificación en dos pasos.',
+  'mfa.enrolled_title': 'Verificación en dos pasos',
+  'mfa.enabled': 'Activada',
+  'mfa.enrolled_description':
+    'Se te pide un código al iniciar sesión desde un dispositivo en el que no confías.',
+  'mfa.recovery_codes': 'Códigos de recuperación',
+  'mfa.recovery_codes_remaining': 'Quedan {count} códigos sin usar.',
+  'mfa.recovery_codes_low':
+    'Te quedan pocos códigos de recuperación. Genera un conjunto nuevo para no quedarte fuera.',
+  'mfa.regenerate_recovery_codes': 'Generar códigos nuevos',
+  'mfa.save_recovery_codes': 'Guarda tus códigos de recuperación',
+  'mfa.save_recovery_codes_description':
+    'Se muestran una sola vez y no se pueden recuperar después. Guárdalos en un lugar seguro: son tu forma de volver a entrar si pierdes tu autenticador.',
+  'mfa.copy_all': 'Copiar todos',
+  'mfa.download': 'Descargar',
+  'mfa.saved_them': 'Ya los he guardado',
+  'mfa.disable_title': 'Desactivar la verificación en dos pasos',
+  'mfa.disable_description':
+    'Esto elimina tu autenticador, tus códigos de recuperación y todos los dispositivos de confianza. Introduce un código actual para confirmar.',
+  'mfa.disable': 'Desactivar',
+  'mfa.devices_title': 'Dispositivos de confianza',
+  'mfa.devices_description':
+    'Dispositivos que omiten el código hasta que pasen sus 30 días. Si revocas uno, se pedirá un código la próxima vez.',
+  'mfa.no_trusted_devices':
+    'No hay dispositivos de confianza. Se te pide un código cada vez que inicias sesión.',
+  'mfa.device_expires': 'De confianza hasta el {date}',
+  'mfa.revoke': 'Revocar',
+  'mfa.revoke_all_devices': 'Revocar todos los dispositivos',
   'auth.invalid_invitation': 'Enlace de invitación no válido',
   'auth.invitation_missing_token': 'A este enlace le falta el token de invitación.',
   'auth.accept_invitation': 'Aceptar invitación',
