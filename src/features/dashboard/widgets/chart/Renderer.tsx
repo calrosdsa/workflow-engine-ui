@@ -11,9 +11,11 @@ import {
   DATE_FIELD_TYPES, type ChartWidgetConfig,
 } from './schema'
 import {
-  PALETTE, buildFlatPlot, buildSplitPlot, canUseLog, hasSplit, logFloor,
-  plottedValues, seriesLabel, type PlotSeries,
+  PALETTE, RAW_KEY, buildFlatPlot, buildSplitPlot, canUseLog, hasSplit,
+  logFloor, plottedValues, seriesLabel, type PlotRow, type PlotSeries,
 } from './plot'
+import { drillDownConditions } from './drill-down'
+import { findRecordsMenu, navigateToRecords } from './records-link'
 import type { WidgetRendererProps } from '../../widget-contract'
 import { useChartData } from './useChartData'
 import { mergeFilters, rangeToConditions } from './runtime-filter'
@@ -114,6 +116,34 @@ export function ChartRenderer({ config, clientId, appId, menus, mode, parameterF
     return formatMeasure(value, match?.measureIndex ?? 0)
   }
 
+  // Clicking a data point goes to the records behind THAT point, where the
+  // "..." menu's own View records goes to every record the chart covers.
+  //
+  // Only at runtime, and only when three things hold: the viewer can see a
+  // Search menu for this form, the dimension is exactly invertible (see
+  // drill-down.ts — an age band is not), and the click actually identified
+  // a group. Any of them failing leaves the mark inert rather than
+  // navigating somewhere plausible-looking and wrong.
+  const recordsMenu = isRuntime ? findRecordsMenu(config, menus) : undefined
+
+  const drillTo = (row: PlotRow | undefined, series?: PlotSeries) => {
+    if (!recordsMenu || !row) return
+    const rawKey = row[RAW_KEY]
+    if (typeof rawKey !== 'string') return
+    const conditions = drillDownConditions(config, fields, rawKey, series?.rawLabel)
+    if (!conditions) return
+    navigateToRecords(recordsMenu, clientId, appId, effectiveFilter, conditions)
+  }
+
+  // Recharts hands a mark's click the row it was built from, widened to
+  // `unknown` by its own typings — this widget only ever supplies PlotRows.
+  const markClick = (series?: PlotSeries) => (data: unknown) => {
+    const row = data && typeof data === 'object' && 'payload' in data
+      ? (data as { payload?: PlotRow }).payload
+      : (data as PlotRow | undefined)
+    drillTo(row, series)
+  }
+
   // A single Y axis cannot speak two units, so it formats only when every
   // measure agrees. With a mixed set the ticks stay raw rather than silently
   // labelling all of them with the first series' currency.
@@ -172,6 +202,8 @@ export function ChartRenderer({ config, clientId, appId, menus, mode, parameterF
             // labels by not having opted in.
             label={config.dataLabels ? (e: { value?: number }) => formatMeasure(e.value, 0) : true}
             isAnimationActive={false}
+            onClick={markClick()}
+            style={recordsMenu ? { cursor: 'pointer' } : undefined}
           >
             {rows.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
           </Pie>
@@ -267,16 +299,46 @@ export function ChartRenderer({ config, clientId, appId, menus, mode, parameterF
               : config.chartType === 'line' ? 'line'
               : config.chartType === 'area' ? 'area'
               : 'bar'
+            // Bound per series, so a click on a split chart knows WHICH
+            // sub-series it landed on — recharts reports the row, not the
+            // split value, and only the series carries that.
+            const onMarkClick = markClick(isSplit ? s : undefined)
+            const clickable = recordsMenu ? { onClick: onMarkClick, style: { cursor: 'pointer' } } : {}
+            // On a line or an area the drillable mark is the DOT, not the
+            // stroke — the segment between two points belongs to neither of
+            // them. It has to be the always-rendered dot rather than the
+            // activeDot: that one exists only while the cursor is over the
+            // chart, so it is a target that appears and vanishes.
+            //
+            // Which is also why an area GROWS dots when drill-down is armed
+            // and has none otherwise. The dot is the affordance; showing it
+            // exactly when clicking does something is the honest version.
+            //
+            // Rendered by a function rather than configured with a props
+            // object, because recharts hands a dot-props object no payload
+            // — only geometry — so a handler attached that way fires with
+            // nothing to identify the point. The render form gets `index`,
+            // which indexes the rows this component built.
+            const clickableDot = recordsMenu
+              ? (p: { cx?: number; cy?: number; index?: number }) => (
+                  <circle
+                    cx={p.cx} cy={p.cy} r={3}
+                    fill={s.color} stroke={s.color}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => drillTo(rows[p.index ?? -1], isSplit ? s : undefined)}
+                  />
+                )
+              : undefined
             if (mark === 'line') {
               return (
-                <Line key={i} type="monotone" dataKey={s.dataKey} name={s.label} stroke={s.color} strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false}>
+                <Line key={i} type="monotone" dataKey={s.dataKey} name={s.label} stroke={s.color} strokeWidth={2} dot={clickableDot ?? { r: 3 }} isAnimationActive={false}>
                   {dataLabel(s)}
                 </Line>
               )
             }
             if (mark === 'area') {
               return (
-                <Area key={i} type="monotone" dataKey={s.dataKey} name={s.label} stroke={s.color} fill={s.color} fillOpacity={0.25} stackId={stackId} isAnimationActive={false}>
+                <Area key={i} type="monotone" dataKey={s.dataKey} name={s.label} stroke={s.color} fill={s.color} fillOpacity={0.25} stackId={stackId} dot={clickableDot ?? false} isAnimationActive={false}>
                   {dataLabel(s)}
                 </Area>
               )
@@ -286,7 +348,7 @@ export function ChartRenderer({ config, clientId, appId, menus, mode, parameterF
               // segment, and which segment that is varies per column — so
               // stacking squares them all off rather than drawing a rounded
               // edge in the middle of a stack.
-              <Bar key={i} dataKey={s.dataKey} name={s.label} fill={s.color} radius={stacked ? undefined : horizontal ? [0, 3, 3, 0] : [3, 3, 0, 0]} stackId={stackId} isAnimationActive={false}>
+              <Bar key={i} dataKey={s.dataKey} name={s.label} fill={s.color} radius={stacked ? undefined : horizontal ? [0, 3, 3, 0] : [3, 3, 0, 0]} stackId={stackId} isAnimationActive={false} {...clickable}>
                 {dataLabel(s)}
               </Bar>
             )

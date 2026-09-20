@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildFlatPlot, buildSplitPlot, canUseLog, hasSplit, logFloor, plottedValues } from './plot'
+import { RAW_KEY, buildFlatPlot, buildSplitPlot, canUseLog, hasSplit, logFloor, plottedValues } from './plot'
 import type { ChartWidgetConfig } from './schema'
 import type { AggregateGroupResponse } from '@/features/forms/api'
 
@@ -33,7 +33,7 @@ describe('buildFlatPlot', () => {
     ]
     const { rows, series } = buildFlatPlot(cfg({ series: [{ fn: 'count' }, { fn: 'sum', field: 'amount' }] }), groups)
 
-    expect(rows).toEqual([
+    expect(rows).toMatchObject([
       { key: 'Open', val_0: 3, val_1: 900 },
       { key: 'Paid', val_0: 7, val_1: 2100 },
     ])
@@ -92,7 +92,7 @@ describe('buildSplitPlot', () => {
   // it as zero would invent a reading that pulls the chart down.
   it('fills a missing combination with zero for a count', () => {
     const { rows } = buildSplitPlot(cfg({ series: [{ fn: 'count' }] }), groups)
-    expect(rows.find((r) => r.key === 'Feb')).toEqual({ key: 'Feb', s_0: 8, s_1: 0 })
+    expect(rows.find((r) => r.key === 'Feb')).toMatchObject({ key: 'Feb', s_0: 8, s_1: 0 })
   })
 
   it('fills a missing combination with zero for a sum', () => {
@@ -102,7 +102,9 @@ describe('buildSplitPlot', () => {
 
   it('leaves a missing combination absent for an average', () => {
     const { rows } = buildSplitPlot(cfg({ series: [{ fn: 'avg', field: 'amount' }] }), groups)
-    expect(rows.find((r) => r.key === 'Feb')).toEqual({ key: 'Feb', s_0: 8 })
+    const feb = rows.find((r) => r.key === 'Feb')!
+    expect(feb).toMatchObject({ key: 'Feb', s_0: 8 })
+    expect(feb.s_1).toBeUndefined()
   })
 
   // A split value could literally be "key", or collide with a val_N name.
@@ -112,7 +114,7 @@ describe('buildSplitPlot', () => {
       { key: 'Jan', key2: 'val_0', values: [2] },
     ])
     expect(series.map((s) => s.dataKey)).toEqual(['s_0', 's_1'])
-    expect(rows[0]).toEqual({ key: 'Jan', s_0: 1, s_1: 2 })
+    expect(rows[0]).toMatchObject({ key: 'Jan', s_0: 1, s_1: 2 })
   })
 
   it('strips the sort-safe prefix from both dimensions', () => {
@@ -168,5 +170,33 @@ describe('log value axis', () => {
     for (const values of [[12, 340, 9800], [1, 2], [999, 1000], [0.5, 50], [100, 5000]]) {
       expect(logFloor(values)).toBeLessThan(Math.min(...values))
     }
+  })
+})
+
+// The display key has its sort-safe prefix stripped; the RAW key keeps it,
+// because drill-down.ts recovers a range band's index from that prefix and
+// stripping it is exactly what makes the label human.
+describe('raw keys travel alongside the display ones', () => {
+  it('carries the untouched key on every row', () => {
+    const { rows } = buildFlatPlot(cfg(), [{ key: '00\x1f<= 30', values: [2] }])
+    expect(rows[0].key).toBe('<= 30')
+    expect(rows[0][RAW_KEY]).toBe('00\x1f<= 30')
+  })
+
+  it('carries the untouched split value on every sub-series', () => {
+    const { series } = buildSplitPlot(cfg(), [{ key: 'Jan', key2: '01\x1f> 1000', values: [4] }])
+    expect(series[0].label).toBe('> 1000')
+    expect(series[0].rawLabel).toBe('01\x1f> 1000')
+  })
+
+  // Two bands whose display labels collide must stay separate sub-series,
+  // which is why the split is tracked by the raw value.
+  it('keeps split values distinct when their display labels match', () => {
+    const { series } = buildSplitPlot(cfg(), [
+      { key: 'Jan', key2: '00\x1fsame', values: [1] },
+      { key: 'Jan', key2: '01\x1fsame', values: [2] },
+    ])
+    expect(series).toHaveLength(2)
+    expect(series.map((s) => s.label)).toEqual(['same', 'same'])
   })
 })

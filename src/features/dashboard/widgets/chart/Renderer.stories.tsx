@@ -11,11 +11,14 @@
 // a presentational shell: the widget owns its own fetching (useChartData),
 // and a story that bypassed that would stop exercising the thing it claims
 // to document.
+import { useEffect, useState } from "react";
 import type { StoryDefault } from "@ladle/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { I18nProvider } from "@/features/i18n/I18nProvider";
 import { formsApi, type AggregateRecordsResponse } from "@/features/forms/api";
+import { runtimeRouter } from "@/runtime-router";
 import { ChartRenderer } from "./Renderer";
+import type { Menu } from "@/features/menus/types";
 import type { ChartWidgetConfig } from "./schema";
 import type { NumberFormat } from "@/features/forms/types";
 
@@ -112,6 +115,34 @@ const FLAT: AggregateRecordsResponse = {
 const RESPONSES: Record<string, AggregateRecordsResponse> = {};
 formsApi.aggregateRecords = async (formId: string) => RESPONSES[formId] ?? { groups: [] };
 
+// Drill-down navigates through the real runtime router, which has no route
+// tree on this page — so it is stubbed here, at module scope, exactly as
+// the aggregate call above is. The captured destination is then rendered
+// under the DrillDown story, which makes "what would this click do" a thing
+// you can read rather than something to reason about.
+interface CapturedNav { to: string; filter: unknown }
+const navListeners = new Set<(n: CapturedNav) => void>();
+runtimeRouter.navigate = ((args: { to: string; search?: Record<string, string> }) => {
+  const raw = args.search?.ef;
+  const nav: CapturedNav = { to: args.to, filter: raw ? JSON.parse(raw) : undefined };
+  navListeners.forEach((fn) => fn(nav));
+  return Promise.resolve();
+}) as typeof runtimeRouter.navigate;
+
+function LastNavigation() {
+  const [nav, setNav] = useState<CapturedNav | undefined>(undefined);
+  useEffect(() => {
+    navListeners.add(setNav);
+    return () => { navListeners.delete(setNav); };
+  }, []);
+  if (!nav) return <p style={{ fontSize: 11, opacity: 0.6, padding: "0 16px" }}>Click a mark — the filter it produces appears here.</p>;
+  return (
+    <pre style={{ fontSize: 11, padding: 12, margin: "0 16px", border: "1px solid hsl(var(--border))", borderRadius: 6, overflowX: "auto" }}>
+      {`${nav.to}\n${JSON.stringify(nav.filter, null, 2)}`}
+    </pre>
+  );
+}
+
 const base: ChartWidgetConfig = {
   formId: "invoices",
   chartType: "bar",
@@ -123,11 +154,23 @@ const base: ChartWidgetConfig = {
   legend: true,
 };
 
-function Tile({ title, note, response, config }: {
+// Drill-down only arms when the viewer can see a Search menu for the
+// chart's form, so a story that wants to exercise a click has to supply one.
+const recordsMenu = (formId: string): Menu => ({
+  id: `m_${formId}`,
+  slug: `records-${formId}`,
+  name: "Records",
+  menu_type: "search",
+  config: { form_id: formId },
+} as unknown as Menu);
+
+function Tile({ title, note, response, config, clickable }: {
   title: string;
   note: string;
   response: AggregateRecordsResponse;
   config: Partial<ChartWidgetConfig>;
+  /** Renders at runtime with a matching Search menu, so marks are live. */
+  clickable?: boolean;
 }) {
   // Registering under this tile's own id is idempotent and order-independent,
   // so it is safe during render in a way `active = response` was not.
@@ -146,7 +189,8 @@ function Tile({ title, note, response, config }: {
             instance={{ id: title, type: "chart", layout: { x: 0, y: 0, w: 6, h: 6 }, chrome: "card", config: full }}
             clientId="c1"
             appId="a1"
-            mode="builder"
+            menus={clickable ? [recordsMenu(formId)] : []}
+            mode={clickable ? "runtime" : "builder"}
           />
         </QueryClientProvider>
       </div>
@@ -273,4 +317,43 @@ export const AxisAndLabels = () => (
       config={{ axis: { yLog: true } }}
     />
   </Grid>
+);
+
+// Clicking a mark navigates to the records behind THAT point. The marks are
+// only live here because `clickable` supplies a Search menu for the form —
+// without one the chart is inert, which is the state a viewer with no
+// records menu sees.
+export const DrillDown = () => (
+  <>
+  <I18nProvider><LastNavigation /></I18nProvider>
+  <Grid>
+    <Tile
+      title="Plain categories"
+      note="Each bar drills to its own key. Exactly invertible: the key IS the field's value."
+      response={FLAT}
+      config={{}}
+      clickable
+    />
+    <Tile
+      title="Split segments"
+      note="A stacked segment drills to BOTH its category and its split value — the series carries the split, the row carries the category."
+      response={SPLIT}
+      config={{ groupBy2: { field: "region" }, stacked: true }}
+      clickable
+    />
+    <Tile
+      title="Line, click the dot"
+      note="On a line the mark is the dot; the stroke between two dots belongs to no single group."
+      response={FLAT}
+      config={{ chartType: "line" }}
+      clickable
+    />
+    <Tile
+      title="No records menu"
+      note="The same chart where the viewer can see no Search menu for this form: no pointer cursor, clicks do nothing."
+      response={FLAT}
+      config={{}}
+    />
+  </Grid>
+  </>
 );

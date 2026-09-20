@@ -1,12 +1,12 @@
 import { MoreHorizontal, RotateCw, RefreshCw, Download, ListFilter } from 'lucide-react'
 import { useTranslation } from '@/features/i18n/I18nProvider'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
-import { runtimeRouter } from '@/runtime-router'
 import { buildChartCsv, downloadCsv } from './export-csv'
+import { findRecordsMenu, navigateToRecords } from './records-link'
 import type { ChartWidgetConfig } from './schema'
 import type { AggregateGroupResponse } from '@/features/forms/api'
 import type { FilterGroup } from '@/features/workflows/types'
-import type { Menu, SearchMenuConfig } from '@/features/menus/types'
+import type { Menu } from '@/features/menus/types'
 
 interface ChartMenuProps {
   config: ChartWidgetConfig
@@ -30,24 +30,14 @@ interface ChartMenuProps {
 export function ChartMenu({ config, clientId, appId, menus, groups, sourceFormName, effectiveFilter, onRefresh, onReset }: ChartMenuProps) {
   const t = useTranslation()
 
-  // "View records" only ever targets a Search menu whose own form_id
-  // matches this chart's source form — and only when that menu is in the
-  // viewer-visible `menus` snapshot already handed down to every widget
-  // (the same visibility guarantee the quick-links widget's isVisible()
-  // relies on: "not in `menus`" already means "this viewer can't see it").
-  const targetMenu = menus?.find((m) => m.menu_type === 'search' && (m.config as SearchMenuConfig).form_id === config.formId)
+  // Menu resolution and navigation both live in records-link.ts, shared
+  // with the click-a-data-point path in Renderer.tsx — this item shows
+  // every record the chart covers, that one shows the records behind a
+  // single group, and they must not drift on which menu they target.
+  const targetMenu = findRecordsMenu(config, menus)
 
   const handleViewRecords = () => {
-    if (!targetMenu) return
-    // `to` is a dynamic template string, so TanStack Router can't resolve
-    // which registered route it targets at the type level — same situation
-    // RuntimeLink.tsx's own comment documents. Assigning `search` to a
-    // widely-typed variable first (rather than passing a fresh object
-    // literal inline) sidesteps excess-property-checking against whatever
-    // unrelated route's search shape the navigate() overload resolves to,
-    // the same technique RuntimeLink.tsx already uses.
-    const search: Record<string, string> = effectiveFilter ? { ef: JSON.stringify(effectiveFilter) } : {}
-    runtimeRouter.navigate({ to: `/${clientId}/${appId}/${targetMenu.slug}`, search })
+    if (targetMenu) navigateToRecords(targetMenu, clientId, appId, effectiveFilter)
   }
 
   const handleExport = () => {

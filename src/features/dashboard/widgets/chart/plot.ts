@@ -41,6 +41,12 @@ export function seriesLabel(config: ChartWidgetConfig, index: number): string {
 export interface PlotSeries {
   dataKey: string
   label: string
+  /** The split value exactly as the response sent it, sort-safe prefix and
+   *  all. `label` is for reading; this is for inverting — drill-down.ts
+   *  needs the "%02d" prefix to recover a range band's index, and stripping
+   *  it is what makes the human label human. Undefined on an unsplit chart,
+   *  where a series is a measure rather than a value. */
+  rawLabel?: string
   color: string
   /** Which measure column this plots, indexing the response's measure
    *  columns. Every sub-series of a split plots measure 0 — see
@@ -48,6 +54,11 @@ export interface PlotSeries {
   measureIndex: number
   type: SeriesType
 }
+
+/** The category key exactly as the response sent it — see PlotSeries.rawLabel
+ *  for why both forms are carried. Recharts ignores keys nothing references,
+ *  so this rides along on the row rather than needing a parallel array. */
+export const RAW_KEY = '__rawKey'
 
 export type PlotRow = Record<string, string | number>
 
@@ -104,7 +115,7 @@ export function logFloor(values: number[]): number {
  *  `val_N` keys match the backend's own positional aliasing (aggregate.go). */
 export function buildFlatPlot(config: ChartWidgetConfig, groups: AggregateGroupResponse[]): Plot {
   const rows: PlotRow[] = groups.map((g) => {
-    const row: PlotRow = { key: stripBucketSortPrefix(g.key) }
+    const row: PlotRow = { key: stripBucketSortPrefix(g.key), [RAW_KEY]: g.key }
     g.values.forEach((v, i) => { row[`val_${i}`] = v })
     return row
   })
@@ -139,19 +150,21 @@ export function buildSplitPlot(config: ChartWidgetConfig, groups: AggregateGroup
   const fn = config.series[0]?.fn
   const fillsZero = fn === 'count' || fn === 'sum'
 
-  const splitLabels: string[] = []
+  // Tracked by the RAW value so two different bands cannot merge just
+  // because their display labels happen to match.
+  const splitKeys: string[] = []
   const byKey = new Map<string, PlotRow>()
   for (const g of groups) {
     const key = stripBucketSortPrefix(g.key)
-    const split = stripBucketSortPrefix(g.key2 ?? '')
-    let idx = splitLabels.indexOf(split)
+    const split = g.key2 ?? ''
+    let idx = splitKeys.indexOf(split)
     if (idx === -1) {
-      idx = splitLabels.length
-      splitLabels.push(split)
+      idx = splitKeys.length
+      splitKeys.push(split)
     }
     let row = byKey.get(key)
     if (!row) {
-      row = { key }
+      row = { key, [RAW_KEY]: g.key }
       byKey.set(key, row)
     }
     // Keyed positionally rather than by the split value itself, which could
@@ -159,9 +172,10 @@ export function buildSplitPlot(config: ChartWidgetConfig, groups: AggregateGroup
     row[`s_${idx}`] = g.values[0] ?? 0
   }
 
-  const series: PlotSeries[] = splitLabels.map((label, i) => ({
+  const series: PlotSeries[] = splitKeys.map((raw, i) => ({
     dataKey: `s_${i}`,
-    label,
+    label: stripBucketSortPrefix(raw),
+    rawLabel: raw,
     color: PALETTE[i % PALETTE.length],
     measureIndex: 0,
     type: config.chartType === 'combo' ? (config.series[0]?.type ?? 'bar') : 'bar',

@@ -1006,6 +1006,23 @@ export const en = {
   'runtime.dashboard_chart.bucket.month': 'Month',
   'runtime.dashboard_chart.bucket.quarter': 'Quarter',
   'runtime.dashboard_chart.bucket.year': 'Year',
+  // components/ui/active-filters-bar.tsx — the viewer-facing wording for
+  // the operator vocabulary. The canonical, untranslated form lives in
+  // features/workflows/filter-text.ts, which is the candidate syntax for a
+  // parser and must stay stable across locales.
+  'filters.op.contains': 'contains',
+  'filters.op.not_contains': 'does not contain',
+  'filters.op.starts_with': 'starts with',
+  'filters.op.ends_with': 'ends with',
+  'filters.op.in': 'is one of',
+  'filters.op.not_in': 'is none of',
+  'filters.op.is_empty': 'is empty',
+  'filters.op.is_not_empty': 'is not empty',
+  'filters.op.matches': 'matches',
+  'filters.op.was_updated': 'was updated',
+  'filters.any_field': 'Any field',
+  'filters.remove_on': 'Remove filter on {{field}}',
+  'filters.reset_all': 'Reset all',
   'runtime.dashboard_chart.filter.label': 'Filter',
   'runtime.dashboard_chart.menu.label': 'Chart options',
   'runtime.dashboard_chart.menu.refresh': 'Refresh',
