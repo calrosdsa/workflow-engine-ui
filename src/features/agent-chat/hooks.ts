@@ -5,6 +5,7 @@ export const agentChatKeys = {
   sessions: ['agent-chat', 'sessions'] as const,
   messages: (sessionId: string) => ['agent-chat', 'sessions', sessionId, 'messages'] as const,
   runEvents: (sessionId: string, runId: string, after: number) => ['agent-chat', 'sessions', sessionId, 'runs', runId, 'events', after] as const,
+  surface: (sessionId: string, surfaceId: string) => ['agent-chat', 'sessions', sessionId, 'surfaces', surfaceId] as const,
 }
 
 // enabled gates every hook below on session presence — same convention as
@@ -78,5 +79,24 @@ export function useAgentRunEvents(sessionId: string | null, runId: string | null
     queryKey: agentChatKeys.runEvents(sessionId ?? '', runId ?? '', after),
     queryFn:  () => agentChatApi.listRunEvents(sessionId!, runId!, after),
     enabled:  !!sessionId && !!runId,
+  })
+}
+
+export function useAgentSurface(sessionId: string | null, surfaceId: string | null) {
+  return useQuery({
+    queryKey: agentChatKeys.surface(sessionId ?? '', surfaceId ?? ''),
+    queryFn:  () => agentChatApi.getSurface(sessionId!, surfaceId!),
+    enabled:  !!sessionId && !!surfaceId,
+  })
+}
+
+export function useSubmitAgentSurface(sessionId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ surfaceId, actionId, payload }: { surfaceId: string; actionId: string; payload: unknown }) =>
+      agentChatApi.submitSurface(sessionId!, surfaceId, actionId, payload),
+    onSuccess: (_result, variables) => {
+      qc.invalidateQueries({ queryKey: agentChatKeys.surface(sessionId ?? '', variables.surfaceId) })
+    },
   })
 }

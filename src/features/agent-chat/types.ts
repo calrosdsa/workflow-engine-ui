@@ -111,3 +111,11 @@ export interface AgentRunEvent {
   payload: unknown
   created_at: string
 }
+
+export interface AgentUISurfaceResponse {
+  surface: ChatSurface
+  state: ChatSurface['state']
+  submitted_payload?: unknown
+  actor_id?: string
+  updated_at: string
+}
