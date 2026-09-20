@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import type { AgentRun, ChatSession, ChatMessage, WSTokenResponse, SendMessageResult } from './types'
+import type { AgentRun, AgentRunEvent, ChatSession, ChatMessage, WSTokenResponse, SendMessageResult } from './types'
 
 // Thin wrapper over api/agentchat's Chat routes (FR-D4-002) — mirrors
 // features/agents/api.ts's shape (flat route names, .json<T>() per call).
@@ -21,6 +21,8 @@ export const agentChatApi = {
     api.get(`agent-chat/sessions/${id}/messages`).json<{ messages: ChatMessage[] }>().then(r => r.messages),
   getRun:        (sessionId: string, runId: string) =>
     api.get(`agent-chat/sessions/${sessionId}/runs/${runId}`).json<AgentRun>(),
+  listRunEvents: (sessionId: string, runId: string, after = 0) =>
+    api.get(`agent-chat/sessions/${sessionId}/runs/${runId}/events?after=${after}`).json<{ events: AgentRunEvent[] }>().then(r => r.events),
   sendMessage:   (id: string, content: string) =>
     api.post(`agent-chat/sessions/${id}/messages`, { json: { content } }).json<SendMessageResult>(),
   confirm:       (id: string, callId: string, approved: boolean) =>

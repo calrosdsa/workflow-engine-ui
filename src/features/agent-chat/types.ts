@@ -102,3 +102,12 @@ export interface AgentRun {
   created_at: string
   updated_at: string
 }
+
+export interface AgentRunEvent {
+  id: string
+  run_id: string
+  sequence: number
+  type: string
+  payload: unknown
+  created_at: string
+}

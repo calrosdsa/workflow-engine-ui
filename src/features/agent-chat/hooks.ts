@@ -4,6 +4,7 @@ import { agentChatApi } from './api'
 export const agentChatKeys = {
   sessions: ['agent-chat', 'sessions'] as const,
   messages: (sessionId: string) => ['agent-chat', 'sessions', sessionId, 'messages'] as const,
+  runEvents: (sessionId: string, runId: string, after: number) => ['agent-chat', 'sessions', sessionId, 'runs', runId, 'events', after] as const,
 }
 
 // enabled gates every hook below on session presence — same convention as
@@ -66,5 +67,16 @@ export function useSendChatMessage(sessionId: string | null) {
 export function useConfirmChatToolCall(sessionId: string | null) {
   return useMutation({
     mutationFn: ({ callId, approved }: { callId: string; approved: boolean }) => agentChatApi.confirm(sessionId!, callId, approved),
+  })
+}
+
+// Durable events are the replay path for reconnects and a future run
+// inspector. `after` is an exclusive sequence cursor, so callers can keep a
+// local cursor and fetch only events they have not applied yet.
+export function useAgentRunEvents(sessionId: string | null, runId: string | null, after = 0) {
+  return useQuery({
+    queryKey: agentChatKeys.runEvents(sessionId ?? '', runId ?? '', after),
+    queryFn:  () => agentChatApi.listRunEvents(sessionId!, runId!, after),
+    enabled:  !!sessionId && !!runId,
   })
 }
