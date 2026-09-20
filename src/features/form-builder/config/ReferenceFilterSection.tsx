@@ -95,6 +95,7 @@ export function ReferenceFilterSection({ element, schema, onChange }: ReferenceF
                   fields={targetForm?.fields ?? []}
                   variables={[]}
                   viewerModes={viewerModes}
+            allowRelativeDates
                   onChange={(referenceFilter) => onChange({ referenceFilter })}
                 />
               ) : (

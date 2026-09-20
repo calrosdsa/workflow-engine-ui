@@ -226,7 +226,7 @@ export function DashboardEditorPage({ appId, menuId }: DashboardEditorPageProps)
 
       <div className="flex flex-1 overflow-hidden">
         <DashboardBuilderDnd>
-          <DashboardToolbox />
+          <DashboardToolbox parameters />
           <GridCanvas clientId={appId} appId={appId} onAddFirstWidget={() => addWidget('paragraph')} />
           <WidgetSettingsDrawer clientId={appId} appId={appId} />
         </DashboardBuilderDnd>

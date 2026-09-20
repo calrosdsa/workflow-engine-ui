@@ -65,6 +65,6 @@ export function useSendChatMessage(sessionId: string | null) {
 
 export function useConfirmChatToolCall(sessionId: string | null) {
   return useMutation({
-    mutationFn: (approved: boolean) => agentChatApi.confirm(sessionId!, approved),
+    mutationFn: ({ callId, approved }: { callId: string; approved: boolean }) => agentChatApi.confirm(sessionId!, callId, approved),
   })
 }

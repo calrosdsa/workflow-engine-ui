@@ -17,4 +17,7 @@ registerWidget({
   defaultChrome: 'card',
   Renderer: ChartRenderer,
   ConfigPanel: ChartConfigPanel,
+  // Reads parameterFilter in its Renderer, so it declares itself
+  // bindable — see widget-contract.ts for why those two must stay in step.
+  bindable: { formId: (c) => c.formId || undefined },
 })

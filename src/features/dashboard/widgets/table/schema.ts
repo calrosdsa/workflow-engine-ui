@@ -82,7 +82,7 @@ export const TABLE_CONFIG_SCHEMA: ConfigSchema = {
   required: ['formId', 'columns', 'pageSize'],
   properties: {
     formId: { type: 'string', description: 'Id of the form whose records to list.' },
-    columns: { type: 'array', items: { type: 'string' }, description: 'Field names to show as columns, in order.' },
+    columns: { type: 'array', items: { type: 'string', fieldRef: true }, description: 'Field names to show as columns, in order.' },
     defaultFilter: { type: 'object', description: 'A FilterGroup applied server-side. Same grammar as workflow nodes.' },
     defaultSort: { type: 'array', items: { type: 'object' }, description: 'SortRule list applied by default.' },
     pageSize: { type: 'integer', description: 'Rows per page. Tile-appropriate default is 10.' },
@@ -91,7 +91,7 @@ export const TABLE_CONFIG_SCHEMA: ConfigSchema = {
     scopeToRecord: {
       type: 'object',
       required: ['fieldName'],
-      properties: { fieldName: { type: 'string' } },
+      properties: { fieldName: { type: 'string', fieldRef: true } },
       description: "Only meaningful inside a detail-page 'custom' tab: narrows the table to records whose reference field `fieldName` points at the record being viewed. Ignored on a Dashboard menu.",
     },
     footerAggregates: {
@@ -101,7 +101,7 @@ export const TABLE_CONFIG_SCHEMA: ConfigSchema = {
         type: 'object',
         required: ['field', 'fn'],
         properties: {
-          field: { type: 'string', description: 'A numeric field on this widget\'s form.' },
+          field: { type: 'string', fieldRef: true, description: 'A numeric field on this widget\'s form.' },
           fn: { type: 'string', enum: ['count', 'sum', 'avg', 'min', 'max'] },
         },
       },

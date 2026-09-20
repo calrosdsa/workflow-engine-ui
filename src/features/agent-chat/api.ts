@@ -1,7 +1,7 @@
 import { api } from '@/lib/api'
 import type { ChatSession, ChatMessage, WSTokenResponse, SendMessageResult } from './types'
 
-// Thin wrapper over api/agentchat's 8 routes (FR-D4-002) — mirrors
+// Thin wrapper over api/agentchat's Chat routes (FR-D4-002) — mirrors
 // features/agents/api.ts's shape (flat route names, .json<T>() per call).
 //
 // listSessions/listMessages unwrap the `{sessions/messages, total, page,
@@ -21,7 +21,9 @@ export const agentChatApi = {
     api.get(`agent-chat/sessions/${id}/messages`).json<{ messages: ChatMessage[] }>().then(r => r.messages),
   sendMessage:   (id: string, content: string) =>
     api.post(`agent-chat/sessions/${id}/messages`, { json: { content } }).json<SendMessageResult>(),
-  confirm:       (id: string, approved: boolean) =>
-    api.post(`agent-chat/sessions/${id}/confirm`, { json: { approved } }).json<{ ok: boolean }>(),
+  confirm:       (id: string, callId: string, approved: boolean) =>
+    api.post(`agent-chat/sessions/${id}/ui-actions/${encodeURIComponent(`confirm:${callId}`)}`, {
+      json: { action_id: approved ? 'approve' : 'deny' },
+    }).json<{ ok: boolean; surface_id: string; state: string }>(),
   mintWSToken:   (id: string) => api.post(`agent-chat/sessions/${id}/ws-token`).json<WSTokenResponse>(),
 }

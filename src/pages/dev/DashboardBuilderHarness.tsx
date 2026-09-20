@@ -43,7 +43,7 @@ export function DashboardBuilderHarness() {
       </div>
       <div className="flex min-h-0 flex-1">
         <DashboardBuilderDnd>
-          <DashboardToolbox />
+          <DashboardToolbox parameters />
           <GridCanvas
             clientId="dev-client"
             appId="dev-app"

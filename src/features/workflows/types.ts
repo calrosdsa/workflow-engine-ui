@@ -177,7 +177,10 @@ export interface SubflowConfig {
 
 export type CompareOp =
   | 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte'
-  | 'contains' | 'starts_with' | 'in' | 'is_null' | 'not_null'
+  | 'contains' | 'starts_with' | 'ends_with' | 'in' | 'is_null' | 'not_null'
+  // Negations. A record holding NO value MATCHES these, the same way it
+  // already matches 'neq' — "not open" includes the records with no status.
+  | 'not_contains' | 'not_in'
   // Full-text search against the form's combined "tsv" column (fields marked
   // searchable). Unlike every other op, `field` is ignored — there is no
   // single per-field column to target. Not supported inside a Trigger node's
@@ -200,7 +203,7 @@ export type CompareOp =
  *  email, or a field on the app's user-account form. this_record → value is
  *  "<reference_field>.<attr>": exactly one hop through a reference field on
  *  the record being authored. */
-export type ValueMode = 'static' | 'expression' | 'change_flag' | 'current_user' | 'this_record'
+export type ValueMode = 'static' | 'expression' | 'change_flag' | 'current_user' | 'this_record' | 'relative'
 
 export interface FilterCondition {
   id: string                // UI-only key for list rendering (stripped on save)

@@ -8,6 +8,7 @@ import { useDashboardStore } from './store'
 import { allWidgets, WIDGET_CATEGORIES } from './widget-registry'
 import type { WidgetDefinition } from './widget-contract'
 import { useTranslation } from '@/features/i18n/I18nProvider'
+import { ParametersSection } from './ParametersSection'
 
 // Direct mirror of features/page-builder/Toolbox.tsx, sourced from the
 // widget registry (open-ended, populated by whatever widgets/index.ts has
@@ -47,7 +48,20 @@ function ToolboxItem({ def }: { def: WidgetDefinition }) {
   )
 }
 
-export function DashboardToolbox() {
+interface DashboardToolboxProps {
+  /** Shows the dashboard-parameters authoring section below the widget list.
+   *
+   *  DEFAULT OFF, opted in per host — the same gating stance FilterBuilder's
+   *  `allowRelativeDates` takes, and for the same reason: it is a
+   *  correctness constraint, not taste. This builder is also mounted by the
+   *  record detail page's custom-tab editor, and RuntimeGrid renders that
+   *  tab with NO ParameterBar (see DashboardMenuRuntime, which owns the bar
+   *  precisely so the custom tab does not grow one). A parameter declared
+   *  there would be a control nobody could ever set. */
+  parameters?: boolean
+}
+
+export function DashboardToolbox({ parameters = false }: DashboardToolboxProps = {}) {
   const t = useTranslation()
   const [search, setSearch] = useState('')
   const q = search.trim().toLowerCase()
@@ -83,6 +97,7 @@ export function DashboardToolbox() {
             )
           })}
         </div>
+        {parameters && <ParametersSection />}
       </ScrollArea>
     </div>
   )

@@ -18,6 +18,7 @@ import type { ComponentType } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import type { ConfigSchema } from '@/lib/config-schema'
 import type { Menu } from '@/features/menus/types'
+import type { FilterGroup } from '@/features/workflows/types'
 import type { WidgetInstance, WidgetLayout, WidgetChrome } from './schema'
 
 export type WidgetCategory = 'Data' | 'Content' | 'Navigation' | 'Embed'
@@ -47,6 +48,12 @@ export interface WidgetRendererProps<TConfig> {
    *  opt in simply ignores it and renders exactly as it does in a Dashboard
    *  menu today. */
   recordContext?: { formId: string; recordId: string }
+  /** Extra conditions from the dashboard's own parameters, already resolved
+   *  for THIS tile (see parameters.ts). A data-bearing widget ANDs it onto
+   *  its own configured filter — wrap, never replace — and every other
+   *  widget ignores it. Undefined when the dashboard declares no parameters,
+   *  when none are bound to this tile, or when every bound one is unset. */
+  parameterFilter?: FilterGroup
 }
 
 export interface WidgetConfigPanelProps<TConfig> {
@@ -83,4 +90,25 @@ export interface WidgetDefinition<TConfig = unknown> {
    *  while dragging/resizing (e.g. a chart re-querying on every resize
    *  tick). Falls back to Renderer with mode='builder' when absent. */
   BuilderPreview?: ComponentType<WidgetRendererProps<TConfig>>
+  /** Declares that this widget can be narrowed by a dashboard parameter,
+   *  and tells the core which form its fields come from.
+   *
+   *  It is a FUNCTION rather than the core reading `config.formId` because
+   *  `config` is opaque by contract (see schema.ts: "this file and
+   *  everything in canvas/ treats it as a blob it serializes, clones and
+   *  diffs but never inspects"). A widget that wants to be bindable says so
+   *  and answers the one question the parameters panel has; every other
+   *  widget omits this and simply is not offered.
+   *
+   *  INVARIANT: the widgets declaring this must be exactly the widgets whose
+   *  Renderer reads `parameterFilter` above — chart and table today. Declare
+   *  it without reading the prop and the panel offers a binding the runtime
+   *  silently ignores; read the prop without declaring it and a working
+   *  binding is unreachable from the builder. The two live in different
+   *  files, so this is the note that keeps them together. */
+  bindable?: {
+    /** The form whose fields a binding may target; undefined while the
+     *  widget has no form chosen yet. */
+    formId: (config: TConfig) => string | undefined
+  }
 }

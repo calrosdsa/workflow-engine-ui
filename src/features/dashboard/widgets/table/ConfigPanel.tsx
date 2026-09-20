@@ -97,6 +97,7 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
             fields={form.fields}
             variables={[]}
             viewerModes={viewerModes}
+            allowRelativeDates
             onChange={(g) => patch({ defaultFilter: g })}
           />
         </div>

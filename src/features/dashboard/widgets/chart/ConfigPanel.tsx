@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BarChart3, LineChart as LineChartIcon, AreaChart as AreaChartIcon, PieChart as PieChartIcon, Hash, Plus, Trash2 } from 'lucide-react'
+import { BarChart3, LineChart as LineChartIcon, AreaChart as AreaChartIcon, PieChart as PieChartIcon, Donut, CandlestickChart, Hash, Plus, Trash2 } from 'lucide-react'
 import { FormReferenceSelect } from '@/features/form-builder/config/FormReferenceSelect'
 import { FilterBuilder, newGroup } from '@/features/workflows/builder/FilterBuilder'
 import { useCurrentUserAttrs } from '@/features/workflows/builder/useCurrentUserAttrs'
@@ -10,7 +10,10 @@ import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } fro
 import { useForm } from '@/features/forms/hooks'
 import { useTranslation, type I18nContextValue } from '@/features/i18n/I18nProvider'
 import type { WidgetConfigPanelProps } from '../../widget-contract'
-import { DATE_FIELD_TYPES, type ChartWidgetConfig, type ChartType, type ChartSeries } from './schema'
+import {
+  CARTESIAN_TYPES, ORIENTABLE_TYPES, STACKABLE_TYPES, DATE_FIELD_TYPES,
+  type ChartWidgetConfig, type ChartType, type ChartSeries, type SeriesType,
+} from './schema'
 import type { AggregateFn, DateBucket } from '@/features/forms/api'
 import type { FieldDef, FieldType } from '@/features/forms/types'
 import { ChartRenderer } from './Renderer'
@@ -29,6 +32,8 @@ function chartTypeOptions(t: I18nContextValue['t']): Array<{ value: ChartType; l
     { value: 'line', label: t('builder.dashboard_chart.type_line'), icon: LineChartIcon },
     { value: 'area', label: t('builder.dashboard_chart.type_area'), icon: AreaChartIcon },
     { value: 'pie', label: t('builder.dashboard_chart.type_pie'), icon: PieChartIcon },
+    { value: 'donut', label: t('builder.dashboard_chart.type_donut'), icon: Donut },
+    { value: 'combo', label: t('builder.dashboard_chart.type_combo'), icon: CandlestickChart },
     { value: 'stat', label: t('builder.dashboard_chart.type_stat'), icon: Hash },
   ]
 }
@@ -60,7 +65,22 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
   const patch = (p: Partial<ChartWidgetConfig>) => onChange({ ...config, ...p })
 
   const needsGroupBy = config.chartType !== 'stat'
-  const supportsGroupBy2 = config.chartType === 'bar' || config.chartType === 'line' || config.chartType === 'area'
+  const supportsGroupBy2 = CARTESIAN_TYPES.includes(config.chartType)
+  const supportsStacking = STACKABLE_TYPES.includes(config.chartType)
+  const supportsOrientation = ORIENTABLE_TYPES.includes(config.chartType)
+  const isCombo = config.chartType === 'combo'
+  // A split already colours by its own values, so it can only draw one
+  // measure — the panel stops offering more rather than letting an author
+  // add a series the chart will tell them it ignored.
+  const isSplit = supportsGroupBy2 && !!config.groupBy2?.field
+
+  const patchAxis = (p: Partial<NonNullable<ChartWidgetConfig['axis']>>) => {
+    const next = { ...config.axis, ...p }
+    // Collapse back to absent when every bound is cleared, so "automatic"
+    // has one representation rather than two.
+    const live = Object.values(next).some((v) => v !== undefined && v !== '')
+    patch({ axis: live ? next : undefined })
+  }
 
   const addSeries = () => patch({ series: [...config.series, { fn: 'count' }] })
   const updateSeries = (index: number, s: Partial<ChartSeries>) =>
@@ -76,7 +96,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
 
       <div className="space-y-1.5">
         <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_chart.chart_type')}</Label>
-        <div className="grid grid-cols-5 gap-1">
+        <div className="grid grid-cols-4 gap-1">
           {chartTypeOptions(t).map(({ value, label, icon: Icon }) => (
             <button
               key={value}
@@ -136,6 +156,29 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
             onChange={(f) => patch({ groupBy2: f ? { field: f } : undefined })}
             allowNone
           />
+          {isSplit && (
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_chart.split_hint')}</p>
+          )}
+        </div>
+      )}
+
+      {needsGroupBy && (supportsStacking || supportsOrientation) && (
+        <div className="space-y-2">
+          {supportsStacking && (
+            <Label className="flex items-center gap-2 text-[12px] font-normal text-[hsl(var(--foreground))]">
+              <Checkbox checked={config.stacked === true} onCheckedChange={(c) => patch({ stacked: c === true ? true : undefined })} />
+              {t('builder.dashboard_chart.stacked')}
+            </Label>
+          )}
+          {supportsOrientation && (
+            <Label className="flex items-center gap-2 text-[12px] font-normal text-[hsl(var(--foreground))]">
+              <Checkbox
+                checked={config.orientation === 'horizontal'}
+                onCheckedChange={(c) => patch({ orientation: c === true ? 'horizontal' : undefined })}
+              />
+              {t('builder.dashboard_chart.horizontal')}
+            </Label>
+          )}
         </div>
       )}
 
@@ -145,7 +188,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
             <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
               {config.chartType === 'stat' ? t('builder.dashboard_chart.value_label') : t('builder.dashboard_chart.series_label')}
             </Label>
-            {config.chartType !== 'stat' && (
+            {config.chartType !== 'stat' && !isSplit && (
               <button type="button" onClick={addSeries} className="flex items-center gap-1 text-[11px] text-[hsl(var(--primary))] hover:brightness-110">
                 <Plus size={11} /> {t('builder.dashboard_chart.add_series')}
               </button>
@@ -156,6 +199,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
               key={i}
               series={s}
               numericFields={numericFields}
+              showType={isCombo}
               onChange={(patch) => updateSeries(i, patch)}
               onRemove={config.series.length > 1 ? () => removeSeries(i) : undefined}
             />
@@ -176,6 +220,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
             fields={form.fields}
             variables={[]}
             viewerModes={viewerModes}
+            allowRelativeDates
             onChange={(g) => patch({ filter: g })}
           />
         </div>
@@ -210,10 +255,68 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
         <div className="space-y-1.5">
           <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_chart.max_groups')}</Label>
           <Input type="number" min={1} max={200} value={config.limit} onChange={(e) => patch({ limit: Number(e.target.value) || 20 })} className="h-8 w-24 text-sm" />
+          {isSplit && (
+            // The label says "groups" but the engine caps ROWS, which on a
+            // split are primary × split combinations — so the number of
+            // categories that actually appear is this divided by the number
+            // of split values. Invisible from the chart itself.
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_chart.max_groups_split_hint')}</p>
+          )}
         </div>
       )}
 
-      {config.chartType !== 'pie' && (
+      {needsGroupBy && CARTESIAN_TYPES.includes(config.chartType) && (
+        <div className="space-y-1.5">
+          <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_chart.axis')}</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              value={config.axis?.xTitle ?? ''}
+              onChange={(e) => patchAxis({ xTitle: e.target.value || undefined })}
+              placeholder={t('builder.dashboard_chart.axis_x_title')}
+              className="h-8 text-sm"
+            />
+            <Input
+              value={config.axis?.yTitle ?? ''}
+              onChange={(e) => patchAxis({ yTitle: e.target.value || undefined })}
+              placeholder={t('builder.dashboard_chart.axis_y_title')}
+              className="h-8 text-sm"
+            />
+            <Input
+              type="number"
+              value={config.axis?.yMin ?? ''}
+              onChange={(e) => patchAxis({ yMin: e.target.value === '' ? undefined : Number(e.target.value) })}
+              placeholder={t('builder.dashboard_chart.axis_y_min')}
+              className="h-8 text-sm"
+            />
+            <Input
+              type="number"
+              value={config.axis?.yMax ?? ''}
+              onChange={(e) => patchAxis({ yMax: e.target.value === '' ? undefined : Number(e.target.value) })}
+              placeholder={t('builder.dashboard_chart.axis_y_max')}
+              className="h-8 text-sm"
+            />
+          </div>
+          <Label className="flex items-center gap-2 text-[12px] font-normal text-[hsl(var(--foreground))]">
+            <Checkbox checked={config.axis?.yLog === true} onCheckedChange={(c) => patchAxis({ yLog: c === true ? true : undefined })} />
+            {t('builder.dashboard_chart.axis_y_log')}
+          </Label>
+          {config.axis?.yLog && (
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_chart.axis_y_log_hint')}</p>
+          )}
+        </div>
+      )}
+
+      {needsGroupBy && (
+        <Label className="flex items-center gap-2 text-[12px] font-normal text-[hsl(var(--foreground))]">
+          <Checkbox checked={config.dataLabels === true} onCheckedChange={(c) => patch({ dataLabels: c === true ? true : undefined })} />
+          {t('builder.dashboard_chart.data_labels')}
+        </Label>
+      )}
+
+      {/* Pie and donut label their own slices, and a stat tile is a single
+          number — none of the three has a legend to show. The stat case was
+          always offered before and always did nothing. */}
+      {needsGroupBy && config.chartType !== 'pie' && config.chartType !== 'donut' && (
         <Label className="flex items-center gap-2 text-[12px] font-normal text-[hsl(var(--foreground))]">
           <Checkbox checked={config.legend} onCheckedChange={(c) => patch({ legend: c === true })} />
           {t('builder.dashboard_chart.show_legend')}
@@ -318,9 +421,14 @@ function RangesInput({ value, onChange, placeholder }: {
   )
 }
 
-function SeriesEditor({ series, numericFields, onChange, onRemove }: {
+const SERIES_TYPES: SeriesType[] = ['bar', 'line', 'area']
+
+function SeriesEditor({ series, numericFields, showType, onChange, onRemove }: {
   series: ChartSeries
   numericFields: FieldDef[]
+  /** Combo only — every other chart type draws all series the same way, so
+   *  offering a per-series mark there would be a control with no effect. */
+  showType?: boolean
   onChange: (patch: Partial<ChartSeries>) => void
   onRemove?: () => void
 }) {
@@ -328,6 +436,16 @@ function SeriesEditor({ series, numericFields, onChange, onRemove }: {
   const labels = fnLabels(t)
   return (
     <div className="flex items-center gap-1.5 rounded-md border border-[hsl(var(--border))] p-2">
+      {showType && (
+        <SelectMenu value={series.type ?? 'bar'} onValueChange={(v) => onChange({ type: v as SeriesType })}>
+          <SelectTrigger className="h-7 w-[4.5rem] shrink-0 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {SERIES_TYPES.map((st) => (
+              <SelectItem key={st} value={st} className="text-xs">{t(`builder.dashboard_chart.type_${st}`)}</SelectItem>
+            ))}
+          </SelectContent>
+        </SelectMenu>
+      )}
       <SelectMenu value={series.fn} onValueChange={(v) => onChange({ fn: v as AggregateFn, field: v === 'count' ? undefined : series.field })}>
         <SelectTrigger className="h-7 flex-1 text-xs"><SelectValue /></SelectTrigger>
         <SelectContent>

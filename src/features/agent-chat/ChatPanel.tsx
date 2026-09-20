@@ -3,7 +3,7 @@
 // placeholder. Owns session selection, message history, sending, tool-call
 // confirmation, and the live Centrifugo connection.
 import { useEffect, useRef, useState } from 'react'
-import { Plus, Send, AlertTriangle, ChevronDown, Loader2, Check, X, Wrench } from 'lucide-react'
+import { Plus, Send, AlertTriangle, ChevronDown, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { extractApiError } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -19,14 +19,14 @@ import {
 } from './hooks'
 import { useAgentChatSocket } from './useAgentChatSocket'
 import type { ChatSession, ChatMessage, PendingConfirmation } from './types'
+import { ChatSurface } from './ChatSurface'
 import { useTranslation } from '@/features/i18n/I18nProvider'
 
 function asPendingConfirmation(message: ChatMessage): PendingConfirmation | null {
   if (!Array.isArray(message.tool_calls) || message.tool_calls.length === 0) return null
   const first = message.tool_calls[0] as PendingConfirmation
-  return typeof first?.name === 'string' && typeof first?.status === 'string' ? first : null
+  return typeof first?.id === 'string' && typeof first?.name === 'string' && typeof first?.status === 'string' ? first : null
 }
-
 function timeLabel(iso: string): string {
   const d = new Date(iso)
   return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
@@ -167,7 +167,6 @@ export function ChatPanel() {
     </div>
   )
 }
-
 interface ChatHeaderProps {
   activeSession?: ChatSession
   sessions: ChatSession[]
@@ -232,8 +231,27 @@ function MessageBubble({ message, onConfirm }: MessageBubbleProps) {
   const isUser = message.role === 'user'
   const pending = asPendingConfirmation(message)
 
+  if (message.ui) {
+    return (
+      <ChatSurface
+        surface={message.ui}
+        busy={onConfirm.isPending}
+        onConfirm={(callId, approved) => onConfirm.mutate({ callId, approved })}
+      />
+    )
+  }
+
   if (pending) {
-    return <ConfirmationBubble confirmation={pending} onConfirm={onConfirm} />
+    return (
+      <ChatSurface
+        surface={{
+          kind: 'confirm', id: pending.id, call_id: pending.id, title: `Wants to run`,
+          tool_name: pending.name, arguments: pending.arguments, status: pending.status,
+        }}
+        busy={onConfirm.isPending}
+        onConfirm={(callId, approved) => onConfirm.mutate({ callId, approved })}
+      />
+    )
   }
 
   if (!message.content) return null
@@ -255,47 +273,3 @@ function MessageBubble({ message, onConfirm }: MessageBubbleProps) {
   )
 }
 
-interface ConfirmationBubbleProps {
-  confirmation: PendingConfirmation
-  onConfirm: ReturnType<typeof useConfirmChatToolCall>
-}
-
-// Renders an always_confirm tool call awaiting (or resolved by) a human
-// decision (FR-F6-002 AGNT-03) — the Chat surface's own attended path, as
-// opposed to an unattended run which blocks outright. Approving/denying
-// posts to /confirm; FR-F6-002's own server-side poll (unchanged by this
-// document) is what actually resumes the Agent loop once recorded.
-function ConfirmationBubble({ confirmation, onConfirm }: ConfirmationBubbleProps) {
-  const resolved = confirmation.status !== 'pending'
-  return (
-    <div className="flex items-start justify-start">
-      <div className="max-w-[90%] rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2.5 text-sm">
-        <div className="flex items-center gap-1.5 font-medium">
-          <Wrench size={13} className="shrink-0 text-[hsl(var(--muted-foreground))]" />
-          Wants to run <code className="rounded bg-[hsl(var(--muted))] px-1 py-0.5 text-xs">{confirmation.name}</code>
-        </div>
-        {Object.keys(confirmation.arguments ?? {}).length > 0 && (
-          <pre className="mt-1.5 overflow-x-auto rounded-md bg-[hsl(var(--muted))] p-2 text-[11px] text-[hsl(var(--muted-foreground))]">
-            {JSON.stringify(confirmation.arguments, null, 2)}
-          </pre>
-        )}
-        {resolved ? (
-          <p className="mt-2 text-xs text-[hsl(var(--muted-foreground))]">
-            {confirmation.status === 'approved' ? 'Approved.' : 'Denied.'}
-          </p>
-        ) : (
-          <div className="mt-2 flex gap-2">
-            <Button size="sm" onClick={() => onConfirm.mutate(true)} disabled={onConfirm.isPending}>
-              <Check size={13} />
-              Approve
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => onConfirm.mutate(false)} disabled={onConfirm.isPending}>
-              <X size={13} />
-              Deny
-            </Button>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}

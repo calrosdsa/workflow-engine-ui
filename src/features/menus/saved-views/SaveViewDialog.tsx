@@ -361,7 +361,7 @@ export function SaveViewDialog({ open, onClose, appId, formId, fields, enumLabel
                whole drawer body, keeps Name/Columns/Sort/Visibility
                unaffected. */}
             <div className="overflow-x-auto">
-              <FilterBuilder group={filter} fields={fieldsWithSystem} variables={[]} onChange={setFilter} viewerModes={viewerModes} />
+              <FilterBuilder group={filter} fields={fieldsWithSystem} variables={[]} onChange={setFilter} viewerModes={viewerModes} allowRelativeDates />
             </div>
           </div>
 

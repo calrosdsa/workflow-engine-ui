@@ -1,6 +1,7 @@
 import { nanoid } from '@/features/workflows/builder/nanoid'
 import { RecordsTable } from '@/features/forms/runtime/RecordsTable'
 import { useTranslation } from '@/features/i18n/I18nProvider'
+import { mergeFilters } from '../chart/runtime-filter'
 import type { WidgetRendererProps } from '../../widget-contract'
 import type { TableWidgetConfig } from './schema'
 import type { FilterGroup } from '@/features/workflows/types'
@@ -41,7 +42,7 @@ function withRecordScope(
   return { combinator: 'and', conditions: [scopeCondition], groups: [base] }
 }
 
-export function TableRenderer({ config, recordContext }: WidgetRendererProps<TableWidgetConfig>) {
+export function TableRenderer({ config, recordContext, parameterFilter }: WidgetRendererProps<TableWidgetConfig>) {
   const t = useTranslation()
   if (!config.formId) {
     return <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('builder.dashboard_table.no_form_selected')}</div>
@@ -52,7 +53,9 @@ export function TableRenderer({ config, recordContext }: WidgetRendererProps<Tab
       <RecordsTable
         formId={config.formId}
         columns={config.columns}
-        defaultFilter={withRecordScope(config.defaultFilter, config.scopeToRecord, recordContext)}
+        // Parameters narrow, never widen — same stance as the record scope
+        // above, and composed the same way.
+        defaultFilter={mergeFilters(withRecordScope(config.defaultFilter, config.scopeToRecord, recordContext), parameterFilter)}
         defaultSort={config.defaultSort}
         pageSize={config.pageSize}
         allowFilter={config.allowUserFilter}
