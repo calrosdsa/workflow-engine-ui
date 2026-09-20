@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { CANONICAL_OPS, conditionToText, countConditions, describeCondition, describeFilter, opTakesValue } from './filter-text'
+import { CANONICAL_OPS, conditionToText, describeCondition, describeFilter, opTakesValue } from './filter-text'
 import type { CompareOp, FilterCondition, FilterGroup } from './types'
 import type { FieldDef } from '@/features/forms/types'
 
@@ -140,16 +140,5 @@ describe('describeFilter', () => {
     expect(describeFilter(undefined)).toBe('')
     expect(describeFilter(group({}))).toBe('')
     expect(describeFilter(group({ groups: [group({})] }))).toBe('')
-  })
-})
-
-describe('countConditions', () => {
-  it('counts leaves through the whole tree', () => {
-    const g = group({
-      conditions: [c({ id: 'a' })],
-      groups: [group({ conditions: [c({ id: 'b' }), c({ id: 'd' })], groups: [group({ conditions: [c({ id: 'e' })] })] })],
-    })
-    expect(countConditions(g)).toBe(4)
-    expect(countConditions(undefined)).toBe(0)
   })
 })

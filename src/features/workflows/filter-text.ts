@@ -155,10 +155,3 @@ function describeGroup(group: FilterGroup | undefined, fields: FieldDef[] | unde
   // carries no more information than without them.
   return top || parts.length === 1 ? joined : `(${joined})`
 }
-
-/** How many leaf conditions the whole tree holds, groups included — for a
- *  caller that wants "3 filters" without rendering them. */
-export function countConditions(group: FilterGroup | undefined): number {
-  if (!group) return 0
-  return group.conditions.length + group.groups.reduce((n, g) => n + countConditions(g), 0)
-}

@@ -349,6 +349,13 @@ export const DrillDown = () => (
       clickable
     />
     <Tile
+      title="Pie slice"
+      note="Recharts nests a sector's data one level deeper than a bar's, so this needs its own look rather than an argument that it must work."
+      response={WIDE_RANGE}
+      config={{ chartType: "pie", groupBy: { field: "channel" } }}
+      clickable
+    />
+    <Tile
       title="No records menu"
       note="The same chart where the viewer can see no Search menu for this form: no pointer cursor, clicks do nothing."
       response={FLAT}

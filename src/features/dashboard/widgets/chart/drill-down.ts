@@ -39,20 +39,45 @@ function bucketIndex(key: string): number | undefined {
   return Number.isInteger(n) && n >= 0 ? n : undefined
 }
 
-/** Adds one bucket period to an ISO instant, giving the exclusive upper
- *  bound of a date-truncated group. Month and quarter arithmetic has to go
- *  through the date parts rather than adding milliseconds, or February
- *  lands in the wrong place. */
-function addBucket(start: Date, bucket: string): Date | undefined {
-  const d = new Date(start)
+/** The calendar date a bucketed key begins on. The engine emits
+ *  `date_trunc(...)::text` over a timestamptz, which Postgres renders as
+ *  "2026-09-01 00:00:00+00" — a space, and an offset in the SERVER's
+ *  session timezone.
+ *
+ *  Deliberately NOT `new Date(key)`. That string is outside the grammar
+ *  ECMAScript mandates, so parsing it is implementation-defined; a form
+ *  carrying no offset is read as LOCAL time and silently shifts the whole
+ *  window by the browser's own offset. Only the leading date is relied on,
+ *  which every rendering of a truncated timestamp shares. */
+const DATE_PREFIX = /^(\d{4})-(\d{2})-(\d{2})/
+
+/** The half-open window a bucketed key covers, as YYYY-MM-DD bounds.
+ *
+ *  Plain calendar dates rather than instants, matching runtime-filter.ts's
+ *  own rangeToConditions — and because they are what makes this correct
+ *  across a DST change. An instant window advanced in UTC drifts by an hour
+ *  when the server's offset shifts mid-range; a date bound is coerced by
+ *  Postgres to midnight in the session timezone, which is where the bucket
+ *  boundary actually sits, whatever the offset was that day. */
+function bucketWindow(key: string, bucket: string): [string, string] | undefined {
+  const m = DATE_PREFIX.exec(key)
+  if (!m) return undefined
+  // Date.UTC is used purely as calendar arithmetic over Y/M/D — no instant
+  // ever leaves this function, so no timezone enters. Month and quarter
+  // have to advance by parts rather than by a fixed span, or February
+  // lands in the wrong place.
+  const start = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])))
+  const end = new Date(start)
   switch (bucket) {
-    case 'day': d.setUTCDate(d.getUTCDate() + 1); return d
-    case 'week': d.setUTCDate(d.getUTCDate() + 7); return d
-    case 'month': d.setUTCMonth(d.getUTCMonth() + 1); return d
-    case 'quarter': d.setUTCMonth(d.getUTCMonth() + 3); return d
-    case 'year': d.setUTCFullYear(d.getUTCFullYear() + 1); return d
+    case 'day': end.setUTCDate(end.getUTCDate() + 1); break
+    case 'week': end.setUTCDate(end.getUTCDate() + 7); break
+    case 'month': end.setUTCMonth(end.getUTCMonth() + 1); break
+    case 'quarter': end.setUTCMonth(end.getUTCMonth() + 3); break
+    case 'year': end.setUTCFullYear(end.getUTCFullYear() + 1); break
     default: return undefined
   }
+  const iso = (d: Date) => d.toISOString().slice(0, 10)
+  return [iso(start), iso(end)]
 }
 
 function cond(id: string, field: string, op: FilterCondition['op'], value?: unknown): FilterCondition {
@@ -107,16 +132,15 @@ function conditionsForDimension(
   }
 
   if (dim.bucket) {
-    // date_trunc's own output, so the key IS the window's inclusive start.
-    const start = new Date(key)
-    if (Number.isNaN(start.getTime())) return undefined
-    const end = addBucket(start, dim.bucket)
-    if (!end) return undefined
+    const window = bucketWindow(key, dim.bucket)
+    if (!window) return undefined
     // Half-open, so a record exactly on the next boundary belongs to the
-    // next bucket — matching what date_trunc grouped it into.
+    // next bucket — matching what date_trunc grouped it into, and the same
+    // gte/lt pair rangeToConditions uses. There is no `between` operator in
+    // this codebase's grammar.
     return [
-      cond(`${idPrefix}-gte`, dim.field, 'gte', start.toISOString()),
-      cond(`${idPrefix}-lt`, dim.field, 'lt', end.toISOString()),
+      cond(`${idPrefix}-gte`, dim.field, 'gte', window[0]),
+      cond(`${idPrefix}-lt`, dim.field, 'lt', window[1]),
     ]
   }
 

@@ -19,6 +19,12 @@ const cfg = (p: Partial<ChartWidgetConfig>): ChartWidgetConfig => ({
  *  "%02d" index, the \x1f separator, then the human label. */
 const banded = (i: number, label: string) => `${String(i).padStart(2, '0')}\x1f${label}`
 
+/** A date-bucketed key as the engine actually emits it: date_trunc(...)::text
+ *  over a timestamptz, which Postgres renders with a SPACE and a
+ *  session-timezone offset — not the ISO-8601 the first draft of these
+ *  tests assumed. */
+const pg = (day: string) => `${day} 00:00:00+00`
+
 describe('unbucketed dimension', () => {
   it('matches the key exactly', () => {
     expect(drillDownConditions(cfg({}), FIELDS, 'Open')).toEqual([
@@ -107,40 +113,62 @@ describe('date-age bands refuse rather than approximate', () => {
   // a time bucket inverts exactly and must still work.
   it('still drills down a date bucketed by period', () => {
     const c = cfg({ groupBy: { field: 'due_date', bucket: 'month' } })
-    expect(drillDownConditions(c, FIELDS, '2026-09-01T00:00:00.000Z')).toHaveLength(2)
+    expect(drillDownConditions(c, FIELDS, pg('2026-09-01'))).toHaveLength(2)
   })
 })
 
 describe('date buckets', () => {
   const at = (c: ChartWidgetConfig, key: string) => drillDownConditions(c, FIELDS, key)!
+  const monthly = cfg({ groupBy: { field: 'due_date', bucket: 'month' } })
 
   it('produces a half-open window so a boundary record lands in one bucket only', () => {
-    const c = cfg({ groupBy: { field: 'due_date', bucket: 'month' } })
-    const out = at(c, '2026-09-01T00:00:00.000Z')
-    expect(out[0]).toMatchObject({ op: 'gte', value: '2026-09-01T00:00:00.000Z' })
-    expect(out[1]).toMatchObject({ op: 'lt', value: '2026-10-01T00:00:00.000Z' })
+    const out = at(monthly, pg('2026-09-01'))
+    expect(out[0]).toMatchObject({ op: 'gte', value: '2026-09-01' })
+    expect(out[1]).toMatchObject({ op: 'lt', value: '2026-10-01' })
   })
 
-  // Adding milliseconds would land February in the wrong place.
-  it('advances months and quarters by calendar parts, not by a fixed span', () => {
-    const month = at(cfg({ groupBy: { field: 'due_date', bucket: 'month' } }), '2026-02-01T00:00:00.000Z')
-    expect(month[1].value).toBe('2026-03-01T00:00:00.000Z')
-    const quarter = at(cfg({ groupBy: { field: 'due_date', bucket: 'quarter' } }), '2026-10-01T00:00:00.000Z')
-    expect(quarter[1].value).toBe('2027-01-01T00:00:00.000Z')
+  // Adding a fixed span would land February in the wrong place.
+  it('advances months and quarters by calendar parts', () => {
+    expect(at(monthly, pg('2026-02-01'))[1].value).toBe('2026-03-01')
+    expect(at(cfg({ groupBy: { field: 'due_date', bucket: 'quarter' } }), pg('2026-10-01'))[1].value)
+      .toBe('2027-01-01')
   })
 
   it('handles the shorter buckets', () => {
-    expect(at(cfg({ groupBy: { field: 'due_date', bucket: 'day' } }), '2026-09-30T00:00:00.000Z')[1].value)
-      .toBe('2026-10-01T00:00:00.000Z')
-    expect(at(cfg({ groupBy: { field: 'due_date', bucket: 'week' } }), '2026-09-28T00:00:00.000Z')[1].value)
-      .toBe('2026-10-05T00:00:00.000Z')
-    expect(at(cfg({ groupBy: { field: 'due_date', bucket: 'year' } }), '2026-01-01T00:00:00.000Z')[1].value)
-      .toBe('2027-01-01T00:00:00.000Z')
+    expect(at(cfg({ groupBy: { field: 'due_date', bucket: 'day' } }), pg('2026-09-30'))[1].value).toBe('2026-10-01')
+    expect(at(cfg({ groupBy: { field: 'due_date', bucket: 'week' } }), pg('2026-09-28'))[1].value).toBe('2026-10-05')
+    expect(at(cfg({ groupBy: { field: 'due_date', bucket: 'year' } }), pg('2026-01-01'))[1].value).toBe('2027-01-01')
   })
 
-  it('refuses an unparseable key rather than producing an Invalid Date window', () => {
-    const c = cfg({ groupBy: { field: 'due_date', bucket: 'month' } })
-    expect(drillDownConditions(c, FIELDS, 'not-a-date')).toBeUndefined()
+  // The window must not move with the machine running the browser. Feeding
+  // the offsets a server in any timezone would emit has to give the same
+  // calendar bounds — which is why only the key's date prefix is read, and
+  // why `new Date(key)` is not used: a Postgres timestamp string is outside
+  // the grammar ECMAScript mandates, and an offset-less one is parsed as
+  // LOCAL time.
+  it('gives the same window whatever offset the server rendered', () => {
+    const expected = ['2026-09-01', '2026-10-01']
+    for (const key of [
+      '2026-09-01 00:00:00+00',    // a UTC server
+      '2026-09-01 00:00:00-04',    // and one that is not
+      '2026-09-01 00:00:00+05:30',
+      '2026-09-01 00:00:00',       // no offset at all
+      '2026-09-01T00:00:00.000Z',  // and the ISO form, still accepted
+      '2026-09-01',
+    ]) {
+      expect(at(monthly, key).map((x) => x.value), key).toEqual(expected)
+    }
+  })
+
+  it('refuses a key carrying no date rather than producing an Invalid Date window', () => {
+    expect(drillDownConditions(monthly, FIELDS, 'not-a-date')).toBeUndefined()
+    expect(drillDownConditions(monthly, FIELDS, '')).toBeUndefined()
+  })
+
+  // Same format rangeToConditions emits for the chart's own time-range
+  // control, so the two never disagree about how a date bound is written.
+  it('emits plain calendar dates, not instants', () => {
+    for (const x of at(monthly, pg('2026-09-01'))) expect(x.value).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 })
 
