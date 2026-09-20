@@ -33,7 +33,7 @@ export interface ConfirmSurface {
   expires_at?: string
   run_id?: string
   approval_id?: string
-  status?: 'pending' | 'approved' | 'denied'
+  status?: 'pending' | 'approved' | 'denied' | 'expired'
   tool_name?: string
   arguments?: Record<string, unknown>
 }
@@ -73,7 +73,7 @@ export interface PendingConfirmation {
   id: string
   name: string
   arguments: Record<string, unknown>
-  status: 'pending' | 'approved' | 'denied'
+  status: 'pending' | 'approved' | 'denied' | 'expired'
   run_id?: string
   approval_id?: string
 }
