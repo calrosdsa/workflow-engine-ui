@@ -24,9 +24,15 @@ export type ChatSurface = ConfirmSurface | FormSurface | ChoiceSurface
 export interface ConfirmSurface {
   kind: 'confirm'
   id: string
+  version?: 1
+  state?: 'open' | 'pending' | 'resolved' | 'expired'
   call_id: string
   title: string
   description?: string
+  allowed_actions?: string[]
+  expires_at?: string
+  run_id?: string
+  approval_id?: string
   status?: 'pending' | 'approved' | 'denied'
   tool_name?: string
   arguments?: Record<string, unknown>
@@ -35,16 +41,26 @@ export interface ConfirmSurface {
 export interface FormSurface {
   kind: 'form'
   id: string
+  version?: 1
+  state?: 'open' | 'pending' | 'submitted' | 'resolved' | 'expired'
   title: string
   description?: string
+  allowed_actions?: string[]
+  expires_at?: string
+  run_id?: string
   fields: Array<{ name: string; label: string; type: 'text' | 'textarea' | 'number' | 'boolean' | 'date' | 'datetime'; description?: string; required?: boolean }>
 }
 
 export interface ChoiceSurface {
   kind: 'choice'
   id: string
+  version?: 1
+  state?: 'open' | 'pending' | 'submitted' | 'resolved' | 'expired'
   title: string
   description?: string
+  allowed_actions?: string[]
+  expires_at?: string
+  run_id?: string
   options: Array<{ value: string; label: string; description?: string }>
 }
 
