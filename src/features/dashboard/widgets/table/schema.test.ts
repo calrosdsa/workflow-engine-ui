@@ -54,10 +54,10 @@ describe('parseTableConfig', () => {
   it('drops footerAggregates entries with an unrecognized fn or a missing field, and an empty result becomes undefined', () => {
     const parsed = parseTableConfig({
       formId: 'f1',
-      footerAggregates: [{ field: 'amount', fn: 'median' }, { fn: 'sum' }, 'not-an-object', { field: 'amount', fn: 'sum' }],
+      footerAggregates: [{ field: 'amount', fn: 'stddev' }, { fn: 'sum' }, 'not-an-object', { field: 'amount', fn: 'sum' }],
     })
     expect(parsed.footerAggregates).toEqual([{ field: 'amount', fn: 'sum' }])
-    expect(parseTableConfig({ formId: 'f1', footerAggregates: [{ field: 'amount', fn: 'median' }] }).footerAggregates).toBeUndefined()
+    expect(parseTableConfig({ formId: 'f1', footerAggregates: [{ field: 'amount', fn: 'stddev' }] }).footerAggregates).toBeUndefined()
     expect(parseTableConfig({ formId: 'f1', footerAggregates: 'not-an-array' }).footerAggregates).toBeUndefined()
   })
 

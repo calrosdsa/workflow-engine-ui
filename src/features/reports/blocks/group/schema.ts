@@ -4,7 +4,7 @@ import type { ReportFilter } from '../table/schema'
 // Mirrors internal/reports.GroupBlockConfig (Go, block_group.go) exactly —
 // snake_case field names matching the wire schema (FR-J1-002 §1). AggFn
 // mirrors internal/forms/store.AggregateFn's own value set.
-export type AggFn = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'count_distinct'
+export type AggFn = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'count_distinct' | 'median'
 
 export interface GroupByDimension {
   field: string

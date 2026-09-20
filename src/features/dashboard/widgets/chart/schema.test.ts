@@ -54,7 +54,7 @@ describe('parseChartConfig', () => {
   it('filters out series entries with an unrecognized fn', () => {
     const parsed = parseChartConfig({
       formId: 'f1',
-      series: [{ fn: 'count' }, { fn: 'median', field: 'amount' }, 'not-an-object'],
+      series: [{ fn: 'count' }, { fn: 'stddev', field: 'amount' }, 'not-an-object'],
     })
     expect(parsed.series).toEqual([{ fn: 'count', field: undefined, label: undefined, color: undefined }])
   })
@@ -130,6 +130,12 @@ describe('parseChartConfig', () => {
   })
 })
 
+describe('median', () => {
+  it('is accepted as a measure', () => {
+    expect(parseChartConfig({ formId: 'f1', series: [{ fn: 'median', field: 'amount' }] }).series[0].fn).toBe('median')
+  })
+})
+
 describe('count_distinct', () => {
   it('is accepted as a measure', () => {
     const parsed = parseChartConfig({ formId: 'f1', series: [{ fn: 'count_distinct', field: 'customer' }] })
@@ -143,7 +149,10 @@ describe('count_distinct', () => {
     expect(parseChartConfig({ formId: 'f1', series: [{ fn: 'count_distinct', field: 'status' }] }).series[0].field).toBe('status')
   })
 
+  // The example was 'median' until median shipped. Any measure used to
+  // stand for "unimplemented" here has to be one the engine really does not
+  // have, or the test quietly starts asserting the opposite.
   it('still rejects a measure the engine does not implement', () => {
-    expect(parseChartConfig({ formId: 'f1', series: [{ fn: 'median', field: 'amount' }] }).series).toEqual([])
+    expect(parseChartConfig({ formId: 'f1', series: [{ fn: 'stddev', field: 'amount' }] }).series).toEqual([])
   })
 })

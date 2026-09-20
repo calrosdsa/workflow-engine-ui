@@ -29,6 +29,7 @@ function fnLabels(t: I18nContextValue['t']): Record<AggregateFn, string> {
     min: t('common.fn_min'),
     max: t('common.fn_max'),
     count_distinct: t('common.fn_count_distinct'),
+    median: t('common.fn_median'),
   }
 }
 
