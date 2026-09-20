@@ -10,6 +10,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { NotFoundPage } from '@/features/runtime/NotFoundPage'
 import { Spinner } from '@/components/ui/spinner'
 import { LoginPage } from '@/features/auth/LoginPage'
+import { SecurityPage } from '@/features/auth/mfa/SecurityPage'
 import { AcceptInvitePage } from '@/features/auth/AcceptInvitePage'
 import { requireSession } from '@/features/auth/requireSession'
 import { qualifiesForBuilder, isSuperAdmin } from '@/features/auth/access'
@@ -194,6 +195,16 @@ const homeRoute = createRoute({
 // than rendering a page whose every underlying API call now 403s (the
 // backend's RequireSuperAdmin gate — see api/handler.go — matches this).
 // ---------------------------------------------------------------------------
+// Account security (two-step verification, recovery codes, trusted devices).
+// A shell child, not an app child: MFA belongs to the person, not to whichever
+// client/app they happen to have selected -- the same factor protects every
+// client they hold a role in.
+const accountSecurityRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/account/security',
+  component: SecurityPage,
+})
+
 const teamRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/team',
@@ -509,6 +520,7 @@ const routeTree = rootRoute.addChildren([
   portalRoute,
   shellRoute.addChildren([
     homeRoute,
+    accountSecurityRoute,
     teamRoute,
     modelProvidersRoute,
     marketplaceRoute,
