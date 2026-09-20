@@ -99,6 +99,9 @@ describe('report print settings (RF-102/RF-301)', () => {
     const [overview, details] = useReportStore.getState().definition.workbook!.sheets
     expect(overview.print).toEqual({ area: { start_row: 0, end_row: 5, start_col: 0, end_col: 3 } })
     expect(details.print).toBeUndefined()
+
+    useReportStore.getState().undo()
+    expect(useReportStore.getState().definition).toEqual(definition)
   })
 
   it('is a no-op when the report has no workbook yet', () => {
@@ -166,6 +169,26 @@ describe('report print settings (RF-102/RF-301)', () => {
   // Same bug, the redoStack side: undo() pushes the pre-undo definition
   // onto redoStack, which is just as frozen as an undo entry until
   // syncWorkbookSnapshot patches it too.
+  // main's fold test above exercises updatePageSetup; this is the same
+  // contract for updateSheetPrint, which reaches the workbook through a
+  // different path (per-sheet, coalesced by sheet id) and so could regress
+  // independently. From claude/report-print-fidelity-contract (RF-102).
+  it('updateSheetPrint folds a synchronized live workbook into its own undo entry', () => {
+    const editedWorkbook = {
+      ...definition.workbook!,
+      sheets: definition.workbook!.sheets.map((sheet, index) => index === 0
+        ? { ...sheet, cells: [{ row: 0, col: 0, value: 'Unsaved workbook edit' }] }
+        : sheet),
+    }
+    useReportStore.getState().syncWorkbookSnapshot(editedWorkbook)
+    useReportStore.getState().updateSheetPrint('overview', { row_breaks: [10] })
+
+    useReportStore.getState().undo()
+
+    expect(useReportStore.getState().definition.workbook).toEqual(editedWorkbook)
+    expect(useReportStore.getState().definition.workbook!.sheets[0].print).toBeUndefined()
+  })
+
   it('does not lose a workbook flush that lands between an undo and the following redo', () => {
     useReportStore.getState().updatePageSetup({ orientation: 'landscape' })
     useReportStore.getState().undo()
