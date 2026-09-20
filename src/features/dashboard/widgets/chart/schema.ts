@@ -90,7 +90,7 @@ export interface ChartWidgetConfig {
 }
 
 const VALID_CHART_TYPES: ChartType[] = ['bar', 'line', 'area', 'pie', 'donut', 'combo', 'stat']
-const VALID_FNS: AggregateFn[] = ['count', 'sum', 'avg', 'min', 'max']
+const VALID_FNS: AggregateFn[] = ['count', 'sum', 'avg', 'min', 'max', 'count_distinct', 'median']
 const VALID_BUCKETS: DateBucket[] = ['day', 'week', 'month', 'quarter', 'year']
 const VALID_SERIES_TYPES: SeriesType[] = ['bar', 'line', 'area']
 const VALID_ORIENTATIONS: ChartOrientation[] = ['vertical', 'horizontal']
@@ -193,7 +193,7 @@ const DIMENSION_SCHEMA = {
   type: 'object',
   required: ['field'],
   properties: {
-    field: { type: 'string', fieldRef: true, description: 'Field to group rows by.' },
+    field: { type: 'string', fieldRef: true, description: "Field to group rows by. May also be a DOTTED path reading one hop through a reference field — 'customer.region' groups these records by a field on the form `customer` points at. One hop only. A hopped dimension cannot also be bucketed or banded, and a record whose reference is unset (or points at a row this viewer may not read) groups under '(empty)'." },
     bucket: { type: 'string', enum: ['day', 'week', 'month', 'quarter', 'year'], description: 'For date/datetime fields: bucket rows into this period.' },
     ranges: {
       type: 'array',
@@ -229,8 +229,8 @@ export const CHART_CONFIG_SCHEMA: ConfigSchema = {
         type: 'object',
         required: ['fn'],
         properties: {
-          fn: { type: 'string', enum: ['count', 'sum', 'avg', 'min', 'max'] },
-          field: { type: 'string', fieldRef: true, description: "Numeric field to aggregate. Required for every fn except 'count'." },
+          fn: { type: 'string', enum: ['count', 'sum', 'avg', 'min', 'max', 'count_distinct', 'median'], description: 'Measures, in order. \'count\' counts records and needs no field. \'count_distinct\' counts DIFFERENT values of its field and is the only measure that accepts a non-numeric one — "how many customers", "how many statuses are in use". It is unitless, so it never inherits the field\'s currency or percent format.' },
+          field: { type: 'string', fieldRef: true, description: "Numeric field to aggregate. Required for every fn except 'count'. May also be a DOTTED path one hop through a reference field ('customer.credit_limit'), in which case the FAR field must be numeric for everything but count_distinct. The far value is joined per record, so two orders for the same customer count that customer twice." },
           label: { type: 'string' },
           color: { type: 'string', description: 'CSS color; omit for the theme palette. Ignored on a groupBy2 split, where the colours belong to the split values rather than to the series.' },
           type: { type: 'string', enum: ['bar', 'line', 'area'], description: "Mark for this series. Read ONLY when chartType is 'combo'; defaults to 'bar'. The classic use is bars for an amount plus a line for a running average." },

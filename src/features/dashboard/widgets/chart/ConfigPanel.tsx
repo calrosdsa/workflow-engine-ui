@@ -16,6 +16,7 @@ import {
 } from './schema'
 import type { AggregateFn, DateBucket } from '@/features/forms/api'
 import type { FieldDef, FieldType } from '@/features/forms/types'
+import { useHopFields, isHopPath, type HopField } from './hop-fields'
 import { ChartRenderer } from './Renderer'
 
 // Field-type gating: any field can be a dimension (group_by) — enum/string/
@@ -47,6 +48,8 @@ function fnLabels(t: I18nContextValue['t']): Record<AggregateFn, string> {
     avg: t('common.fn_avg'),
     min: t('common.fn_min'),
     max: t('common.fn_max'),
+    count_distinct: t('common.fn_count_distinct'),
+    median: t('common.fn_median'),
   }
 }
 
@@ -60,6 +63,8 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
   const { data: form } = useForm(config.formId)
   const fields = form?.fields ?? []
   const numericFields = fields.filter((f) => NUMERIC_TYPES.includes(f.type))
+  // Fields one hop away, through this form's reference fields.
+  const hopFields = useHopFields(form)
   const viewerModes = useCurrentUserAttrs()
 
   const patch = (p: Partial<ChartWidgetConfig>) => onChange({ ...config, ...p })
@@ -119,10 +124,11 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
           <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_chart.group_by')}</Label>
           <FieldSelect
             fields={fields}
+            hops={hopFields}
             value={config.groupBy?.field ?? ''}
             onChange={(f) => patch({ groupBy: f ? { field: f } : undefined })}
           />
-          {config.groupBy?.field && DATE_FIELD_TYPES.includes(fields.find((f) => f.name === config.groupBy?.field)?.type as FieldType) && (
+          {config.groupBy?.field && !isHopPath(config.groupBy.field) && DATE_FIELD_TYPES.includes(fields.find((f) => f.name === config.groupBy?.field)?.type as FieldType) && (
             <>
               <BucketSelect
                 value={config.groupBy.bucket}
@@ -136,7 +142,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
               />
             </>
           )}
-          {config.groupBy?.field && NUMERIC_TYPES.includes(fields.find((f) => f.name === config.groupBy?.field)?.type as FieldType) && (
+          {config.groupBy?.field && !isHopPath(config.groupBy.field) && NUMERIC_TYPES.includes(fields.find((f) => f.name === config.groupBy?.field)?.type as FieldType) && (
             <RangesInput
               key={config.groupBy.field}
               value={config.groupBy.ranges}
@@ -152,6 +158,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
           <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_chart.split_by')}</Label>
           <FieldSelect
             fields={fields}
+            hops={hopFields}
             value={config.groupBy2?.field ?? ''}
             onChange={(f) => patch({ groupBy2: f ? { field: f } : undefined })}
             allowNone
@@ -198,7 +205,9 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
             <SeriesEditor
               key={i}
               series={s}
+              fields={fields}
               numericFields={numericFields}
+              hops={hopFields}
               showType={isCombo}
               onChange={(patch) => updateSeries(i, patch)}
               onRemove={config.series.length > 1 ? () => removeSeries(i) : undefined}
@@ -353,8 +362,11 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
   )
 }
 
-function FieldSelect({ fields, value, onChange, allowNone }: {
+function FieldSelect({ fields, hops, value, onChange, allowNone }: {
   fields: FieldDef[]
+  /** Fields one hop through a reference, offered under their own heading so
+   *  it is obvious they come from another form. */
+  hops?: HopField[]
   value: string
   onChange: (field: string) => void
   allowNone?: boolean
@@ -368,6 +380,16 @@ function FieldSelect({ fields, value, onChange, allowNone }: {
         {fields.map((f) => (
           <SelectItem key={f.name} value={f.name} className="text-xs">{f.label || f.name}</SelectItem>
         ))}
+        {hops && hops.length > 0 && (
+          <>
+            <div className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
+              {t('builder.dashboard_chart.through_reference')}
+            </div>
+            {hops.map((h) => (
+              <SelectItem key={h.path} value={h.path} className="text-xs">{h.label}</SelectItem>
+            ))}
+          </>
+        )}
       </SelectContent>
     </SelectMenu>
   )
@@ -423,9 +445,15 @@ function RangesInput({ value, onChange, placeholder }: {
 
 const SERIES_TYPES: SeriesType[] = ['bar', 'line', 'area']
 
-function SeriesEditor({ series, numericFields, showType, onChange, onRemove }: {
+function SeriesEditor({ series, fields, numericFields, hops, showType, onChange, onRemove }: {
   series: ChartSeries
+  /** Every field on the form — what count_distinct may target. */
+  fields: FieldDef[]
   numericFields: FieldDef[]
+  /** Fields one hop through a reference. Gated by the FAR field's own type,
+   *  exactly as a near field is: the engine applies the same numeric rule on
+   *  both sides of a hop. */
+  hops?: HopField[]
   /** Combo only — every other chart type draws all series the same way, so
    *  offering a per-series mark there would be a control with no effect. */
   showType?: boolean
@@ -434,6 +462,12 @@ function SeriesEditor({ series, numericFields, showType, onChange, onRemove }: {
 }) {
   const t = useTranslation()
   const labels = fnLabels(t)
+  // count_distinct counts DIFFERENT values, so it takes any field — that is
+  // the measure's whole point, and gating it to numeric columns would make
+  // it unreachable for exactly the questions it exists to answer. Every
+  // other non-count measure stays numeric-only, mirroring aggregate.go.
+  const eligibleFields = series.fn === 'count_distinct' ? fields : numericFields
+  const eligibleHops = (hops ?? []).filter((h) => series.fn === 'count_distinct' || NUMERIC_TYPES.includes(h.type))
   return (
     <div className="flex items-center gap-1.5 rounded-md border border-[hsl(var(--border))] p-2">
       {showType && (
@@ -458,10 +492,24 @@ function SeriesEditor({ series, numericFields, showType, onChange, onRemove }: {
         <SelectMenu value={series.field ?? ''} onValueChange={(v) => onChange({ field: v })}>
           <SelectTrigger className="h-7 flex-1 text-xs"><SelectValue placeholder={t('builder.dashboard_chart.field_placeholder')} /></SelectTrigger>
           <SelectContent>
-            {numericFields.map((f) => (
+            {/* count_distinct counts DIFFERENT values, so it takes any
+                field — that is the measure's whole point. Every other
+                non-count measure stays numeric-only, mirroring
+                aggregate.go's own gate. */}
+            {eligibleFields.map((f) => (
               <SelectItem key={f.name} value={f.name} className="text-xs">{f.label || f.name}</SelectItem>
             ))}
-            {numericFields.length === 0 && <SelectItem value="__none__" disabled className="text-xs">{t('builder.dashboard_chart.no_numeric_fields')}</SelectItem>}
+            {eligibleHops.length > 0 && (
+              <>
+                <div className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
+                  {t('builder.dashboard_chart.through_reference')}
+                </div>
+                {eligibleHops.map((h) => (
+                  <SelectItem key={h.path} value={h.path} className="text-xs">{h.label}</SelectItem>
+                ))}
+              </>
+            )}
+            {eligibleFields.length === 0 && eligibleHops.length === 0 && <SelectItem value="__none__" disabled className="text-xs">{t(series.fn === 'count_distinct' ? 'builder.dashboard_chart.no_fields' : 'builder.dashboard_chart.no_numeric_fields')}</SelectItem>}
           </SelectContent>
         </SelectMenu>
       )}

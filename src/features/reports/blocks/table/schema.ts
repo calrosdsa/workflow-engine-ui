@@ -34,7 +34,7 @@ export interface ColumnTotal {
   column: string
   /** Empty means this cell is a literal label (see `label`) rather than a
    *  computed value — the usual case for the row's leftmost column. */
-  fn?: 'count' | 'sum' | 'avg' | 'min' | 'max'
+  fn?: 'count' | 'sum' | 'avg' | 'min' | 'max' | 'count_distinct' | 'median'
   /** Shown verbatim when `fn` is empty; ignored when `fn` is set. */
   label?: string
 }

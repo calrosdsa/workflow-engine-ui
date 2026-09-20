@@ -4,6 +4,7 @@ import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } fro
 import { useMCPServers } from '@/features/agent-mcp/hooks'
 import { useExposedTools } from '@/features/workflows/hooks'
 import type { ToolBinding, ToolPolicy } from './types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 interface ToolBindingsSubsectionProps {
   agentId: string
@@ -19,18 +20,13 @@ type AvailableTool = {
   source: 'MCP' | 'Workflow'
 }
 
-const POLICY_LABELS: Record<ToolPolicy, string> = {
-  allow: 'Allow automatically',
-  require_approval: 'Ask for approval',
-  deny: 'Deny',
-}
-
 function workflowToolName(name: string): string {
   const sanitized = name.trim().replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^[_-]+|[_-]+$/g, '')
   return sanitized || 'tool'
 }
 
 export function ToolBindingsSubsection({ agentId, bindings, onChange, canWrite }: ToolBindingsSubsectionProps) {
+  const t = useTranslation()
   const { data: servers, isLoading: mcpLoading } = useMCPServers(agentId)
   const { data: workflows, isLoading: workflowLoading } = useExposedTools()
 
@@ -68,17 +64,17 @@ export function ToolBindingsSubsection({ agentId, bindings, onChange, canWrite }
   return (
     <section className="space-y-3">
       <div>
-        <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Tool permissions</h3>
+        <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">{t('agents.tool_permissions')}</h3>
         <p className="text-xs text-[hsl(var(--muted-foreground))]">
-          Choose what each enabled tool may do. Saving one binding turns this list into the Agent's explicit allowlist.
+          {t('agents.tool_permissions_description')}
         </p>
       </div>
 
       {isLoading ? (
-        <p className="text-xs text-[hsl(var(--muted-foreground))]">Loading available tools…</p>
+        <p className="text-xs text-[hsl(var(--muted-foreground))]">{t('agents.loading_tools')}</p>
       ) : available.length === 0 ? (
         <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-4 text-center text-xs text-[hsl(var(--muted-foreground))]">
-          Enable an MCP tool or expose a workflow as a tool first.
+          {t('agents.enable_tool_first')}
         </p>
       ) : (
         <div className="space-y-2">
@@ -100,9 +96,9 @@ export function ToolBindingsSubsection({ agentId, bindings, onChange, canWrite }
                 >
                   <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__unbound__" className="text-xs">Not bound</SelectItem>
-                    {(Object.keys(POLICY_LABELS) as ToolPolicy[]).map((policy) => (
-                      <SelectItem key={policy} value={policy} className="text-xs">{POLICY_LABELS[policy]}</SelectItem>
+                    <SelectItem value="__unbound__" className="text-xs">{t('agents.tool_not_bound')}</SelectItem>
+                    {(Object.keys({ allow: true, require_approval: true, deny: true }) as ToolPolicy[]).map((policy) => (
+                      <SelectItem key={policy} value={policy} className="text-xs">{t(`agents.tool_policy_${policy}`)}</SelectItem>
                     ))}
                   </SelectContent>
                 </SelectMenu>

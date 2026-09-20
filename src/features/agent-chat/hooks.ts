@@ -4,6 +4,8 @@ import { agentChatApi } from './api'
 export const agentChatKeys = {
   sessions: ['agent-chat', 'sessions'] as const,
   messages: (sessionId: string) => ['agent-chat', 'sessions', sessionId, 'messages'] as const,
+  runEvents: (sessionId: string, runId: string, after: number) => ['agent-chat', 'sessions', sessionId, 'runs', runId, 'events', after] as const,
+  surface: (sessionId: string, surfaceId: string) => ['agent-chat', 'sessions', sessionId, 'surfaces', surfaceId] as const,
 }
 
 // enabled gates every hook below on session presence — same convention as
@@ -64,7 +66,40 @@ export function useSendChatMessage(sessionId: string | null) {
 }
 
 export function useConfirmChatToolCall(sessionId: string | null) {
+  const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ callId, approved }: { callId: string; approved: boolean }) => agentChatApi.confirm(sessionId!, callId, approved),
+    mutationFn: ({ callId, runId, approvalId, approved }: { callId: string; runId: string; approvalId: string; approved: boolean }) =>
+      agentChatApi.confirm(sessionId!, callId, runId, approvalId, approved),
+    onSuccess: () => qc.invalidateQueries({ queryKey: agentChatKeys.messages(sessionId ?? '') }),
+  })
+}
+
+// Durable events are the replay path for reconnects and a future run
+// inspector. `after` is an exclusive sequence cursor, so callers can keep a
+// local cursor and fetch only events they have not applied yet.
+export function useAgentRunEvents(sessionId: string | null, runId: string | null, after = 0) {
+  return useQuery({
+    queryKey: agentChatKeys.runEvents(sessionId ?? '', runId ?? '', after),
+    queryFn:  () => agentChatApi.listRunEvents(sessionId!, runId!, after),
+    enabled:  !!sessionId && !!runId,
+  })
+}
+
+export function useAgentSurface(sessionId: string | null, surfaceId: string | null) {
+  return useQuery({
+    queryKey: agentChatKeys.surface(sessionId ?? '', surfaceId ?? ''),
+    queryFn:  () => agentChatApi.getSurface(sessionId!, surfaceId!),
+    enabled:  !!sessionId && !!surfaceId,
+  })
+}
+
+export function useSubmitAgentSurface(sessionId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ surfaceId, actionId, payload }: { surfaceId: string; actionId: string; payload: unknown }) =>
+      agentChatApi.submitSurface(sessionId!, surfaceId, actionId, payload),
+    onSuccess: (_result, variables) => {
+      qc.invalidateQueries({ queryKey: agentChatKeys.surface(sessionId ?? '', variables.surfaceId) })
+    },
   })
 }

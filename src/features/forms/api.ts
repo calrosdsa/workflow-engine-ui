@@ -25,7 +25,7 @@ export interface SearchRecordsResponse {
   unresolved_reason?: string
 }
 
-export type AggregateFn = 'count' | 'sum' | 'avg' | 'min' | 'max'
+export type AggregateFn = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'count_distinct' | 'median'
 export type DateBucket = 'day' | 'week' | 'month' | 'quarter' | 'year'
 
 export interface AggregateDimensionRequest {
