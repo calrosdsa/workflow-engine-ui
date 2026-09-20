@@ -43,8 +43,11 @@ const OPERATORS: { value: CompareOp; label: string }[] = [
   { value: 'lt', label: '<' },
   { value: 'lte', label: '≤' },
   { value: 'contains', label: 'contains' },
+  { value: 'not_contains', label: 'does not contain' },
   { value: 'starts_with', label: 'starts with' },
+  { value: 'ends_with', label: 'ends with' },
   { value: 'in', label: 'in list' },
+  { value: 'not_in', label: 'not in list' },
   { value: 'is_null', label: 'is empty' },
   { value: 'not_null', label: 'is not empty' },
   // Matches the form's combined full-text search column, not the selected
@@ -676,8 +679,11 @@ function ThisRecordValuePicker({ value, refs, onChange }: {
 function operatorLabel(value: CompareOp, t: (key: string, vars?: Record<string, string | number>) => string) {
   const keys: Partial<Record<CompareOp, string>> = {
     contains: 'workflows.builder.operator_contains',
+    not_contains: 'workflows.builder.operator_not_contains',
     starts_with: 'workflows.builder.operator_starts_with',
+    ends_with: 'workflows.builder.operator_ends_with',
     in: 'workflows.builder.operator_in',
+    not_in: 'workflows.builder.operator_not_in',
     is_null: 'workflows.builder.operator_is_null',
     not_null: 'workflows.builder.operator_not_null',
     search: 'workflows.builder.operator_search',
