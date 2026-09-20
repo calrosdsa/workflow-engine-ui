@@ -24,7 +24,7 @@ export function ChatSurface({ surface, busy = false, onConfirm }: ChatSurfacePro
 function ConfirmSurfaceView({ surface, busy, onConfirm }: { surface: ConfirmSurface; busy: boolean; onConfirm?: ChatSurfaceProps['onConfirm'] }) {
   const t = useTranslation()
   const actionable = (surface.state === undefined || surface.state === 'open' || surface.state === 'pending')
-    && surface.status === 'pending'
+    && (surface.status === undefined || surface.status === 'pending')
     && !!surface.run_id
     && !!surface.approval_id
   const resolved = !actionable
