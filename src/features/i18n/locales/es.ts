@@ -2398,6 +2398,7 @@ export const es = {
   'builder.dashboard_chart.data_labels': 'Mostrar valores en el gráfico',
   'builder.dashboard_chart.auto_refresh': 'Actualización automática (segundos, opcional)',
   'builder.dashboard_chart.load_once': 'Cargar una vez',
+  'builder.dashboard_chart.through_reference': 'A través de una referencia',
   'builder.dashboard_chart.field_placeholder': 'Campo…',
   'builder.dashboard_chart.none_option': 'Ninguno',
   'builder.dashboard_chart.no_bucketing': 'Sin agrupación',
