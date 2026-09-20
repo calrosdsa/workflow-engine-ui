@@ -414,6 +414,19 @@ export function emptyReportDefinition(name = ''): ReportDefinition {
   }
 }
 
+// Mirrors internal/reports.ReportExample (Go, examples.go) field-for-field —
+// a worked report definition keyed to a common intent, served by GET
+// /meta/catalog (RF-401). Written for an AI authoring agent originally (see
+// that Go file's own doc comment), which is why intent/note are full prose
+// rather than a short label — the template picker uses `definition.name`
+// (e.g. "Invoice", "AR Ageing") as its card title instead, and shows `note`
+// as a caveat, not a headline.
+export interface ReportExample {
+  intent: string
+  note: string
+  definition: ReportDefinition
+}
+
 // Mirrors api/reports/handler.go's definitionResponse.
 export interface ReportDefinitionRow {
   id: string

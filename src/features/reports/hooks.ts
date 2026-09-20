@@ -18,6 +18,16 @@ export function useRendererCapabilities() {
   })
 }
 
+// Same static-per-deployment reasoning as useRendererCapabilities above —
+// RF-401's template picker source.
+export function useReportExamples() {
+  return useQuery({
+    queryKey: ['meta', 'catalog', 'report-examples'],
+    queryFn: metaApi.examples,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
 export function useReports() {
   return useQuery({ queryKey: reportKeys.all, queryFn: reportsApi.list })
 }

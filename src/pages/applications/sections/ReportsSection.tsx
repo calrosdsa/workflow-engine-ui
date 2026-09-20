@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { Plus, ExternalLink, Play, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useReports, useCreateReport, useDeleteReport } from '@/features/reports/hooks'
-import { emptyReportDefinition } from '@/features/reports/types'
+import { useReports, useDeleteReport } from '@/features/reports/hooks'
 import { declaredArguments } from '@/features/reports/arguments'
 import { ReportArgumentsDialog } from '@/features/reports/ReportArgumentsDialog'
+import { ReportTemplatePickerDialog } from '@/features/reports/ReportTemplatePickerDialog'
 import { runReportToDownload } from '@/features/reports/run-report'
 import { usePermission } from '@/features/auth/permissions'
 import { extractApiError } from '@/lib/api'
@@ -27,26 +27,16 @@ interface ReportsSectionProps {
 export function ReportsSection({ appId }: ReportsSectionProps) {
   const t = useTranslation()
   const { data: reports, isLoading } = useReports()
-  const createMutation = useCreateReport()
   const deleteMutation = useDeleteReport()
   const navigate = useNavigate()
   const canWrite = usePermission('application:design')
 
-  const [creating, setCreating] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Spinner /></div>
 
-  const handleCreate = async () => {
-    setCreating(true)
-    try {
-      // Not translated: this is the persisted row.name/definition.name saved to
-      // the database, not display-time UI chrome — same class of exclusion as
-      // argument.label (see ReportArgumentsDialog.tsx).
-      const row = await createMutation.mutateAsync({ name: 'Untitled Report', definition: emptyReportDefinition('Untitled Report') })
-      navigate({ to: '/applications/$appId/design/reports/$reportId', params: { appId, reportId: row.id } })
-    } finally {
-      setCreating(false)
-    }
+  const handleCreated = (id: string) => {
+    navigate({ to: '/applications/$appId/design/reports/$reportId', params: { appId, reportId: id } })
   }
 
   const handleDelete = (id: string) => {
@@ -66,15 +56,15 @@ export function ReportsSection({ appId }: ReportsSectionProps) {
           </p>
         </div>
         {canWrite && (
-          <Button onClick={handleCreate} disabled={creating}>
-            {creating ? <Spinner className="h-4 w-4" /> : <Plus size={16} />}
+          <Button onClick={() => setPickerOpen(true)}>
+            <Plus size={16} />
             {t('reports.section.new_report')}
           </Button>
         )}
       </div>
 
       {!rows.length ? (
-        <EmptyState canWrite={canWrite} onCreate={handleCreate} creating={creating} />
+        <EmptyState canWrite={canWrite} onCreate={() => setPickerOpen(true)} />
       ) : (
         <div className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] divide-y divide-[hsl(var(--border))]">
           {rows.map((row) => (
@@ -82,6 +72,12 @@ export function ReportsSection({ appId }: ReportsSectionProps) {
           ))}
         </div>
       )}
+
+      <ReportTemplatePickerDialog
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onCreated={handleCreated}
+      />
     </div>
   )
 }
@@ -180,14 +176,14 @@ function ReportRow({ appId, row, canWrite, onDelete }: {
   )
 }
 
-function EmptyState({ canWrite, onCreate, creating }: { canWrite: boolean; onCreate: () => void; creating: boolean }) {
+function EmptyState({ canWrite, onCreate }: { canWrite: boolean; onCreate: () => void }) {
   const t = useTranslation()
   return (
     <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[hsl(var(--border))] p-12 text-center">
       <p className="text-[hsl(var(--muted-foreground))] mb-4">{t('reports.section.empty_title')}</p>
       {canWrite && (
-        <Button variant="outline" onClick={onCreate} disabled={creating}>
-          {creating ? <Spinner className="h-4 w-4" /> : <Plus size={16} />}
+        <Button variant="outline" onClick={onCreate}>
+          <Plus size={16} />
           {t('reports.section.create_first')}
         </Button>
       )}
