@@ -93,3 +93,71 @@ export function activeParameterKeys(
     .filter((p) => !isUnset(effectiveValue(p, values)))
     .map((p) => p.key)
 }
+
+// ---------------------------------------------------------------------------
+// Authoring helpers — used by the builder panel, not by the runtime
+// ---------------------------------------------------------------------------
+
+/** One tile a parameter may be bound to: a widget that declared itself
+ *  bindable AND has a form chosen. */
+export interface BindableWidget {
+  id: string
+  /** The tile's own title, else its widget type — what the picker shows. */
+  label: string
+  formId: string
+}
+
+/** The tiles on this dashboard that a binding can target.
+ *
+ *  Asks each widget's registry entry rather than reading `config.formId`,
+ *  because `config` is opaque to the dashboard core by contract — see
+ *  `bindable` in widget-contract.ts. A widget type that never declared
+ *  itself bindable is absent here however its config is shaped, and one
+ *  that did but has no form chosen yet is absent until it does. */
+export function bindableWidgets(
+  widgets: Array<{ id: string; type: string; title?: string; config: unknown }>,
+  lookup: (type: string) => { bindable?: { formId: (config: never) => string | undefined } } | undefined,
+): BindableWidget[] {
+  const out: BindableWidget[] = []
+  for (const w of widgets) {
+    const formId = lookup(w.type)?.bindable?.formId(w.config as never)
+    if (formId) out.push({ id: w.id, label: w.title?.trim() || w.type, formId })
+  }
+  return out
+}
+
+/** A fresh parameter with a key that does not collide with an existing one.
+ *  Mirrors the report surface's createArgument. */
+export function createParameter(existing: DashboardParameter[] | undefined): DashboardParameter {
+  const taken = new Set((existing ?? []).map((p) => p.key))
+  let n = taken.size + 1
+  while (taken.has(`param_${n}`)) n += 1
+  return { key: `param_${n}`, label: `Parameter ${n}`, type: 'text' }
+}
+
+/** Operators worth offering for a parameter's type. A text parameter
+ *  comparing with `gte` is legal but nearly always a mistake; a boolean
+ *  only ever means equals.
+ *
+ *  Not the full CompareOp union on purpose — this is the authoring
+ *  shortlist, and a binding hand-written by MCP may use anything the filter
+ *  grammar accepts. */
+export function operatorsFor(type: DashboardParameter['type']): CompareOp[] {
+  switch (type) {
+    case 'number':
+    case 'date':
+      return ['eq', 'neq', 'gte', 'lte', 'gt', 'lt']
+    case 'boolean':
+      return ['eq', 'neq']
+    default:
+      return ['eq', 'neq', 'contains', 'not_contains', 'starts_with', 'ends_with', 'in', 'not_in']
+  }
+}
+
+/** Keeps a binding's operator legal after its parameter's type changes —
+ *  a `contains` left behind on a date parameter would compile to a text
+ *  comparison against a date column. */
+export function coerceOperator(op: string | undefined, type: DashboardParameter['type']): CompareOp {
+  const allowed = operatorsFor(type)
+  return allowed.includes((op ?? '') as CompareOp) ? (op as CompareOp) : allowed[0]
+}

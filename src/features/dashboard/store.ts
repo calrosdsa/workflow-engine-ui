@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { DashboardSchema, WidgetInstance, WidgetLayout, WidgetChrome } from './schema'
+import type { DashboardParameter, DashboardSchema, ParameterBinding, WidgetInstance, WidgetLayout, WidgetChrome } from './schema'
 import { emptyDashboardSchema } from './schema'
 import { createWidget, duplicateWidget } from './factory'
 import { applyLayoutKeyAction, type LayoutKeyAction } from './canvas/keyboardLayout'
@@ -57,6 +57,13 @@ export interface DashboardStoreState {
   updateWidgetChrome: (id: string, chrome: WidgetChrome) => void
   duplicateWidgetById: (id: string) => void
   removeWidget: (id: string) => void
+
+  addParameter: (parameter: DashboardParameter, binding?: ParameterBinding) => void
+  updateParameter: (key: string, patch: Partial<DashboardParameter>) => void
+  removeParameter: (key: string) => void
+  addBinding: (binding: ParameterBinding) => void
+  updateBinding: (index: number, patch: Partial<ParameterBinding>) => void
+  removeBinding: (index: number) => void
 
   undo: () => void
   redo: () => void
@@ -210,8 +217,81 @@ export const useDashboardStore = create<DashboardStoreState>((set, get) => {
     },
 
     removeWidget: (id) => {
-      mutate((schema) => ({ ...schema, widgets: schema.widgets.filter((w) => w.id !== id) }))
+      mutate((schema) => ({
+        ...schema,
+        widgets: schema.widgets.filter((w) => w.id !== id),
+        // A binding to a deleted tile is harmless at runtime — resolution
+        // skips it — but leaving it behind means the panel lists a binding
+        // pointing at nothing, which reads as a bug to whoever opens it next.
+        parameterBindings: schema.parameterBindings?.filter((b) => b.widgetId !== id),
+      }))
       set((state) => (state.selectedWidgetId === id ? { selectedWidgetId: null } : {}))
+    },
+
+    // Parameters and their bindings. Deliberately the same shape as the
+    // report store's argument actions (features/reports/store.ts), since
+    // slice 1 lifted the report model rather than inventing a second one.
+    //
+    // Both lists stay UNDEFINED rather than empty when nothing is declared,
+    // so a dashboard authored before parameters existed serializes back out
+    // byte-identical instead of gaining two empty arrays on first open.
+    addParameter: (parameter, binding) => {
+      mutate((schema) => ({
+        ...schema,
+        parameters: [...(schema.parameters ?? []), parameter],
+        parameterBindings: binding
+          ? [...(schema.parameterBindings ?? []), binding]
+          : schema.parameterBindings,
+      }))
+    },
+
+    // A key change carries its bindings with it. Not a correctness
+    // requirement — slice 1 decided a stale binding is skipped, not an
+    // error, so an orphaned one would cost the binding and nothing else.
+    // It is that renaming a parameter and silently losing every tile it
+    // narrowed is a rotten thing to do to an author mid-edit.
+    updateParameter: (key, patch) => {
+      mutate((schema) => {
+        const nextKey = patch.key ?? key
+        return {
+          ...schema,
+          parameters: (schema.parameters ?? []).map((p) => (p.key === key ? { ...p, ...patch } : p)),
+          parameterBindings: schema.parameterBindings?.map((b) => (
+            b.parameterKey === key ? { ...b, parameterKey: nextKey } : b
+          )),
+        }
+      // Coalesced so a burst of keystrokes in the label or key field is ONE
+      // undo, matching what the drag and title-field mutations already do.
+      }, `parameter:${key}`)
+    },
+
+    removeParameter: (key) => {
+      mutate((schema) => ({
+        ...schema,
+        parameters: (schema.parameters ?? []).filter((p) => p.key !== key),
+        parameterBindings: schema.parameterBindings?.filter((b) => b.parameterKey !== key),
+      }))
+    },
+
+    addBinding: (binding) => {
+      mutate((schema) => ({
+        ...schema,
+        parameterBindings: [...(schema.parameterBindings ?? []), binding],
+      }))
+    },
+
+    updateBinding: (index, patch) => {
+      mutate((schema) => ({
+        ...schema,
+        parameterBindings: (schema.parameterBindings ?? []).map((b, i) => (i === index ? { ...b, ...patch } : b)),
+      }), `binding:${index}`)
+    },
+
+    removeBinding: (index) => {
+      mutate((schema) => ({
+        ...schema,
+        parameterBindings: (schema.parameterBindings ?? []).filter((_, i) => i !== index),
+      }))
     },
 
     // undo/redo intentionally bypass mutate() — navigating history must not

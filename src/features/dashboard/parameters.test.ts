@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { resolveParameterFilter, effectiveValue, activeParameterKeys } from './parameters'
+import {
+  resolveParameterFilter, effectiveValue, activeParameterKeys,
+  bindableWidgets, coerceOperator, createParameter, operatorsFor,
+} from './parameters'
 import type { DashboardParameter, ParameterBinding } from './schema'
 
 const REGION: DashboardParameter = { key: 'region', label: 'Region', type: 'text' }
@@ -94,5 +97,64 @@ describe('effectiveValue and activeParameterKeys', () => {
   it('prefers a supplied value over a default', () => {
     expect(effectiveValue({ ...REGION, default: 'South' }, { region: 'North' })).toBe('North')
     expect(effectiveValue({ ...REGION, default: 'South' }, {})).toBe('South')
+  })
+})
+
+describe('authoring helpers', () => {
+  // Asks the registry rather than reading config.formId, because `config`
+  // is opaque to the dashboard core by contract.
+  const lookup = (type: string) => ({
+    chart: { bindable: { formId: (c: never) => (c as { formId?: string }).formId || undefined } },
+    heading: {},
+  }[type] as { bindable?: { formId: (c: never) => string | undefined } } | undefined)
+
+  const tiles = [
+    { id: 'w1', type: 'chart', title: 'Revenue', config: { formId: 'invoices' } },
+    { id: 'w2', type: 'chart', title: '  ', config: { formId: 'invoices' } },
+    { id: 'w3', type: 'chart', config: { formId: '' } },
+    { id: 'w4', type: 'heading', title: 'Hi', config: { formId: 'invoices' } },
+    { id: 'w5', type: 'unregistered', title: 'X', config: { formId: 'invoices' } },
+  ]
+
+  it('offers only widgets that declared themselves bindable and have a form', () => {
+    expect(bindableWidgets(tiles, lookup).map((w) => w.id)).toEqual(['w1', 'w2'])
+  })
+
+  // A heading carrying a formId in its config is still not a target — the
+  // declaration is what counts, not the shape of the blob.
+  it('ignores a formId on a widget type that never declared bindable', () => {
+    expect(bindableWidgets(tiles, lookup).some((w) => w.id === 'w4')).toBe(false)
+  })
+
+  it('falls back to the widget type when the tile has no usable title', () => {
+    const out = bindableWidgets(tiles, lookup)
+    expect(out.find((w) => w.id === 'w1')?.label).toBe('Revenue')
+    expect(out.find((w) => w.id === 'w2')?.label).toBe('chart')
+  })
+
+  it('creates a key that does not collide with an existing one', () => {
+    expect(createParameter(undefined).key).toBe('param_1')
+    expect(createParameter([{ key: 'param_1', label: 'x', type: 'text' }]).key).toBe('param_2')
+    const taken = [
+      { key: 'param_1', label: 'x', type: 'text' as const },
+      { key: 'param_2', label: 'x', type: 'text' as const },
+    ]
+    expect(taken.map((p) => p.key)).not.toContain(createParameter(taken).key)
+  })
+
+  it('offers ordering operators only where the type has an order', () => {
+    expect(operatorsFor('number')).toContain('gte')
+    expect(operatorsFor('date')).toContain('lte')
+    expect(operatorsFor('text')).not.toContain('gte')
+    expect(operatorsFor('boolean')).toEqual(['eq', 'neq'])
+  })
+
+  // A `contains` left behind on a date parameter would compile to a text
+  // comparison against a date column.
+  it('coerces an operator that no longer suits the type', () => {
+    expect(coerceOperator('contains', 'text')).toBe('contains')
+    expect(coerceOperator('contains', 'date')).toBe('eq')
+    expect(coerceOperator(undefined, 'number')).toBe('eq')
+    expect(coerceOperator('gte', 'number')).toBe('gte')
   })
 })

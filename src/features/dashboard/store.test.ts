@@ -326,3 +326,90 @@ describe('useDashboardStore', () => {
     })
   })
 })
+
+describe('parameters and bindings', () => {
+  const store = () => useDashboardStore.getState()
+  const param = (key: string) => ({ key, label: key, type: 'text' as const })
+
+  beforeEach(() => {
+    resetRegistry()
+    registerWidget(fakeWidget('note'))
+    useDashboardStore.getState().reset()
+  })
+
+  // A dashboard authored before parameters existed must serialize back out
+  // byte-identical rather than gaining two empty arrays on first open.
+  it('leaves both lists undefined until something is declared', () => {
+    store().addWidget('note')
+    expect(store().schema.parameters).toBeUndefined()
+    expect(store().schema.parameterBindings).toBeUndefined()
+  })
+
+  it('adds a parameter with an optional starter binding', () => {
+    store().addParameter(param('region'))
+    expect(store().schema.parameters).toHaveLength(1)
+    expect(store().schema.parameterBindings).toBeUndefined()
+
+    store().addParameter(param('total'), { parameterKey: 'total', widgetId: 'w1', field: 'grand_total' })
+    expect(store().schema.parameterBindings).toHaveLength(1)
+  })
+
+  // Not a correctness requirement — a stale binding is skipped at runtime,
+  // not an error — but silently losing every tile a parameter narrowed is a
+  // rotten thing to do to an author mid-rename.
+  it('carries bindings through a key rename', () => {
+    store().addParameter(param('region'), { parameterKey: 'region', widgetId: 'w1', field: 'region' })
+    store().updateParameter('region', { key: 'area' })
+    expect(store().schema.parameters?.[0].key).toBe('area')
+    expect(store().schema.parameterBindings?.[0].parameterKey).toBe('area')
+  })
+
+  it('removes a parameter together with every binding that named it', () => {
+    store().addParameter(param('region'), { parameterKey: 'region', widgetId: 'w1', field: 'region' })
+    store().addBinding({ parameterKey: 'region', widgetId: 'w2', field: 'r2' })
+    store().addBinding({ parameterKey: 'other', widgetId: 'w3', field: 'x' })
+    store().removeParameter('region')
+    expect(store().schema.parameters).toHaveLength(0)
+    expect(store().schema.parameterBindings).toEqual([{ parameterKey: 'other', widgetId: 'w3', field: 'x' }])
+  })
+
+  // Harmless at runtime, but the panel would list a binding pointing at
+  // nothing, which reads as a bug to whoever opens it next.
+  it('drops bindings onto a tile that gets deleted', () => {
+    const id = store().addWidget('note')
+    store().addParameter(param('region'), { parameterKey: 'region', widgetId: id, field: 'region' })
+    store().removeWidget(id)
+    expect(store().schema.parameterBindings).toEqual([])
+    expect(store().schema.parameters).toHaveLength(1)
+  })
+
+  it('updates and removes a binding by its index in the flat list', () => {
+    store().addBinding({ parameterKey: 'a', widgetId: 'w1', field: 'f1' })
+    store().addBinding({ parameterKey: 'b', widgetId: 'w2', field: 'f2' })
+    store().updateBinding(1, { field: 'changed' })
+    expect(store().schema.parameterBindings?.[1].field).toBe('changed')
+    store().removeBinding(0)
+    expect(store().schema.parameterBindings).toEqual([{ parameterKey: 'b', widgetId: 'w2', field: 'changed' }])
+  })
+
+  // Every mutation has to be undoable, like every other store action.
+  it('puts parameter edits on the undo stack', () => {
+    store().addParameter(param('region'))
+    expect(store().canUndo).toBe(true)
+    store().undo()
+    expect(store().schema.parameters).toBeUndefined()
+    store().redo()
+    expect(store().schema.parameters).toHaveLength(1)
+  })
+
+  // Coalescing is what makes one undo revert a burst of keystrokes rather
+  // than one character of it.
+  it('folds consecutive edits to the same parameter into one history entry', () => {
+    store().addParameter(param('region'))
+    store().updateParameter('region', { label: 'R' })
+    store().updateParameter('region', { label: 'Re' })
+    store().updateParameter('region', { label: 'Reg' })
+    store().undo()
+    expect(store().schema.parameters?.[0].label).toBe('region')
+  })
+})
