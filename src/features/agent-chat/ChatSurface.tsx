@@ -70,6 +70,7 @@ function FormSurfaceView({ surface, busy, onSubmit }: { surface: FormSurface; bu
   const t = useTranslation()
   const [values, setValues] = useState<Record<string, unknown>>({})
   const [submitted, setSubmitted] = useState(surface.state === 'submitted' || surface.state === 'resolved')
+  const inactive = surface.state !== undefined && surface.state !== 'open' && surface.state !== 'pending'
   const [error, setError] = useState<string | null>(null)
 
   const submit = async () => {
@@ -79,8 +80,14 @@ function FormSurfaceView({ surface, busy, onSubmit }: { surface: FormSurface; bu
       return
     }
     setError(null)
+    const payload = Object.fromEntries(Object.entries(values)
+      .filter(([, value]) => value !== '' && value !== undefined)
+      .map(([name, value]) => {
+        const field = surface.fields.find((candidate) => candidate.name === name)
+        return [name, field?.type === 'datetime' && typeof value === 'string' ? new Date(value).toISOString() : value]
+      }))
     try {
-      await onSubmit?.(surface, values)
+      await onSubmit?.(surface, payload)
       setSubmitted(true)
     } catch {
       setError(t('agent_chat.submit_failed'))
@@ -98,22 +105,24 @@ function FormSurfaceView({ surface, busy, onSubmit }: { surface: FormSurface; bu
               <span className="mb-1 block font-medium">{field.label}{field.required ? ' *' : ''}</span>
               {field.description && <span className="mb-1 block text-[11px] text-[hsl(var(--muted-foreground))]">{field.description}</span>}
               {field.type === 'textarea' ? (
-                <textarea disabled={busy || submitted} rows={2} value={String(values[field.name] ?? '')} onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))} className="w-full rounded-md border bg-transparent px-2 py-1" />
+                <textarea disabled={busy || submitted || inactive} rows={2} value={String(values[field.name] ?? '')} onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))} className="w-full rounded-md border bg-transparent px-2 py-1" />
               ) : field.type === 'boolean' ? (
-                <input disabled={busy || submitted} type="checkbox" checked={values[field.name] === true} onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.checked }))} className="h-4 w-4 rounded border" />
+                <input disabled={busy || submitted || inactive} type="checkbox" checked={values[field.name] === true} onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.checked }))} className="h-4 w-4 rounded border" />
               ) : (
-                <input disabled={busy || submitted} type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : field.type === 'datetime' ? 'datetime-local' : 'text'} value={String(values[field.name] ?? '')} onChange={(event) => setValues((current) => ({ ...current, [field.name]: field.type === 'number' ? (event.target.value === '' ? '' : Number(event.target.value)) : event.target.value }))} className="w-full rounded-md border bg-transparent px-2 py-1" />
+                <input disabled={busy || submitted || inactive} type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : field.type === 'datetime' ? 'datetime-local' : 'text'} value={String(values[field.name] ?? '')} onChange={(event) => setValues((current) => ({ ...current, [field.name]: field.type === 'number' ? (event.target.value === '' ? '' : Number(event.target.value)) : event.target.value }))} className="w-full rounded-md border bg-transparent px-2 py-1" />
               )}
             </label>
           ))}
         </div>
         {error && <p className="mt-2 text-xs text-destructive" role="alert">{error}</p>}
-        {submitted ? (
+        {inactive && !submitted ? (
+          <p className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">{t('agent_chat.no_longer_available')}</p>
+        ) : submitted ? (
           <p className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">{t('agent_chat.surface_submitted')}</p>
         ) : (
           <div className="mt-2 flex items-center justify-between gap-2">
             <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('agent_chat.form_awaiting_action')}</p>
-            <Button size="sm" onClick={() => void submit()} disabled={busy || !onSubmit}>{t('agent_chat.submit_surface')}</Button>
+            <Button size="sm" onClick={() => void submit()} disabled={busy || !onSubmit || inactive}>{t('agent_chat.submit_surface')}</Button>
           </div>
         )}
       </div>
@@ -125,6 +134,7 @@ function ChoiceSurfaceView({ surface, busy, onSubmit }: { surface: ChoiceSurface
   const t = useTranslation()
   const [selected, setSelected] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(surface.state === 'submitted' || surface.state === 'resolved')
+  const inactive = surface.state !== undefined && surface.state !== 'open' && surface.state !== 'pending'
   const [error, setError] = useState<string | null>(null)
 
   const submit = async () => {
@@ -148,18 +158,20 @@ function ChoiceSurfaceView({ surface, busy, onSubmit }: { surface: ChoiceSurface
         {surface.description && <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{surface.description}</p>}
         <div className="mt-2 flex flex-wrap gap-2">
           {surface.options.map((option) => (
-            <Button key={option.value} size="sm" type="button" disabled={busy || submitted} variant={selected === option.value ? 'default' : 'outline'} onClick={() => setSelected(option.value)}>
+            <Button key={option.value} size="sm" type="button" disabled={busy || submitted || inactive} variant={selected === option.value ? 'default' : 'outline'} onClick={() => setSelected(option.value)}>
               <span>{option.label}</span>
             </Button>
           ))}
         </div>
         {error && <p className="mt-2 text-xs text-destructive" role="alert">{error}</p>}
-        {submitted ? (
+        {inactive && !submitted ? (
+          <p className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">{t('agent_chat.no_longer_available')}</p>
+        ) : submitted ? (
           <p className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">{t('agent_chat.surface_submitted')}</p>
         ) : (
           <div className="mt-2 flex items-center justify-between gap-2">
             <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('agent_chat.choice_awaiting_action')}</p>
-            <Button size="sm" onClick={() => void submit()} disabled={busy || !selected || !onSubmit}>{t('agent_chat.submit_surface')}</Button>
+            <Button size="sm" onClick={() => void submit()} disabled={busy || !selected || !onSubmit || inactive}>{t('agent_chat.submit_surface')}</Button>
           </div>
         )}
       </div>
