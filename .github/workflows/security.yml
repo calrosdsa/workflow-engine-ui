@@ -1,0 +1,107 @@
+name: security
+
+# Security controls run separately from deploy.yml so each candidate UI image
+# has scan and SBOM evidence before it is promoted.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  TRIVY_IMAGE: aquasec/trivy:0.58.1
+
+jobs:
+  source:
+    # A self-hosted deployment runner must never execute an untrusted fork.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, app-builder]
+    steps:
+      - uses: actions/checkout@v4
+      - name: collect source, dependency, secret, and infrastructure results
+        run: |
+          set -euo pipefail
+          mkdir -p security-results
+          status=0
+          set +e
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/repo:ro" \
+            -v "$GITHUB_WORKSPACE/security-results:/results" \
+            "$TRIVY_IMAGE" fs \
+              --scanners vuln,secret,misconfig \
+              --severity HIGH,CRITICAL \
+              --exit-code 1 \
+              --format json \
+              --output /results/trivy-source.json \
+              /repo
+          result=$?
+          set -e
+          [ "$result" -eq 0 ] || status=1
+          exit "$status"
+      - name: generate CycloneDX software bill of materials
+        if: always()
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/repo:ro" \
+            -v "$GITHUB_WORKSPACE/security-results:/results" \
+            "$TRIVY_IMAGE" fs \
+              --format cyclonedx \
+              --output /results/source-sbom.cdx.json \
+              /repo
+      - name: retain source scan evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-ui-source-${{ github.run_id }}
+          path: security-results/
+          if-no-files-found: warn
+          retention-days: 400
+
+  images:
+    # Image evidence is collected even if source finds a separate issue.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, app-builder]
+    steps:
+      - uses: actions/checkout@v4
+      - name: build candidate image
+        run: docker build -t app-builder/security-ui:${GITHUB_SHA} .
+      - name: scan candidate image
+        run: |
+          set -euo pipefail
+          mkdir -p security-results
+          status=0
+          set +e
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$GITHUB_WORKSPACE/security-results:/results" \
+            "$TRIVY_IMAGE" image \
+              --scanners vuln,secret,misconfig \
+              --severity HIGH,CRITICAL \
+              --exit-code 1 \
+              --format json \
+              --output /results/trivy-image.json \
+              app-builder/security-ui:${GITHUB_SHA}
+          result=$?
+          set -e
+          [ "$result" -eq 0 ] || status=1
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$GITHUB_WORKSPACE/security-results:/results" \
+            "$TRIVY_IMAGE" image \
+              --format cyclonedx \
+              --output /results/image-sbom.cdx.json \
+              app-builder/security-ui:${GITHUB_SHA}
+          exit "$status"
+      - name: retain image scan evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-ui-images-${{ github.run_id }}
+          path: security-results/
+          if-no-files-found: warn
+          retention-days: 400
