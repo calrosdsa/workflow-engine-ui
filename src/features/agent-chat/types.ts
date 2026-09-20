@@ -48,6 +48,7 @@ export interface FormSurface {
   allowed_actions?: string[]
   expires_at?: string
   run_id?: string
+  call_id?: string
   fields: Array<{ name: string; label: string; type: 'text' | 'textarea' | 'number' | 'boolean' | 'date' | 'datetime'; description?: string; required?: boolean }>
 }
 
@@ -61,6 +62,7 @@ export interface ChoiceSurface {
   allowed_actions?: string[]
   expires_at?: string
   run_id?: string
+  call_id?: string
   options: Array<{ value: string; label: string; description?: string }>
 }
 
