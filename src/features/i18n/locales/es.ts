@@ -791,6 +791,7 @@ export const es = {
   'common.fn_avg': 'Promedio',
   'common.fn_min': 'Mín',
   'common.fn_max': 'Máx',
+  'common.fn_count_distinct': 'Distintos',
   'common.asc': 'Ascendente',
   'common.desc': 'Descendente',
   'common.cancelled': 'Cancelado',
@@ -1395,6 +1396,7 @@ export const es = {
   'reports.blocks.group.agg_sum': 'Suma',
   'reports.blocks.group.agg_avg': 'Promedio',
   'reports.blocks.group.agg_min': 'Mínimo',
+  'reports.blocks.group.agg_count_distinct': 'Distintos',
   'reports.blocks.group.agg_max': 'Máximo',
   'reports.blocks.group.preview_kind': 'grupo/subtotal',
 
@@ -2377,6 +2379,7 @@ export const es = {
   'builder.dashboard_chart.none_option': 'Ninguno',
   'builder.dashboard_chart.no_bucketing': 'Sin agrupación',
   'builder.dashboard_chart.bucket_by': 'Por {{bucket}}',
+  'builder.dashboard_chart.no_fields': 'Este formulario no tiene campos.',
   'builder.dashboard_chart.no_numeric_fields': 'No hay campos numéricos',
   'builder.dashboard_chart.choose_form_field': 'Elige un formulario y un campo para agrupar.',
   'builder.dashboard_chart.choose_form': 'Elige un formulario para agregar.',

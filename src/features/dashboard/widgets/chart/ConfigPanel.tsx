@@ -47,6 +47,7 @@ function fnLabels(t: I18nContextValue['t']): Record<AggregateFn, string> {
     avg: t('common.fn_avg'),
     min: t('common.fn_min'),
     max: t('common.fn_max'),
+    count_distinct: t('common.fn_count_distinct'),
   }
 }
 
@@ -198,6 +199,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
             <SeriesEditor
               key={i}
               series={s}
+              fields={fields}
               numericFields={numericFields}
               showType={isCombo}
               onChange={(patch) => updateSeries(i, patch)}
@@ -423,8 +425,10 @@ function RangesInput({ value, onChange, placeholder }: {
 
 const SERIES_TYPES: SeriesType[] = ['bar', 'line', 'area']
 
-function SeriesEditor({ series, numericFields, showType, onChange, onRemove }: {
+function SeriesEditor({ series, fields, numericFields, showType, onChange, onRemove }: {
   series: ChartSeries
+  /** Every field on the form — what count_distinct may target. */
+  fields: FieldDef[]
   numericFields: FieldDef[]
   /** Combo only — every other chart type draws all series the same way, so
    *  offering a per-series mark there would be a control with no effect. */
@@ -434,6 +438,11 @@ function SeriesEditor({ series, numericFields, showType, onChange, onRemove }: {
 }) {
   const t = useTranslation()
   const labels = fnLabels(t)
+  // count_distinct counts DIFFERENT values, so it takes any field — that is
+  // the measure's whole point, and gating it to numeric columns would make
+  // it unreachable for exactly the questions it exists to answer. Every
+  // other non-count measure stays numeric-only, mirroring aggregate.go.
+  const eligibleFields = series.fn === 'count_distinct' ? fields : numericFields
   return (
     <div className="flex items-center gap-1.5 rounded-md border border-[hsl(var(--border))] p-2">
       {showType && (
@@ -458,10 +467,14 @@ function SeriesEditor({ series, numericFields, showType, onChange, onRemove }: {
         <SelectMenu value={series.field ?? ''} onValueChange={(v) => onChange({ field: v })}>
           <SelectTrigger className="h-7 flex-1 text-xs"><SelectValue placeholder={t('builder.dashboard_chart.field_placeholder')} /></SelectTrigger>
           <SelectContent>
-            {numericFields.map((f) => (
+            {/* count_distinct counts DIFFERENT values, so it takes any
+                field — that is the measure's whole point. Every other
+                non-count measure stays numeric-only, mirroring
+                aggregate.go's own gate. */}
+            {eligibleFields.map((f) => (
               <SelectItem key={f.name} value={f.name} className="text-xs">{f.label || f.name}</SelectItem>
             ))}
-            {numericFields.length === 0 && <SelectItem value="__none__" disabled className="text-xs">{t('builder.dashboard_chart.no_numeric_fields')}</SelectItem>}
+            {eligibleFields.length === 0 && <SelectItem value="__none__" disabled className="text-xs">{t(series.fn === 'count_distinct' ? 'builder.dashboard_chart.no_fields' : 'builder.dashboard_chart.no_numeric_fields')}</SelectItem>}
           </SelectContent>
         </SelectMenu>
       )}

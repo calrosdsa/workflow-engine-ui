@@ -1468,6 +1468,7 @@ export const en = {
   'common.fn_avg': 'Average',
   'common.fn_min': 'Min',
   'common.fn_max': 'Max',
+  'common.fn_count_distinct': 'Distinct',
   'common.asc': 'Ascending',
   'common.desc': 'Descending',
   'common.cancelled': 'Cancelled',
@@ -2598,6 +2599,7 @@ export const en = {
   'builder.dashboard_chart.none_option': 'None',
   'builder.dashboard_chart.no_bucketing': 'No bucketing',
   'builder.dashboard_chart.bucket_by': 'By {{bucket}}',
+  'builder.dashboard_chart.no_fields': 'This form has no fields.',
   'builder.dashboard_chart.no_numeric_fields': 'No numeric fields',
   'builder.dashboard_chart.choose_form_field': 'Choose a form and a field to group by.',
   'builder.dashboard_chart.choose_form': 'Choose a form to aggregate.',
@@ -3383,6 +3385,7 @@ export const en = {
   'reports.blocks.group.agg_sum': 'Sum',
   'reports.blocks.group.agg_avg': 'Average',
   'reports.blocks.group.agg_min': 'Minimum',
+  'reports.blocks.group.agg_count_distinct': 'Distinct',
   'reports.blocks.group.agg_max': 'Maximum',
   'reports.blocks.group.preview_kind': 'group/subtotal',
 

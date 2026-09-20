@@ -10,7 +10,7 @@ import type { ReportBlockConfigPanelProps } from '../../report-block-contract'
 import { ColumnNumberFormat } from '../ColumnNumberFormat'
 import type { GroupBlockConfig, AggFn, GroupSeries, GroupByDimension } from './schema'
 
-const AGG_FNS: AggFn[] = ['count', 'sum', 'avg', 'min', 'max']
+const AGG_FNS: AggFn[] = ['count', 'sum', 'avg', 'min', 'max', 'count_distinct']
 const BUCKETS = ['', 'day', 'week', 'month', 'quarter', 'year'] as const
 
 function aggLabels(t: I18nContextValue['t']): Record<AggFn, string> {
@@ -20,6 +20,7 @@ function aggLabels(t: I18nContextValue['t']): Record<AggFn, string> {
     avg: t('reports.blocks.group.agg_avg'),
     min: t('reports.blocks.group.agg_min'),
     max: t('reports.blocks.group.agg_max'),
+    count_distinct: t('reports.blocks.group.agg_count_distinct'),
   }
 }
 

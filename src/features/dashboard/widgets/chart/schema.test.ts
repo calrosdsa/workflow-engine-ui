@@ -129,3 +129,21 @@ describe('parseChartConfig', () => {
     })
   })
 })
+
+describe('count_distinct', () => {
+  it('is accepted as a measure', () => {
+    const parsed = parseChartConfig({ formId: 'f1', series: [{ fn: 'count_distinct', field: 'customer' }] })
+    expect(parsed.series).toEqual([{ fn: 'count_distinct', field: 'customer', label: undefined, color: undefined, type: undefined }])
+  })
+
+  // The engine exempts it from the numeric gate on purpose, so the parser
+  // must not reintroduce one — a distinct count of an enum is the case it
+  // exists for.
+  it('keeps a non-numeric field', () => {
+    expect(parseChartConfig({ formId: 'f1', series: [{ fn: 'count_distinct', field: 'status' }] }).series[0].field).toBe('status')
+  })
+
+  it('still rejects a measure the engine does not implement', () => {
+    expect(parseChartConfig({ formId: 'f1', series: [{ fn: 'median', field: 'amount' }] }).series).toEqual([])
+  })
+})

@@ -90,7 +90,7 @@ export interface ChartWidgetConfig {
 }
 
 const VALID_CHART_TYPES: ChartType[] = ['bar', 'line', 'area', 'pie', 'donut', 'combo', 'stat']
-const VALID_FNS: AggregateFn[] = ['count', 'sum', 'avg', 'min', 'max']
+const VALID_FNS: AggregateFn[] = ['count', 'sum', 'avg', 'min', 'max', 'count_distinct']
 const VALID_BUCKETS: DateBucket[] = ['day', 'week', 'month', 'quarter', 'year']
 const VALID_SERIES_TYPES: SeriesType[] = ['bar', 'line', 'area']
 const VALID_ORIENTATIONS: ChartOrientation[] = ['vertical', 'horizontal']
@@ -229,7 +229,7 @@ export const CHART_CONFIG_SCHEMA: ConfigSchema = {
         type: 'object',
         required: ['fn'],
         properties: {
-          fn: { type: 'string', enum: ['count', 'sum', 'avg', 'min', 'max'] },
+          fn: { type: 'string', enum: ['count', 'sum', 'avg', 'min', 'max', 'count_distinct'], description: 'Measures, in order. \'count\' counts records and needs no field. \'count_distinct\' counts DIFFERENT values of its field and is the only measure that accepts a non-numeric one — "how many customers", "how many statuses are in use". It is unitless, so it never inherits the field\'s currency or percent format.' },
           field: { type: 'string', fieldRef: true, description: "Numeric field to aggregate. Required for every fn except 'count'." },
           label: { type: 'string' },
           color: { type: 'string', description: 'CSS color; omit for the theme palette. Ignored on a groupBy2 split, where the colours belong to the split values rather than to the series.' },

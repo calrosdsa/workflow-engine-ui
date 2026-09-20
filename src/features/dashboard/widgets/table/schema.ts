@@ -39,7 +39,7 @@ export interface TableWidgetConfig {
 }
 
 const VALID_ROW_CLICK: TableRowClick[] = ['none', 'record']
-const VALID_FNS: AggregateFn[] = ['count', 'sum', 'avg', 'min', 'max']
+const VALID_FNS: AggregateFn[] = ['count', 'sum', 'avg', 'min', 'max', 'count_distinct']
 
 function parseFooterAggregates(raw: unknown): TableFooterAggregate[] | undefined {
   if (!Array.isArray(raw)) return undefined
@@ -102,7 +102,7 @@ export const TABLE_CONFIG_SCHEMA: ConfigSchema = {
         required: ['field', 'fn'],
         properties: {
           field: { type: 'string', fieldRef: true, description: 'A numeric field on this widget\'s form.' },
-          fn: { type: 'string', enum: ['count', 'sum', 'avg', 'min', 'max'] },
+          fn: { type: 'string', enum: ['count', 'sum', 'avg', 'min', 'max', 'count_distinct'], description: 'Measures, in order. \'count\' counts records and needs no field. \'count_distinct\' counts DIFFERENT values of its field and is the only measure that accepts a non-numeric one — "how many customers", "how many statuses are in use". It is unitless, so it never inherits the field\'s currency or percent format.' },
         },
       },
     },

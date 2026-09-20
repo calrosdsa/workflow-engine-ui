@@ -28,6 +28,7 @@ function fnLabels(t: I18nContextValue['t']): Record<AggregateFn, string> {
     avg: t('common.fn_avg'),
     min: t('common.fn_min'),
     max: t('common.fn_max'),
+    count_distinct: t('common.fn_count_distinct'),
   }
 }
 
@@ -141,6 +142,7 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
           <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_table.footer_totals')}</Label>
           <FooterAggregatesList
             aggregates={config.footerAggregates ?? []}
+            fields={form.fields}
             numericFields={form.fields.filter((f) => NUMERIC_TYPES.includes(f.type))}
             onChange={(footerAggregates) => patch({ footerAggregates: footerAggregates.length > 0 ? footerAggregates : undefined })}
           />
@@ -175,16 +177,28 @@ export function TableConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ta
   )
 }
 
-function FooterAggregatesList({ aggregates, numericFields, onChange }: {
+function FooterAggregatesList({ aggregates, fields, numericFields, onChange }: {
   aggregates: TableFooterAggregate[]
+  /** Every column — what count_distinct may total over. */
+  fields: { name: string; label: string }[]
   numericFields: { name: string; label: string }[]
   onChange: (aggregates: TableFooterAggregate[]) => void
 }) {
   const t = useTranslation()
   const labels = fnLabels(t)
+  // A footer can now total a non-numeric column, but only one way: by
+  // counting its distinct values. Everything else still needs a number, so
+  // the per-row field list follows the row's own measure.
+  const eligible = (fn: AggregateFn) => (fn === 'count_distinct' ? fields : numericFields)
   const addAggregate = () => {
-    if (numericFields.length === 0) return
-    onChange([...aggregates, { field: numericFields[0].name, fn: 'sum' }])
+    // Seeded as a sum when there is a number to sum, else as the one measure
+    // a text column supports — rather than refusing to add anything, which
+    // is what this did when the whole feature was numeric-only.
+    if (numericFields.length > 0) {
+      onChange([...aggregates, { field: numericFields[0].name, fn: 'sum' }])
+    } else if (fields.length > 0) {
+      onChange([...aggregates, { field: fields[0].name, fn: 'count_distinct' }])
+    }
   }
   const updateAggregate = (i: number, patch: Partial<TableFooterAggregate>) =>
     onChange(aggregates.map((a, idx) => (idx === i ? { ...a, ...patch } : a)))
@@ -205,10 +219,10 @@ function FooterAggregatesList({ aggregates, numericFields, onChange }: {
           <SelectMenu value={a.field} onValueChange={(v) => updateAggregate(i, { field: v })}>
             <SelectTrigger className="h-7 min-w-0 flex-1 text-[11px]"><SelectValue placeholder={t('builder.dashboard_table.field_placeholder')} /></SelectTrigger>
             <SelectContent>
-              {numericFields.map((f) => (
+              {eligible(a.fn).map((f) => (
                 <SelectItem key={f.name} value={f.name} className="text-xs">{f.label || f.name}</SelectItem>
               ))}
-              {numericFields.length === 0 && <SelectItem value="__none__" disabled className="text-xs">{t('builder.dashboard_table.no_numeric_fields')}</SelectItem>}
+              {eligible(a.fn).length === 0 && <SelectItem value="__none__" disabled className="text-xs">{t('builder.dashboard_table.no_numeric_fields')}</SelectItem>}
             </SelectContent>
           </SelectMenu>
           <button type="button" onClick={() => removeAggregate(i)} className="shrink-0 rounded px-1.5 py-1 text-[11px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]">
@@ -216,7 +230,7 @@ function FooterAggregatesList({ aggregates, numericFields, onChange }: {
           </button>
         </div>
       ))}
-      {numericFields.length === 0 ? (
+      {fields.length === 0 ? (
         <p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_table.no_numeric_to_total')}</p>
       ) : (
         <button
