@@ -109,6 +109,23 @@ export function createDefaultChartConfig(): ChartWidgetConfig {
   }
 }
 
+/** groupBy and groupBy2 are the same shape, so they share one description
+ *  rather than two that can drift — groupBy2 was previously declared as a
+ *  bare object, which meant its own bucket/field values went unchecked. */
+const DIMENSION_SCHEMA = {
+  type: 'object',
+  required: ['field'],
+  properties: {
+    field: { type: 'string', fieldRef: true, description: 'Field to group rows by.' },
+    bucket: { type: 'string', enum: ['day', 'week', 'month', 'quarter', 'year'], description: 'For date/datetime fields: bucket rows into this period.' },
+    ranges: {
+      type: 'array',
+      items: { type: 'number' },
+      description: "Ascending breakpoints bucketing into bands instead of (never together with) 'bucket'. On a numeric field, bands the field's own value. On a date/datetime field, bands its AGE IN DAYS FROM TODAY (negative = not yet due) — e.g. [30, 60, 90] on a due-date field makes an ageing report's classic <=30/31-60/61-90/>90 overdue bands.",
+    },
+  },
+} as const
+
 export const CHART_CONFIG_SCHEMA: ConfigSchema = {
   type: 'object',
   description: "An aggregate chart over one form's records, computed server-side. 'stat' renders a single big number and needs no groupBy.",
@@ -117,20 +134,13 @@ export const CHART_CONFIG_SCHEMA: ConfigSchema = {
     formId: { type: 'string', description: 'Id of the form to aggregate.' },
     chartType: { type: 'string', enum: ['bar', 'line', 'area', 'pie', 'stat'] },
     groupBy: {
-      type: 'object',
-      required: ['field'],
-      properties: {
-        field: { type: 'string', description: 'Field to group rows by.' },
-        bucket: { type: 'string', enum: ['day', 'week', 'month', 'quarter', 'year'], description: 'For date/datetime fields: bucket rows into this period.' },
-        ranges: {
-          type: 'array',
-          items: { type: 'number' },
-          description: "Ascending breakpoints bucketing into bands instead of (never together with) 'bucket'. On a numeric field, bands the field's own value. On a date/datetime field, bands its AGE IN DAYS FROM TODAY (negative = not yet due) — e.g. [30, 60, 90] on a due-date field makes an ageing report's classic <=30/31-60/61-90/>90 overdue bands.",
-        },
-      },
+      ...DIMENSION_SCHEMA,
       description: "Primary dimension. Omit only for chartType 'stat'.",
     },
-    groupBy2: { type: 'object', description: 'Optional second dimension (same shape as groupBy) — splits each group into stacked/colored sub-series.' },
+    groupBy2: {
+      ...DIMENSION_SCHEMA,
+      description: 'Optional second dimension (same shape as groupBy) — splits each group into stacked/colored sub-series.',
+    },
     series: {
       type: 'array',
       description: 'What to measure per group, in order.',
@@ -139,7 +149,7 @@ export const CHART_CONFIG_SCHEMA: ConfigSchema = {
         required: ['fn'],
         properties: {
           fn: { type: 'string', enum: ['count', 'sum', 'avg', 'min', 'max'] },
-          field: { type: 'string', description: "Numeric field to aggregate. Required for every fn except 'count'." },
+          field: { type: 'string', fieldRef: true, description: "Numeric field to aggregate. Required for every fn except 'count'." },
           label: { type: 'string' },
           color: { type: 'string', description: 'CSS color; omit for the theme palette.' },
         },
