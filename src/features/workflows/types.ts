@@ -200,7 +200,7 @@ export type CompareOp =
  *  email, or a field on the app's user-account form. this_record → value is
  *  "<reference_field>.<attr>": exactly one hop through a reference field on
  *  the record being authored. */
-export type ValueMode = 'static' | 'expression' | 'change_flag' | 'current_user' | 'this_record'
+export type ValueMode = 'static' | 'expression' | 'change_flag' | 'current_user' | 'this_record' | 'relative'
 
 export interface FilterCondition {
   id: string                // UI-only key for list rendering (stripped on save)

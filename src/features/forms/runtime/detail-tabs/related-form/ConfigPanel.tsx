@@ -93,6 +93,7 @@ export function RelatedFormConfigPanel({ config, onChange, formId }: DetailTabCo
                 variables={[]}
                 onChange={(g) => onChange({ ...config, additionalFilter: g })}
                 hideExpressions
+                allowRelativeDates
               />
             </div>
           </Field>

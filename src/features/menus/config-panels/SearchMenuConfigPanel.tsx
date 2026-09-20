@@ -98,6 +98,7 @@ export function SearchMenuConfigPanel({ menu, onChange }: SearchMenuConfigPanelP
             fields={form.fields}
             variables={[]}
             viewerModes={viewerModes}
+            allowRelativeDates
             onChange={(g) => patch({ default_filter: g })}
           />
         </div>

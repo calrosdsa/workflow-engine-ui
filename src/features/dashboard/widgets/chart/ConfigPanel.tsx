@@ -176,6 +176,7 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
             fields={form.fields}
             variables={[]}
             viewerModes={viewerModes}
+            allowRelativeDates
             onChange={(g) => patch({ filter: g })}
           />
         </div>

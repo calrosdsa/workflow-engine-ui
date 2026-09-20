@@ -18,7 +18,7 @@
 // defeated hover states the previous version of this file tried to add.
 
 import { useState, Fragment } from 'react'
-import { Plus, Trash2, Code2, FolderPlus, Braces, ListFilter } from 'lucide-react'
+import { Plus, Trash2, Code2, FolderPlus, Braces, ListFilter, CalendarClock } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectGroup, SelectLabel } from '@/components/ui/select-menu'
@@ -26,6 +26,7 @@ import { DatePicker, DateTimePicker } from '@/components/ui/date-time-picker'
 import { cn } from '@/lib/utils'
 import { ExpressionEditor } from './ExpressionEditor'
 import { FilterReferenceValuePicker } from './FilterReferenceValuePicker'
+import { RELATIVE_PRESETS, RELATIVE_SYNTAX_HINT, isRelativePreset, isValidRelativeValue } from './relative-date'
 import { nanoid } from './nanoid'
 import type { NodeOutputSchema } from './node-output-schema'
 import { mergeSystemFields } from '@/features/forms/types'
@@ -124,6 +125,18 @@ interface FilterBuilderProps {
    *  filter, a single form's own field list) has nothing to group and omits
    *  it, keeping their existing flat `fields` list unchanged. */
   fieldGroups?: FieldGroup[]
+  /** Offers a fixed/relative switch on date and datetime conditions, so an
+   *  author can persist "the last 90 days" instead of a literal date that
+   *  rots (workflow-engine's `relative` condition value_mode).
+   *
+   *  DEFAULT OFF, and opted into per caller rather than inferred, because the
+   *  failure mode is asymmetric: a caller that forgets the flag loses a
+   *  feature, but a surface that gets it wrongly saves a filter the platform
+   *  never resolves. Specifically it must stay OFF for a form's ACCESS SCOPE
+   *  — that compiles through Query.AccessScope (api/forms/access_scope.go),
+   *  which deliberately does not resolve relative values, since a security
+   *  predicate must not change what a viewer may see as the clock ticks. */
+  allowRelativeDates?: boolean
   /** Hides the Value/Expression toggle and the Expr expression input/editor
    *  entirely — a condition can only ever be a static value. Expr is an
    *  engineering-facing scripting surface (Vars[...], NodeOutputs[...]) that
@@ -141,7 +154,7 @@ interface FilterBuilderProps {
   viewerModes?: ViewerFilterContext
 }
 
-export function FilterBuilder({ group, fields, variables, nodeContext = [], onChange, onRemove, depth = 0, hideExpressions = false, fieldGroups, viewerModes }: FilterBuilderProps) {
+export function FilterBuilder({ group, fields, variables, nodeContext = [], onChange, onRemove, depth = 0, hideExpressions = false, fieldGroups, viewerModes, allowRelativeDates = false }: FilterBuilderProps) {
   const { t } = useI18n()
   // Every caller's `fields` ultimately means "what can this condition match
   // against" — for the common case (a form's own declared fields) that's
@@ -232,6 +245,7 @@ export function FilterBuilder({ group, fields, variables, nodeContext = [], onCh
               hideExpressions={hideExpressions}
               fieldGroups={fieldGroups}
               viewerModes={viewerModes}
+              allowRelativeDates={allowRelativeDates}
             />
             {(idx < group.conditions.length - 1 || group.groups.length > 0) && (
               <Connector combinator={group.combinator} />
@@ -256,6 +270,7 @@ export function FilterBuilder({ group, fields, variables, nodeContext = [], onCh
                 hideExpressions={hideExpressions}
                 fieldGroups={fieldGroups}
                 viewerModes={viewerModes}
+                allowRelativeDates={allowRelativeDates}
               />
               {idx < group.groups.length - 1 && <Connector combinator={group.combinator} />}
             </Fragment>
@@ -297,7 +312,7 @@ function Connector({ combinator }: { combinator: 'and' | 'or' }) {
 // Single condition row
 // ---------------------------------------------------------------------------
 
-function ConditionRow({ condition, fields, variables, nodeContext, onChange, onRemove, hideExpressions = false, fieldGroups, viewerModes }: {
+function ConditionRow({ condition, fields, variables, nodeContext, onChange, onRemove, hideExpressions = false, fieldGroups, viewerModes, allowRelativeDates = false }: {
   condition: FilterCondition
   fields: FieldDef[]
   variables: VariableDecl[]
@@ -307,6 +322,7 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
   hideExpressions?: boolean
   fieldGroups?: FieldGroup[]
   viewerModes?: ViewerFilterContext
+  allowRelativeDates?: boolean
 }) {
   const { t } = useI18n()
   const [editorOpen, setEditorOpen] = useState(false)
@@ -336,6 +352,11 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
   const isDateValue = selectedField?.type === 'date' && !isMultiValue
   const isDatetimeValue = selectedField?.type === 'datetime' && !isMultiValue
   const isReferenceValue = selectedField?.type === 'reference' && !!selectedField.reference_table && !isMultiValue
+  // A relative date is only offered where the platform will actually resolve
+  // one — see FilterBuilder's allowRelativeDates prop. It is a date concept,
+  // so it is never offered on a non-date field.
+  const canBeRelative = allowRelativeDates && (isDateValue || isDatetimeValue)
+  const isRelativeMode = canBeRelative && condition.value_mode === 'relative'
 
   const fieldControl = ignoresField ? (
     <div className="min-w-0 flex-1 truncate rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-2 py-1.5 text-[11px] italic text-[hsl(var(--muted-foreground))]">
@@ -353,7 +374,10 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
       // Status = "true" filtering nothing at all). Expression mode/text is
       // untouched — switching the field mid-expression doesn't invalidate
       // the expression itself the way a static value does.
-      onChange={(v) => onChange({ field: v, value: '' })}
+      // value_mode resets alongside the value for the same reason: a
+      // relative date left behind on a newly-chosen text field is a
+      // condition the server refuses at save.
+      onChange={(v) => onChange({ field: v, value: '', value_mode: condition.value_mode === 'relative' ? 'static' : condition.value_mode })}
       placeholder={t('workflows.builder.field_placeholder')}
       options={fields.map((f) => ({ value: f.name, label: f.label || f.name }))}
       groups={fieldGroups?.map((g) => ({ label: g.label, options: g.fields.map((f) => ({ value: f.name, label: f.label || f.name })) }))}
@@ -405,20 +429,54 @@ function ConditionRow({ condition, fields, variables, nodeContext, onChange, onR
       className={valueWidthClass}
       size="value"
     />
-  ) : isDateValue ? (
-    <DatePicker
-      value={condition.value == null ? '' : String(condition.value)}
-      onChange={(v) => onChange({ value: v })}
-      className={valueWidthClass}
-      size="sm"
-    />
-  ) : isDatetimeValue ? (
-    <DateTimePicker
-      value={condition.value == null ? '' : String(condition.value)}
-      onChange={(v) => onChange({ value: v })}
-      className={valueWidthClass}
-      size="sm"
-    />
+  ) : isDateValue || isDatetimeValue ? (
+    // The date value and its fixed/relative switch travel together inside
+    // valueControl, so every layout below (workflow canvas, viewer-scoped,
+    // and the single-row runtime one) picks the capability up without
+    // repeating the markup.
+    <div className={cn('flex items-center gap-1.5', valueWidthClass)}>
+      {isRelativeMode ? (
+        <RelativeValuePicker
+          value={condition.value == null ? '' : String(condition.value)}
+          onChange={(v) => onChange({ value: v })}
+          className="min-w-0 flex-1"
+        />
+      ) : isDateValue ? (
+        <DatePicker
+          value={condition.value == null ? '' : String(condition.value)}
+          onChange={(v) => onChange({ value: v })}
+          className="min-w-0 flex-1"
+          size="sm"
+        />
+      ) : (
+        <DateTimePicker
+          value={condition.value == null ? '' : String(condition.value)}
+          onChange={(v) => onChange({ value: v })}
+          className="min-w-0 flex-1"
+          size="sm"
+        />
+      )}
+      {canBeRelative && (
+        <button
+          type="button"
+          // Switching mode clears the value: a literal date is not a
+          // relative token and vice versa, and carrying one across would
+          // leave a condition the server refuses.
+          onClick={() => onChange({ value_mode: isRelativeMode ? 'static' : 'relative', value: isRelativeMode ? '' : 'today' })}
+          title={isRelativeMode ? t('workflows.builder.relative.switch_fixed') : t('workflows.builder.relative.use_relative')}
+          aria-label={isRelativeMode ? t('workflows.builder.relative.switch_fixed') : t('workflows.builder.relative.use_relative')}
+          aria-pressed={isRelativeMode}
+          className={cn(
+            'flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]',
+            isRelativeMode
+              ? 'border-[hsl(var(--primary))]/40 bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]'
+              : 'border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]',
+          )}
+        >
+          <CalendarClock size={13} />
+        </button>
+      )}
+    </div>
   ) : isReferenceValue ? (
     <FilterReferenceValuePicker
       targetFormId={selectedField!.reference_table!}
@@ -640,6 +698,69 @@ function operatorLabel(value: CompareOp, t: (key: string, vars?: Record<string, 
 // AUTO sentinel already establishes for this codebase's other SelectMenu-
 // with-a-none-option call sites.
 const SELECT_FIELD_EMPTY = '__empty__'
+
+/** Picks a relative-date token: the common presets as a dropdown, with a
+ *  "custom" escape hatch for anything else the grammar allows (an arbitrary
+ *  offset like -45d, or a period offset the presets don't list).
+ *
+ *  A value that isn't a preset — one authored through MCP, say — opens
+ *  straight into the custom input rather than being silently dropped or
+ *  shown as an empty select. */
+function RelativeValuePicker({ value, onChange, className }: {
+  value: string
+  onChange: (value: string) => void
+  className?: string
+}) {
+  const { t } = useI18n()
+  const [custom, setCustom] = useState(value !== '' && !isRelativePreset(value))
+  const invalid = custom && value.trim() !== '' && !isValidRelativeValue(value)
+
+  if (custom) {
+    return (
+      <div className={cn('min-w-0', className)}>
+        <div className="flex items-center gap-1.5">
+          <Input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="-90d"
+            aria-invalid={invalid || undefined}
+            className={cn('h-7 min-w-0 flex-1 text-[12px]', invalid && 'border-[hsl(var(--destructive))]')}
+          />
+          <button
+            type="button"
+            onClick={() => { setCustom(false); onChange('today') }}
+            title={t('workflows.builder.relative.back_to_presets')}
+            aria-label={t('workflows.builder.relative.back_to_presets')}
+            className="shrink-0 rounded-md px-1.5 py-1 text-[10px] text-[hsl(var(--muted-foreground))] transition-colors hover:text-[hsl(var(--foreground))]"
+          >
+            {t('workflows.builder.relative.presets')}
+          </button>
+        </div>
+        {/* Caught here rather than as a 400 on save — the server's grammar
+            is the authority, this only shortens the feedback loop. */}
+        {invalid && <p className="mt-1 text-[10px] text-[hsl(var(--destructive))]">{RELATIVE_SYNTAX_HINT}</p>}
+      </div>
+    )
+  }
+
+  return (
+    <SelectField
+      value={value}
+      onChange={(v) => { if (v === CUSTOM_RELATIVE) { setCustom(true); onChange('') } else { onChange(v) } }}
+      placeholder={t('workflows.builder.relative.select')}
+      options={[
+        ...RELATIVE_PRESETS.map((preset) => ({ value: preset.value, label: t(preset.labelKey) })),
+        { value: CUSTOM_RELATIVE, label: t('workflows.builder.relative.custom') },
+      ]}
+      className={className}
+      size="value"
+    />
+  )
+}
+
+/** Sentinel option value — never stored, only a signal to swap the select
+ *  for a free-text input. */
+const CUSTOM_RELATIVE = '__custom__'
 
 function SelectField({ value, onChange, options, groups, placeholder, className, size = 'compact' }: {
   value: string
