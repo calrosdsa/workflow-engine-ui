@@ -20,8 +20,9 @@ import { useUpdateAgent } from '@/features/agents/hooks'
 import { MCPToolsSubsection } from '@/features/agent-mcp/MCPToolsSubsection'
 import { WorkflowToolsSubsection } from '@/features/agent-mcp/WorkflowToolsSubsection'
 import { SkillsSubsection } from '@/features/agents/SkillsSubsection'
+import { ToolBindingsSubsection } from '@/features/agents/ToolBindingsSubsection'
 import { useTranslation } from '@/features/i18n/I18nProvider'
-import type { Agent } from '@/features/agents/types'
+import type { Agent, ToolBinding } from '@/features/agents/types'
 
 interface AgentEditorDrawerProps {
   agent: Agent
@@ -37,6 +38,7 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
   const [modelId, setModelId] = useState(agent.model_id)
   const [enabled, setEnabled] = useState(agent.enabled)
   const [skills, setSkills] = useState(agent.skills)
+  const [tools, setTools] = useState<ToolBinding[]>(agent.tools ?? [])
   // Text, not number, state — an empty string is how the field represents
   // "use the platform default" (session_ttl_days: null) without a spurious
   // 0 flashing while the user is mid-edit; parsed back to number|null only
@@ -58,6 +60,7 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
         instructions,
         model_id: modelId,
         skills,
+        tools,
         enabled,
         session_ttl_days: trimmedTTLInput === '' ? null : Number(trimmedTTLInput),
       })
@@ -146,6 +149,10 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
 
           <div className="border-t border-[hsl(var(--border))] pt-4">
             <WorkflowToolsSubsection />
+          </div>
+
+          <div className="border-t border-[hsl(var(--border))] pt-4">
+            <ToolBindingsSubsection agentId={agent.id} bindings={tools} onChange={setTools} canWrite={canWrite} />
           </div>
 
           <div className="border-t border-[hsl(var(--border))] pt-4">

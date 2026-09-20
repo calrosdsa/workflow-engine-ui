@@ -8,6 +8,15 @@ export interface Skill {
   instructions: string
 }
 
+export type ToolPolicy = 'allow' | 'require_approval' | 'deny'
+
+export interface ToolBinding {
+  id: string
+  name?: string
+  enabled: boolean
+  policy: ToolPolicy
+}
+
 export interface Agent {
   id: string
   app_id: string
@@ -21,6 +30,7 @@ export interface Agent {
   provider_id: string
   model_id: string
   skills: Skill[]
+  tools: ToolBinding[]
   enabled: boolean
   // session_ttl_days overrides the platform-wide default retention window
   // (FR-F6-003) — null means "use the platform default," not "retain
@@ -41,6 +51,7 @@ export interface UpdateAgentPayload {
   instructions: string
   model_id?: string
   skills?: Skill[]
+  tools?: ToolBinding[]
   enabled: boolean
   session_ttl_days?: number | null
 }
