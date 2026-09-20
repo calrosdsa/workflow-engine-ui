@@ -255,6 +255,13 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
         <div className="space-y-1.5">
           <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_chart.max_groups')}</Label>
           <Input type="number" min={1} max={200} value={config.limit} onChange={(e) => patch({ limit: Number(e.target.value) || 20 })} className="h-8 w-24 text-sm" />
+          {isSplit && (
+            // The label says "groups" but the engine caps ROWS, which on a
+            // split are primary × split combinations — so the number of
+            // categories that actually appear is this divided by the number
+            // of split values. Invisible from the chart itself.
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{t('builder.dashboard_chart.max_groups_split_hint')}</p>
+          )}
         </div>
       )}
 
@@ -306,7 +313,10 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
         </Label>
       )}
 
-      {config.chartType !== 'pie' && config.chartType !== 'donut' && (
+      {/* Pie and donut label their own slices, and a stat tile is a single
+          number — none of the three has a legend to show. The stat case was
+          always offered before and always did nothing. */}
+      {needsGroupBy && config.chartType !== 'pie' && config.chartType !== 'donut' && (
         <Label className="flex items-center gap-2 text-[12px] font-normal text-[hsl(var(--foreground))]">
           <Checkbox checked={config.legend} onCheckedChange={(c) => patch({ legend: c === true })} />
           {t('builder.dashboard_chart.show_legend')}

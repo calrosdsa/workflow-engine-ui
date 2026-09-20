@@ -2541,6 +2541,7 @@ export const en = {
   'builder.dashboard_chart.direction': 'Direction',
   'builder.dashboard_chart.max_groups': 'Max groups shown',
   'builder.dashboard_chart.show_legend': 'Show legend',
+  'builder.dashboard_chart.max_groups_split_hint': 'Counts category × split combinations, not categories — raise it on a split chart.',
   'builder.dashboard_chart.split_hint': 'A split chart plots the first series only — the colours belong to the split values.',
   'builder.dashboard_chart.split_extra_series': '{{n}} more series not shown while the chart is split.',
   'builder.dashboard_chart.stacked': 'Stack the series',

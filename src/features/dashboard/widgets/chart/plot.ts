@@ -90,7 +90,14 @@ export function canUseLog(values: number[]): boolean {
  *  Callers must check canUseLog first; a non-positive minimum has no
  *  logarithm. */
 export function logFloor(values: number[]): number {
-  return Math.pow(10, Math.floor(Math.log10(Math.min(...values))))
+  const min = Math.min(...values)
+  const decade = Math.pow(10, Math.floor(Math.log10(min)))
+  // A floor EQUAL to the smallest value gives that bar zero height —
+  // log(min) - log(min) = 0 — which is the same vanishing act, just one
+  // step later. It bites whenever the minimum is itself a round power of
+  // ten, so drop another decade. (>= rather than ===: the exponent round
+  // trip can land a hair above min.)
+  return decade >= min ? decade / 10 : decade
 }
 
 /** Plain shape: one row per group, one series per configured measure. The

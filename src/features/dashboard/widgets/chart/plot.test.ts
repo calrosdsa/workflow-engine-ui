@@ -148,16 +148,25 @@ describe('log value axis', () => {
   // The regression this exists for: recharts' own 'auto' log domain picked a
   // floor of 40 for 12/340/9800 — ABOVE the smallest value — and the first
   // bar vanished off the bottom of the chart with no error anywhere.
-  it('floors at the decade at or below the smallest value, never above it', () => {
+  it('floors at the decade below the smallest value', () => {
     expect(logFloor([12, 340, 9800])).toBe(10)
     expect(logFloor([340, 9800])).toBe(100)
     expect(logFloor([0.04, 7])).toBeCloseTo(0.01)
-    expect(logFloor([1000])).toBe(1000)
   })
 
-  it('never floors above the data it has to contain', () => {
-    for (const values of [[12, 340, 9800], [1, 2], [999, 1000], [0.5, 50]]) {
-      expect(logFloor(values)).toBeLessThanOrEqual(Math.min(...values))
+  // The same vanishing act one step later: a floor EQUAL to the smallest
+  // value gives that bar zero height, which bites whenever the minimum is
+  // itself a round power of ten.
+  it('drops another decade when the smallest value IS a decade', () => {
+    expect(logFloor([100, 5000])).toBe(10)
+    expect(logFloor([1000])).toBe(100)
+    expect(logFloor([1, 80])).toBeCloseTo(0.1)
+  })
+
+  // STRICTLY below, not at: equal is the zero-height case above.
+  it('never floors at or above the data it has to contain', () => {
+    for (const values of [[12, 340, 9800], [1, 2], [999, 1000], [0.5, 50], [100, 5000]]) {
+      expect(logFloor(values)).toBeLessThan(Math.min(...values))
     }
   })
 })

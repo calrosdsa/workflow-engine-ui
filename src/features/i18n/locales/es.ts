@@ -2327,6 +2327,7 @@ export const es = {
   'builder.dashboard_chart.direction': 'Dirección',
   'builder.dashboard_chart.max_groups': 'Máximo de grupos mostrados',
   'builder.dashboard_chart.show_legend': 'Mostrar leyenda',
+  'builder.dashboard_chart.max_groups_split_hint': 'Cuenta combinaciones de categoría × división, no categorías — auméntalo en un gráfico dividido.',
   'builder.dashboard_chart.split_hint': 'Un gráfico dividido traza solo la primera serie — los colores corresponden a los valores de la división.',
   'builder.dashboard_chart.split_extra_series': '{{n}} serie(s) más no se muestran mientras el gráfico está dividido.',
   'builder.dashboard_chart.stacked': 'Apilar las series',

@@ -59,3 +59,33 @@ describe('buildAggregateRequest', () => {
     expect(req!.series).toBeUndefined()
   })
 })
+
+describe('the second dimension is gated at the REQUEST, not the render', () => {
+  const split = {
+    ...createDefaultChartConfig(),
+    formId: 'f1',
+    groupBy: { field: 'status' },
+    groupBy2: { field: 'region' },
+  }
+
+  // A pie has no way to draw a split: it would get one response row per
+  // (key, key2) pair and slice them all under duplicate names. Gating here
+  // means a pie never receives a key2 at all.
+  it('omits group_by2 for a pie and a donut', () => {
+    expect(buildAggregateRequest({ ...split, chartType: 'pie' })!.group_by2).toBeUndefined()
+    expect(buildAggregateRequest({ ...split, chartType: 'donut' })!.group_by2).toBeUndefined()
+  })
+
+  it('keeps group_by2 for every chart type with a category axis', () => {
+    for (const chartType of ['bar', 'line', 'area', 'combo'] as const) {
+      expect(buildAggregateRequest({ ...split, chartType })!.group_by2).toBeDefined()
+    }
+  })
+
+  // The reachable human path: build a split bar chart, then switch it to a
+  // pie. The panel hides the Split by control but does not clear what it
+  // set, so the config still carries groupBy2.
+  it('ignores a groupBy2 left behind by a chart-type switch', () => {
+    expect(buildAggregateRequest({ ...split, chartType: 'pie' })!.group_by).toBeDefined()
+  })
+})
