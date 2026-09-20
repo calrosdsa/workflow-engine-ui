@@ -15,7 +15,37 @@ export interface ChatMessage {
   content: string
   tool_calls?: PendingConfirmation[] | unknown
   tool_results?: unknown
+  ui?: ChatSurface
   created_at: string
+}
+
+export type ChatSurface = ConfirmSurface | FormSurface | ChoiceSurface
+
+export interface ConfirmSurface {
+  kind: 'confirm'
+  id: string
+  call_id: string
+  title: string
+  description?: string
+  status?: 'pending' | 'approved' | 'denied'
+  tool_name?: string
+  arguments?: Record<string, unknown>
+}
+
+export interface FormSurface {
+  kind: 'form'
+  id: string
+  title: string
+  description?: string
+  fields: Array<{ name: string; label: string; type: 'text' | 'textarea' | 'number' | 'boolean' | 'date' | 'datetime'; description?: string; required?: boolean }>
+}
+
+export interface ChoiceSurface {
+  kind: 'choice'
+  id: string
+  title: string
+  description?: string
+  options: Array<{ value: string; label: string; description?: string }>
 }
 
 // agent_messages.tool_calls' shape for an always_confirm tool call awaiting
