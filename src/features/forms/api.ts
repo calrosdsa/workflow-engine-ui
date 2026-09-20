@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import type { FormDefinition, CreateFormPayload, UpdateFormPayload, FormRecord, AuditLogResponse, LinkedRecordsResponse, ConnectionCountTarget, ConnectionCountsResponse, CommentEntry, CommentsResponse, AttachmentEntry, TagEntry, TagsResponse, TagSuggestionsResponse, FormVisibility, FormSharingResponse, FormSharingUsageResponse, LinkableForm } from './types'
+import type { NumberFormat, FormDefinition, CreateFormPayload, UpdateFormPayload, FormRecord, AuditLogResponse, LinkedRecordsResponse, ConnectionCountTarget, ConnectionCountsResponse, CommentEntry, CommentsResponse, AttachmentEntry, TagEntry, TagsResponse, TagSuggestionsResponse, FormVisibility, FormSharingResponse, FormSharingUsageResponse, LinkableForm } from './types'
 import type { FilterGroup, SortRule } from '@/features/workflows/types'
 
 export interface SearchRecordsRequest {
@@ -58,8 +58,34 @@ export interface AggregateGroupResponse {
   values: number[]
 }
 
+/** Describes one positional column of AggregateGroupResponse, in row order:
+ *  the group key, key2 when the request had one, then one per series.
+ *  Mirrors api/forms/handler.go's aggregateColumnResponse.
+ *
+ *  This is what lets a chart format a money measure as money. Before it, the
+ *  renderer had to go back to the form definition and guess which field
+ *  produced which value, which is why formatting only ever worked on a stat
+ *  tile — the one shape with exactly one known source field. */
+export interface AggregateColumnResponse {
+  role: 'group' | 'group2' | 'measure'
+  /** The form field grouped by or aggregated. Absent for a count. */
+  field?: string
+  /** A display fallback — a caller's own label (the chart's series[].label)
+   *  still wins. */
+  label: string
+  /** Measures only. */
+  fn?: string
+  /** The aggregated field's own format. Absent for counts (a row count has
+   *  no unit) and for group keys, which are text. */
+  number_format?: NumberFormat
+}
+
 export interface AggregateRecordsResponse {
   groups: AggregateGroupResponse[]
+  /** Always present from a current backend; optional so an older one (or a
+   *  cached response) degrades to the previous unformatted behavior rather
+   *  than throwing. */
+  columns?: AggregateColumnResponse[]
   /** Mirrors SearchRecordsResponse's own field — see its doc comment.
    *  groups is empty BY DESIGN when this is set. */
   unresolved_reason?: string

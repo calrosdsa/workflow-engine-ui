@@ -93,6 +93,36 @@ export function ChartRenderer({ config, clientId, appId, menus, mode }: WidgetRe
   const { data, isLoading, isError, refetch, dataUpdatedAt } = useChartData(effectiveConfig)
   const groups = data?.groups ?? []
 
+  // Per-measure formats, straight off the result. Before the response
+  // described its own columns, the only way to format a value was to go back
+  // to the form definition and guess which field produced it — which is why
+  // this used to work on a stat tile and nowhere else. Optional because an
+  // older backend (or a cached response) simply has no columns, in which case
+  // every number renders raw exactly as it used to.
+  const measureFormats = (data?.columns ?? []).filter((c) => c.role === 'measure').map((c) => c.number_format)
+
+  const formatMeasure = (value: unknown, index: number) =>
+    typeof value === 'number' ? formatNumber(value, measureFormats[index]) : String(value ?? '')
+
+  // Recharts hands the tooltip the series' dataKey, which is this widget's
+  // own positional "val_N" — so each series formats with ITS own measure.
+  // dataKey is widened by recharts to include an accessor function; this
+  // widget only ever sets the string form, so anything else falls back to 0.
+  const tooltipFormatter = (value: unknown, _name: unknown, item?: { dataKey?: unknown }) => {
+    const raw = item?.dataKey
+    const key = typeof raw === 'string' ? raw : ''
+    const i = key.startsWith('val_') ? Number(key.slice(4)) : 0
+    return formatMeasure(value, Number.isFinite(i) ? i : 0)
+  }
+
+  // A single Y axis cannot speak two units, so it formats only when every
+  // measure agrees. With a mixed set the ticks stay raw rather than silently
+  // labelling all of them with the first series' currency.
+  const axisFormat = measureFormats.length > 0
+    && measureFormats.every((f) => JSON.stringify(f ?? null) === JSON.stringify(measureFormats[0] ?? null))
+    ? measureFormats[0]
+    : undefined
+
   let content: ReactNode
   if (!config.formId || (needsGroupBy && !config.groupBy?.field)) {
     content = (
@@ -120,7 +150,10 @@ export function ChartRenderer({ config, clientId, appId, menus, mode }: WidgetRe
     content = <div className="flex h-full items-center justify-center p-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{t('builder.dashboard_chart.no_data')}</div>
   } else if (isStat) {
     const sourceFieldName = config.series[0]?.field
-    const numberFormat = sourceForm?.fields.find((f) => f.name === sourceFieldName)?.number_format
+    // The column descriptor is authoritative; the form-definition lookup
+    // stays as the fallback for a backend that does not send columns yet.
+    const numberFormat = measureFormats[0]
+      ?? sourceForm?.fields.find((f) => f.name === sourceFieldName)?.number_format
     content = <StatTile config={config} value={groups[0]?.values[0] ?? 0} numberFormat={numberFormat} />
   } else {
     // Recharts consumes plain objects keyed by name — "key" for the x-axis /
@@ -140,7 +173,7 @@ export function ChartRenderer({ config, clientId, appId, menus, mode }: WidgetRe
             <Pie data={rows} dataKey="val_0" nameKey="key" outerRadius="80%" label isAnimationActive={false}>
               {rows.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
             </Pie>
-            <Tooltip />
+            <Tooltip formatter={tooltipFormatter} />
             {config.legend && <Legend />}
           </PieChart>
         </ResponsiveContainer>
@@ -152,8 +185,8 @@ export function ChartRenderer({ config, clientId, appId, menus, mode }: WidgetRe
           <ChartComponent data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="key" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} allowDecimals />
-            <Tooltip />
+            <YAxis tick={{ fontSize: 11 }} allowDecimals tickFormatter={(v) => formatNumber(Number(v), axisFormat)} />
+            <Tooltip formatter={tooltipFormatter} />
             {config.legend && <Legend />}
             {config.series.map((_, i) => {
               const color = seriesColor(config, i)
