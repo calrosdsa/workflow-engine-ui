@@ -85,4 +85,6 @@ export interface WSTokenResponse {
 
 export interface SendMessageResult {
   outcome: string
+  run_id?: string
+  status?: 'queued' | 'running' | 'waiting_for_input' | 'waiting_for_approval' | 'completed' | 'failed' | 'cancelled' | 'timed_out' | 'budget_exceeded'
 }
