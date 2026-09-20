@@ -228,6 +228,7 @@ interface MessageBubbleProps {
 }
 
 function MessageBubble({ message, onConfirm }: MessageBubbleProps) {
+  const t = useTranslation()
   const isUser = message.role === 'user'
   const pending = asPendingConfirmation(message)
 
@@ -236,7 +237,12 @@ function MessageBubble({ message, onConfirm }: MessageBubbleProps) {
       <ChatSurface
         surface={message.ui}
         busy={onConfirm.isPending}
-        onConfirm={(callId, approved) => onConfirm.mutate({ callId, approved })}
+        onConfirm={(surface, approved) => onConfirm.mutate({
+          callId: surface.call_id,
+          runId: surface.run_id ?? '',
+          approvalId: surface.approval_id ?? '',
+          approved,
+        })}
       />
     )
   }
@@ -245,11 +251,17 @@ function MessageBubble({ message, onConfirm }: MessageBubbleProps) {
     return (
       <ChatSurface
         surface={{
-          kind: 'confirm', id: pending.id, call_id: pending.id, title: `Wants to run`,
+          kind: 'confirm', id: pending.id, call_id: pending.id, title: t('agent_chat.wants_to_run'),
+          run_id: pending.run_id, approval_id: pending.approval_id,
           tool_name: pending.name, arguments: pending.arguments, status: pending.status,
         }}
         busy={onConfirm.isPending}
-        onConfirm={(callId, approved) => onConfirm.mutate({ callId, approved })}
+        onConfirm={(surface, approved) => onConfirm.mutate({
+          callId: surface.call_id,
+          runId: surface.run_id ?? '',
+          approvalId: surface.approval_id ?? '',
+          approved,
+        })}
       />
     )
   }

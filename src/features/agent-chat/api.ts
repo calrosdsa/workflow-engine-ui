@@ -31,9 +31,12 @@ export const agentChatApi = {
     }).json<{ ok: boolean; surface_id: string; kind: string; state: string }>(),
   sendMessage:   (id: string, content: string) =>
     api.post(`agent-chat/sessions/${id}/messages`, { json: { content } }).json<SendMessageResult>(),
-  confirm:       (id: string, callId: string, approved: boolean) =>
+  confirm:       (id: string, callId: string, runId: string, approvalId: string, approved: boolean) =>
     api.post(`agent-chat/sessions/${id}/ui-actions/${encodeURIComponent(`confirm:${callId}`)}`, {
-      json: { action_id: approved ? 'approve' : 'deny' },
+      json: {
+        action_id: approved ? 'approve' : 'deny',
+        payload: { call_id: callId, run_id: runId, approval_id: approvalId },
+      },
     }).json<{ ok: boolean; surface_id: string; state: string }>(),
   mintWSToken:   (id: string) => api.post(`agent-chat/sessions/${id}/ws-token`).json<WSTokenResponse>(),
 }

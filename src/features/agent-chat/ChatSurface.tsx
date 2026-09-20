@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { Check, CircleHelp, X, Wrench } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { ChatSurface as ChatSurfaceData, ConfirmSurface, FormSurface, ChoiceSurface } from './types'
+import { useTranslation } from '@/features/i18n/I18nProvider'
 
 interface ChatSurfaceProps {
   surface: ChatSurfaceData
   busy?: boolean
-  onConfirm?: (callId: string, approved: boolean) => void
+  onConfirm?: (surface: ConfirmSurface, approved: boolean) => void
 }
 
 export function ChatSurface({ surface, busy = false, onConfirm }: ChatSurfaceProps) {
@@ -21,7 +22,12 @@ export function ChatSurface({ surface, busy = false, onConfirm }: ChatSurfacePro
 }
 
 function ConfirmSurfaceView({ surface, busy, onConfirm }: { surface: ConfirmSurface; busy: boolean; onConfirm?: ChatSurfaceProps['onConfirm'] }) {
-  const resolved = surface.status && surface.status !== 'pending'
+  const t = useTranslation()
+  const actionable = (surface.state === undefined || surface.state === 'open' || surface.state === 'pending')
+    && surface.status === 'pending'
+    && !!surface.run_id
+    && !!surface.approval_id
+  const resolved = !actionable
   return (
     <div className="flex items-start justify-start">
       <div className="max-w-[90%] rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2.5 text-sm">
@@ -38,15 +44,19 @@ function ConfirmSurfaceView({ surface, busy, onConfirm }: { surface: ConfirmSurf
         )}
         {resolved ? (
           <p className="mt-2 text-xs text-[hsl(var(--muted-foreground))]">
-            {surface.status === 'approved' ? 'Approved.' : 'Denied.'}
+            {surface.status === 'approved'
+              ? t('agent_chat.approved')
+              : surface.status === 'denied'
+                ? t('agent_chat.denied')
+                : t('agent_chat.no_longer_available')}
           </p>
-        ) : onConfirm ? (
+        ) : actionable && onConfirm ? (
           <div className="mt-2 flex gap-2">
-            <Button size="sm" onClick={() => onConfirm(surface.call_id, true)} disabled={busy}>
-              <Check size={13} />Approve
+            <Button size="sm" onClick={() => onConfirm(surface, true)} disabled={busy}>
+              <Check size={13} />{t('agent_chat.approve')}
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onConfirm(surface.call_id, false)} disabled={busy}>
-              <X size={13} />Deny
+            <Button size="sm" variant="outline" onClick={() => onConfirm(surface, false)} disabled={busy}>
+              <X size={13} />{t('agent_chat.deny')}
             </Button>
           </div>
         ) : null}
@@ -56,6 +66,7 @@ function ConfirmSurfaceView({ surface, busy, onConfirm }: { surface: ConfirmSurf
 }
 
 function FormSurfaceView({ surface }: { surface: FormSurface }) {
+  const t = useTranslation()
   return (
     <div className="flex items-start justify-start">
       <div className="max-w-[90%] rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2.5 text-sm">
@@ -69,13 +80,14 @@ function FormSurfaceView({ surface }: { surface: FormSurface }) {
             </label>
           ))}
         </div>
-        <p className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">This form is awaiting an action handler.</p>
+        <p className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">{t('agent_chat.form_awaiting_action')}</p>
       </div>
     </div>
   )
 }
 
 function ChoiceSurfaceView({ surface }: { surface: ChoiceSurface }) {
+  const t = useTranslation()
   const [selected, setSelected] = useState<string | null>(null)
   return (
     <div className="flex items-start justify-start">
@@ -89,7 +101,7 @@ function ChoiceSurfaceView({ surface }: { surface: ChoiceSurface }) {
             </Button>
           ))}
         </div>
-        <p className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">This choice is awaiting an action handler.</p>
+        <p className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">{t('agent_chat.choice_awaiting_action')}</p>
       </div>
     </div>
   )

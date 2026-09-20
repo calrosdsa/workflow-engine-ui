@@ -74,6 +74,8 @@ export interface PendingConfirmation {
   name: string
   arguments: Record<string, unknown>
   status: 'pending' | 'approved' | 'denied'
+  run_id?: string
+  approval_id?: string
 }
 
 export interface WSTokenResponse {

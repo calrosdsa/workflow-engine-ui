@@ -65,7 +65,12 @@ export function useAgentChatSocket(sessionId: string | null) {
         const msg = ctx.data as ChatMessage
         qc.setQueryData<ChatMessage[]>(agentChatKeys.messages(sessionId), (prev) => {
           if (!prev) return [msg]
-          if (prev.some((m) => m.id === msg.id)) return prev
+          const existing = prev.findIndex((m) => m.id === msg.id)
+          if (existing >= 0) {
+            const next = [...prev]
+            next[existing] = msg
+            return next
+          }
           return [...prev, msg]
         })
       })

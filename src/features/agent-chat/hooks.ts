@@ -66,8 +66,11 @@ export function useSendChatMessage(sessionId: string | null) {
 }
 
 export function useConfirmChatToolCall(sessionId: string | null) {
+  const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ callId, approved }: { callId: string; approved: boolean }) => agentChatApi.confirm(sessionId!, callId, approved),
+    mutationFn: ({ callId, runId, approvalId, approved }: { callId: string; runId: string; approvalId: string; approved: boolean }) =>
+      agentChatApi.confirm(sessionId!, callId, runId, approvalId, approved),
+    onSuccess: () => qc.invalidateQueries({ queryKey: agentChatKeys.messages(sessionId ?? '') }),
   })
 }
 
