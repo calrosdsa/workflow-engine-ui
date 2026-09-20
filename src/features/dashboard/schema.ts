@@ -169,7 +169,7 @@ export const DASHBOARD_ENVELOPE_SCHEMA: ConfigSchema = {
     widgets: { type: 'array', description: 'Tiles, per dashboards.widget_envelope.', items: { type: 'object' } },
     parameters: {
       type: 'array',
-      description: "Viewer-supplied inputs this dashboard declares, so ONE control narrows many tiles instead of the same filter being repeated in each. The same model a report's `arguments` uses. Optional; omit entirely for a dashboard with no parameters. A parameter the viewer leaves unset narrows NOTHING — it does not match nothing.",
+      description: "Viewer-supplied inputs this dashboard declares, so ONE control narrows many tiles instead of the same filter being repeated in each. The same model a report's `arguments` uses. Optional; omit entirely for a dashboard with no parameters. A parameter the viewer leaves unset narrows NOTHING — it does not match nothing. ONLY A DASHBOARD MENU RENDERS THE CONTROL BAR: this same envelope is also what a detail page's 'custom' tab stores, and that surface has no bar, so parameters declared there never receive a value and every binding on them stays inert. Put them on a Dashboard menu.",
       items: {
         type: 'object',
         required: ['key', 'label', 'type'],
