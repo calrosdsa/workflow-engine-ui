@@ -1524,6 +1524,15 @@ export const en = {
   'mfa.verify': 'Verify',
   'mfa.verifying': 'Verifying…',
   'mfa.invalid_code': 'That code was not accepted. Check your authenticator app and try again.',
+  // The 15 minutes is the engine's LockWindow (internal/auth/mfa/store.go).
+  'mfa.too_many_attempts': 'Too many attempts. Code entry is paused for 15 minutes.',
+  'mfa.too_many_attempts_recovery_signin': 'To get in sooner, go back, sign in again and use a recovery code.',
+  'mfa.too_many_attempts_recovery': 'To continue now, enter one of your recovery codes instead.',
+  'mfa.server_error': 'Something went wrong on our side. Please try again.',
+  'mfa.network_error': 'Could not reach the server. Check your connection and try again.',
+  'mfa.already_enabled': 'Two-step verification is already on for your account.',
+  'mfa.not_enabled': 'Two-step verification is not on for your account.',
+  'mfa.signin_expired': 'This sign-in has expired. Go back and sign in again.',
   'mfa.trust_device': 'Trust this device for 30 days',
   'mfa.trust_device_hint':
     'You will not be asked for a code on this device again until the 30 days are up. Do not use this on a shared computer.',

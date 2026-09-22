@@ -849,6 +849,15 @@ export const es = {
   'mfa.verifying': 'Verificando…',
   'mfa.invalid_code':
     'No se aceptó ese código. Revisa tu aplicación de autenticación e inténtalo de nuevo.',
+  'mfa.too_many_attempts': 'Demasiados intentos. La introducción de códigos está en pausa durante 15 minutos.',
+  'mfa.too_many_attempts_recovery_signin':
+    'Para entrar antes, vuelve atrás, inicia sesión de nuevo y usa un código de recuperación.',
+  'mfa.too_many_attempts_recovery': 'Para continuar ahora, introduce uno de tus códigos de recuperación.',
+  'mfa.server_error': 'Algo salió mal por nuestra parte. Inténtalo de nuevo.',
+  'mfa.network_error': 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+  'mfa.already_enabled': 'La verificación en dos pasos ya está activada en tu cuenta.',
+  'mfa.not_enabled': 'La verificación en dos pasos no está activada en tu cuenta.',
+  'mfa.signin_expired': 'Este inicio de sesión ha caducado. Vuelve atrás e inicia sesión de nuevo.',
   'mfa.trust_device': 'Confiar en este dispositivo durante 30 días',
   'mfa.trust_device_hint':
     'No se te pedirá un código en este dispositivo hasta que pasen los 30 días. No lo uses en un ordenador compartido.',

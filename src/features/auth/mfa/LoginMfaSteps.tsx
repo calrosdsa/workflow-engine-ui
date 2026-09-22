@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { mfaApi, type MfaChallenge } from './api'
+import { mfaFailure } from './errors'
+import { MfaErrorText } from './MfaErrorText'
 import { SecretKeyBlock } from './SecretKeyBlock'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,6 +34,13 @@ export function MfaChallengeCard({ challenge, onVerified, onCancel }: Props) {
 
   const canUseRecoveryCode = challenge.methods.includes('recovery_code')
 
+  // A lockout ends this challenge. The engine caps a challenge at five
+  // attempts and the lock lands on the fifth, so any further code here is
+  // refused as invalid -- keeping the field open would only produce a more
+  // confusing error. The way forward is a fresh sign-in, where a recovery code
+  // works: using one clears the lock.
+  const locked = verify.isError && mfaFailure(verify.error) === 'too_many_attempts'
+
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
@@ -62,6 +71,7 @@ export function MfaChallengeCard({ challenge, onVerified, onCancel }: Props) {
               autoComplete={useRecoveryCode ? 'off' : 'one-time-code'}
               inputMode={useRecoveryCode ? 'text' : 'numeric'}
               placeholder={useRecoveryCode ? 'XXXXX-XXXXX-XXXXX' : '123456'}
+              disabled={locked}
             />
           </div>
 
@@ -70,6 +80,7 @@ export function MfaChallengeCard({ challenge, onVerified, onCancel }: Props) {
               id="mfa-trust-device"
               checked={trustDevice}
               onCheckedChange={(checked) => setTrustDevice(checked === true)}
+              disabled={locked}
             />
             <div className="space-y-0.5">
               <Label htmlFor="mfa-trust-device" className="font-normal">
@@ -79,13 +90,31 @@ export function MfaChallengeCard({ challenge, onVerified, onCancel }: Props) {
             </div>
           </div>
 
-          {verify.isError && <p className="text-xs text-destructive">{t('mfa.invalid_code')}</p>}
+          {verify.isError && (
+            <MfaErrorText
+              error={verify.error}
+              // Only offer the recovery-code route when the engine says codes
+              // remain -- the challenge lists 'recovery_code' only then.
+              lockedHintKey={canUseRecoveryCode ? 'mfa.too_many_attempts_recovery_signin' : undefined}
+            />
+          )}
 
-          <Button type="submit" className="w-full" disabled={verify.isPending || !code.trim()}>
-            {verify.isPending ? t('mfa.verifying') : t('mfa.verify')}
-          </Button>
+          {locked ? (
+            // Once locked, going back is the only thing that can work, so it
+            // becomes the primary action rather than a small link.
+            <Button type="button" className="w-full" onClick={onCancel}>
+              {t('mfa.back_to_sign_in')}
+            </Button>
+          ) : (
+            <Button type="submit" className="w-full" disabled={verify.isPending || !code.trim()}>
+              {verify.isPending ? t('mfa.verifying') : t('mfa.verify')}
+            </Button>
+          )}
         </form>
 
+        {/* Hidden once locked: the recovery-code toggle cannot work on a spent
+            challenge, and "back to sign in" is already the primary button. */}
+        {!locked && (
         <div className="flex items-center justify-between">
           {canUseRecoveryCode ? (
             <Button
@@ -107,6 +136,7 @@ export function MfaChallengeCard({ challenge, onVerified, onCancel }: Props) {
             {t('mfa.back_to_sign_in')}
           </Button>
         </div>
+        )}
       </CardContent>
     </Card>
   )
@@ -141,7 +171,12 @@ export function MfaEnrollDuringLogin({ challenge, onVerified, onCancel }: Props)
       </CardHeader>
       <CardContent className="space-y-4">
         {start.isPending && <p className="text-sm text-muted-foreground">{t('mfa.loading_secret')}</p>}
-        {start.isError && <p className="text-sm text-destructive">{t('mfa.enroll_start_failed')}</p>}
+        {start.isError && (
+          // No code has been typed yet, so a 400 here can only mean the
+          // sign-in challenge itself is dead (expired or spent): say that, not
+          // "wrong code".
+          <MfaErrorText error={start.error} invalidKey="mfa.signin_expired" conflictKey="mfa.already_enabled" />
+        )}
 
         {start.data && (
           <>
@@ -166,7 +201,8 @@ export function MfaEnrollDuringLogin({ challenge, onVerified, onCancel }: Props)
                 />
               </div>
 
-              {confirm.isError && <p className="text-xs text-destructive">{t('mfa.invalid_code')}</p>}
+              {/* No recovery-code hint: someone mid-enrollment has none yet. */}
+              {confirm.isError && <MfaErrorText error={confirm.error} />}
 
               <Button type="submit" className="w-full" disabled={confirm.isPending || !code.trim()}>
                 {confirm.isPending ? t('mfa.verifying') : t('mfa.finish_setup')}
