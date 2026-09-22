@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { mfaApi } from './api'
+import { MfaErrorText } from './MfaErrorText'
 import { SecretKeyBlock } from './SecretKeyBlock'
 import { RecoveryCodesPanel } from './RecoveryCodesPanel'
 import { Button } from '@/components/ui/button'
@@ -83,7 +84,11 @@ function EnrollCard({ required, deadline }: { required: boolean; deadline?: stri
             {start.isPending ? t('common.loading') : t('mfa.begin_setup')}
           </Button>
         )}
-        {start.isError && <p className="text-sm text-destructive">{t('mfa.enroll_start_failed')}</p>}
+        {start.isError && (
+          // A 409 here means MFA got turned on elsewhere (another tab) since
+          // this page loaded.
+          <MfaErrorText error={start.error} invalidKey="mfa.enroll_start_failed" conflictKey="mfa.already_enabled" />
+        )}
 
         {start.data && (
           <>
@@ -107,7 +112,7 @@ function EnrollCard({ required, deadline }: { required: boolean; deadline?: stri
                   placeholder="123456"
                 />
               </div>
-              {confirm.isError && <p className="text-xs text-destructive">{t('mfa.invalid_code')}</p>}
+              {confirm.isError && <MfaErrorText error={confirm.error} conflictKey="mfa.already_enabled" />}
               <Button type="submit" disabled={confirm.isPending || !code.trim()}>
                 {confirm.isPending ? t('mfa.verifying') : t('mfa.finish_setup')}
               </Button>
@@ -190,7 +195,13 @@ function EnrolledCard({ remaining }: { remaining: number }) {
               {t('mfa.regenerate_recovery_codes')}
             </Button>
           </form>
-          {regenerate.isError && <p className="text-xs text-destructive">{t('mfa.invalid_code')}</p>}
+          {regenerate.isError && (
+            <MfaErrorText
+              error={regenerate.error}
+              lockedHintKey={remaining > 0 ? 'mfa.too_many_attempts_recovery' : undefined}
+              conflictKey="mfa.not_enabled"
+            />
+          )}
         </div>
 
         <Separator />
@@ -221,7 +232,15 @@ function EnrolledCard({ remaining }: { remaining: number }) {
               {t('mfa.disable')}
             </Button>
           </form>
-          {disable.isError && <p className="text-xs text-destructive">{t('mfa.invalid_code')}</p>}
+          {disable.isError && (
+            <MfaErrorText
+              error={disable.error}
+              // Here a recovery code works in this same field right away: the
+              // engine's recovery-code path ignores the lock and clears it.
+              lockedHintKey={remaining > 0 ? 'mfa.too_many_attempts_recovery' : undefined}
+              conflictKey="mfa.not_enabled"
+            />
+          )}
         </div>
       </CardContent>
     </Card>
