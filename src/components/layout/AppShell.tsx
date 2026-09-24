@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Outlet, useRouterState } from '@tanstack/react-router'
+import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { Menu as MenuIcon, X } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { ClientSwitcher } from './ClientSwitcher'
@@ -20,6 +20,7 @@ import { useTranslation } from '@/features/i18n/I18nProvider'
 export function AppShell() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const session = useAuthStore((s) => s.session)
+  const navigate = useNavigate()
   const t = useTranslation()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const isAppDesignShell = pathname.startsWith('/applications/')
@@ -74,7 +75,9 @@ export function AppShell() {
             </button>
             <ClientSwitcher />
           </div>
-          {session && <ProfileMenu session={session} />}
+          {session && (
+            <ProfileMenu session={session} onOpenAccountSecurity={() => navigate({ to: '/account/security' })} />
+          )}
         </header>
         <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
           <Outlet />
