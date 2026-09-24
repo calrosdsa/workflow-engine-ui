@@ -5,7 +5,7 @@
 // away here -- the engine's recovery-code path ignores the lock and clears it --
 // so the message should say so, but only when the user has codes left.
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HTTPError } from 'ky'
 import { I18nProvider } from '@/features/i18n/I18nProvider'
@@ -14,14 +14,16 @@ import { SecurityPage } from './SecurityPage'
 
 const statusMock = vi.fn()
 const disableMock = vi.fn()
+const startEnrollmentMock = vi.fn()
+const confirmEnrollmentMock = vi.fn()
 vi.mock('./api', () => ({
   mfaApi: {
     status: (...args: unknown[]) => statusMock(...args),
     disable: (...args: unknown[]) => disableMock(...args),
     listDevices: () => Promise.resolve({ devices: [] }),
     regenerateRecoveryCodes: vi.fn(),
-    startEnrollment: vi.fn(),
-    confirmEnrollment: vi.fn(),
+    startEnrollment: (...args: unknown[]) => startEnrollmentMock(...args),
+    confirmEnrollment: (...args: unknown[]) => confirmEnrollmentMock(...args),
     revokeDevice: vi.fn(),
     revokeAllDevices: vi.fn(),
   },
@@ -31,6 +33,8 @@ afterEach(() => {
   cleanup()
   statusMock.mockReset()
   disableMock.mockReset()
+  startEnrollmentMock.mockReset()
+  confirmEnrollmentMock.mockReset()
 })
 
 function httpError(status: number): HTTPError {
@@ -112,5 +116,49 @@ describe('SecurityPage disable error states', () => {
     const alert = await submitDisable()
 
     expect(alert.textContent).toBe(en['mfa.not_enabled'])
+  })
+})
+
+// Finishing setup refreshes the status, and the refreshed status ("enrolled")
+// swaps the setup card for the enrolled one. The new recovery codes used to
+// live in the setup card, so they went with it: in a real browser nobody who
+// enrolled on this page ever saw them, though they are the only plaintext copy.
+// This drives exactly that sequence.
+describe('SecurityPage enrollment', () => {
+  it('keeps showing the new recovery codes after the status flips to enrolled', async () => {
+    statusMock
+      .mockResolvedValueOnce({ enrolled: false, required: false, blocking: false, recovery_codes_remaining: 0 })
+      .mockResolvedValue({ enrolled: true, required: false, blocking: false, recovery_codes_remaining: 10 })
+    startEnrollmentMock.mockResolvedValue({
+      secret: 'JBSWY3DPEHPK3PXP',
+      otpauth_uri: 'otpauth://totp/Test:someone@example.test?secret=JBSWY3DPEHPK3PXP&issuer=Test',
+      digits: 6,
+      period_secs: 30,
+    })
+    confirmEnrollmentMock.mockResolvedValue({ recovery_codes: ['AAAAA-BBBBB-CCCCC-D', 'EEEEE-FFFFF-GGGGG-H'] })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <I18nProvider>
+          <SecurityPage />
+        </I18nProvider>
+      </QueryClientProvider>,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: en['mfa.begin_setup'] }))
+    fireEvent.change(await screen.findByLabelText(en['mfa.enter_code_to_confirm']), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: en['mfa.finish_setup'] }))
+
+    // Let the status refetch that finishing setup triggers land and re-render.
+    await waitFor(() => expect(statusMock).toHaveBeenCalledTimes(2))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    expect(screen.getByText('AAAAA-BBBBB-CCCCC-D')).toBeTruthy()
+    expect(screen.getByText('EEEEE-FFFFF-GGGGG-H')).toBeTruthy()
+
+    // Once saved, the page shows the enrolled state.
+    fireEvent.click(screen.getByRole('button', { name: en['mfa.saved_them'] }))
+    expect(await screen.findByRole('button', { name: en['mfa.disable'] })).toBeTruthy()
+    expect(screen.queryByText('AAAAA-BBBBB-CCCCC-D')).toBeNull()
   })
 })
