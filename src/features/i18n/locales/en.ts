@@ -102,6 +102,7 @@ export const en = {
   'workflows.evaluations.page.not_reviewed': 'Not reviewed',
   'profile.account_menu': 'Account menu',
   'profile.log_out': 'Log out',
+  'profile.account_security': 'Account security',
   'profile.language': 'Language',
   'profile.theme': 'Theme',
   'menus.module.invalid_nest_toast': 'A Module can only be nested under another Module, or moved to the top level.',

@@ -1,10 +1,13 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useParams, useSearch } from '@tanstack/react-router'
 import { AlertCircle } from 'lucide-react'
 import { runtimeRouter } from '@/runtime-router'
-import { useLogin } from '@/features/auth/hooks'
+import { useLoadSession, useLogin } from '@/features/auth/hooks'
+import { isMfaChallenge, type MfaChallenge } from '@/features/auth/mfa/api'
+import { MfaChallengeCard, MfaEnrollDuringLogin } from '@/features/auth/mfa/LoginMfaSteps'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -36,6 +39,13 @@ export function RuntimeLoginPage() {
   const { clientId, appId } = useParams({ strict: false }) as { clientId: string; appId: string }
   const search = useSearch({ strict: false }) as { returnTo?: string }
   const login = useLogin()
+  const loadSession = useLoadSession()
+  // Set when sign-in accepted the password but held the session back for a
+  // second factor. This page used to navigate into the app regardless, so an
+  // enrolled user arrived with no session and was bounced straight back here
+  // with no explanation. Held in component state, like the builder's
+  // LoginPage, so a half-finished login never outlives the page.
+  const [challenge, setChallenge] = useState<MfaChallenge | null>(null)
 
   const {
     register,
@@ -43,18 +53,59 @@ export function RuntimeLoginPage() {
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(buildSchema(t)) })
 
+  // Where a successful sign-in lands, whether it finished in one step or
+  // through the MFA challenge.
+  function goToApp() {
+    const returnTo = search.returnTo
+    if (returnTo && returnTo.startsWith(`/${clientId}/${appId}`)) {
+      window.location.href = returnTo
+    } else {
+      runtimeRouter.navigate({ to: `/${clientId}/${appId}` })
+    }
+  }
+
   async function onSubmit(values: FormValues) {
     try {
-      await login.mutateAsync(values)
-      const returnTo = search.returnTo
-      if (returnTo && returnTo.startsWith(`/${clientId}/${appId}`)) {
-        window.location.href = returnTo
-      } else {
-        runtimeRouter.navigate({ to: `/${clientId}/${appId}` })
+      const result = await login.mutateAsync(values)
+      if (isMfaChallenge(result)) {
+        setChallenge(result)
+        return
       }
+      goToApp()
     } catch {
       // error shown inline via login.isError
     }
+  }
+
+  // Runs once the second factor is accepted and a session finally exists.
+  async function onVerified() {
+    await loadSession()
+    goToApp()
+  }
+
+  if (challenge) {
+    // The same two steps the builder's LoginPage renders. Enrollment is
+    // included: someone the policy requires to enroll may well meet that
+    // requirement here first, and turning them away would strand them.
+    const Step = challenge.purpose === 'enroll' ? MfaEnrollDuringLogin : MfaChallengeCard
+    return (
+      <div
+        className="flex min-h-screen items-center justify-center p-4"
+        style={{ backgroundColor: 'hsl(var(--background))', color: 'hsl(var(--foreground))' }}
+      >
+        <Step
+          challenge={challenge}
+          onVerified={onVerified}
+          onCancel={() => {
+            // Back to the password form. Nothing to revoke: the engine
+            // already revoked the pre-verification session, and the challenge
+            // expires on its own.
+            setChallenge(null)
+            login.reset()
+          }}
+        />
+      </div>
+    )
   }
 
   return (

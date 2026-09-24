@@ -1,6 +1,6 @@
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { Bot, Workflow, FileText, Palette, SlidersHorizontal, Rocket, Loader2, AlertCircle, ListTree, Eye, LogOut, Sun, Moon, BookOpen, Lock, ChevronsUpDown, LayoutGrid, Check } from 'lucide-react'
+import { Bot, Workflow, FileText, Palette, SlidersHorizontal, Rocket, Loader2, AlertCircle, ListTree, Eye, LogOut, Sun, Moon, BookOpen, Lock, ChevronsUpDown, LayoutGrid, Check, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
@@ -381,6 +381,7 @@ function ThemeToggle() {
 function AccountMenu() {
   const session = useAuthStore((s) => s.session)
   const logoutMutation = useLogout()
+  const navigate = useNavigate()
   const t = useI18n().t
   if (!session) return null
 
@@ -408,6 +409,14 @@ function AccountMenu() {
             <p className="truncate text-[12px] text-[hsl(var(--muted-foreground))]">{session.email}</p>
           </div>
         </div>
+        <DropdownMenuSeparator />
+        {/* The design shell replaces the builder's AppShell chrome entirely
+            (so its ProfileMenu is not on screen here); without this item,
+            account security would be unreachable from inside any app. */}
+        <DropdownMenuItem onSelect={() => navigate({ to: '/account/security' })}>
+          <ShieldCheck size={14} />
+          {t('profile.account_security')}
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           destructive

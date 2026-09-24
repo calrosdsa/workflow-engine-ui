@@ -15,6 +15,7 @@ export const es = {
   'common.columns': 'Columnas',
   'profile.account_menu': 'Menú de cuenta',
   'profile.log_out': 'Cerrar sesión',
+  'profile.account_security': 'Seguridad de la cuenta',
   'profile.language': 'Idioma',
   'profile.theme': 'Tema',
   'app_settings.variables.title': 'Variables globales',

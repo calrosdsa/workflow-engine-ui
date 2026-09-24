@@ -1,4 +1,4 @@
-import { LogOut, Sun, Moon, Monitor } from 'lucide-react'
+import { LogOut, Sun, Moon, Monitor, ShieldCheck } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { useLogout } from '@/features/auth/hooks'
@@ -21,6 +21,13 @@ interface ProfileMenuProps {
    *  below that's simply never mounted on that path, rather than calling
    *  the hook unconditionally in this one. */
   showThemeToggle?: boolean
+  /** Adds an "Account security" item (two-step verification, recovery codes,
+   *  trusted devices) that calls this. Only the builder's AppShell passes it:
+   *  the page lives on the builder's router (/account/security), and the
+   *  runtime app mounts this same component under a separate router where no
+   *  such route exists. A callback rather than a <Link> keeps this shared
+   *  component free of either router, the same way useLogout navigates. */
+  onOpenAccountSecurity?: () => void
 }
 
 function displayName(session: Me): string {
@@ -54,7 +61,7 @@ function ThemeTogglePreference({ t }: { t: I18nContextValue['t'] }) {
   )
 }
 
-export function ProfileMenu({ session, showThemeToggle }: ProfileMenuProps) {
+export function ProfileMenu({ session, showThemeToggle, onOpenAccountSecurity }: ProfileMenuProps) {
   const logout = useLogout()
   const name = displayName(session)
   const { locale, setLocale, supportedLocales, t } = useI18n()
@@ -79,6 +86,15 @@ export function ProfileMenu({ session, showThemeToggle }: ProfileMenuProps) {
           <p className="truncate text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>{session.email}</p>
         </div>
         <DropdownMenuSeparator className="bg-[hsl(var(--border))]" />
+        {onOpenAccountSecurity && (
+          <>
+            <DropdownMenuItem onSelect={onOpenAccountSecurity}>
+              <ShieldCheck size={13} />
+              {t('profile.account_security')}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-[hsl(var(--border))]" />
+          </>
+        )}
         {/* Preferences — a small block rather than two bespoke dropdown
             items, since "language" and "theme" are the same kind of thing
             (a per-viewer runtime preference) and "and so on" (the request
