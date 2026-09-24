@@ -24,4 +24,8 @@ export const usersApi = {
   revokeAppAccess:  (userId: string, appId: string) => api.delete(`users/${userId}/apps/${appId}`),
   grantSuperAdmin:  (userId: string) => api.post(`users/${userId}/super-admin`),
   revokeSuperAdmin: (userId: string) => api.delete(`users/${userId}/super-admin`),
+  // Turns off a member's two-step verification. The engine refuses (403) unless
+  // the caller runs every organisation the member belongs to, and never lets
+  // anyone reset themselves this way.
+  resetMfa:         (userId: string) => api.post(`users/${userId}/mfa/reset`),
 }

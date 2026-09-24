@@ -12,6 +12,9 @@ export interface TeamUser {
   last_name: string
   status: string
   is_super_admin: boolean
+  /** Whether the member has two-step verification on. Absent from engines that
+   *  predate reporting it -- treat that as "unknown", not "off". */
+  mfa_enabled?: boolean
   memberships: UserMembership[]
 }
 

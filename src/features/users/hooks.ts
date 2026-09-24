@@ -76,6 +76,15 @@ export function useGrantSuperAdmin() {
   })
 }
 
+export function useResetUserMfa() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) => usersApi.resetMfa(userId),
+    // Refetch either way: a 409 means the list's "on" was already stale.
+    onSettled: () => qc.invalidateQueries({ queryKey: userKeys.all }),
+  })
+}
+
 export function useRevokeSuperAdmin() {
   const qc = useQueryClient()
   return useMutation({

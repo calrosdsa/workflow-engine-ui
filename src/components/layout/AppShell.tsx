@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar'
 import { ClientSwitcher } from './ClientSwitcher'
 import { useAuthStore } from '@/stores/auth'
 import { ProfileMenu } from '@/features/runtime/ProfileMenu'
+import { MfaEnrollmentBanner } from '@/features/auth/mfa/MfaEnrollmentBanner'
 import { useTranslation } from '@/features/i18n/I18nProvider'
 
 // /applications/$appId/* (the app-scoped design shell) renders its own
@@ -79,6 +80,10 @@ export function AppShell() {
             <ProfileMenu session={session} onOpenAccountSecurity={() => navigate({ to: '/account/security' })} />
           )}
         </header>
+        {/* Not on the security page itself: that is where the banner sends you. */}
+        {session && pathname !== '/account/security' && (
+          <MfaEnrollmentBanner onSetUp={() => navigate({ to: '/account/security' })} />
+        )}
         <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
           <Outlet />
         </main>

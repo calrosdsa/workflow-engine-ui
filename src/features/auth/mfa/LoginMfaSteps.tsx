@@ -4,6 +4,7 @@ import { mfaApi, type MfaChallenge } from './api'
 import { mfaFailure } from './errors'
 import { MfaErrorText } from './MfaErrorText'
 import { SecretKeyBlock } from './SecretKeyBlock'
+import { RecoveryCodesPanel } from './RecoveryCodesPanel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -147,11 +148,19 @@ export function MfaChallengeCard({ challenge, onVerified, onCancel }: Props) {
 export function MfaEnrollDuringLogin({ challenge, onVerified, onCancel }: Props) {
   const t = useTranslation()
   const [code, setCode] = useState('')
+  // The recovery codes the engine sent back with the new session. They are
+  // shown before going on because that response is the only time they exist
+  // in plaintext -- someone who enrolls here has no other way to see them.
+  const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null)
 
   const start = useMutation({ mutationFn: () => mfaApi.startEnrollmentDuringLogin(challenge.mfa_token) })
   const confirm = useMutation({
     mutationFn: () => mfaApi.verify(challenge.mfa_token, code, false),
-    onSuccess: onVerified,
+    onSuccess: (data) => {
+      // An older engine returns no codes here; with nothing to show, go on.
+      if (data.recovery_codes?.length) setRecoveryCodes(data.recovery_codes)
+      else onVerified()
+    },
   })
 
   // Fetch the secret when this step mounts. In an effect rather than the render
@@ -162,6 +171,16 @@ export function MfaEnrollDuringLogin({ challenge, onVerified, onCancel }: Props)
   useEffect(() => {
     startEnrollment()
   }, [startEnrollment])
+
+  // The session already exists at this point; "back to sign in" would only
+  // strand it, so the codes panel is the whole screen until they are saved.
+  if (recoveryCodes) {
+    return (
+      <div className="w-full max-w-md">
+        <RecoveryCodesPanel codes={recoveryCodes} onDone={onVerified} />
+      </div>
+    )
+  }
 
   return (
     <Card className="w-full max-w-md">
