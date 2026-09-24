@@ -11,8 +11,10 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useTranslation } from '@/features/i18n/I18nProvider'
+import { MFA_STATUS_KEY } from './queryKeys'
 
-const STATUS_KEY = ['mfa', 'status']
+// Shared with the shell's reminder banner: enrolling here must clear it.
+const STATUS_KEY = MFA_STATUS_KEY
 const DEVICES_KEY = ['mfa', 'devices']
 
 /** Account security: enroll or remove a second factor, replace recovery codes,

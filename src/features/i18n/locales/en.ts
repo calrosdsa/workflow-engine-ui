@@ -1558,6 +1558,9 @@ export const en = {
   'mfa.begin_setup': 'Set up two-step verification',
   'mfa.required_by': 'Your organisation requires two-step verification by {date}.',
   'mfa.required_now': 'Your organisation requires two-step verification.',
+  'mfa.banner_next_signin': "You'll be asked to set it up the next time you sign in.",
+  'mfa.banner_set_up': 'Set up now',
+  'mfa.banner_dismiss': 'Dismiss',
   'mfa.enrolled_title': 'Two-step verification',
   'mfa.enabled': 'Enabled',
   'mfa.enrolled_description':

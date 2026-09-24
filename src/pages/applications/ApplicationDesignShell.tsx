@@ -21,6 +21,7 @@ import { useState } from 'react'
 import type { ValidationIssue } from '@/features/applications/types'
 import type { Membership } from '@/features/auth/types'
 import { useI18n } from '@/features/i18n/I18nProvider'
+import { MfaEnrollmentBanner } from '@/features/auth/mfa/MfaEnrollmentBanner'
 
 // The app-scoped design shell — replaces the old ApplicationBuilderPage's
 // bespoke header+useState tab bar with real nested routes
@@ -220,6 +221,8 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
           <AccountMenu />
         </div>
       </header>
+
+      <MfaEnrollmentBanner onSetUp={() => navigate({ to: '/account/security' })} />
 
       {isLockedProduction && (
         <div className="flex items-center justify-between gap-3 border-b border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/10 px-4 py-2 text-[12px] font-medium text-[hsl(var(--warning))]">

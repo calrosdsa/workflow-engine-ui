@@ -885,6 +885,9 @@ export const es = {
   'mfa.begin_setup': 'Configurar la verificación en dos pasos',
   'mfa.required_by': 'Tu organización exige verificación en dos pasos antes del {date}.',
   'mfa.required_now': 'Tu organización exige verificación en dos pasos.',
+  'mfa.banner_next_signin': 'Se te pedirá configurarla la próxima vez que inicies sesión.',
+  'mfa.banner_set_up': 'Configurar ahora',
+  'mfa.banner_dismiss': 'Descartar',
   'mfa.enrolled_title': 'Verificación en dos pasos',
   'mfa.enabled': 'Activada',
   'mfa.enrolled_description':
