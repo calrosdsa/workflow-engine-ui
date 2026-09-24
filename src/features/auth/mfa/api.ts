@@ -6,11 +6,15 @@ import type { User } from '../types'
 export const mfaApi = {
   /** Completes a pending challenge. On success the engine issues the session
    *  that sign-in withheld, delivered as the same HttpOnly cookie an ordinary
-   *  login would have set. */
+   *  login would have set.
+   *
+   *  When the challenge was an enrollment (a sign-in held because setup was
+   *  overdue), the response also carries the new recovery codes: this is the
+   *  only time they exist in plaintext, so the caller must show them. */
   verify: (mfaToken: string, code: string, trustDevice: boolean) =>
     api
       .post('auth/mfa/verify', { json: { mfa_token: mfaToken, code, trust_device: trustDevice } })
-      .json<{ user: User }>(),
+      .json<{ user: User; recovery_codes?: string[] }>(),
 
   /** Starts enrollment for a login that is blocked on it. Authenticated by the
    *  challenge token, because the user has no session yet. */
