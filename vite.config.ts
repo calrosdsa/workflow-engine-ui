@@ -6,18 +6,18 @@ import { cspMetaTag } from './src/lib/csp.js'
 
 // Every top-level path segment the BUILDER's router.tsx actually owns (Home
 // '/', /applications/$appId/{workflows,forms,design,settings,executions},
-// /knowledge-bases, /team, /dev, /test, /login) — anything else 2-3 segments
-// deep is assumed to be a runtime URL (/{clientId}/{appId}[/{menuSlug}]).
-// This list must be kept in sync with router.tsx's top-level routes; a
-// missing entry here would silently misroute that builder page to the
-// runtime bundle in dev only (confirmed by hand: this exact bug happened
-// with /applications/{appId} before this list existed — the original
-// version only excluded '/api', '/@', '/node_modules', and dotted asset
-// paths, which doesn't cover builder routes with a param segment like
-// /applications/{appId} at all).
+// /knowledge-bases, /team, /dev, /test, /login, /account/security) — anything
+// else 2-3 segments deep is assumed to be a runtime URL
+// (/{clientId}/{appId}[/{menuSlug}]). This list must be kept in sync with
+// router.tsx's top-level routes and nginx.conf's copy of it; a missing entry
+// misroutes that builder page to the runtime bundle whenever it is loaded
+// directly (confirmed by hand: this exact bug happened with /applications/
+// {appId} before this list existed, and again with /account/security, which
+// then asked the engine for client "account", app "security").
+// src/router-hosting.test.ts now pins all three together.
 const BUILDER_ROUTE_PREFIXES = [
   'workflows', 'executions', 'forms', 'applications', 'knowledge-bases',
-  'team', 'portal', 'accept-invite', 'dev', 'test', 'login',
+  'team', 'portal', 'accept-invite', 'dev', 'test', 'login', 'account',
 ]
 
 // Vite's dev server only auto-falls-back to index.html for unmatched paths

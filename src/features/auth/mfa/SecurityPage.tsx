@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useTranslation } from '@/features/i18n/I18nProvider'
 import { MFA_STATUS_KEY } from './queryKeys'
+import { describeDevice } from './deviceLabel'
 
 // Shared with the shell's reminder banner: enrolling here must clear it.
 const STATUS_KEY = MFA_STATUS_KEY
@@ -294,7 +295,9 @@ function TrustedDevicesCard() {
         {list.map((device) => (
           <div key={device.id} className="flex items-start justify-between gap-4 rounded-md border p-3">
             <div className="min-w-0 space-y-0.5">
-              <p className="truncate text-sm font-medium">{device.label}</p>
+              {/* The engine stores the raw User-Agent; describe it in the reader's language,
+                  keeping the raw value to hand for anyone who needs it. */}
+              <p className="truncate text-sm font-medium" title={device.label}>{describeDevice(device.label, t)}</p>
               <p className="text-xs text-muted-foreground">
                 {t('mfa.device_expires').replace('{date}', new Date(device.expires_at).toLocaleDateString())}
               </p>
