@@ -21,6 +21,7 @@ import type { AppSummary } from '@/features/applications/types'
 import type { InvitationGrant } from '@/features/invitations/types'
 import type { TeamUser } from '@/features/users/types'
 import { useTranslation } from '@/features/i18n/I18nProvider'
+import { MfaResetSection } from './MfaResetSection'
 
 interface UserFormDrawerProps {
   open: boolean
@@ -264,6 +265,9 @@ export function UserFormDrawer({ open, onClose, mode = 'invite', existingUser }:
                 </p>
               </div>
             )}
+
+            {/* Not part of Save: resetting takes effect immediately, behind its own confirmation. */}
+            {isManageAccess && existingUser && <MfaResetSection user={existingUser} />}
 
             {!grantingSuperAdmin && (
               <div>
