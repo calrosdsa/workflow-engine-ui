@@ -1981,6 +1981,7 @@ export const en = {
   'app_design.back_to_apps': 'Back to applications',
   'app_design.no_access_title': "You can't open this app's design tools",
   'app_design.no_access_description': 'Your role includes app design, but not “View application settings”, which design needs. Ask a Super Admin to add it to your role.',
+  'app_design.no_design_access_description': "Your role doesn't include app design. Ask a Super Admin if you need it.",
   'app_design.load_failed_title': "Couldn't load this application",
   'app_design.load_failed_description': 'Something went wrong on our side. Try again in a moment.',
   'app_design.switch_application': 'Switch application',

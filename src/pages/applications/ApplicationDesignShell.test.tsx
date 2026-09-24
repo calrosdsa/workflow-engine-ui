@@ -31,14 +31,16 @@ vi.mock('@/features/applications/hooks', () => ({
 vi.mock('@/features/environment/hooks', () => ({
   useEnvironmentLinkStatus: () => ({ data: undefined }),
 }))
+let granted = new Set<string>()
 vi.mock('@/features/auth/permissions', () => ({
-  usePermission: () => false,
+  usePermission: (need: string) => granted.has(need),
   hasPermission: () => false,
 }))
 
 afterEach(() => {
   cleanup()
   navigateMock.mockReset()
+  granted = new Set()
 })
 
 function httpError(status: number): HTTPError {
@@ -56,6 +58,7 @@ function renderShellWithError(error: unknown) {
 
 describe('ApplicationDesignShell when the application cannot be loaded', () => {
   it('explains a refusal instead of showing a blank page, and offers a way back', () => {
+    granted = new Set(['application:design'])
     renderShellWithError(httpError(403))
 
     const alert = screen.getByRole('alert')
@@ -64,6 +67,18 @@ describe('ApplicationDesignShell when the application cannot be loaded', () => {
 
     fireEvent.click(screen.getByRole('button', { name: en['app_design.back_to_apps'] }))
     expect(navigateMock).toHaveBeenCalledWith({ to: '/' })
+  })
+
+  // The shell's route only checks membership of the app, so a member without
+  // design reaches it from a typed or bookmarked URL. Telling them their role
+  // "includes app design" would be false.
+  it('does not claim design for a member whose role has none', () => {
+    renderShellWithError(httpError(403))
+
+    const alert = screen.getByRole('alert')
+    expect(alert.textContent).toContain(en['app_design.no_access_title'])
+    expect(alert.textContent).toContain(en['app_design.no_design_access_description'])
+    expect(alert.textContent).not.toContain(en['app_design.no_access_description'])
   })
 
   it('does not blame permissions for a server failure', () => {

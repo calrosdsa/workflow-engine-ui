@@ -115,7 +115,7 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Spinner /></div>
   // Used to fall through to `return null` below: a refused or failed load
   // rendered a blank page with no way to tell why.
-  if (isError) return <DesignShellError error={error} onBack={() => navigate({ to: '/' })} />
+  if (isError) return <DesignShellError error={error} canDesign={canPreviewDraft} onBack={() => navigate({ to: '/' })} />
   if (!app) return null
 
   if (hideShellChrome) return <Outlet />

@@ -1309,6 +1309,7 @@ export const es = {
   'app_design.back_to_apps': 'Volver a aplicaciones',
   'app_design.no_access_title': 'No puedes abrir las herramientas de diseño de esta app',
   'app_design.no_access_description': 'Tu rol incluye el diseño de la app, pero no «View application settings», que el diseño necesita. Pide a un Super Admin que lo añada a tu rol.',
+  'app_design.no_design_access_description': 'Tu rol no incluye el diseño de la app. Pídeselo a un Super Admin si lo necesitas.',
   'app_design.load_failed_title': 'No se pudo cargar esta aplicación',
   'app_design.load_failed_description': 'Algo falló de nuestro lado. Inténtalo de nuevo en un momento.',
   'app_design.switch_application': 'Cambiar de aplicación',
