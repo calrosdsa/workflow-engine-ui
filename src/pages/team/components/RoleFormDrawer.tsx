@@ -20,6 +20,15 @@ import { useTranslation } from '@/features/i18n/I18nProvider'
 // dedicated switch, not a checkbox buried inside "application"'s group.
 const APP_DESIGN_KEY = 'application:design'
 
+// The design shell cannot open without reading the application it edits
+// (GET /application is gated on application:read). "App design permissions"
+// alone used to be savable, and produced a user who was shown "Edit design"
+// and then a blank screen -- so while design is on, read is part of the role,
+// shown ticked and locked. Derived rather than written into state when the
+// switch flips, so it also holds for roles saved before this existed and for
+// unticking the whole "application" group while design stays on.
+const APP_READ_KEY = 'application:read'
+
 interface RoleFormDrawerProps {
   appId: string
   role: Role | null
@@ -62,6 +71,9 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
   const grouped = groupByResource(staticDefs)
   const formsByForm = groupByFormId(formDefs)
   const canDesign = permissions.includes(APP_DESIGN_KEY)
+  // What the role actually grants, and what is saved: design brings read along.
+  const effective = canDesign && !permissions.includes(APP_READ_KEY) ? [...permissions, APP_READ_KEY] : permissions
+  const lockedByDesign = (key: string) => canDesign && key === APP_READ_KEY
 
   const toggleAppDesign = (checked: boolean) => {
     setPermissions((prev) => (checked ? [...new Set([...prev, APP_DESIGN_KEY])] : prev.filter((p) => p !== APP_DESIGN_KEY)))
@@ -84,9 +96,9 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
     }
     try {
       if (role) {
-        await updateMutation.mutateAsync({ app_id: appId, name, permissions })
+        await updateMutation.mutateAsync({ app_id: appId, name, permissions: effective })
       } else {
-        await createMutation.mutateAsync({ app_id: appId, name, permissions })
+        await createMutation.mutateAsync({ app_id: appId, name, permissions: effective })
       }
       onClose()
     } catch {
@@ -119,7 +131,7 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
             <p className="mb-2 text-xs font-medium text-[hsl(var(--muted-foreground))]">{t('team.permissions_question')}</p>
             <Accordion type="multiple" defaultValue={Object.keys(grouped)} className="rounded-md border border-[hsl(var(--border))]">
               {Object.entries(grouped).map(([resource, defs]) => {
-                const selectedCount = defs.filter((d) => permissions.includes(d.key)).length
+                const selectedCount = defs.filter((d) => effective.includes(d.key)).length
                 const allChecked = selectedCount === defs.length
                 const someChecked = selectedCount > 0 && !allChecked
 
@@ -139,8 +151,15 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
                       <div className="space-y-1.5 pl-6">
                         {defs.map((p) => (
                           <Label key={p.key} className="flex cursor-pointer items-center gap-2 text-sm font-normal text-[hsl(var(--foreground))]">
-                            <Checkbox checked={permissions.includes(p.key)} onCheckedChange={(c) => toggleOne(p.key, c === true)} />
+                            <Checkbox
+                              checked={effective.includes(p.key)}
+                              disabled={lockedByDesign(p.key)}
+                              onCheckedChange={(c) => toggleOne(p.key, c === true)}
+                            />
                             {p.label}
+                            {lockedByDesign(p.key) && (
+                              <span className="text-xs text-[hsl(var(--muted-foreground))]">{t('team.required_for_app_design')}</span>
+                            )}
                           </Label>
                         ))}
                       </div>
@@ -154,9 +173,9 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
                   <div className="flex items-center gap-2 py-1">
                     <Checkbox
                       checked={
-                        formDefs.every((d) => permissions.includes(d.key))
+                        formDefs.every((d) => effective.includes(d.key))
                           ? true
-                          : formDefs.some((d) => permissions.includes(d.key))
+                          : formDefs.some((d) => effective.includes(d.key))
                             ? 'indeterminate'
                             : false
                       }
@@ -170,7 +189,7 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
                   <AccordionContent>
                     <Accordion type="multiple" defaultValue={Object.keys(formsByForm)} className="space-y-0.5 pl-4">
                       {Object.entries(formsByForm).map(([formId, defs]) => {
-                        const selectedCount = defs.filter((d) => permissions.includes(d.key)).length
+                        const selectedCount = defs.filter((d) => effective.includes(d.key)).length
                         const allChecked = selectedCount === defs.length
                         const someChecked = selectedCount > 0 && !allChecked
 
@@ -190,7 +209,7 @@ export function RoleFormDrawer({ appId, role, onClose }: RoleFormDrawerProps) {
                               <div className="space-y-1.5 pl-6">
                                 {defs.map((p) => (
                                   <Label key={p.key} className="flex cursor-pointer items-center gap-2 text-sm font-normal text-[hsl(var(--foreground))]">
-                                    <Checkbox checked={permissions.includes(p.key)} onCheckedChange={(c) => toggleOne(p.key, c === true)} />
+                                    <Checkbox checked={effective.includes(p.key)} onCheckedChange={(c) => toggleOne(p.key, c === true)} />
                                     {actionLabel(p, t)}
                                   </Label>
                                 ))}

@@ -1258,6 +1258,7 @@ export const es = {
   'team.remove_app_access': 'Quitar acceso a esta aplicación',
   'team.super_admin': '¿Es Super Admin?',
   'team.super_admin_description': 'Concede acceso administrativo completo para gestionar usuarios, roles, creación de aplicaciones y plantillas del marketplace.',
+  'team.required_for_app_design': 'Necesario para el diseño de la app',
   'team.two_step': 'Verificación en dos pasos',
   'team.two_step_on': 'Activada',
   'team.two_step_off': 'Desactivada',
@@ -1303,6 +1304,10 @@ export const es = {
   'team.permission_comment': 'Comentar registros',
 
   'app_design.back_to_apps': 'Volver a aplicaciones',
+  'app_design.no_access_title': 'No puedes abrir las herramientas de diseño de esta app',
+  'app_design.no_access_description': 'Tu rol incluye el diseño de la app, pero no «View application settings», que el diseño necesita. Pide a un Super Admin que lo añada a tu rol.',
+  'app_design.load_failed_title': 'No se pudo cargar esta aplicación',
+  'app_design.load_failed_description': 'Algo falló de nuestro lado. Inténtalo de nuevo en un momento.',
   'app_design.switch_application': 'Cambiar de aplicación',
   'app_design.dashboard': 'Panel',
   'app_design.workflows': 'Workflows',

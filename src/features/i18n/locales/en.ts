@@ -1930,6 +1930,7 @@ export const en = {
   'team.remove_app_access': 'Remove access to this app',
   'team.super_admin': 'Is a Super Admin?',
   'team.super_admin_description': 'Grant full administrative access, enabling management of users, roles, app creation, and marketplace templates.',
+  'team.required_for_app_design': 'Needed for app design',
   'team.two_step': 'Two-step verification',
   'team.two_step_on': 'On',
   'team.two_step_off': 'Off',
@@ -1975,6 +1976,10 @@ export const en = {
   'team.permission_comment': 'Comment on records',
 
   'app_design.back_to_apps': 'Back to applications',
+  'app_design.no_access_title': "You can't open this app's design tools",
+  'app_design.no_access_description': 'Your role includes app design, but not “View application settings”, which design needs. Ask a Super Admin to add it to your role.',
+  'app_design.load_failed_title': "Couldn't load this application",
+  'app_design.load_failed_description': 'Something went wrong on our side. Try again in a moment.',
   'app_design.switch_application': 'Switch application',
   'app_design.dashboard': 'Dashboard',
   'app_design.workflows': 'Workflows',

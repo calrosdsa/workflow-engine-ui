@@ -21,6 +21,7 @@ import { useState } from 'react'
 import type { ValidationIssue } from '@/features/applications/types'
 import type { Membership } from '@/features/auth/types'
 import { useI18n } from '@/features/i18n/I18nProvider'
+import { DesignShellError } from './DesignShellError'
 import { MfaEnrollmentBanner } from '@/features/auth/mfa/MfaEnrollmentBanner'
 
 // The app-scoped design shell — replaces the old ApplicationBuilderPage's
@@ -88,7 +89,7 @@ function isEvaluationDatasetRoute(pathname: string, appId: string): boolean {
 export function ApplicationDesignShell({ appId }: { appId: string }) {
   const { t } = useI18n()
   const navigate = useNavigate()
-  const { data: app, isLoading } = useApplication()
+  const { data: app, isLoading, isError, error } = useApplication()
   const { data: versions } = useApplicationVersions()
   const { data: envStatus } = useEnvironmentLinkStatus()
   const isLockedProduction = envStatus?.linked && envStatus.role === 'production'
@@ -112,6 +113,9 @@ export function ApplicationDesignShell({ appId }: { appId: string }) {
   const [publishDialogOpen, setPublishDialogOpen] = useState(false)
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Spinner /></div>
+  // Used to fall through to `return null` below: a refused or failed load
+  // rendered a blank page with no way to tell why.
+  if (isError) return <DesignShellError error={error} onBack={() => navigate({ to: '/' })} />
   if (!app) return null
 
   if (hideShellChrome) return <Outlet />
