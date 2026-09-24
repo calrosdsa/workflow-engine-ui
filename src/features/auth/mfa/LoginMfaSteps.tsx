@@ -71,7 +71,7 @@ export function MfaChallengeCard({ challenge, onVerified, onCancel }: Props) {
               // the authenticator app.
               autoComplete={useRecoveryCode ? 'off' : 'one-time-code'}
               inputMode={useRecoveryCode ? 'text' : 'numeric'}
-              placeholder={useRecoveryCode ? 'XXXXX-XXXXX-XXXXX' : '123456'}
+              placeholder={useRecoveryCode ? 'XXXX-XXXX-XXXX-XXXX' : '123456'}
               disabled={locked}
             />
           </div>

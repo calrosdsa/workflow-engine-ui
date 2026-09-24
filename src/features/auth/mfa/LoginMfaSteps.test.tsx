@@ -205,3 +205,12 @@ describe('MfaEnrollDuringLogin recovery codes', () => {
     expect(screen.queryByText(en['mfa.save_recovery_codes'])).toBeNull()
   })
 })
+
+// Recovery codes are shown as four groups of four; the field says so.
+describe('MfaChallengeCard recovery-code field', () => {
+  it('shows the recovery-code format the codes are actually issued in', () => {
+    renderChallenge(['totp', 'recovery_code'])
+    fireEvent.click(screen.getByRole('button', { name: en['mfa.use_recovery_code_instead'] }))
+    expect(screen.getByLabelText(en['mfa.recovery_code']).getAttribute('placeholder')).toBe('XXXX-XXXX-XXXX-XXXX')
+  })
+})

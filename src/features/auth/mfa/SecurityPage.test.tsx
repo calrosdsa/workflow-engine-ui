@@ -4,7 +4,7 @@
 // accepted". Unlike sign-in, a recovery code works in the same field straight
 // away here -- the engine's recovery-code path ignores the lock and clears it --
 // so the message should say so, but only when the user has codes left.
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HTTPError } from 'ky'
@@ -16,11 +16,12 @@ const statusMock = vi.fn()
 const disableMock = vi.fn()
 const startEnrollmentMock = vi.fn()
 const confirmEnrollmentMock = vi.fn()
+const listDevicesMock = vi.fn()
 vi.mock('./api', () => ({
   mfaApi: {
     status: (...args: unknown[]) => statusMock(...args),
     disable: (...args: unknown[]) => disableMock(...args),
-    listDevices: () => Promise.resolve({ devices: [] }),
+    listDevices: (...args: unknown[]) => listDevicesMock(...args),
     regenerateRecoveryCodes: vi.fn(),
     startEnrollment: (...args: unknown[]) => startEnrollmentMock(...args),
     confirmEnrollment: (...args: unknown[]) => confirmEnrollmentMock(...args),
@@ -29,12 +30,19 @@ vi.mock('./api', () => ({
   },
 }))
 
+beforeEach(() => {
+  // Most tests here are about other cards; an empty device list keeps the
+  // devices query resolving to a real value.
+  listDevicesMock.mockResolvedValue({ devices: [] })
+})
+
 afterEach(() => {
   cleanup()
   statusMock.mockReset()
   disableMock.mockReset()
   startEnrollmentMock.mockReset()
   confirmEnrollmentMock.mockReset()
+  listDevicesMock.mockReset()
 })
 
 function httpError(status: number): HTTPError {
@@ -160,5 +168,22 @@ describe('SecurityPage enrollment', () => {
     fireEvent.click(screen.getByRole('button', { name: en['mfa.saved_them'] }))
     expect(await screen.findByRole('button', { name: en['mfa.disable'] })).toBeTruthy()
     expect(screen.queryByText('AAAAA-BBBBB-CCCCC-D')).toBeNull()
+  })
+})
+
+// Trusted devices used to be listed by their raw User-Agent, cut at 120
+// characters. The engine still stores the raw value; the page names it.
+describe('SecurityPage trusted devices', () => {
+  it('names a device by browser and system, keeping the raw User-Agent to hand', async () => {
+    const ua =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    listDevicesMock.mockResolvedValue({
+      devices: [{ id: 'd1', label: ua, created_at: '', last_seen_at: '', expires_at: '2026-10-24T00:00:00Z' }],
+    })
+    await renderEnrolled(10)
+
+    const name = await screen.findByText('Chrome on Windows')
+    expect(name.getAttribute('title')).toBe(ua)
+    expect(screen.queryByText(ua)).toBeNull()
   })
 })

@@ -888,6 +888,9 @@ export const es = {
   'mfa.banner_next_signin': 'Se te pedirá configurarla la próxima vez que inicies sesión.',
   'mfa.banner_set_up': 'Configurar ahora',
   'mfa.banner_dismiss': 'Descartar',
+  'mfa.device_browser_on_os': '{{browser}} en {{os}}',
+  'mfa.device_os_only': 'Dispositivo {{os}}',
+  'mfa.device_unknown': 'Dispositivo desconocido',
   'mfa.enrolled_title': 'Verificación en dos pasos',
   'mfa.enabled': 'Activada',
   'mfa.enrolled_description':

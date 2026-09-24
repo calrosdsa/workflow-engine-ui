@@ -1561,6 +1561,9 @@ export const en = {
   'mfa.banner_next_signin': "You'll be asked to set it up the next time you sign in.",
   'mfa.banner_set_up': 'Set up now',
   'mfa.banner_dismiss': 'Dismiss',
+  'mfa.device_browser_on_os': '{{browser}} on {{os}}',
+  'mfa.device_os_only': '{{os}} device',
+  'mfa.device_unknown': 'Unknown device',
   'mfa.enrolled_title': 'Two-step verification',
   'mfa.enabled': 'Enabled',
   'mfa.enrolled_description':
