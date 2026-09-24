@@ -22,6 +22,12 @@ const DEVICES_KEY = ['mfa', 'devices']
 export function SecurityPage() {
   const t = useTranslation()
   const status = useQuery({ queryKey: STATUS_KEY, queryFn: mfaApi.status })
+  // Recovery codes from an enrollment that just finished. They live here, not
+  // in EnrollCard: finishing setup refreshes the status, the fresh status says
+  // "enrolled", and this page then swaps EnrollCard for EnrolledCard,
+  // unmounting whatever EnrollCard held. Kept there, the codes -- the only
+  // plaintext copy there will ever be -- vanished before anyone saw them.
+  const [freshCodes, setFreshCodes] = useState<string[] | null>(null)
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
@@ -33,38 +39,46 @@ export function SecurityPage() {
       {status.isPending && <p className="text-sm text-muted-foreground">{t('common.loading')}</p>}
       {status.isError && <p className="text-sm text-destructive">{t('mfa.status_failed')}</p>}
 
-      {status.data && (
-        <>
-          {status.data.enrolled ? (
-            <EnrolledCard remaining={status.data.recovery_codes_remaining} />
-          ) : (
-            <EnrollCard required={status.data.required} deadline={status.data.enrollment_deadline} />
-          )}
-          {status.data.enrolled && <TrustedDevicesCard />}
-        </>
+      {freshCodes ? (
+        <RecoveryCodesPanel codes={freshCodes} onDone={() => setFreshCodes(null)} />
+      ) : (
+        status.data && (
+          <>
+            {status.data.enrolled ? (
+              <EnrolledCard remaining={status.data.recovery_codes_remaining} />
+            ) : (
+              <EnrollCard
+                required={status.data.required}
+                deadline={status.data.enrollment_deadline}
+                onEnrolled={setFreshCodes}
+              />
+            )}
+            {status.data.enrolled && <TrustedDevicesCard />}
+          </>
+        )
       )}
     </div>
   )
 }
 
-function EnrollCard({ required, deadline }: { required: boolean; deadline?: string }) {
+function EnrollCard({ required, deadline, onEnrolled }: {
+  required: boolean
+  deadline?: string
+  /** Receives the new recovery codes; the page shows them (see freshCodes). */
+  onEnrolled: (codes: string[]) => void
+}) {
   const t = useTranslation()
   const qc = useQueryClient()
   const [code, setCode] = useState('')
-  const [codes, setCodes] = useState<string[] | null>(null)
 
   const start = useMutation({ mutationFn: mfaApi.startEnrollment })
   const confirm = useMutation({
     mutationFn: () => mfaApi.confirmEnrollment(code),
     onSuccess: (result) => {
-      setCodes(result.recovery_codes)
+      onEnrolled(result.recovery_codes)
       void qc.invalidateQueries({ queryKey: STATUS_KEY })
     },
   })
-
-  if (codes) {
-    return <RecoveryCodesPanel codes={codes} onDone={() => setCodes(null)} />
-  }
 
   return (
     <Card>
