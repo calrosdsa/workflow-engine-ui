@@ -16,20 +16,24 @@ function isFileFieldValue(v: unknown): v is FileFieldValue {
 }
 
 export function FileCellDisplay({ value }: { value: unknown }) {
-  if (!isFileFieldValue(value)) return <>—</>
-
-  const isImage = value.content_type.startsWith('image/')
+  // Declared before the empty-value return so every render calls the same
+  // hooks; `enabled` keeps the query idle for an empty cell.
+  const file = isFileFieldValue(value) ? value : undefined
   const presigned = useQuery({
-    queryKey: ['content', value.content_id, 'presigned-url'],
-    queryFn: () => contentApi.presignedUrl(value.content_id),
+    queryKey: ['content', file?.content_id, 'presigned-url'],
+    queryFn: () => contentApi.presignedUrl(file!.content_id),
+    enabled: !!file,
     staleTime: 10 * 60 * 1000,
   })
+
+  if (!file) return <>—</>
+  const isImage = file.content_type.startsWith('image/')
 
   if (isImage) {
     return presigned.data?.url ? (
       <img
         src={presigned.data.url}
-        alt={value.filename}
+        alt={file.filename}
         className="h-8 w-8 rounded border border-[hsl(var(--border))] object-cover"
       />
     ) : (
@@ -46,7 +50,7 @@ export function FileCellDisplay({ value }: { value: unknown }) {
       className="inline-flex items-center gap-1 text-[hsl(var(--primary))] hover:underline"
     >
       <FileIcon size={12} className="shrink-0" />
-      <span className="truncate">{value.filename}</span>
+      <span className="truncate">{file.filename}</span>
     </a>
   )
 }
