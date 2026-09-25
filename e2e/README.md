@@ -23,25 +23,31 @@ at `main`). It runs on a GitHub-hosted runner against the public staging URL,
 and can also be started by hand from the Actions tab (**e2e → Run workflow**).
 
 Until the QA accounts are configured it **skips with a notice** instead of
-failing. To turn it on, in **each** of the two repositories (a personal account
-has no shared secrets):
+failing. To turn it on:
 
-1. Run the seed once per environment (see `seed/README.md`):
+1. Pick an app **used only by this suite**. Tests publish it (which ships every
+   draft change in it) and create and delete forms, menus and workflows in it,
+   so never point it at an app people build or use.
+2. Run the seed once per environment (see `seed/README.md`):
    ```sh
    QA_BASE_URL=https://app.staging.penvly.com/api QA_CLIENT_ID=<client id> QA_APP_ID=<app id> \
    QA_OWNER_EMAIL=<a Super Admin> QA_OWNER_PASSWORD=<...> node e2e/seed/seed-qa-users.mjs
    ```
-2. Secrets: `QA_ADMIN_EMAIL`, `QA_ADMIN_PASSWORD`, `QA_BUILDER_EMAIL`,
-   `QA_BUILDER_PASSWORD`, `QA_RUNTIME_EMAIL`, `QA_RUNTIME_PASSWORD`.
-3. Variables: `QA_CLIENT_ID`, `QA_APP_ID`.
+3. In **each** of the two repositories (a personal account has no shared
+   secrets), add the secrets `QA_ADMIN_EMAIL`, `QA_ADMIN_PASSWORD`, `QA_BUILDER_EMAIL`,
+   `QA_BUILDER_PASSWORD`, `QA_RUNTIME_EMAIL`, `QA_RUNTIME_PASSWORD`, and the
+   variables `QA_CLIENT_ID`, `QA_APP_ID`.
 
 The QA tenant must not require two-step verification (Team → Security); the
 sign-in step stops with that message if it does.
 
-The HTML report is uploaded as an artifact. Traces are only kept when the
-calling repository is private: they record session cookies, and anyone can
-download this public repository's artifacts. Every run signs its sessions out
-at the end.
+The HTML report (and, on a retry, a trace) is uploaded only when the calling
+repository is private, i.e. for runs started by a backend deploy. Anyone can
+download this public repository's artifacts, and they would show the QA
+tenant's pages, emails and (traces) session cookies; public runs keep the
+console log. Passwords never reach the report: sign-in types them through
+`fillSecret`, never `fill()`, whose step title records the value. Every run
+signs its sessions out at the end.
 
 ## Locally
 
@@ -72,5 +78,9 @@ the refusal tests prove nothing.
 - Call `expectAccessible(page, '<what>')` on each new page. An accessibility
   problem that can't be fixed right away goes in `KNOWN_VIOLATIONS` in
   `support/ui.ts` with its reason; don't turn the check off.
-- `sweep.setup.ts` removes `qa-*` data older than two hours that a crashed run
-  left behind.
+- `sweep.setup.ts` removes data a crashed run left behind: items named exactly
+  like `runName()` output and older than two hours, plus per-form grants on the
+  QA roles whose form is gone (the API refuses a role update that names a
+  deleted form, so one killed run would otherwise break every later one).
+- Two runs that change the same QA role at once can race (read, then replace
+  the list); a test that fails only then shows up as flaky, not failed.

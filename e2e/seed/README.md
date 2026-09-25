@@ -1,7 +1,8 @@
 # QA seed
 
 `seed-qa-users.mjs` creates the roles and accounts the end-to-end suite signs
-in as, inside an existing staging tenant. Run it once per environment, and
+in as, inside an existing staging tenant, in an app used only by the suite (tests
+publish it and create and delete things in it). Run it once per environment, and
 again whenever its permission sets change; it is idempotent.
 
 | Account | Access |

@@ -120,17 +120,35 @@ export async function expectExecutionCompletes(api: Api, executionId: string) {
 
 interface RoleRow { id: string; name: string; permissions: string[] }
 
+const PER_FORM_KEY = /^forms:([0-9a-f-]{36}):/
+
 /**
- * Adds per-form permissions to the named role (the seeded "QA Runtime User").
- * PUT replaces the whole list, so this reads it first; concurrent runs could
- * race, which is why removal tolerates missing keys and nothing else relies
- * on the list staying fixed.
+ * Changes the per-form permissions of a seeded QA role ("QA Builder", "QA
+ * Runtime User"). PUT replaces the whole list, so this reads it first, and
+ * it drops keys for forms that no longer exist: the API refuses a list that
+ * names a deleted form ("unknown permission"), so one run killed between
+ * granting and revoking would otherwise break every run after it. Another
+ * run can delete its form between the read and the write, hence the retry.
  */
 export async function changeRolePermissions(api: Api, roleName: string, add: string[], drop: string[] = []) {
   const { appId } = tenant()
-  const roles = await ok<RoleRow[]>(await api.get(`roles?app_id=${appId}`), 'list roles')
-  const role = roles.find((r) => r.name === roleName)
-  if (!role) throw new Error(`role "${roleName}" not found; run e2e/seed/seed-qa-users.mjs`)
-  const next = [...new Set([...role.permissions.filter((p) => !drop.includes(p)), ...add])]
-  await ok(await api.put(`roles/${role.id}`, { data: { app_id: appId, name: role.name, permissions: next } }), 'update role')
+  for (let attempt = 1; ; attempt++) {
+    const [roles, forms] = await Promise.all([
+      ok<RoleRow[]>(await api.get(`roles?app_id=${appId}`), 'list roles'),
+      listForms(api),
+    ])
+    const role = roles.find((r) => r.name === roleName)
+    if (!role) throw new Error(`role "${roleName}" not found; run e2e/seed/seed-qa-users.mjs`)
+    const live = new Set(forms.map((f) => f.id))
+    const kept = role.permissions.filter((p) => {
+      if (drop.includes(p)) return false
+      const form = PER_FORM_KEY.exec(p)?.[1]
+      return !form || live.has(form)
+    })
+    const next = [...new Set([...kept, ...add])]
+    const res = await api.put(`roles/${role.id}`, { data: { app_id: appId, name: role.name, permissions: next } })
+    if (res.ok()) return
+    if (attempt < 3 && res.status() === 400 && /unknown permission/.test(await res.text())) continue
+    await ok(res, `update role ${roleName}`)
+  }
 }

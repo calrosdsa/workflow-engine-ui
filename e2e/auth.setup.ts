@@ -1,9 +1,22 @@
 // Signs each QA account in through the real login page once, and saves its
 // session for the tests (and for the API helper). Not traced: it types the
 // passwords.
-import { test as setup, expect, type Page } from '@playwright/test'
+import { test as setup, expect, type Locator, type Page } from '@playwright/test'
 import { credentials, ROLES, storageState } from './support/env'
 import { pinEnglish } from './support/ui'
+
+/**
+ * Types a secret without it reaching the report. locator.fill() records its
+ * value in the step title, which the HTML report keeps; an evaluate() step
+ * does not. The native setter plus an input event is what React listens to.
+ */
+async function fillSecret(input: Locator, value: string) {
+  await input.evaluate((el, v) => {
+    const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!
+    setValue.call(el, v)
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+  }, value)
+}
 
 async function signInOutcome(page: Page) {
   if (!new URL(page.url()).pathname.startsWith('/login')) return 'signed-in'
@@ -18,7 +31,7 @@ for (const role of ROLES) {
     await pinEnglish(page)
     await page.goto('/login')
     await page.getByLabel('Email').fill(email)
-    await page.getByLabel('Password').fill(password)
+    await fillSecret(page.getByLabel('Password'), password)
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
 
     let outcome = 'waiting'

@@ -3,13 +3,17 @@
 // be using younger ones right now. Menus go first, since a menu on a deleted
 // form fails every later publish of the app.
 import { test as setup } from '@playwright/test'
-import { apiAs, deleteForm, deleteMenu, deleteWorkflow, listForms, listMenus, listWorkflows } from './support/api'
+import { apiAs, changeRolePermissions, deleteForm, deleteMenu, deleteWorkflow, listForms, listMenus, listWorkflows } from './support/api'
 
-const STALE_MS = 2 * 60 * 60 * 1000
+// E2E_SWEEP_AGE_MS overrides it, for exercising the sweep itself.
+const STALE_MS = Number(process.env.E2E_SWEEP_AGE_MS ?? 2 * 60 * 60 * 1000)
 
-function stale(item: { name?: string; slug?: string; created_at?: string }) {
-  const label = item.name ?? item.slug ?? ''
-  if (!/^qa[-_]/i.test(label) || !item.created_at) return false
+// Exactly what runName() makes (qa-<run id or localXXXX>-<attempt>-...), so a
+// form someone named "QA Tickets" is never touched.
+const RUN_NAME = /^qa-(\d+|local[0-9a-z]+)-\d+-/
+
+function stale(item: { name?: string; created_at?: string }) {
+  if (!item.name || !RUN_NAME.test(item.name) || !item.created_at) return false
   return Date.now() - Date.parse(item.created_at) > STALE_MS
 }
 
@@ -19,6 +23,9 @@ setup('sweep stale test data', async () => {
     for (const m of (await listMenus(api)).filter(stale)) await deleteMenu(api, m.id)
     for (const w of (await listWorkflows(api)).filter(stale)) await deleteWorkflow(api, w.id)
     for (const f of (await listForms(api)).filter(stale)) await deleteForm(api, f.id)
+    // Per-form grants a killed run never took back, now pointing at forms
+    // that are gone: changing a role with no additions prunes them.
+    for (const role of ['QA Builder', 'QA Runtime User']) await changeRolePermissions(api, role, [])
   } finally {
     await api.dispose()
   }

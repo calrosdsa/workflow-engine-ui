@@ -67,9 +67,11 @@ jobs:
       QA_BUILDER_PASSWORD: ${{ secrets.QA_BUILDER_PASSWORD }}
       QA_RUNTIME_EMAIL: ${{ secrets.QA_RUNTIME_EMAIL }}
       QA_RUNTIME_PASSWORD: ${{ secrets.QA_RUNTIME_PASSWORD }}
-      # Traces record request headers, session cookies included, and anyone
-      # can download a public repository's artifacts. Keep them for private
-      # callers only.
+      # Anyone can download a public repository's artifacts, and a report or
+      # trace shows the QA tenant's pages, emails and (traces) session
+      # cookies. Both are kept for private callers only; public runs keep
+      # the console log.
+      E2E_PRIVATE: ${{ github.event.repository.private && 'true' || 'false' }}
       E2E_TRACE: ${{ github.event.repository.private && 'true' || 'false' }}
     steps:
       - name: check the QA accounts are configured
@@ -118,7 +120,7 @@ jobs:
         if: steps.ready.outputs.run == 'true'
         run: npm run e2e
       - name: keep the report
-        if: always() && steps.ready.outputs.run == 'true'
+        if: always() && steps.ready.outputs.run == 'true' && env.E2E_PRIVATE == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: e2e-report-${{ github.run_id }}-${{ github.run_attempt }}
