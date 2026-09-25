@@ -104,6 +104,7 @@ export const SectionCard = memo(function SectionCard({ section }: { section: For
 
         <Input
           value={section.title}
+          aria-label={t('builder.canvas.section_title')}
           onChange={(e) => updateSection(section.id, { title: e.target.value })}
           onClick={(e) => e.stopPropagation()}
           className="h-7 max-w-xs border-transparent bg-transparent px-1 text-sm font-semibold text-[hsl(var(--foreground))] hover:border-[hsl(var(--border))] focus:border-[hsl(var(--ring))]"
@@ -118,8 +119,8 @@ export const SectionCard = memo(function SectionCard({ section }: { section: For
         <div className="ml-auto flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
           {/* Layout picker */}
           <SelectMenu value={section.layout} onValueChange={(v) => setLayout(section.id, v as ColumnLayout)}>
-            <SelectTrigger className="h-7 w-auto gap-1.5 border-[hsl(var(--border))] px-2 text-[11px]">
-              <Columns3 size={12} className="text-[hsl(var(--muted-foreground))]" />
+            <SelectTrigger aria-label={t('builder.canvas.section_layout', { layout: t(`builder.canvas.column_layout.${section.layout}.label`) })} className="h-7 w-auto gap-1.5 border-[hsl(var(--border))] px-2 text-[11px]">
+              <Columns3 size={12} aria-hidden="true" className="text-[hsl(var(--muted-foreground))]" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

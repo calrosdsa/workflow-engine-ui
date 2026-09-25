@@ -13,7 +13,7 @@ import { useTriggerExecution } from '@/features/executions/hooks'
 import { useForms } from '@/features/forms/hooks'
 import { usePermission } from '@/features/auth/permissions'
 import { useAuthStore } from '@/stores/auth'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import type { WorkflowDefinition, TriggerConfig } from '@/features/workflows/types'
@@ -251,12 +251,25 @@ function WorkflowRow({
             {t('workflows.list.run')}
           </Button>
         )}
-        <Link to="/applications/$appId/workflows/$workflowId" params={{ appId, workflowId: wf.id }}>
-          <Button variant="ghost" size="icon"><ExternalLink size={14} /></Button>
+        <Link
+          to="/applications/$appId/workflows/$workflowId"
+          params={{ appId, workflowId: wf.id }}
+          aria-label={t('workflows.list.open', { name: wf.name })}
+          title={t('workflows.list.open', { name: wf.name })}
+          className={buttonVariants({ variant: 'ghost', size: 'icon' })}
+        >
+          <ExternalLink size={14} aria-hidden="true" />
         </Link>
         {canWrite && (
-          <Button size="sm" variant="outline" onClick={onDelete} className="text-[hsl(var(--destructive))] hover:text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10">
-            <Trash2 size={14} />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onDelete}
+            aria-label={t('workflows.list.delete', { name: wf.name })}
+            title={t('workflows.list.delete', { name: wf.name })}
+            className="text-[hsl(var(--destructive))] hover:text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10"
+          >
+            <Trash2 size={14} aria-hidden="true" />
           </Button>
         )}
       </div>
