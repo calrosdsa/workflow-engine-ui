@@ -42,6 +42,17 @@ export const mfaApi = {
     api.post('auth/mfa/devices/revoke', { json: { device_id: deviceId } }).json<{ revoked: number }>(),
 
   revokeAllDevices: () => api.post('auth/mfa/devices/revoke', { json: { all: true } }).json<{ revoked: number }>(),
+
+  /** The active organisation's own rule (Team > Security). Super Admin only;
+   *  the organisation is whichever one the client's tenant headers name. */
+  orgPolicy: () => api.get('client/mfa-policy').json<OrgMfaPolicy>(),
+
+  /** Sets the active organisation's own rule. A grace period is sent only with
+   *  a requirement: the engine keeps none when nothing is required. */
+  setOrgPolicy: (required: boolean, graceDays: number) =>
+    api
+      .put('client/mfa-policy', { json: required ? { required, grace_days: graceDays } : { required } })
+      .json<OrgMfaPolicy>(),
 }
 
 export interface EnrollmentSecret {
@@ -60,6 +71,23 @@ export interface MfaStatus {
   recovery_codes_remaining: number
   enrollment_deadline?: string
 }
+
+/** An organisation's own two-step verification rule. The grace period, start
+ *  and deadline are null when it requires nothing. */
+export interface OrgMfaPolicy {
+  required: boolean
+  grace_days: number | null
+  /** When the requirement started: the grace period counts from here, and a
+   *  grace-only change does not move it. */
+  required_since: string | null
+  deadline: string | null
+  /** MFA_POLICY already requires two-step platform-wide, which this rule
+   *  cannot lift. */
+  platform_required: boolean
+}
+
+/** Matches internal/auth/mfa.MaxGraceDays. */
+export const ORG_MFA_MAX_GRACE_DAYS = 90
 
 export interface TrustedDevice {
   id: string
