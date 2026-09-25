@@ -31,5 +31,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx tsc -b
+      # The browser suite runs against staging after a deploy (e2e.yml); a
+      # pull request can still catch it no longer compiling.
+      - run: npx tsc -p e2e/tsconfig.json
       - run: npm test
       - run: npm run lint
