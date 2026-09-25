@@ -55,7 +55,11 @@ permissions:
 
 jobs:
   e2e:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moves to Ubuntu 26 from 2026-10-19, and the
+    # suite installs Chromium's system packages with playwright install
+    # --with-deps, which only knows the releases its version was built for.
+    # A red e2e job turns the engine's deploy red, so move this on purpose.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       E2E_BASE_URL: ${{ inputs.base-url || format('https://{0}', vars.STAGING_APP_HOST) }}
