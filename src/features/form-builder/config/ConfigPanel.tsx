@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { SlidersHorizontal, Layers, FileText, LayoutPanelTop, LayoutGrid, Zap, ShieldCheck } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -59,10 +59,11 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
 }
 
 function ToggleRow({ label, checked, onCheckedChange }: { label: string; checked: boolean; onCheckedChange: (v: boolean) => void }) {
+  const id = useId()
   return (
     <div className="flex items-center justify-between">
-      <Label className="text-[12px] font-normal text-[hsl(var(--muted-foreground))]">{label}</Label>
-      <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      <Label htmlFor={id} className="text-[12px] font-normal text-[hsl(var(--muted-foreground))]">{label}</Label>
+      <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
     </div>
   )
 }

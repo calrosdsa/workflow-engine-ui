@@ -115,8 +115,10 @@ export function FormRecordsPage() {
                         size="icon"
                         className="text-[hsl(var(--destructive))] hover:text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 h-7 w-7"
                         onClick={() => deleteMutation.mutate(String(rec.id))}
+                        aria-label={t('records.delete')}
+                        title={t('records.delete')}
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={12} aria-hidden="true" />
                       </Button>
                     </td>
                   </tr>

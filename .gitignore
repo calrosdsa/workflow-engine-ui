@@ -28,3 +28,8 @@ graphify-out/
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright (e2e/)
+/test-results/
+/playwright-report/
+/e2e/.auth/

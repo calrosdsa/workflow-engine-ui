@@ -1,0 +1,129 @@
+name: e2e
+
+# Runs the Playwright suite in e2e/ against a deployed environment. Both
+# deploy.yml files call it after their staging job: this repository's for a
+# UI release, calrosdsa/workflow-engine's for a backend one. It can also be
+# started by hand from the Actions tab.
+#
+# The suite signs in as three QA accounts in one QA app (e2e/seed creates
+# them). Until their QA_* secrets and the QA_CLIENT_ID / QA_APP_ID variables
+# exist in the calling repository, the job skips with a notice instead of
+# failing. A personal account has no organization-level secrets, so each
+# calling repository needs its own copy.
+#
+# GitHub-hosted: the self-hosted runner sits on the staging machine, and the
+# suite only needs the public URL.
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Revision of this repository whose e2e/ suite to run.
+        type: string
+        default: main
+      base-url:
+        description: Builder URL, e.g. https://app.staging.example.com
+        type: string
+        required: true
+      client-id:
+        type: string
+        default: ''
+      app-id:
+        type: string
+        default: ''
+    secrets:
+      QA_ADMIN_EMAIL:
+        required: false
+      QA_ADMIN_PASSWORD:
+        required: false
+      QA_BUILDER_EMAIL:
+        required: false
+      QA_BUILDER_PASSWORD:
+        required: false
+      QA_RUNTIME_EMAIL:
+        required: false
+      QA_RUNTIME_PASSWORD:
+        required: false
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Revision of this repository whose e2e/ suite to run.
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      E2E_BASE_URL: ${{ inputs.base-url || format('https://{0}', vars.STAGING_APP_HOST) }}
+      E2E_CLIENT_ID: ${{ inputs.client-id || vars.QA_CLIENT_ID }}
+      E2E_APP_ID: ${{ inputs.app-id || vars.QA_APP_ID }}
+      QA_ADMIN_EMAIL: ${{ secrets.QA_ADMIN_EMAIL }}
+      QA_ADMIN_PASSWORD: ${{ secrets.QA_ADMIN_PASSWORD }}
+      QA_BUILDER_EMAIL: ${{ secrets.QA_BUILDER_EMAIL }}
+      QA_BUILDER_PASSWORD: ${{ secrets.QA_BUILDER_PASSWORD }}
+      QA_RUNTIME_EMAIL: ${{ secrets.QA_RUNTIME_EMAIL }}
+      QA_RUNTIME_PASSWORD: ${{ secrets.QA_RUNTIME_PASSWORD }}
+      # Anyone can download a public repository's artifacts, and a report or
+      # trace shows the QA tenant's pages, emails and (traces) session
+      # cookies. Both are kept for private callers only; public runs keep
+      # the console log.
+      E2E_PRIVATE: ${{ github.event.repository.private && 'true' || 'false' }}
+      E2E_TRACE: ${{ github.event.repository.private && 'true' || 'false' }}
+    steps:
+      - name: check the QA accounts are configured
+        id: ready
+        run: |
+          missing=()
+          for name in E2E_CLIENT_ID E2E_APP_ID QA_ADMIN_EMAIL QA_ADMIN_PASSWORD QA_BUILDER_EMAIL QA_BUILDER_PASSWORD QA_RUNTIME_EMAIL QA_RUNTIME_PASSWORD; do
+            [ -n "${!name}" ] || missing+=("$name")
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::notice title=e2e skipped::not configured in ${GITHUB_REPOSITORY}: ${missing[*]} (see e2e/README.md)"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      # Always this repository, whichever one called: a plain checkout would
+      # fetch the caller, which has no e2e/.
+      - uses: actions/checkout@v4
+        if: steps.ready.outputs.run == 'true'
+        with:
+          repository: calrosdsa/workflow-engine-ui
+          ref: ${{ inputs.ref || 'main' }}
+      - uses: actions/setup-node@v4
+        if: steps.ready.outputs.run == 'true'
+        with:
+          node-version: '24'
+          cache: npm
+      - if: steps.ready.outputs.run == 'true'
+        run: npm ci
+      - if: steps.ready.outputs.run == 'true'
+        run: npx playwright install --with-deps chromium
+      # The deploy that called this has just swapped pods; the edge can
+      # answer 502 for a moment while the old one drains.
+      - name: wait for the environment
+        if: steps.ready.outputs.run == 'true'
+        run: |
+          for _ in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$E2E_BASE_URL/api/readyz" || true)
+            app=$(curl -s -o /dev/null -w '%{http_code}' "$E2E_BASE_URL/" || true)
+            [ "$code" = 200 ] && [ "$app" = 200 ] && exit 0
+            sleep 4
+          done
+          echo "::error::$E2E_BASE_URL not ready after 2 minutes (readyz $code, app $app)"
+          exit 1
+      - name: run the suite
+        if: steps.ready.outputs.run == 'true'
+        run: npm run e2e
+      - name: keep the report
+        if: always() && steps.ready.outputs.run == 'true' && env.E2E_PRIVATE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14
