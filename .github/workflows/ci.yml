@@ -1,0 +1,35 @@
+name: ci
+
+# Runs deploy.yml's test job on every pull request, so a change is checked
+# before it merges rather than only after it lands on main. Keep the steps in
+# step with deploy.yml's test job.
+#
+# GitHub-hosted, not the self-hosted app-builder runner: this repository is
+# public, so anyone can open a pull request, and the self-hosted runner sits on
+# the staging machine with docker and a cluster-admin kubeconfig. Nothing here
+# needs a secret, so pull requests from forks run too.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  # A new push to the pull request supersedes the run for the previous one.
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'   # matches deploy.yml; no .nvmrc to read
+          cache: npm
+      - run: npm ci
+      - run: npx tsc -b
+      - run: npm test
+      - run: npm run lint

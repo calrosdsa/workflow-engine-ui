@@ -131,6 +131,15 @@ export function KanbanLayout({ formId, fields, config, filter, sort, columns, ro
     return ordered.map((v) => ({ key: v, label: resolveEnumLabel(enumLabels, groupField.name, v) }))
   }, [groupField, enumLabels, config.visibleColumns, allValues])
 
+  // A drag's `active.id` is either a column key (one of columnDefs's own
+  // values, when the drag started on a header's grip handle) or a record id
+  // (a card) — this codebase's enum values and record UUIDs never collide in
+  // practice, but checking membership explicitly (rather than assuming
+  // "not a UUID shape") keeps this correct even for an enum value that
+  // happens to look UUID-like. Memoized here, above the missing/invalid
+  // group-field returns below, so every render calls the same hooks.
+  const columnKeySet = useMemo(() => new Set(columnDefs.map((c) => c.key)), [columnDefs])
+
   // Live registry of every column's current records, kept up to date by
   // each KanbanColumn instance itself (see registerRef below) — lets the
   // board-level drag handlers read "what's in column X right now" without
@@ -153,13 +162,6 @@ export function KanbanLayout({ formId, fields, config, filter, sort, columns, ro
     return undefined
   }
 
-  // A drag's `active.id` is either a column key (one of columnDefs's own
-  // values, when the drag started on a header's grip handle) or a record id
-  // (a card) — this codebase's enum values and record UUIDs never collide in
-  // practice, but checking membership explicitly (rather than assuming
-  // "not a UUID shape") keeps this correct even for an enum value that
-  // happens to look UUID-like.
-  const columnKeySet = useMemo(() => new Set(columnDefs.map((c) => c.key)), [columnDefs])
   const isColumnDrag = (id: string) => columnKeySet.has(id)
 
   function handleDragStart(e: DragStartEvent) {
