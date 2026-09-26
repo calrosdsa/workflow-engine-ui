@@ -2115,6 +2115,7 @@ export const en = {
   'app_config.light_colors': 'Light mode colors',
   'app_config.dark_colors': 'Dark mode overrides',
   'app_config.font_family': 'Font family',
+  'app_config.font_atkinson_hyperlegible_next': 'Atkinson Hyperlegible Next',
   'app_config.font_system_ui': 'System UI',
   'app_config.font_inter': 'Inter',
   'app_config.font_roboto': 'Roboto',

@@ -1411,6 +1411,7 @@ export const es = {
   'app_config.light_colors': 'Colores del modo claro',
   'app_config.dark_colors': 'Sobrescrituras del modo oscuro',
   'app_config.font_family': 'Familia tipográfica',
+  'app_config.font_atkinson_hyperlegible_next': 'Atkinson Hyperlegible Next',
   'app_config.font_system_ui': 'Interfaz del sistema',
   'app_config.font_inter': 'Inter',
   'app_config.font_roboto': 'Roboto',
