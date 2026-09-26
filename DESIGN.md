@@ -115,10 +115,19 @@ class. A future toggle is a separate feature request — see
 | `--secondary` / `--accent` | `0 0% 100% / 5%` (same as `--muted` — RAGFlow doesn't distinguish secondary/muted/accent into 3 different fills) |
 | `--secondary-foreground` / `--accent-foreground` | `240 2% 97%` |
 | `--destructive` | `359 63% 57%` (`rgb(216,73,75)` — RAGFlow's `--state-error`) |
-| `--success` | `142 46% 43%` (`rgb(59,160,92)`) |
-| `--warning` | `38 89% 53%` (`rgb(250,173,20)`) |
+| `--success` | `142 46% 43%` (`rgb(59,160,92)`); light mode `142 64% 28%` (see below) |
+| `--warning` | `38 89% 53%` (`rgb(250,173,20)`); light mode `32 95% 30%`, with `--warning-foreground` white |
 | `--ring` | `175 100% 37%` (same as `--primary` — RAGFlow reuses one color for accent and focus) |
 | `--radius` | `0.4375rem` (7px, RAGFlow's own card radius — was 0.5rem/8px) |
+
+**Status colors in light mode (2026-09-26):** the DNA keeps `--success` and
+`--warning` theme-invariant, but those shades are tuned for the dark surface:
+as text on white they measure 3.3:1 and 2.1:1, under WCAG AA's 4.5:1, and ~150
+places use them as text. The light theme (`.light` in `src/index.css`)
+therefore redeclares them as darker shades of the same hues, `142 64% 28%`
+and `32 95% 30%` (5.7:1 and 6.1:1 on white, at least 4.6:1 on their own 15%
+tint), with white text on filled amber. The dark theme is unchanged. The
+mocked browser suite's axe checks (`e2e/mock`) catch a regression.
 
 **Two gradient tokens, new — added as their own CSS custom properties,
 kept as gradients, never flattened** (per the DNA's own explicit warning
