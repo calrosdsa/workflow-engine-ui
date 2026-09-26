@@ -10,6 +10,7 @@ import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } fro
 import { useForm } from '@/features/forms/hooks'
 import { useTranslation, type I18nContextValue } from '@/features/i18n/I18nProvider'
 import type { WidgetConfigPanelProps } from '../../widget-contract'
+import { WidgetErrorBoundary } from '../../WidgetErrorBoundary'
 import {
   CARTESIAN_TYPES, ORIENTABLE_TYPES, STACKABLE_TYPES, DATE_FIELD_TYPES,
   type ChartWidgetConfig, type ChartType, type ChartSeries, type SeriesType,
@@ -348,13 +349,18 @@ export function ChartConfigPanel({ config, onChange }: WidgetConfigPanelProps<Ch
         <div className="space-y-1.5">
           <Label className="text-[11px] font-medium text-[hsl(var(--muted-foreground))]">{t('common.preview')}</Label>
           <div className="h-48 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-            <ChartRenderer
-              config={config}
-              instance={{ id: 'preview', type: 'chart', layout: { x: 0, y: 0, w: 1, h: 1 }, chrome: 'plain', config }}
-              clientId=""
-              appId=""
-              mode="builder"
-            />
+            {/* Guarded like a canvas tile: the preview renders mid-edit, and
+                a failure here would otherwise take the builder page down
+                with whatever the author had not saved yet. */}
+            <WidgetErrorBoundary resetKey={JSON.stringify(config)} widgetId="preview" widgetType="chart">
+              <ChartRenderer
+                config={config}
+                instance={{ id: 'preview', type: 'chart', layout: { x: 0, y: 0, w: 1, h: 1 }, chrome: 'plain', config }}
+                clientId=""
+                appId=""
+                mode="builder"
+              />
+            </WidgetErrorBoundary>
           </div>
         </div>
       )}

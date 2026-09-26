@@ -9,6 +9,7 @@ const FIELDS = [
   { name: 'grand_total', label: 'Grand Total', type: 'decimal' },
   { name: 'due_date', label: 'Due Date', type: 'date' },
   { name: 'created_at', label: 'Created', type: 'datetime' },
+  { name: 'phone', label: 'Phone', type: 'phone' },
 ] as unknown as FieldDef[]
 
 const cfg = (p: Partial<ChartWidgetConfig>): ChartWidgetConfig => ({
@@ -51,6 +52,35 @@ describe('the empty group', () => {
     const out = drillDownConditions(c, FIELDS, banded(0, '(empty)'))
     expect(out).toHaveLength(1)
     expect(out![0].op).toBe('is_null')
+  })
+})
+
+// A text field saved BLANK groups under "", which the response omits and the
+// plot carries as the raw key "" (rawGroupKey). It is a different group from
+// "(empty)": eq "" selects exactly the blank records and none of the unset
+// ones — checked against the live engine, where it returned the keyless
+// group's two records and not the "(empty)" group's.
+describe('the blank group', () => {
+  it('becomes eq "", not is_null', () => {
+    expect(drillDownConditions(cfg({ groupBy: { field: 'phone' } }), FIELDS, '')).toEqual([
+      { id: 'drill-eq', field: 'phone', op: 'eq', value_mode: 'static', value: '' },
+    ])
+  })
+
+  it('narrows a split to its blank sub-series the same way', () => {
+    const c = cfg({ groupBy2: { field: 'phone' } })
+    expect(drillDownConditions(c, FIELDS, 'Open', '')).toEqual([
+      { id: 'drill-eq', field: 'status', op: 'eq', value_mode: 'static', value: 'Open' },
+      { id: 'drill2-eq', field: 'phone', op: 'eq', value_mode: 'static', value: '' },
+    ])
+  })
+
+  // A bucket or a band never produces "" (date_trunc and the band CASE give
+  // text or NULL), so a blank key there is not a group this chart can have
+  // drawn. Refused like any other key those shapes cannot invert.
+  it('refuses on a date-bucketed or banded dimension', () => {
+    expect(drillDownConditions(cfg({ groupBy: { field: 'due_date', bucket: 'month' } }), FIELDS, '')).toBeUndefined()
+    expect(drillDownConditions(cfg({ groupBy: { field: 'grand_total', ranges: [100] } }), FIELDS, '')).toBeUndefined()
   })
 })
 

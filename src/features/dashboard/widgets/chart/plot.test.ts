@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { RAW_KEY, buildFlatPlot, buildSplitPlot, canUseLog, hasSplit, logFloor, plottedValues } from './plot'
+import type { GroupKeyLabels } from './bucket-label'
 import type { ChartWidgetConfig } from './schema'
 import type { AggregateGroupResponse } from '@/features/forms/api'
+
+// Deliberately NOT the English words, so an assertion can only pass on a
+// label that came from here — the renderer passes translated ones.
+const LABELS: GroupKeyLabels = { empty: 'EMPTY-LABEL', blank: 'BLANK-LABEL' }
 
 const base: ChartWidgetConfig = {
   formId: 'invoices',
@@ -31,7 +36,7 @@ describe('buildFlatPlot', () => {
       { key: 'Open', values: [3, 900] },
       { key: 'Paid', values: [7, 2100] },
     ]
-    const { rows, series } = buildFlatPlot(cfg({ series: [{ fn: 'count' }, { fn: 'sum', field: 'amount' }] }), groups)
+    const { rows, series } = buildFlatPlot(cfg({ series: [{ fn: 'count' }, { fn: 'sum', field: 'amount' }] }), groups, LABELS)
 
     expect(rows).toMatchObject([
       { key: 'Open', val_0: 3, val_1: 900 },
@@ -44,16 +49,80 @@ describe('buildFlatPlot', () => {
   })
 
   it('strips a range bucket\'s sort-safe prefix from the category', () => {
-    const { rows } = buildFlatPlot(cfg(), [{ key: '00\x1f<= 30', values: [2] }])
+    const { rows } = buildFlatPlot(cfg(), [{ key: '00\x1f<= 30', values: [2] }], LABELS)
     expect(rows[0].key).toBe('<= 30')
   })
 
   it('reads a per-series mark only for a combo chart', () => {
     const series = [{ fn: 'count' as const }, { fn: 'sum' as const, field: 'amount', type: 'line' as const }]
-    expect(buildFlatPlot(cfg({ chartType: 'combo', series }), []).series.map((s) => s.type)).toEqual(['bar', 'line'])
+    expect(buildFlatPlot(cfg({ chartType: 'combo', series }), [], LABELS).series.map((s) => s.type)).toEqual(['bar', 'line'])
     // Same config as a plain bar chart: every series draws as a bar, and the
     // declared 'line' is inert rather than quietly changing the chart.
-    expect(buildFlatPlot(cfg({ chartType: 'bar', series }), []).series.map((s) => s.type)).toEqual(['bar', 'bar'])
+    expect(buildFlatPlot(cfg({ chartType: 'bar', series }), [], LABELS).series.map((s) => s.type)).toEqual(['bar', 'bar'])
+  })
+})
+
+// The engine serializes a group key with `omitempty`, so a group whose value
+// is the empty string arrives with NO key at all — `{"values":[2]}`, taken
+// from a live response grouping customers by an unindexed phone field. The
+// plot used to call key.indexOf on it and take the whole page down.
+describe('a group key the response left out', () => {
+  it('plots a keyless group as the blank label, carrying "" as its raw key', () => {
+    const { rows } = buildFlatPlot(cfg(), [{ key: '+15550202001', values: [1] }, { values: [2] }], LABELS)
+    expect(rows[1]).toMatchObject({ key: 'BLANK-LABEL', [RAW_KEY]: '', val_0: 2 })
+  })
+
+  it('treats an undefined or null key the same way', () => {
+    const groups = [
+      { key: undefined, values: [3] },
+      { key: null, values: [4] },
+    ] as unknown as AggregateGroupResponse[]
+    const { rows } = buildFlatPlot(cfg(), groups, LABELS)
+    expect(rows).toEqual([
+      { key: 'BLANK-LABEL', [RAW_KEY]: '', val_0: 3 },
+      { key: 'BLANK-LABEL', [RAW_KEY]: '', val_0: 4 },
+    ])
+  })
+
+  // NULL comes back as the literal "(empty)". Renamed for display, but the
+  // raw key stays the sentinel: drill-down turns it into is_null.
+  it('names the NULL group with its own label, keeping the raw sentinel', () => {
+    const { rows } = buildFlatPlot(cfg(), [{ key: '(empty)', values: [5] }], LABELS)
+    expect(rows[0]).toMatchObject({ key: 'EMPTY-LABEL', [RAW_KEY]: '(empty)' })
+  })
+
+  // Unset and saved-blank are separate groups in the response, and an
+  // average of two averages is not an average — so they stay two rows with
+  // two different names rather than being merged or sharing one.
+  it('keeps the blank and NULL groups apart', () => {
+    const { rows } = buildFlatPlot(cfg({ series: [{ fn: 'avg', field: 'amount' }] }), [
+      { key: '(empty)', values: [10] },
+      { values: [30] },
+    ], LABELS)
+    expect(rows.map((r) => [r.key, r.val_0])).toEqual([['EMPTY-LABEL', 10], ['BLANK-LABEL', 30]])
+  })
+
+  it('plots a keyless split value as its own labelled sub-series', () => {
+    const { rows, series } = buildSplitPlot(cfg(), [
+      { key: 'Jan', key2: 'North', values: [5] },
+      { key: 'Jan', values: [2] },
+      { values: [7] },
+    ], LABELS)
+    expect(series.map((s) => [s.label, s.rawLabel])).toEqual([['North', 'North'], ['BLANK-LABEL', '']])
+    expect(rows).toMatchObject([
+      { key: 'Jan', [RAW_KEY]: 'Jan', s_0: 5, s_1: 2 },
+      { key: 'BLANK-LABEL', [RAW_KEY]: '', s_1: 7 },
+    ])
+  })
+
+  // Rows are tracked by the raw key, so a real value that happens to be
+  // spelled like a label cannot absorb the blank group's numbers.
+  it('does not merge a blank group into a value spelled like its label', () => {
+    const { rows } = buildSplitPlot(cfg(), [
+      { key: 'BLANK-LABEL', key2: 'North', values: [1] },
+      { key2: 'North', values: [2] },
+    ], LABELS)
+    expect(rows.map((r) => [r[RAW_KEY], r.s_0])).toEqual([['BLANK-LABEL', 1], ['', 2]])
   })
 })
 
@@ -67,7 +136,7 @@ describe('buildSplitPlot', () => {
   // The whole point: before this, these three rows collapsed onto the
   // category axis under 'Jan', 'Jan', 'Feb' with no split at all.
   it('pivots (key, key2) pairs into one row per primary key', () => {
-    const { rows, series } = buildSplitPlot(cfg(), groups)
+    const { rows, series } = buildSplitPlot(cfg(), groups, LABELS)
 
     expect(rows).toHaveLength(2)
     expect(rows.map((r) => r.key)).toEqual(['Jan', 'Feb'])
@@ -75,12 +144,12 @@ describe('buildSplitPlot', () => {
   })
 
   it('gives every sub-series measure 0, whatever the split value', () => {
-    const { series } = buildSplitPlot(cfg(), groups)
+    const { series } = buildSplitPlot(cfg(), groups, LABELS)
     expect(series.every((s) => s.measureIndex === 0)).toBe(true)
   })
 
   it('colours by split value rather than by the series that produced it', () => {
-    const { series } = buildSplitPlot(cfg({ series: [{ fn: 'count', color: '#ff0000' }] }), groups)
+    const { series } = buildSplitPlot(cfg({ series: [{ fn: 'count', color: '#ff0000' }] }), groups, LABELS)
     // The authored colour cannot apply — there is one series in the config
     // and two in the plot.
     expect(series.map((s) => s.color)).toHaveLength(2)
@@ -91,17 +160,17 @@ describe('buildSplitPlot', () => {
   // sum that genuinely is zero; for an average it is "no data", and drawing
   // it as zero would invent a reading that pulls the chart down.
   it('fills a missing combination with zero for a count', () => {
-    const { rows } = buildSplitPlot(cfg({ series: [{ fn: 'count' }] }), groups)
+    const { rows } = buildSplitPlot(cfg({ series: [{ fn: 'count' }] }), groups, LABELS)
     expect(rows.find((r) => r.key === 'Feb')).toMatchObject({ key: 'Feb', s_0: 8, s_1: 0 })
   })
 
   it('fills a missing combination with zero for a sum', () => {
-    const { rows } = buildSplitPlot(cfg({ series: [{ fn: 'sum', field: 'amount' }] }), groups)
+    const { rows } = buildSplitPlot(cfg({ series: [{ fn: 'sum', field: 'amount' }] }), groups, LABELS)
     expect(rows.find((r) => r.key === 'Feb')?.s_1).toBe(0)
   })
 
   it('leaves a missing combination absent for an average', () => {
-    const { rows } = buildSplitPlot(cfg({ series: [{ fn: 'avg', field: 'amount' }] }), groups)
+    const { rows } = buildSplitPlot(cfg({ series: [{ fn: 'avg', field: 'amount' }] }), groups, LABELS)
     const feb = rows.find((r) => r.key === 'Feb')!
     expect(feb).toMatchObject({ key: 'Feb', s_0: 8 })
     expect(feb.s_1).toBeUndefined()
@@ -112,13 +181,13 @@ describe('buildSplitPlot', () => {
     const { rows, series } = buildSplitPlot(cfg(), [
       { key: 'Jan', key2: 'key', values: [1] },
       { key: 'Jan', key2: 'val_0', values: [2] },
-    ])
+    ], LABELS)
     expect(series.map((s) => s.dataKey)).toEqual(['s_0', 's_1'])
     expect(rows[0]).toMatchObject({ key: 'Jan', s_0: 1, s_1: 2 })
   })
 
   it('strips the sort-safe prefix from both dimensions', () => {
-    const { rows, series } = buildSplitPlot(cfg(), [{ key: '00\x1f<= 30', key2: '01\x1f> 1000', values: [4] }])
+    const { rows, series } = buildSplitPlot(cfg(), [{ key: '00\x1f<= 30', key2: '01\x1f> 1000', values: [4] }], LABELS)
     expect(rows[0].key).toBe('<= 30')
     expect(series[0].label).toBe('> 1000')
   })
@@ -127,14 +196,14 @@ describe('buildSplitPlot', () => {
     const { rows } = buildSplitPlot(cfg(), [
       { key: 'Z', key2: 'a', values: [1] },
       { key: 'A', key2: 'a', values: [1] },
-    ])
+    ], LABELS)
     expect(rows.map((r) => r.key)).toEqual(['Z', 'A'])
   })
 })
 
 describe('log value axis', () => {
   it('collects only the numeric cells, ignoring the category key', () => {
-    const plot = buildFlatPlot(cfg(), [{ key: 'Jan', values: [5] }, { key: 'Feb', values: [8] }])
+    const plot = buildFlatPlot(cfg(), [{ key: 'Jan', values: [5] }, { key: 'Feb', values: [8] }], LABELS)
     expect(plottedValues(plot).sort()).toEqual([5, 8])
   })
 
@@ -178,13 +247,13 @@ describe('log value axis', () => {
 // stripping it is exactly what makes the label human.
 describe('raw keys travel alongside the display ones', () => {
   it('carries the untouched key on every row', () => {
-    const { rows } = buildFlatPlot(cfg(), [{ key: '00\x1f<= 30', values: [2] }])
+    const { rows } = buildFlatPlot(cfg(), [{ key: '00\x1f<= 30', values: [2] }], LABELS)
     expect(rows[0].key).toBe('<= 30')
     expect(rows[0][RAW_KEY]).toBe('00\x1f<= 30')
   })
 
   it('carries the untouched split value on every sub-series', () => {
-    const { series } = buildSplitPlot(cfg(), [{ key: 'Jan', key2: '01\x1f> 1000', values: [4] }])
+    const { series } = buildSplitPlot(cfg(), [{ key: 'Jan', key2: '01\x1f> 1000', values: [4] }], LABELS)
     expect(series[0].label).toBe('> 1000')
     expect(series[0].rawLabel).toBe('01\x1f> 1000')
   })
@@ -195,7 +264,7 @@ describe('raw keys travel alongside the display ones', () => {
     const { series } = buildSplitPlot(cfg(), [
       { key: 'Jan', key2: '00\x1fsame', values: [1] },
       { key: 'Jan', key2: '01\x1fsame', values: [2] },
-    ])
+    ], LABELS)
     expect(series).toHaveLength(2)
     expect(series.map((s) => s.label)).toEqual(['same', 'same'])
   })

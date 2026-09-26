@@ -9,7 +9,7 @@
 // Pure and directly testable rather than reachable only through a recharts
 // tree that jsdom renders at zero size.
 import type { AggregateGroupResponse } from '@/features/forms/api'
-import { stripBucketSortPrefix } from './bucket-label'
+import { groupKeyLabel, rawGroupKey, type GroupKeyLabels } from './bucket-label'
 import type { ChartWidgetConfig, SeriesType } from './schema'
 
 // Categorical palette fallback (docs/dashboard-system-plan.md section 5.3) —
@@ -55,9 +55,10 @@ export interface PlotSeries {
   type: SeriesType
 }
 
-/** The category key exactly as the response sent it — see PlotSeries.rawLabel
- *  for why both forms are carried. Recharts ignores keys nothing references,
- *  so this rides along on the row rather than needing a parallel array. */
+/** The category key exactly as the response sent it ("" where it sent none,
+ *  see rawGroupKey) — see PlotSeries.rawLabel for why both forms are
+ *  carried. Recharts ignores keys nothing references, so this rides along on
+ *  the row rather than needing a parallel array. */
 export const RAW_KEY = '__rawKey'
 
 export type PlotRow = Record<string, string | number>
@@ -112,10 +113,14 @@ export function logFloor(values: number[]): number {
 }
 
 /** Plain shape: one row per group, one series per configured measure. The
- *  `val_N` keys match the backend's own positional aliasing (aggregate.go). */
-export function buildFlatPlot(config: ChartWidgetConfig, groups: AggregateGroupResponse[]): Plot {
+ *  `val_N` keys match the backend's own positional aliasing (aggregate.go).
+ *
+ *  Only for a response that HAS group keys. A stat tile's ungrouped response
+ *  has none, and the renderer does not plot it. */
+export function buildFlatPlot(config: ChartWidgetConfig, groups: AggregateGroupResponse[], labels: GroupKeyLabels): Plot {
   const rows: PlotRow[] = groups.map((g) => {
-    const row: PlotRow = { key: stripBucketSortPrefix(g.key), [RAW_KEY]: g.key }
+    const raw = rawGroupKey(g.key)
+    const row: PlotRow = { key: groupKeyLabel(raw, labels), [RAW_KEY]: raw }
     g.values.forEach((v, i) => { row[`val_${i}`] = v })
     return row
   })
@@ -141,7 +146,7 @@ export function buildFlatPlot(config: ChartWidgetConfig, groups: AggregateGroupR
  *  Only series[0] is plotted: the sub-series have already spent the colour
  *  channel, leaving a second measure nothing to be drawn with. The caller
  *  tells the viewer when that discards something. */
-export function buildSplitPlot(config: ChartWidgetConfig, groups: AggregateGroupResponse[]): Plot {
+export function buildSplitPlot(config: ChartWidgetConfig, groups: AggregateGroupResponse[], labels: GroupKeyLabels): Plot {
   // A combination with no records is absent from the response entirely, and
   // what that absence MEANS depends on the measure: no rows to count or sum
   // really is zero, whereas an absent average is "no data" and drawing it as
@@ -150,22 +155,23 @@ export function buildSplitPlot(config: ChartWidgetConfig, groups: AggregateGroup
   const fn = config.series[0]?.fn
   const fillsZero = fn === 'count' || fn === 'sum'
 
-  // Tracked by the RAW value so two different bands cannot merge just
-  // because their display labels happen to match.
+  // Both dimensions are tracked by the RAW value so two different groups
+  // cannot merge just because their display labels happen to match — two
+  // bands with one label, or a real value spelled like a "no value" label.
   const splitKeys: string[] = []
   const byKey = new Map<string, PlotRow>()
   for (const g of groups) {
-    const key = stripBucketSortPrefix(g.key)
-    const split = g.key2 ?? ''
+    const raw = rawGroupKey(g.key)
+    const split = rawGroupKey(g.key2)
     let idx = splitKeys.indexOf(split)
     if (idx === -1) {
       idx = splitKeys.length
       splitKeys.push(split)
     }
-    let row = byKey.get(key)
+    let row = byKey.get(raw)
     if (!row) {
-      row = { key, [RAW_KEY]: g.key }
-      byKey.set(key, row)
+      row = { key: groupKeyLabel(raw, labels), [RAW_KEY]: raw }
+      byKey.set(raw, row)
     }
     // Keyed positionally rather than by the split value itself, which could
     // collide with 'key' or with another series' name.
@@ -174,7 +180,7 @@ export function buildSplitPlot(config: ChartWidgetConfig, groups: AggregateGroup
 
   const series: PlotSeries[] = splitKeys.map((raw, i) => ({
     dataKey: `s_${i}`,
-    label: stripBucketSortPrefix(raw),
+    label: groupKeyLabel(raw, labels),
     rawLabel: raw,
     color: PALETTE[i % PALETTE.length],
     measureIndex: 0,

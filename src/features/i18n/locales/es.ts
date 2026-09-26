@@ -2453,6 +2453,7 @@ export const es = {
   'builder.dashboard.tile_aria_selected': 'seleccionado. Usa las flechas para mover, Shift+flechas para cambiar el tamaño.',
   'builder.dashboard.unavailable_detail': 'El tipo "{{type}}" no está registrado. Tu diseño se conserva.',
   'builder.dashboard.runtime_unavailable': 'El tipo de widget "{{type}}" no está disponible.',
+  'builder.dashboard.widget_error': 'No se pudo mostrar este widget.',
   'builder.dashboard.empty_title': 'Empieza a construir tu panel',
   'builder.dashboard.empty_hint': 'Arrastra un widget desde la izquierda, o agrega uno para comenzar.',
   'builder.dashboard.add_widget': 'Agregar widget',
@@ -2542,6 +2543,8 @@ export const es = {
   'builder.dashboard_chart.choose_form': 'Elige un formulario para agregar.',
   'builder.dashboard_chart.load_error': 'No se pudieron cargar los datos del gráfico.',
   'builder.dashboard_chart.no_data': 'Aún no hay datos.',
+  'builder.dashboard_chart.group_empty': '(vacío)',
+  'builder.dashboard_chart.group_blank': '(en blanco)',
 
   'builder.dashboard_image.url_label': 'URL de la imagen',
   'builder.dashboard_image.no_upload_hint': 'Aún no hay carga de archivos — pega un enlace directo a una imagen.',

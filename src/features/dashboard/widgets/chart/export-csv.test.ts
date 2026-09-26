@@ -32,13 +32,27 @@ describe('buildChartCsv', () => {
     expect(buildChartCsv(config, groups)).toBe('status,Count\r\n"a, ""quoted""",1')
   })
 
+  // The engine omits a key that is the empty string, so a group of records
+  // saved with the field blank arrives keyless. Its cell is empty — the value
+  // those records hold — not the chart's translated "(blank)" label.
+  it('writes an empty cell for a group the response sent no key for', () => {
+    const config: ChartWidgetConfig = { ...createDefaultChartConfig(), groupBy: { field: 'phone' }, groupBy2: { field: 'region' } }
+    const groups: AggregateGroupResponse[] = [
+      { key: '(empty)', key2: 'west', values: [2] },
+      { key2: 'west', values: [3] },
+      { key: '555-0101', values: [1] },
+    ]
+    expect(buildChartCsv(config, groups)).toBe('phone,region,Count\r\n(empty),west,2\r\n,west,3\r\n555-0101,,1')
+  })
+
   it('renders a stat tile as a single labeled value, with no Group column', () => {
     const config: ChartWidgetConfig = {
       ...createDefaultChartConfig(),
       chartType: 'stat',
       series: [{ fn: 'sum', field: 'amount', label: 'Total Sales' }],
     }
-    const groups: AggregateGroupResponse[] = [{ key: '', values: [4200] }]
+    // The shape the engine really sends for an ungrouped request: no key.
+    const groups: AggregateGroupResponse[] = [{ values: [4200] }]
     expect(buildChartCsv(config, groups)).toBe('Total Sales\r\n4200')
   })
 

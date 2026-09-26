@@ -1,7 +1,7 @@
 import type { ChartWidgetConfig } from './schema'
 import type { AggregateGroupResponse } from '@/features/forms/api'
 import { seriesLabel } from './plot'
-import { stripBucketSortPrefix } from './bucket-label'
+import { rawGroupKey, stripBucketSortPrefix } from './bucket-label'
 
 function csvCell(value: unknown): string {
   const s = String(value ?? '')
@@ -27,9 +27,12 @@ export function buildChartCsv(config: ChartWidgetConfig, groups: AggregateGroupR
     ...(hasKey2 ? [config.groupBy2?.field ?? 'Group 2'] : []),
     ...config.series.map((_, i) => seriesLabel(config, i)),
   ]
+  // A blank group exports as an empty cell — the value those records really
+  // hold — rather than as the chart's "(blank)" label: this file is data,
+  // and its headers are untranslated for the same reason (see seriesLabel).
   const rows = groups.map((g) => [
-    stripBucketSortPrefix(g.key),
-    ...(hasKey2 ? [g.key2 ? stripBucketSortPrefix(g.key2) : ''] : []),
+    stripBucketSortPrefix(rawGroupKey(g.key)),
+    ...(hasKey2 ? [stripBucketSortPrefix(rawGroupKey(g.key2))] : []),
     ...g.values,
   ])
   return [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n')

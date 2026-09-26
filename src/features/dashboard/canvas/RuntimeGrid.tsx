@@ -20,6 +20,7 @@ import type { DashboardSchema } from '../schema'
 import { resolveParameterFilter, type ParameterValues } from '../parameters'
 import type { FilterGroup } from '@/features/workflows/types'
 import { getWidget } from '../widget-registry'
+import { WidgetBody, WidgetErrorBoundary } from '../WidgetErrorBoundary'
 import { useIsVisible } from './useIsVisible'
 import { useTranslation } from '@/features/i18n/I18nProvider'
 
@@ -142,17 +143,22 @@ function RuntimeTile({ instance, clientId, appId, menus, onNavigate, recordConte
             <div className="h-3 w-1/2 rounded bg-[hsl(var(--muted))]" />
           </div>
         ) : (
-          <def.Renderer
-            config={def.parseConfig(instance.config)}
-            instance={instance}
-            clientId={clientId}
-            appId={appId}
-            menus={menus}
-            onNavigate={onNavigate}
-            mode="runtime"
-            recordContext={recordContext}
-            parameterFilter={parameterFilter}
-          />
+          // Keyed on the parameter filter too: a viewer changing a
+          // dashboard parameter asks for different data, which is a fair
+          // reason to try a failed tile again.
+          <WidgetErrorBoundary resetKey={JSON.stringify([instance.config, parameterFilter ?? null])} widgetId={instance.id} widgetType={instance.type}>
+            <WidgetBody
+              def={def}
+              instance={instance}
+              clientId={clientId}
+              appId={appId}
+              menus={menus}
+              onNavigate={onNavigate}
+              mode="runtime"
+              recordContext={recordContext}
+              parameterFilter={parameterFilter}
+            />
+          </WidgetErrorBoundary>
         )}
       </div>
     </div>

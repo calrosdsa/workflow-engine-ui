@@ -86,9 +86,19 @@ export function ChartRenderer({ config, clientId, appId, menus, mode, parameterF
   // A second dimension is drawable only on a chart with a category axis; a
   // pie split into sub-slices is just a pie of the pairs.
   const isSplit = CARTESIAN_TYPES.includes(config.chartType) && hasSplit(groups)
-  const { rows, series: plotSeries } = isSplit
-    ? buildSplitPlot(config, groups)
-    : buildFlatPlot(config, groups)
+  const groupLabels = {
+    empty: t('builder.dashboard_chart.group_empty'),
+    blank: t('builder.dashboard_chart.group_blank'),
+  }
+  // A stat tile plots nothing, and must not try: its response is a single
+  // ungrouped row that carries no key at all (the engine omits it), so a
+  // plot built from it reads a key that is not there. Building one anyway
+  // is what took down every dashboard holding a stat tile.
+  const { rows, series: plotSeries } = isStat
+    ? { rows: [], series: [] }
+    : isSplit
+      ? buildSplitPlot(config, groups, groupLabels)
+      : buildFlatPlot(config, groups, groupLabels)
   // A split spends the colour channel on the split values, so measures past
   // the first cannot be drawn. Told to the viewer rather than dropped in
   // silence — the failure mode §2.6 of the analytics R&D is about.
