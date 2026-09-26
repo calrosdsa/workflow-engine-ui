@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { ThemeConfig, ThemeMode, ResolvedThemeMode } from './types'
-import { pickForeground, deriveMutedForeground, deriveOverlay } from './color-utils'
+import { pickForeground, deriveMutedForeground, deriveOverlay, ensureContrast } from './color-utils'
 
 const MODE_STORAGE_KEY = 'app-theme-mode'
 
@@ -151,6 +151,20 @@ export function ThemeProvider({ theme, scopeElement, syncDocument, children }: T
       ['--popover-foreground', pickForeground(colors.surface)],
       ['--radius', theme.radius],
       ['--ring', colors.primary],
+      // The primary as TEXT: captions, field labels and the active nav item
+      // print in it (the runtime's "spot ink"). A tenant can pick any
+      // primary, so it is contrast-checked against both surfaces a caption
+      // sits on, with headroom above 4.5:1 for the 5-8% tints under hover
+      // and active states.
+      ['--ink', ensureContrast(colors.primary, [colors.background, colors.surface], foreground, 4.8)],
+      // Status colours were never part of ThemeConfig, so they used to come
+      // from index.css's static blocks: :root (the builder's palette) in
+      // light mode, and the legacy .dark block, which only ever reached
+      // #runtime-root, in dark mode, so portalled content got light-mode
+      // red/green/amber on a dark page. Emitted here per resolved mode and
+      // checked against this app's own surfaces, tint included, because
+      // badges draw status text on a 15% wash of the same colour.
+      ...statusVars(resolvedMode, [colors.background, colors.surface], foreground),
     ]
 
     el.classList.toggle('dark', resolvedMode === 'dark')
@@ -209,6 +223,20 @@ export function ThemeProvider({ theme, scopeElement, syncDocument, children }: T
   const value = useMemo(() => ({ mode, resolvedMode, setMode }), [mode, resolvedMode])
 
   return <ThemeModeContext.Provider value={value}>{children}</ThemeModeContext.Provider>
+}
+
+// Base hues for success / warning / destructive, per mode. ensureContrast
+// only moves them when a tenant's own surfaces leave too little headroom.
+const STATUS_BASE: Record<ResolvedThemeMode, Record<'success' | 'warning' | 'destructive', string>> = {
+  light: { success: '142 64% 28%', warning: '32 95% 30%', destructive: '0 72% 45%' },
+  dark: { success: '142 50% 55%', warning: '38 90% 56%', destructive: '0 80% 68%' },
+}
+
+function statusVars(mode: ResolvedThemeMode, surfaces: string[], foreground: string): [string, string][] {
+  return (Object.entries(STATUS_BASE[mode]) as [string, string][]).flatMap(([name, base]) => {
+    const color = ensureContrast(base, surfaces, foreground, 4.5, { tintAlpha: 0.15 })
+    return [[`--${name}`, color], [`--${name}-foreground`, pickForeground(color)]] as [string, string][]
+  })
 }
 
 function readStoredMode(): ThemeMode {

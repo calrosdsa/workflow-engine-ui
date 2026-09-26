@@ -1420,6 +1420,8 @@ export const es = {
   'app_config.primary': 'Principal',
   'app_config.secondary': 'Secundario',
   'app_config.themed_input': 'Entrada con tema',
+  'app_config.sample_caption': 'Cliente',
+  'app_config.sample_value': 'Acme Corp',
   'app_config.marketplace': 'Marketplace',
 
   'system.loading': 'Cargando…',

@@ -2091,6 +2091,8 @@ export const en = {
   'app_config.primary': 'Primary',
   'app_config.secondary': 'Secondary',
   'app_config.themed_input': 'Themed input',
+  'app_config.sample_caption': 'Customer',
+  'app_config.sample_value': 'Acme Corp',
   'app_config.marketplace': 'Marketplace',
 
   'workflows.execution_inspector.title': 'Execution inspector',

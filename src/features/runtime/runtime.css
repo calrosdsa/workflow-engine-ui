@@ -1,0 +1,87 @@
+/* Runtime design layer — "Printed form" (DESIGN.md § Runtime default theme).
+ *
+ * The published-app runtime reads like a printed business form: sheets of
+ * ruled cells, captions and rules printed in one spot colour (--ink, the
+ * tenant's primary made legible as text by ThemeProvider), values written in
+ * ink (--foreground). Tenant theming produces the look instead of fighting
+ * it: every app's forms come out "printed" in its own brand colour.
+ *
+ * Loaded by runtime-main.tsx only. Every rule is scoped to [data-rt], which
+ * runtime.html puts on <html>, so it also reaches portalled popovers and
+ * dialogs, and a builder surface can opt into the runtime look by carrying
+ * the same attribute. This sheet is unlayered on purpose: it has to beat
+ * Tailwind's layered utilities on components the builder shares (records
+ * table, record detail, form renderer), which it reaches through data-slot
+ * hooks rather than by editing their class names.
+ */
+
+/* --- Before the app's theme arrives ----------------------------------------
+ * The runtime imports index.css, whose :root is the BUILDER's palette. Until
+ * ThemeProvider writes the app's own values inline (after the snapshot
+ * loads), the loading screen and the not-found page painted in builder
+ * colours. These are DEFAULT_THEME's values; inline styles win once the
+ * provider mounts. They also cover the tokens ThemeProvider never sets
+ * (--sidebar), which otherwise leaked from the builder's :root. */
+html[data-rt] {
+  color-scheme: light;
+  font-family: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
+  --background: 160 8% 95.5%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 150 12% 99.5%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 150 12% 99.5%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 172 70% 25%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 160 8% 92.5%;
+  --secondary-foreground: 222.2 84% 4.9%;
+  --accent: 160 8% 92.5%;
+  --accent-foreground: 222.2 84% 4.9%;
+  --muted: 222.2 84% 4.9% / 5%;
+  --muted-foreground: 200 6% 38%;
+  --border: 222.2 84% 4.9% / 10%;
+  --input: 222.2 84% 4.9% / 10%;
+  --ring: 172 70% 25%;
+  --ink: 172 70% 25%;
+  --sidebar: 160 8% 95.5%;
+  --sidebar-foreground: 222.2 84% 4.9%;
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-rt] {
+    color-scheme: dark;
+    --background: 170 10% 7%;
+    --foreground: 210 40% 98%;
+    --card: 168 8% 10.5%;
+    --card-foreground: 210 40% 98%;
+    --popover: 168 8% 10.5%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 162 38% 62%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 165 8% 16%;
+    --secondary-foreground: 210 40% 98%;
+    --accent: 165 8% 16%;
+    --accent-foreground: 210 40% 98%;
+    --muted: 210 40% 98% / 5%;
+    --muted-foreground: 170 6% 66%;
+    --border: 210 40% 98% / 10%;
+    --input: 210 40% 98% / 10%;
+    --ring: 162 38% 62%;
+    --ink: 162 38% 62%;
+    --sidebar: 170 10% 7%;
+    --sidebar-foreground: 210 40% 98%;
+  }
+}
+
+/* index.css sets body's font explicitly, so portalled content (menus,
+   dialogs, toasts under <body>) never inherited the app's font from <html>,
+   where ThemeProvider writes it. */
+html[data-rt] body {
+  font-family: inherit;
+}
+
+/* Record ids, codes and numeric table cells: a monospace from the same
+   family, so an id reads as an id and figures line up in columns. */
+[data-rt] {
+  --rt-mono: 'Atkinson Hyperlegible Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+}

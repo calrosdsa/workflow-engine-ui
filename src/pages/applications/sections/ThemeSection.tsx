@@ -13,8 +13,11 @@ import { DEFAULT_THEME, mergeTheme } from '@/features/theme/default-theme'
 import { hexToHslTriplet, hslTripletToHex } from '@/features/theme/color-utils'
 import type { ThemeConfig, ThemeMode } from '@/features/theme/types'
 import { useTranslation } from '@/features/i18n/I18nProvider'
+// The runtime default typeface, loaded here too so the preview below shows it.
+import '@fontsource-variable/atkinson-hyperlegible-next/wght.css'
 
 const FONT_OPTIONS = [
+  { value: "'Atkinson Hyperlegible Next Variable', system-ui, sans-serif", label: 'Atkinson Hyperlegible Next' },
   { value: 'system-ui, sans-serif', label: 'System UI' },
   { value: 'Inter, sans-serif', label: 'Inter' },
   { value: 'Roboto, sans-serif', label: 'Roboto' },
@@ -208,6 +211,12 @@ function PreviewPane({ setEl, t }: { setEl: (el: HTMLDivElement | null) => void;
           >
             {t('app_config.secondary')}
           </button>
+        </div>
+        {/* One printed-form cell: the caption shows the primary as the runtime
+            prints it (--ink, contrast-adjusted), not the raw swatch. */}
+        <div className="mt-3 border-t pt-2" style={{ borderColor: 'hsl(var(--ink) / 0.2)' }}>
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'hsl(var(--ink))' }}>{t('app_config.sample_caption')}</p>
+          <p className="text-sm">{t('app_config.sample_value')}</p>
         </div>
         <input
           className="mt-3 w-full rounded-md border px-2 py-1 text-sm"
