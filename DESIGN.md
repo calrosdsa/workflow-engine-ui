@@ -266,6 +266,9 @@ this decision is about color only, per the request that prompted it.
 
 ## Typography
 
+(The Workflow Builder is excepted: Archivo + B612 Mono. See § Workflow
+Builder identity.)
+
 - Display: InterVariable, weight 700 for H1-scale headings, style normal
 - Body:    InterVariable, weight 400
 - Mono:    ui-monospace, SFMono-Regular, Menlo, monospace (unchanged from
@@ -377,12 +380,17 @@ Tailwind utilities directly as this codebase already does.
   Design).
 - No page may render a raw hex/rgb/Tailwind-color-utility value (e.g.
   `bg-slate-50`, `text-indigo-600`, `#161618`) outside `index.css`'s own
-  `:root` block — every color reference goes through `hsl(var(--x))`. This
+  token blocks (`:root`, `.light`, and the Workflow Builder's
+  `[data-surface]` blocks) — every color reference goes through
+  `hsl(var(--x))`. This
   is the single most emphasized rule in this system, given the prior
   audit's own 5-critical/6-major finding count was almost entirely this
   exact violation, repeated across 6+ files.
 
 ## What pages MUST share
+
+(Every page except the Workflow Builder, which carries its own palette and
+type by design. See § Workflow Builder identity before "fixing" it back.)
 
 - The single InterVariable typeface, weight-driven hierarchy (unchanged —
   `index.css`'s `body { font-family: system-ui, sans-serif }` needs a real
