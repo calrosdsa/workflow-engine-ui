@@ -70,7 +70,7 @@ export function AddMenuRuntime({ menu, onNavigate }: AddMenuRuntimeProps) {
   return (
     <div className="mx-auto max-w-xl space-y-4 p-6">
       <div>
-        <h1 className="text-lg font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{menu.name}</h1>
+        <h1 data-slot="page-title" className="text-lg font-semibold text-[hsl(var(--foreground))]">{menu.name}</h1>
       </div>
 
       {result === 'success' && config.success_behavior === 'message' && (

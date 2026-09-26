@@ -393,6 +393,8 @@ export const en = {
   'menus.section.detail.delete_error': 'Could not delete — remove or reparent child menus first.',
   'runtime.home.drilldown_back': 'Back',
   'runtime.sidebar.back_to_home': 'Back to Home',
+  'runtime.sidebar.empty': 'No pages to show yet.',
+  'runtime.record.back_to_list': 'Back to list',
   'runtime.record_detail.more_actions': 'More actions',
   // RuntimeLoginPage.tsx. CardTitle/button/labels/validation/error message
   // reuse auth.sign_in/.signing_in/.email/.password/.email_required/
@@ -402,6 +404,7 @@ export const en = {
   // rather than auth.sign_in_description's "your workflow engine account")
   // needed a fresh key.
   'runtime.login.description': 'Sign in to continue to this application',
+  'runtime.login.eyebrow': 'Sign in to',
   'runtime.permission_denied.sign_in_heading': 'Sign in to continue',
   'runtime.permission_denied.sign_in_body': 'This section requires an account with access. Sign in to view it.',
   'runtime.permission_denied.denied_heading': "You don't have access to this section",

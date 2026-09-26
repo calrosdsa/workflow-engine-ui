@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useContext, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -12,8 +12,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useTranslation } from '@/features/i18n/I18nProvider'
+import { RuntimeSnapshotContext } from './snapshot-context'
 
 // z.object is called at module scope, before any component (and its
 // useTranslation()) exists — same shape as AddFormDialog.tsx's buildChoices(t)
@@ -46,6 +46,9 @@ export function RuntimeLoginPage() {
   // with no explanation. Held in component state, like the builder's
   // LoginPage, so a half-finished login never outlives the page.
   const [challenge, setChallenge] = useState<MfaChallenge | null>(null)
+  // Read without the throwing hook: the sign-in page must still render if
+  // the app's snapshot did not load.
+  const appName = useContext(RuntimeSnapshotContext)?.app.name
 
   const {
     register,
@@ -113,63 +116,82 @@ export function RuntimeLoginPage() {
       className="flex min-h-screen items-center justify-center p-4"
       style={{ backgroundColor: 'hsl(var(--background))', color: 'hsl(var(--foreground))' }}
     >
-      <Card className="w-full max-w-sm animate-in fade-in-0 duration-300">
-        <CardHeader>
-          <CardTitle>{t('auth.sign_in')}</CardTitle>
-          <CardDescription>{t('runtime.login.description')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-            <div className="space-y-1.5">
-              <Label htmlFor="credential">{t('auth.email')}</Label>
-              <Input
-                id="credential"
-                type="email"
-                autoFocus
-                aria-invalid={!!errors.credential}
-                {...register('credential')}
-                autoComplete="email"
-              />
-              {errors.credential && (
-                <p className="flex items-center gap-1 text-xs" style={{ color: 'hsl(var(--destructive))' }}>
-                  <AlertCircle size={12} className="shrink-0" />
-                  {errors.credential.message}
-                </p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">{t('auth.password')}</Label>
-              <Input
-                id="password"
-                type="password"
-                aria-invalid={!!errors.password}
-                {...register('password')}
-                autoComplete="current-password"
-              />
-              {errors.password && (
-                <p className="flex items-center gap-1 text-xs" style={{ color: 'hsl(var(--destructive))' }}>
-                  <AlertCircle size={12} className="shrink-0" />
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
-            {login.isError && (
-              <div
-                role="alert"
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-xs"
-                style={{ backgroundColor: 'hsl(var(--destructive) / 0.1)', color: 'hsl(var(--destructive))' }}
-              >
-                <AlertCircle size={14} className="shrink-0" />
-                {t('auth.invalid_credentials')}
+      <div className="w-full max-w-sm animate-in fade-in-0 duration-300 motion-reduce:animate-none">
+        {/* Which app this is, printed like a form's heading: a small caption
+            in the app's spot colour, then its name. Without a snapshot there
+            is no name to print, so it falls back to a plain sign-in title. */}
+        <header className="mb-5 text-center">
+          {appName ? (
+            <>
+              <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[hsl(var(--ink))]">{t('runtime.login.eyebrow')}</p>
+              <h1 className="mt-1 text-2xl font-bold tracking-[-0.015em]">{appName}</h1>
+            </>
+          ) : (
+            <>
+              <h1 className="text-2xl font-bold tracking-[-0.015em]">{t('auth.sign_in')}</h1>
+              <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">{t('runtime.login.description')}</p>
+            </>
+          )}
+        </header>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          {/* The same ruled sheet every form in the app is printed on
+              (runtime.css): two cells, email and password. */}
+          <section data-slot="form-section" data-chrome="true" className="overflow-hidden rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+            <div data-slot="form-section-body">
+              <div data-slot="form-columns">
+                <div data-slot="form-column">
+                  <div data-slot="form-field" data-component="email" data-invalid={errors.credential ? 'true' : undefined}>
+                    <Label htmlFor="credential" data-slot="form-field-label">{t('auth.email')}</Label>
+                    <Input
+                      id="credential"
+                      type="email"
+                      autoFocus
+                      aria-invalid={!!errors.credential}
+                      {...register('credential')}
+                      autoComplete="email"
+                    />
+                    {errors.credential && (
+                      <p data-slot="form-field-error" className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]">
+                        <AlertCircle size={12} className="shrink-0" />
+                        {errors.credential.message}
+                      </p>
+                    )}
+                  </div>
+                  <div data-slot="form-field" data-component="password" data-invalid={errors.password ? 'true' : undefined}>
+                    <Label htmlFor="password" data-slot="form-field-label">{t('auth.password')}</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      aria-invalid={!!errors.password}
+                      {...register('password')}
+                      autoComplete="current-password"
+                    />
+                    {errors.password && (
+                      <p data-slot="form-field-error" className="flex items-center gap-1 text-xs text-[hsl(var(--destructive))]">
+                        <AlertCircle size={12} className="shrink-0" />
+                        {errors.password.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
-            )}
-            <Button type="submit" className="w-full" disabled={login.isPending}>
-              {login.isPending && <Spinner className="h-4 w-4 border-current" />}
-              {login.isPending ? t('auth.signing_in') : t('auth.sign_in')}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+            </div>
+          </section>
+          {login.isError && (
+            <div
+              role="alert"
+              className="flex items-center gap-2 rounded-md bg-[hsl(var(--destructive)/0.1)] px-3 py-2 text-xs text-[hsl(var(--destructive))]"
+            >
+              <AlertCircle size={14} className="shrink-0" />
+              {t('auth.invalid_credentials')}
+            </div>
+          )}
+          <Button type="submit" className="w-full" disabled={login.isPending}>
+            {login.isPending && <Spinner className="h-4 w-4 border-current" />}
+            {login.isPending ? t('auth.signing_in') : t('auth.sign_in')}
+          </Button>
+        </form>
+      </div>
     </div>
   )
 }
