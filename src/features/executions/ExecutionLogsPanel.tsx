@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
 import { iconFor } from '@/features/workflows/builder/icon-hints'
-import { NODE_REGISTRY, defaultLabel } from '@/features/workflows/builder/node-registry'
+import { NODE_REGISTRY, defaultLabel, leverFor } from '@/features/workflows/builder/node-registry'
 import type { NodeType } from '@/features/workflows/types'
 import { detectPayloadShape } from './payload-shape'
 import { useExecutionLogs } from './hooks'
@@ -229,8 +229,8 @@ function stepPayloads(log: ExecutionNodeLog): { input: unknown; output: unknown 
 // chunk-of-the-iterator summary row, not a distinct graph node), so it keeps
 // its own Repeat icon in the iterator's accent.
 function stepIcon(log: ExecutionNodeLog) {
-  if (log.kind === 'loop_chunk') return { Icon: Repeat, color: NODE_REGISTRY.iterator.accent }
-  return { Icon: iconFor(log.node_type), color: NODE_REGISTRY[log.node_type as NodeType]?.accent }
+  if (log.kind === 'loop_chunk') return { Icon: Repeat, lever: leverFor('iterator', NODE_REGISTRY.iterator.category) }
+  return { Icon: iconFor(log.node_type), lever: leverFor(log.node_type, NODE_REGISTRY[log.node_type as NodeType]?.category) }
 }
 
 function StepStatusIcon({ status }: { status: ExecutionLogStatus }) {
@@ -250,7 +250,7 @@ function StepStatusIcon({ status }: { status: ExecutionLogStatus }) {
 }
 
 function LogRow({ log, label, selected, onClick }: { log: ExecutionNodeLog; label: string; selected: boolean; onClick: () => void }) {
-  const { Icon, color } = stepIcon(log)
+  const { Icon, lever } = stepIcon(log)
   return (
     <button
       type="button"
@@ -261,7 +261,7 @@ function LogRow({ log, label, selected, onClick }: { log: ExecutionNodeLog; labe
         selected ? 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]' : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/60',
       )}
     >
-      <Icon size={14} className="shrink-0 text-[hsl(var(--muted-foreground))]" style={color ? { color } : undefined} />
+      <Icon size={14} className="shrink-0 text-[hsl(var(--muted-foreground))]" data-lever={lever} style={{ color: 'hsl(var(--lever))' }} />
       <span className="min-w-0 flex-1 truncate font-medium" title={label}>{label}</span>
       {log.duration_ms !== null && (
         <span className="shrink-0 tabular-nums text-[11px] text-[hsl(var(--muted-foreground))]">{formatDuration(log.duration_ms)}</span>
@@ -309,7 +309,7 @@ function LogDetail({ log, label, view, onViewChange, display, onDisplayChange, r
   reserveHeaderEnd: boolean
 }) {
   const t = useTranslation()
-  const { Icon, color } = stepIcon(log)
+  const { Icon, lever } = stepIcon(log)
   const { input, output } = stepPayloads(log)
 
   return (
@@ -321,7 +321,7 @@ function LogDetail({ log, label, view, onViewChange, display, onDisplayChange, r
         'flex min-h-10 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-[hsl(var(--border))] py-1.5 pl-3',
         reserveHeaderEnd ? 'pr-12' : 'pr-3',
       )}>
-        <Icon size={15} className="shrink-0 text-[hsl(var(--muted-foreground))]" style={color ? { color } : undefined} />
+        <Icon size={15} className="shrink-0 text-[hsl(var(--muted-foreground))]" data-lever={lever} style={{ color: 'hsl(var(--lever))' }} />
         <h3 className="min-w-[3rem] truncate text-[13px] font-semibold text-[hsl(var(--foreground))]" title={log.node_id}>{label}</h3>
         <span className="min-w-0 truncate text-xs text-[hsl(var(--muted-foreground))]">{statusSummary(t, log.status, log.duration_ms)}</span>
         {log.attempt > 1 && (

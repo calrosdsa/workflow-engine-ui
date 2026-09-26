@@ -205,8 +205,10 @@ function protectEntryPoint(nodes: FlowNode[], ids: Set<string>): Set<string> {
 // Dagre auto-layout
 // ---------------------------------------------------------------------------
 
-const NODE_WIDTH  = 180
-const NODE_HEIGHT = 80
+// Fallback plate size before React Flow has measured a node: the station
+// plate is 14.5rem wide (workflow-builder.css .workflow-node).
+export const NODE_WIDTH  = 232
+export const NODE_HEIGHT = 100
 
 function dagreLayout(
   nodes: Node[],
@@ -219,8 +221,15 @@ function dagreLayout(
   // Add nodes in left-to-right (x) order so dagre's initial within-rank ordering
   // follows the current horizontal layout. This keeps sibling order stable across
   // reorders — a node nudged just left/right of a sibling stays on that side.
+  // Measured sizes where React Flow has them: laid out at the fixed fallback,
+  // plates wider than it ate into ranksep, leaving the track between steps
+  // too short to read.
+  const sizeOf = (n: Node) => ({
+    width:  n.measured?.width  ?? NODE_WIDTH,
+    height: n.measured?.height ?? NODE_HEIGHT,
+  })
   const ordered = [...nodes].sort((a, b) => (a.position?.x ?? 0) - (b.position?.x ?? 0))
-  ordered.forEach((n) => g.setNode(n.id, { width: NODE_WIDTH, height: NODE_HEIGHT }))
+  ordered.forEach((n) => g.setNode(n.id, sizeOf(n)))
   edges.forEach((e) => g.setEdge(e.source, e.target))
 
   dagre.layout(g)
@@ -228,11 +237,12 @@ function dagreLayout(
   return nodes.map((n) => {
     const pos = g.node(n.id)
     if (!pos) return n
+    const { width, height } = sizeOf(n)
     return {
       ...n,
       position: {
-        x: pos.x - NODE_WIDTH  / 2,
-        y: pos.y - NODE_HEIGHT / 2,
+        x: pos.x - width  / 2,
+        y: pos.y - height / 2,
       },
     }
   })

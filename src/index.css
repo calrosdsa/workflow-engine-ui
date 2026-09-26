@@ -213,6 +213,134 @@
     --warning-foreground: 0 0% 100%;
   }
 
+  /* Workflow Builder identity: "Signal box" (DESIGN.md § Workflow Builder
+     identity). The editor reads as a railway interlocking mimic panel: a
+     tinted enamel surface, raised station plates, and lamps whose colours
+     are the run states. Everything below is a scoped exception to the teal
+     shell, declared here because DESIGN.md keeps every raw colour in this
+     file.
+
+     Lever colours: one hue per node category, on the category plate strip
+     and icon tile only. They are global (not editor-scoped) because the
+     execution logs, node picker and outline outside the canvas show the
+     same categories. None of them sits on a lamp hue (green / amber / red):
+     those are reserved for run state. */
+  :root {
+    --wf-lever-trigger: 45 38% 92%;
+    --wf-lever-structure: 200 8% 62%;
+    --wf-lever-data: 212 62% 66%;
+    --wf-lever-logic: 262 42% 74%;
+    --wf-lever-integration: 186 46% 56%;
+    --wf-lever-ai: 300 32% 72%;
+    --wf-lever-notify: 330 34% 72%;
+    --wf-lever-output: 92 22% 62%;
+    --wf-lever-utility: 222 14% 68%;
+  }
+
+  .light {
+    --wf-lever-trigger: 165 20% 14%;
+    --wf-lever-structure: 200 10% 38%;
+    --wf-lever-data: 212 62% 38%;
+    --wf-lever-logic: 262 38% 46%;
+    --wf-lever-integration: 186 64% 28%;
+    --wf-lever-ai: 300 30% 40%;
+    --wf-lever-notify: 330 38% 42%;
+    --wf-lever-output: 92 30% 30%;
+    --wf-lever-utility: 222 16% 40%;
+  }
+
+  /* The editor marks <html> with data-surface while it is mounted
+     (WorkflowBuilderPage), so portalled popovers, menus and selects pick up
+     the same palette as the canvas. Two selectors, (0,2,0) each, so night
+     beats :root and day beats .light without either mode silently losing. */
+  [data-surface='workflow-editor']:not(.light) {
+    --background: 163 15% 14%;            /* enamel, night */
+    --foreground: 45 38% 92%;             /* ivory */
+    --card: 163 13% 18%;                  /* plate: raised above the enamel */
+    --card-foreground: 45 38% 92%;
+    --popover: 163 13% 18%;
+    --popover-foreground: 45 38% 92%;
+    --primary: 45 62% 86%;                /* ivory lamp: route set, selection, primary action */
+    --primary-foreground: 163 20% 10%;
+    --secondary: 45 40% 92% / 6%;
+    --secondary-foreground: 45 38% 92%;
+    --muted: 45 40% 92% / 6%;
+    --muted-foreground: 155 9% 67%;
+    --accent: 45 40% 92% / 6%;
+    --accent-foreground: 45 38% 92%;
+    --destructive: 5 76% 62%;             /* red lamp */
+    --destructive-foreground: 163 20% 10%;
+    --success: 146 52% 52%;               /* green lamp */
+    --success-foreground: 163 20% 10%;
+    --warning: 40 90% 58%;                /* amber lamp */
+    --warning-foreground: 163 20% 10%;
+    --border: 150 22% 86% / 12%;
+    --input: 150 22% 86% / 12%;
+    --ring: 45 62% 86%;
+    --sidebar: 163 15% 12%;
+    --sidebar-foreground: 45 38% 92%;
+    --wf-tile: 150 22% 86% / 5%;          /* the panel's domino-tile grid */
+    --wf-track: 158 9% 44%;               /* idle track */
+    --wf-track-bed: 163 20% 8%;
+    --wf-readout: 'B612 Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  [data-surface='workflow-editor'].light {
+    --background: 100 12% 88%;            /* enamel, day: putty sage */
+    --foreground: 165 20% 12%;            /* ink */
+    --card: 80 20% 97%;
+    --card-foreground: 165 20% 12%;
+    --popover: 80 20% 97%;
+    --popover-foreground: 165 20% 12%;
+    --primary: 165 22% 14%;               /* by day the lit route is ink, not a lamp */
+    --primary-foreground: 45 40% 94%;
+    --secondary: 165 20% 15% / 6%;
+    --secondary-foreground: 165 20% 12%;
+    --muted: 165 20% 15% / 6%;
+    --muted-foreground: 160 8% 34%;
+    --accent: 165 20% 15% / 6%;
+    --accent-foreground: 165 20% 12%;
+    --destructive: 5 70% 42%;             /* every lamp colour holds 4.5:1 as text on a plate */
+    --destructive-foreground: 45 40% 96%;
+    --success: 146 62% 27%;
+    --success-foreground: 45 40% 96%;
+    --warning: 36 95% 29%;
+    --warning-foreground: 45 40% 96%;
+    --border: 165 20% 15% / 16%;
+    --input: 165 20% 15% / 16%;
+    --ring: 165 22% 14%;
+    --sidebar: 100 12% 85%;
+    --sidebar-foreground: 165 20% 12%;
+    --wf-tile: 165 20% 15% / 6%;
+    --wf-track: 160 8% 58%;
+    --wf-track-bed: 100 12% 80%;
+    --wf-readout: 'B612 Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  [data-surface='workflow-editor'] body {
+    font-family: 'Archivo Variable', ui-sans-serif, system-ui, sans-serif;
+    font-stretch: 100%;
+  }
+
+  /* Category plate colour for any element carrying data-lever. An id the
+     server adds later falls back to the structure lever. */
+  [data-lever] { --lever: var(--wf-lever-structure); }
+  [data-lever='trigger'] { --lever: var(--wf-lever-trigger); }
+  [data-lever='data'] { --lever: var(--wf-lever-data); }
+  [data-lever='logic'] { --lever: var(--wf-lever-logic); }
+  [data-lever='integration'] { --lever: var(--wf-lever-integration); }
+  [data-lever='ai'] { --lever: var(--wf-lever-ai); }
+  [data-lever='notify'] { --lever: var(--wf-lever-notify); }
+  [data-lever='output'] { --lever: var(--wf-lever-output); }
+  [data-lever='utility'] { --lever: var(--wf-lever-utility); }
+
+  /* Icon tile tinted with its lever colour (picker, palette, outline, logs). */
+  .wf-lever-tile {
+    border: 1px solid hsl(var(--lever) / 0.34);
+    background: hsl(var(--lever) / 0.14);
+    color: hsl(var(--lever));
+  }
+
   /* Static class-based dark-mode fallback (next-themes/shadcn convention:
      toggle a `.dark` class on the scope element). This is the one
      from-scratch dark-mode CSS this codebase needed — ThemeProvider's

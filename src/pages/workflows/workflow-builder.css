@@ -1,8 +1,17 @@
-/* Hallmark · macrostructure: Canvas + Rail · tone: utilitarian · anchor hue: teal · pre-emit critique: P5 H5 E5 S5 R5 V4 · contrast: pass (40–41) · nav: app-shell · footer: none · slop: pass (10, 20, 26, 30, 34, 49) · mobile: pass (34, 49, 50–57) */
-/* design-system: DESIGN.md · designed-as-app */
-/* Hallmark · component: workflow-node · genre: modern-minimal · theme: App Builder dark
- * states: default · hover · focus · active · disabled · loading · error · success
- * contrast: pass (46–50)
+/* Workflow Builder — "Signal box" (DESIGN.md § Workflow Builder identity).
+ *
+ * The editor is an interlocking mimic panel: a tinted enamel surface with a
+ * domino-tile grid, workflow steps as raised station plates, edges as track,
+ * and lamps whose colours are run states and nothing else:
+ *   ivory = route set / selected, green = cleared, amber = caution, red = failed.
+ * Palette and type are set on <html>[data-surface='workflow-editor'] in
+ * index.css; this file only consumes tokens.
+ *
+ * Type roles (Archivo's width axis carries the role):
+ *   expanded  (font-stretch 112%) — the workflow's name, once, in the header
+ *   normal    (100%)              — titles and body
+ *   condensed (75–80%, caps)      — plate labels: tabs, node meta, eyebrows
+ *   B612 Mono                     — readouts: step numbers, ids, durations
  */
 
 :root {
@@ -15,69 +24,142 @@ body {
   overflow-x: clip;
 }
 
+/* Header ---------------------------------------------------------------------- */
+
 .workflow-builder-header {
   position: relative;
-  background: hsl(var(--background) / 0.94);
-  backdrop-filter: blur(16px);
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--sidebar));
 }
 
 .workflow-builder-name-input {
-  width: clamp(9.5rem, 16vw, 15rem);
+  width: clamp(10rem, 20vw, 18rem);
   min-width: 0;
+  color: hsl(var(--foreground));
+  font-size: 1.0625rem;
+  font-stretch: 112%;
+  font-weight: 640;
+  letter-spacing: -0.005em;
+}
+
+.workflow-builder-unsaved {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.375rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.6875rem;
+  font-stretch: 80%;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* An unlit lamp outline: unsaved is a note, not a run state. */
+.workflow-builder-unsaved > span {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border: 1.5px solid hsl(var(--muted-foreground));
+  border-radius: 9999px;
 }
 
 .workflow-builder-header-actions {
   flex-basis: 0;
 }
 
+/* The view switch reads as a row of engraved plates. */
 .workflow-builder-tabs {
   position: absolute;
   left: 50%;
   top: 50%;
   display: flex;
-  align-items: center;
-  gap: 0.125rem;
-  padding: 0.25rem;
+  align-items: stretch;
+  overflow: hidden;
   border: 1px solid hsl(var(--border));
-  border-radius: 0.75rem;
-  background: hsl(var(--muted) / 0.72);
+  border-radius: 0.375rem;
+  background: hsl(var(--background));
   transform: translate(-50%, -50%);
 }
 
 .workflow-builder-tab {
   min-height: 2rem;
-  padding: 0 0.875rem;
-  border-radius: 0.5rem;
+  padding: 0 0.9rem;
   color: hsl(var(--muted-foreground));
   font-size: 0.75rem;
-  font-weight: 600;
+  font-stretch: 78%;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   white-space: nowrap;
-  transition: color 180ms var(--workflow-ease-out), background-color 180ms var(--workflow-ease-out), transform 120ms var(--workflow-ease-out);
+  transition: color 180ms var(--workflow-ease-out), background-color 180ms var(--workflow-ease-out), box-shadow 180ms var(--workflow-ease-out);
+}
+
+.workflow-builder-tab + .workflow-builder-tab {
+  border-left: 1px solid hsl(var(--border));
 }
 
 .workflow-builder-tab:hover:not(:disabled) {
   color: hsl(var(--foreground));
 }
 
-.workflow-builder-tab:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
 .workflow-builder-tab:focus-visible {
   outline: 2px solid hsl(var(--ring));
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .workflow-builder-tab[data-active='true'] {
-  background: hsl(var(--foreground));
+  background: hsl(var(--card));
   box-shadow: inset 0 -2px 0 hsl(var(--primary));
-  color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 .workflow-builder-tab:disabled {
   cursor: not-allowed;
   opacity: 0.38;
 }
+
+.workflow-builder-setup-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid hsl(var(--warning) / 0.4);
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  color: hsl(var(--warning));
+  font-size: 0.75rem;
+  font-weight: 650;
+  white-space: nowrap;
+  transition: background-color 150ms var(--workflow-ease-out);
+}
+
+.workflow-builder-setup-count:hover {
+  background: hsl(var(--warning) / 0.1);
+}
+
+.workflow-builder-setup-count:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.workflow-builder-running,
+.workflow-builder-run-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.25rem 0.25rem 0.5rem;
+  color: hsl(var(--foreground));
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.workflow-builder-run-chip .font-mono {
+  font-family: var(--wf-readout, ui-monospace, monospace);
+}
+
+/* Canvas ---------------------------------------------------------------------- */
 
 .workflow-builder-main {
   min-height: 0;
@@ -88,26 +170,17 @@ body {
   background-color: hsl(var(--background));
 }
 
-.workflow-builder-canvas::before {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background-image: radial-gradient(circle, hsl(var(--border) / 0.7) 1px, transparent 1px);
-  background-size: 22px 22px;
-  content: '';
-  opacity: 0.46;
-  pointer-events: none;
-}
-
 .workflow-builder-canvas > .react-flow {
   position: relative;
   z-index: 1;
 }
 
-.workflow-builder-canvas-toolbar {
-  border-radius: 0.75rem;
-  background: hsl(var(--card) / 0.92);
-  backdrop-filter: blur(12px);
+.workflow-builder-canvas-toolbar,
+.workflow-builder-tool-rail {
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  background: hsl(var(--card));
+  box-shadow: 0 1px 0 hsl(var(--foreground) / 0.05) inset, 0 8px 20px -10px hsl(0 0% 0% / 0.45);
 }
 
 .workflow-builder-tool-rail {
@@ -117,14 +190,9 @@ body {
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.375rem;
-  border: 1px solid hsl(var(--border));
-  border-radius: 0.875rem;
-  background: hsl(var(--card) / 0.92);
-  box-shadow: 0 10px 28px hsl(var(--background) / 0.38);
+  gap: 0.25rem;
+  padding: 0.3125rem;
   transform: translateY(-50%);
-  backdrop-filter: blur(12px);
 }
 
 .workflow-builder-tool {
@@ -133,8 +201,7 @@ body {
   height: 2.25rem;
   align-items: center;
   justify-content: center;
-  border: 1px solid transparent;
-  border-radius: 0.625rem;
+  border-radius: 0.375rem;
   color: hsl(var(--muted-foreground));
   transition: color 180ms var(--workflow-ease-out), background-color 180ms var(--workflow-ease-out), transform 120ms var(--workflow-ease-out);
 }
@@ -159,7 +226,7 @@ body {
 }
 
 .workflow-builder-tool[data-tone='primary']:hover {
-  background: hsl(var(--primary) / 0.88);
+  background: hsl(var(--primary) / 0.86);
   color: hsl(var(--primary-foreground));
 }
 
@@ -174,47 +241,120 @@ body {
 }
 
 .workflow-builder-start-hint {
-  border-color: hsl(var(--primary) / 0.25);
-  background: hsl(var(--card) / 0.9);
+  border-color: hsl(var(--border));
+  background: hsl(var(--card));
   color: hsl(var(--muted-foreground));
 }
 
-/* Workflow node --------------------------------------------------------------
-   Nodes were previously mini gradient cards. The canvas now treats them as
-   precise graph objects: one neutral surface, a small category signal for
-   scanning, and execution state that reads in place instead of as a cluster
-   of detached corner badges. */
-.workflow-node {
-  --workflow-node-accent: var(--primary);
+/* React Flow's zoom buttons and minimap, dressed as panel fittings. */
+.workflow-builder-zoom.react-flow__controls {
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem;
+  box-shadow: none;
+}
 
-  width: 14rem;
+.workflow-builder-zoom .react-flow__controls-button {
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--muted-foreground));
+  fill: currentColor;
+}
+
+.workflow-builder-zoom .react-flow__controls-button:last-child {
+  border-bottom: 0;
+}
+
+.workflow-builder-zoom .react-flow__controls-button:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.workflow-builder-minimap.react-flow__minimap {
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem;
+  background: hsl(var(--card));
+}
+
+/* Track ----------------------------------------------------------------------
+   Every edge is two strokes: a bed (the channel the line sits in) and a core.
+   A selected step lights its upstream route ivory; a run on the panel draws
+   the route it actually took, section by section, in its lamp colour. */
+
+.wf-track-bed {
+  pointer-events: none;
+  stroke-linecap: round;
+  transition: stroke 150ms var(--workflow-ease-out), opacity 150ms var(--workflow-ease-out);
+}
+
+.wf-track-draw {
+  pointer-events: none;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  stroke-linecap: round;
+  animation: wf-route-draw 520ms var(--workflow-ease-out) forwards;
+}
+
+@keyframes wf-route-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+.wf-track-insert {
+  background: hsl(var(--primary));
+  box-shadow: 0 0 0 4px hsl(var(--background));
+  color: hsl(var(--primary-foreground));
+  transition: opacity 150ms var(--workflow-ease-out), transform 150ms var(--workflow-ease-out);
+}
+
+.wf-track-insert:hover {
+  transform: scale(1.1);
+}
+
+.wf-track-insert:focus-visible {
+  opacity: 1;
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  transform: scale(1);
+}
+
+/* Station plate (workflow node) -------------------------------------------------
+   One raised plate per step. The category shows only as a lever strip on the
+   left edge and the icon tile; run state shows only on the lamp, the status
+   readout and the border, so the two never compete. */
+
+.workflow-node {
+  width: 14.5rem;
   overflow: visible;
   border: 1px solid hsl(var(--border));
-  border-radius: var(--radius);
+  border-radius: 0.375rem;
   background: hsl(var(--card));
   color: hsl(var(--card-foreground));
-  box-shadow: 0 1px 0 hsl(var(--foreground) / 0.035), 0 10px 24px hsl(var(--background) / 0.24);
+  box-shadow:
+    0 1px 0 hsl(var(--foreground) / 0.06) inset,
+    0 2px 0 hsl(var(--wf-track-bed)),
+    0 14px 26px -14px hsl(0 0% 0% / 0.55);
   transition: border-color 180ms var(--workflow-ease-out), box-shadow 180ms var(--workflow-ease-out), opacity 150ms var(--workflow-ease-out), transform 120ms var(--workflow-ease-out);
 }
 
-/* Category colour stays deliberately small. It supports graph scanning, but
-   never competes with execution state, which always uses success/warning/
-   error treatment and a readable label. */
-.workflow-node[data-node-category='structure'] {
-  --workflow-node-accent: var(--success);
-}
-
-.workflow-node[data-node-category='logic'] {
-  --workflow-node-accent: var(--warning);
-}
-
-.workflow-node[data-node-category='notify'] {
-  --workflow-node-accent: var(--destructive);
+.workflow-node::before {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  left: -1px;
+  width: 4px;
+  border-radius: 0.375rem 0 0 0.375rem;
+  background: hsl(var(--lever));
+  content: '';
+  pointer-events: none;
 }
 
 .workflow-node[data-selected='true'] {
-  border-color: hsl(var(--primary) / 0.8);
-  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.22), 0 12px 28px hsl(var(--background) / 0.3);
+  border-color: hsl(var(--primary) / 0.9);
+  box-shadow:
+    0 0 0 1px hsl(var(--primary) / 0.9),
+    0 0 0 5px hsl(var(--primary) / 0.12),
+    0 14px 26px -14px hsl(0 0% 0% / 0.55);
 }
 
 .workflow-node:focus-visible,
@@ -224,8 +364,7 @@ body {
 }
 
 .workflow-node--preview-hover {
-  border-color: hsl(var(--muted-foreground) / 0.5);
-  box-shadow: 0 1px 0 hsl(var(--foreground) / 0.05), 0 12px 28px hsl(var(--background) / 0.3);
+  border-color: hsl(var(--muted-foreground) / 0.55);
 }
 
 .workflow-node--preview-active {
@@ -238,18 +377,23 @@ body {
 }
 
 .workflow-node[data-execution-state='running'],
+.workflow-node[data-execution-state='pending'],
 .workflow-node--preview-loading {
-  border-color: hsl(var(--primary) / 0.62);
+  border-color: hsl(var(--primary) / 0.6);
 }
 
 .workflow-node[data-execution-state='failed'],
 .workflow-node--preview-error {
-  border-color: hsl(var(--destructive) / 0.72);
+  border-color: hsl(var(--destructive) / 0.8);
 }
 
 .workflow-node[data-execution-state='completed'],
 .workflow-node--preview-success {
-  border-color: hsl(var(--success) / 0.72);
+  border-color: hsl(var(--success) / 0.7);
+}
+
+.workflow-node[data-execution-state='completed_with_errors'] {
+  border-color: hsl(var(--warning) / 0.75);
 }
 
 .workflow-node--dragging {
@@ -267,17 +411,14 @@ body {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .workflow-node:hover:not(.workflow-node--dragging):not(.workflow-node--dimmed):not(.workflow-node--unreached) {
-    border-color: hsl(var(--muted-foreground) / 0.5);
-    box-shadow: 0 1px 0 hsl(var(--foreground) / 0.05), 0 12px 28px hsl(var(--background) / 0.3);
+  .workflow-node:hover:not(.workflow-node--dragging):not(.workflow-node--dimmed):not(.workflow-node--unreached):not([data-selected='true']) {
+    border-color: hsl(var(--muted-foreground) / 0.55);
   }
 }
 
 .workflow-node-header {
   min-height: 3.5rem;
   border-bottom: 1px solid hsl(var(--border));
-  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
-  background: hsl(var(--card));
 }
 
 .workflow-node-drag-handle {
@@ -294,40 +435,38 @@ body {
   cursor: grabbing;
 }
 
-.workflow-node-icon {
-  border: 1px solid hsl(var(--workflow-node-accent) / 0.28);
-  background: hsl(var(--workflow-node-accent) / 0.12);
-  color: hsl(var(--workflow-node-accent));
-}
-
 .workflow-node-title {
   color: hsl(var(--foreground));
   font-size: 0.8125rem;
-  font-weight: 650;
-  line-height: 1.1;
+  font-weight: 620;
+  line-height: 1.15;
 }
 
 .workflow-node-meta {
-  margin-top: 0.125rem;
+  margin-top: 0.1875rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
+  font-stretch: 75%;
   font-weight: 650;
-  letter-spacing: 0.055em;
+  letter-spacing: 0.08em;
   line-height: 1;
   text-transform: uppercase;
 }
 
+/* The step number is a small readout plate. */
 .workflow-node-step {
   display: inline-flex;
-  min-width: 1.5rem;
-  height: 1.5rem;
+  min-width: 1.625rem;
+  height: 1.375rem;
   align-items: center;
   justify-content: center;
   gap: 0.125rem;
   border: 1px solid hsl(var(--border));
-  border-radius: 0.375rem;
-  background: hsl(var(--muted));
-  color: hsl(var(--muted-foreground));
+  border-radius: 0.25rem;
+  padding: 0 0.25rem;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--wf-readout, ui-monospace, monospace);
   font-size: 0.625rem;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
@@ -335,9 +474,50 @@ body {
 }
 
 .workflow-node-step small {
-  color: hsl(var(--primary));
+  color: hsl(var(--muted-foreground));
   font-size: 0.5rem;
-  font-weight: 750;
+  font-weight: 700;
+}
+
+/* The lamp: off, ivory on the selected route, or the run's outcome. */
+.workflow-node-lamp {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: hsl(var(--wf-track-bed));
+  box-shadow: inset 0 0 0 1px hsl(var(--wf-track));
+  transition: background-color 180ms var(--workflow-ease-out), box-shadow 180ms var(--workflow-ease-out);
+}
+
+.workflow-node-lamp[data-lamp='route'],
+.workflow-node-lamp[data-lamp='running'],
+.workflow-node-lamp[data-lamp='pending'] {
+  --lamp: var(--primary);
+}
+
+.workflow-node-lamp[data-lamp='completed'] { --lamp: var(--success); }
+.workflow-node-lamp[data-lamp='failed'] { --lamp: var(--destructive); }
+.workflow-node-lamp[data-lamp='completed_with_errors'] { --lamp: var(--warning); }
+
+.workflow-node-lamp[data-lamp='route'],
+.workflow-node-lamp[data-lamp='running'],
+.workflow-node-lamp[data-lamp='pending'],
+.workflow-node-lamp[data-lamp='completed'],
+.workflow-node-lamp[data-lamp='failed'],
+.workflow-node-lamp[data-lamp='completed_with_errors'] {
+  background: hsl(var(--lamp));
+  box-shadow: 0 0 0 2px hsl(var(--lamp) / 0.2), 0 0 8px hsl(var(--lamp) / 0.6);
+}
+
+.workflow-node-lamp[data-lamp='running'] {
+  animation: wf-lamp-pulse 1.2s var(--workflow-ease-in-out) infinite alternate;
+}
+
+@keyframes wf-lamp-pulse {
+  from { opacity: 1; }
+  to { opacity: 0.35; }
 }
 
 .workflow-node-setup-flag {
@@ -349,89 +529,109 @@ body {
   min-height: 3.25rem;
 }
 
+/* Configuration summary chips: neutral, because lamp colours mean runs. */
+.wf-chip {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.25rem;
+  padding: 0.0625rem 0.3125rem;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--wf-readout, ui-monospace, monospace);
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .workflow-node-handle {
   width: 0.75rem !important;
   height: 0.75rem !important;
   border: 2px solid hsl(var(--card)) !important;
   border-radius: 9999px !important;
-  box-shadow: 0 0 0 1px hsl(var(--border));
-  transition: background-color 150ms var(--workflow-ease-out), border-color 150ms var(--workflow-ease-out), box-shadow 150ms var(--workflow-ease-out);
+  transition: background-color 150ms var(--workflow-ease-out), box-shadow 150ms var(--workflow-ease-out);
 }
 
 .workflow-node-handle--input {
-  background: hsl(var(--card)) !important;
-  box-shadow: 0 0 0 1px hsl(var(--muted-foreground) / 0.7);
+  background: hsl(var(--wf-track-bed)) !important;
+  box-shadow: 0 0 0 1px hsl(var(--wf-track));
 }
 
 .workflow-node-handle--output {
-  border-color: hsl(var(--card)) !important;
-  background: hsl(var(--workflow-node-accent)) !important;
-  box-shadow: 0 0 0 1px hsl(var(--workflow-node-accent) / 0.55);
+  background: hsl(var(--wf-track)) !important;
+  box-shadow: 0 0 0 1px hsl(var(--wf-track));
 }
 
+/* A condition is a set of points: two routes out, told apart by fill and by
+   their labels, never by lamp colour. */
 .workflow-node-handle--true {
-  background: hsl(var(--success)) !important;
-  box-shadow: 0 0 0 1px hsl(var(--success) / 0.58);
+  background: hsl(var(--foreground)) !important;
+  box-shadow: 0 0 0 1px hsl(var(--foreground) / 0.6);
 }
 
 .workflow-node-handle--false {
-  background: hsl(var(--destructive)) !important;
-  box-shadow: 0 0 0 1px hsl(var(--destructive) / 0.58);
+  background: hsl(var(--card)) !important;
+  box-shadow: 0 0 0 1.5px hsl(var(--foreground) / 0.75);
+}
+
+.workflow-node-handle.connectingfrom,
+.workflow-node-handle.connectingto,
+.react-flow__handle.workflow-node-handle:hover {
+  box-shadow: 0 0 0 2px hsl(var(--primary));
 }
 
 .workflow-node-port-label {
   border: 1px solid hsl(var(--border));
   border-radius: 0.25rem;
-  background: hsl(var(--card) / 0.96);
+  background: hsl(var(--card));
   color: hsl(var(--muted-foreground));
-  font-size: 0.5625rem;
+  font-size: 0.625rem;
+  font-stretch: 78%;
   font-weight: 650;
+  letter-spacing: 0.06em;
   line-height: 1;
-  padding: 0.1875rem 0.25rem;
+  padding: 0.1875rem 0.3125rem;
+  text-transform: uppercase;
 }
 
 .workflow-node-port-label--true {
-  border-color: hsl(var(--success) / 0.35);
-  color: hsl(var(--success));
+  color: hsl(var(--foreground));
 }
 
-.workflow-node-port-label--false {
-  border-color: hsl(var(--destructive) / 0.35);
-  color: hsl(var(--destructive));
-}
-
+/* The status readout under a plate while a run is on the panel. */
 .workflow-node-status {
   border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
   box-shadow: 0 0 0 2px hsl(var(--card));
+  font-family: var(--wf-readout, ui-monospace, monospace);
+  font-weight: 700;
 }
 
 .workflow-node-status--pending,
 .workflow-node-status--skipped {
-  background: hsl(var(--muted));
   color: hsl(var(--muted-foreground));
 }
 
 .workflow-node-status--running {
-  border-color: hsl(var(--primary) / 0.35);
-  background: hsl(var(--primary) / 0.12);
+  border-color: hsl(var(--primary) / 0.4);
   color: hsl(var(--primary));
 }
 
 .workflow-node-status--completed {
-  border-color: hsl(var(--success) / 0.35);
-  background: hsl(var(--success) / 0.12);
+  border-color: hsl(var(--success) / 0.4);
   color: hsl(var(--success));
 }
 
 .workflow-node-status--failed {
-  border-color: hsl(var(--destructive) / 0.35);
-  background: hsl(var(--destructive) / 0.12);
+  border-color: hsl(var(--destructive) / 0.45);
   color: hsl(var(--destructive));
 }
 
 .workflow-node-status--completed-with-errors {
-  border-color: hsl(var(--warning) / 0.35);
-  background: hsl(var(--warning) / 0.14);
+  border-color: hsl(var(--warning) / 0.45);
   color: hsl(var(--warning));
 }
 
@@ -478,7 +678,9 @@ body {
   .workflow-node-add,
   .workflow-node-branch-add,
   .workflow-node-quick-actions,
-  .workflow-node-branch-toolbar {
+  .workflow-node-branch-toolbar,
+  .wf-track-bed,
+  .wf-track-insert {
     transition-duration: 150ms;
   }
 
@@ -487,10 +689,23 @@ body {
   .workflow-node-branch-add:hover,
   .workflow-node-overlay-button:active,
   .workflow-node-add:active,
-  .workflow-node-branch-add:active {
+  .workflow-node-branch-add:active,
+  .wf-track-insert:hover {
     transform: none;
   }
+
+  /* The route appears lit at once instead of drawing on. */
+  .wf-track-draw {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+
+  .workflow-node-lamp[data-lamp='running'] {
+    animation: none;
+  }
 }
+
+/* Command bar ------------------------------------------------------------------- */
 
 .workflow-builder-command-backdrop {
   position: fixed;
@@ -506,24 +721,24 @@ body {
   align-items: flex-start;
   justify-content: center;
   padding: 12vh 1rem 1rem;
-  background: hsl(var(--background) / 0.58);
+  background: hsl(var(--background) / 0.62);
   color: inherit;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(6px);
 }
 
 .workflow-builder-command-dialog {
   width: min(36rem, 100%);
   overflow: hidden;
   border: 1px solid hsl(var(--border));
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   background: hsl(var(--popover));
-  box-shadow: 0 24px 64px hsl(var(--background) / 0.56);
+  box-shadow: 0 24px 64px hsl(0 0% 0% / 0.5);
 }
 
 .workflow-builder-command-dialog kbd {
   margin-left: auto;
   color: hsl(var(--muted-foreground));
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--wf-readout, ui-monospace, monospace);
   font-size: 0.625rem;
 }
 
@@ -604,9 +819,11 @@ body {
   gap: 0.25rem;
   border-radius: 0.25rem;
   padding: 0.25rem 0.375rem;
-  font-size: 0.625rem;
-  font-weight: 600;
-  text-transform: capitalize;
+  font-size: 0.6875rem;
+  font-stretch: 80%;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .node-workbench-icon-button {
@@ -663,8 +880,11 @@ body {
   border-bottom: 2px solid transparent;
   padding: 0 0.625rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.6875rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-stretch: 78%;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   transition: color 180ms var(--workflow-ease-out), border-color 180ms var(--workflow-ease-out);
 }
 
@@ -682,14 +902,16 @@ body {
   outline-offset: -2px;
 }
 
+/* Drawers (setup, lifecycle) ------------------------------------------------------ */
+
 .workflow-builder-drawer-backdrop {
   position: fixed;
   inset: 0;
   z-index: 70;
   display: flex;
   justify-content: flex-end;
-  background: hsl(var(--background) / 0.58);
-  backdrop-filter: blur(8px);
+  background: hsl(var(--background) / 0.62);
+  backdrop-filter: blur(6px);
 }
 
 .workflow-builder-drawer {
@@ -704,7 +926,7 @@ body {
   flex-direction: column;
   border-left: 1px solid hsl(var(--border));
   background: hsl(var(--card));
-  box-shadow: -24px 0 64px hsl(var(--background) / 0.46);
+  box-shadow: -24px 0 64px hsl(0 0% 0% / 0.4);
 }
 
 .workflow-builder-drawer-action,
@@ -731,12 +953,12 @@ body {
 }
 
 .workflow-builder-drawer-publish {
-  background: hsl(var(--foreground));
-  color: hsl(var(--background));
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
 }
 
 .workflow-builder-drawer-publish:hover:not(:disabled) {
-  background: hsl(var(--foreground) / 0.88);
+  background: hsl(var(--primary) / 0.86);
 }
 
 .workflow-builder-drawer-action:disabled,
@@ -751,11 +973,23 @@ body {
   outline-offset: 2px;
 }
 
-@media (max-width: 900px) {
+/* Narrow widths ------------------------------------------------------------------ */
+
+@media (max-width: 1080px) {
+  /* In the header's flow now, the row can be squeezed: it scrolls rather
+     than clipping the last views off. */
   .workflow-builder-tabs {
     position: static;
+    min-width: 0;
     margin-inline: auto;
+    overflow-x: auto;
+    scrollbar-width: none;
     transform: none;
+  }
+
+  .workflow-builder-tab {
+    flex-shrink: 0;
+    padding: 0 0.625rem;
   }
 
   .workflow-builder-header-actions {
@@ -774,7 +1008,12 @@ body {
   .workflow-builder-tabs {
     order: 3;
     width: 100%;
-    justify-content: center;
+    overflow-x: auto;
+  }
+
+  .workflow-builder-tab {
+    flex: 1 0 auto;
+    padding: 0 0.625rem;
   }
 
   .workflow-builder-header-actions {

@@ -1,10 +1,9 @@
 import { useMemo } from 'react'
 import { useBuilderStore } from './store'
-import { PALETTE_NODES, NODE_REGISTRY, fallbackCategory } from './node-registry'
+import { PALETTE_NODES, NODE_REGISTRY, fallbackCategory, leverFor } from './node-registry'
 import { useNodeTaxonomy, groupByPaletteCategory, type PaletteEntry } from './node-taxonomy'
 import { iconFor } from './icon-hints'
 import { cn, onKeyboardActivate } from '@/lib/utils'
-import type { NodeType } from '../types'
 import { useTranslation } from '@/features/i18n/I18nProvider'
 
 const CATEGORY_LABEL_IDS = new Set(['ai', 'core', 'data', 'flow', 'integration', 'notify', 'output', 'structure', 'utility', 'logic'])
@@ -68,7 +67,6 @@ export function NodePalette() {
             {CATEGORY_LABEL_IDS.has(group.id) ? t(`workflows.category.${group.id}`) : group.label}
           </p>
           {group.entries.map((entry) => {
-            const reg = entry.kind === 'core' ? NODE_REGISTRY[entry.type as NodeType] : undefined
             const Icon = iconFor(entry.type, entry.iconHint)
             return (
               <div
@@ -97,10 +95,10 @@ export function NodePalette() {
                 )}
                 title={entry.description}
               >
-                <div className={cn(
-                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white shadow-sm transition-transform group-hover:scale-105',
-                  reg?.gradient ?? 'bg-[hsl(var(--foreground))]/70',
-                )}>
+                <div
+                  data-lever={leverFor(entry.type, entry.category)}
+                  className="wf-lever-tile flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-105"
+                >
                   <Icon size={14} strokeWidth={2.25} />
                 </div>
                 <span className="truncate text-[13px] font-medium text-[hsl(var(--foreground))]">{entry.label}</span>

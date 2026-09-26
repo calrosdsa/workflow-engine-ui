@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, AlertTriangle, ArrowLeft, Check, GitCommitHorizontal, Play, Save, Settings2, Workflow, X } from 'lucide-react'
+import { AlertCircle, AlertTriangle, ArrowLeft, Check, GitCommitHorizontal, Play, Save, Settings2, X } from 'lucide-react'
 import { useWorkflow, useCreateWorkflow, useUpdateWorkflow } from '@/features/workflows/hooks'
 import { useTriggerExecution, useExecution, useExecutionLogs } from '@/features/executions/hooks'
 import { useBuilderStore } from '@/features/workflows/builder/store'
@@ -11,7 +11,7 @@ import { nodeSetupIssue } from '@/features/workflows/builder/node-validation'
 import { VariablesPanel } from '@/features/workflows/builder/VariablesPanel'
 import { OutlinePanel } from '@/features/workflows/builder/OutlinePanel'
 import { NodeConfigPanel } from '@/features/workflows/builder/NodeConfigPanel'
-import { ExecutionsSidebar, statusDot } from '@/features/workflows/builder/ExecutionsSidebar'
+import { ExecutionsSidebar } from '@/features/workflows/builder/ExecutionsSidebar'
 import { EvaluationsSidebar } from '@/features/workflows/builder/EvaluationsSidebar'
 import { ExecutionLogsDock, DOCK_LOGS_PAGE_SIZE } from '@/features/workflows/builder/ExecutionLogsDock'
 import { CanvasOverlayContext } from '@/features/workflows/builder/canvas-overlay'
@@ -21,11 +21,15 @@ import { TriggerOnboardingModal } from '@/features/workflows/builder/TriggerOnbo
 import { WORKFLOW_COMMAND_EVENT, type WorkflowCommandId } from '@/features/workflows/builder/workflow-command-model'
 import { useEnvironmentLinkStatus } from '@/features/environment/hooks'
 import { useApplication } from '@/features/applications/hooks'
-import { cn } from '@/lib/utils'
+import { useTranslation } from '@/features/i18n/I18nProvider'
+import type { ExecutionStatus } from '@/features/executions/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { FlowLayout } from '../test/Layout'
+import '@fontsource-variable/archivo/wdth.css'
+import '@fontsource/b612-mono/400.css'
+import '@fontsource/b612-mono/700.css'
 import './workflow-builder.css'
 
 // True when the event originates inside a text-entry control.
@@ -39,6 +43,12 @@ function isEditableTarget(t: EventTarget | null): boolean {
   )
 }
 
+// The header's run chip shows the selected run's outcome on the same lamp
+// the plates use (workflow-builder.css `.workflow-node-lamp`).
+const runChipLamp: Record<ExecutionStatus, string> = {
+  PENDING: 'running', RUNNING: 'running', COMPLETED: 'completed', FAILED: 'failed', CANCELLED: 'off',
+}
+
 export type BuilderMode = 'new' | 'edit'
 
 interface WorkflowBuilderPageProps {
@@ -46,6 +56,7 @@ interface WorkflowBuilderPageProps {
 }
 
 export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
+  const t = useTranslation()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const params   = useParams({ strict: false }) as { appId?: string; workflowId?: string }
@@ -53,6 +64,15 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   const id       = mode === 'edit' ? (params.workflowId ?? '') : ''
 
   const { data: existing, isLoading } = useWorkflow(id)
+
+  // Marks <html> while the editor is open so the Signal box palette and type
+  // (index.css `[data-surface='workflow-editor']`) also reach popovers,
+  // menus and selects, which portal to <body> outside this component.
+  useEffect(() => {
+    const root = document.documentElement
+    root.dataset.surface = 'workflow-editor'
+    return () => { delete root.dataset.surface }
+  }, [])
   const { data: application } = useApplication()
   const { data: envStatus } = useEnvironmentLinkStatus()
   const isLockedProduction = envStatus?.linked && envStatus.role === 'production'
@@ -305,54 +325,52 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
   return (
     <div className="workflow-builder-shell flex h-screen flex-col overflow-hidden bg-[hsl(var(--background))]">
       {/* ── Header ───────────────────────────────────────────────────── */}
-      <header className="workflow-builder-header sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b border-[hsl(var(--border))] px-3">
+      <header className="workflow-builder-header sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 px-3">
         <Button
           variant="ghost" size="icon"
           className="h-8 w-8 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           onClick={handleBack}
-          title="Back to workflows"
+          title={t('workflows.builder.header.back')}
+          aria-label={t('workflows.builder.header.back')}
         >
           <ArrowLeft size={16} />
         </Button>
 
         <div className="h-5 w-px bg-[hsl(var(--border))]" />
 
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[hsl(var(--primary))]">
-          <Workflow size={16} className="text-[hsl(var(--primary-foreground))]" />
-        </div>
-
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="workflow-builder-name-input h-8 border-0 bg-transparent px-1.5 text-[15px] font-semibold text-[hsl(var(--foreground))] shadow-none focus-visible:bg-[hsl(var(--muted))] focus-visible:ring-0"
-            placeholder="Workflow name…"
+            className="workflow-builder-name-input h-8 border-0 bg-transparent px-1.5 shadow-none focus-visible:bg-[hsl(var(--muted))] focus-visible:ring-0"
+            placeholder={t('workflows.builder.header.name_placeholder')}
+            aria-label={t('workflows.builder.header.name_label')}
           />
           {isDirty && (
-            <span className="flex items-center gap-1 rounded-full bg-[hsl(var(--warning))]/10 px-2 py-0.5 text-[10px] font-medium text-[hsl(var(--warning))]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--warning))]" />
-              Unsaved
+            <span className="workflow-builder-unsaved">
+              <span aria-hidden="true" />
+              {t('common.unsaved')}
             </span>
           )}
         </div>
 
-        <nav className="workflow-builder-tabs" aria-label="Workflow views">
+        <nav className="workflow-builder-tabs" aria-label={t('workflows.builder.header.views')}>
           <button
             type="button"
             className="workflow-builder-tab"
             data-active={!outlinePanelOpen && !executionsPanelOpen && !varsPanelOpen && !evaluationsPanelOpen}
             onClick={closeActiveSidebar}
           >
-            Editor
+            {t('workflows.builder.header.editor')}
           </button>
           <button
             type="button"
             className="workflow-builder-tab"
             data-active={outlinePanelOpen}
             onClick={toggleOutlinePanel}
-            title="View the workflow as a step tree"
+            title={t('workflows.builder.header.outline_hint')}
           >
-            Outline
+            {t('workflows.outline.title')}
           </button>
           <button
             type="button"
@@ -360,9 +378,9 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
             data-active={executionsPanelOpen}
             onClick={toggleExecutionsPanel}
             disabled={mode !== 'edit'}
-            title={mode === 'edit' ? 'Open execution history' : 'Save the workflow to view executions'}
+            title={mode === 'edit' ? t('workflows.builder.header.executions_hint') : t('workflows.builder.header.executions_unsaved')}
           >
-            Executions
+            {t('executions.title')}
           </button>
           <button
             type="button"
@@ -370,7 +388,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
             data-active={varsPanelOpen}
             onClick={toggleVarsPanel}
           >
-            Variables
+            {t('workflows.variables.title')}
           </button>
           <button
             type="button"
@@ -378,9 +396,9 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
             data-active={evaluationsPanelOpen}
             onClick={toggleEvaluationsPanel}
             disabled={mode !== 'edit'}
-            title={mode === 'edit' ? 'Test this workflow against a dataset of sample inputs' : 'Save the workflow to add evaluations'}
+            title={mode === 'edit' ? t('workflows.builder.header.evaluations_hint') : t('workflows.builder.header.evaluations_unsaved')}
           >
-            Evaluations
+            {t('workflows.evaluations.sidebar.title')}
           </button>
         </nav>
 
@@ -393,27 +411,33 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
         )}
 
         {mode === 'edit' && (
-          <Button variant="outline" size="sm" onClick={() => setSetupOpen(true)} title="Open workflow setup">
+          <Button variant="outline" size="sm" onClick={() => setSetupOpen(true)} title={t('workflows.builder.header.setup_hint')}>
             <Settings2 size={13} />
-            <span className="hidden xl:inline">Setup</span>
+            <span className="hidden xl:inline">{t('workflows.builder.header.setup')}</span>
           </Button>
         )}
 
         {mode === 'edit' && (
-          <Button variant="outline" size="sm" onClick={() => setLifecycleOpen(true)} title="Review versions and publish this app">
+          <Button variant="outline" size="sm" onClick={() => setLifecycleOpen(true)} title={t('workflows.builder.header.lifecycle_hint')}>
             <GitCommitHorizontal size={13} />
-            <span className="hidden xl:inline">{isDirty ? 'Draft' : application?.published_version != null ? `Live v${application.published_version}` : 'Lifecycle'}</span>
+            <span className="hidden xl:inline">
+              {isDirty
+                ? t('workflows.builder.header.draft')
+                : application?.published_version != null
+                  ? t('workflows.builder.header.live_version', { version: application.published_version })
+                  : t('workflows.builder.header.lifecycle')}
+            </span>
           </Button>
         )}
 
         {setupIssues.length > 0 && (
           <button
             onClick={() => setSetupOpen(true)}
-            className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[hsl(var(--warning))]/10 px-2.5 py-1 text-xs font-semibold text-[hsl(var(--warning))] ring-1 ring-[hsl(var(--warning))]/30 transition-colors hover:bg-[hsl(var(--warning))]/15"
-            title={`${setupIssues[0].label}: ${setupIssues[0].issue} — click to open`}
+            className="workflow-builder-setup-count"
+            title={`${setupIssues[0].label}: ${setupIssues[0].issue}`}
           >
             <AlertTriangle size={12} />
-            {setupIssues.length} to set up
+            {t('workflows.builder.header.to_set_up', { count: setupIssues.length })}
           </button>
         )}
 
@@ -423,12 +447,14 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
             dock at that point instead), so this chip only shows for
             genuinely in-progress runs, not finished ones. */}
         {isTriggeredRunning && (
-          <span className="flex items-center gap-1.5 whitespace-nowrap rounded-md bg-[hsl(var(--primary))]/10 py-1.5 pl-2.5 pr-1.5 text-xs font-medium text-[hsl(var(--primary))]">
-            <Spinner className="h-3 w-3" />Running…
+          <span className="workflow-builder-running">
+            <span className="workflow-node-lamp" data-lamp="running" aria-hidden="true" />
+            {t('workflows.builder.header.running')}
             <button
               onClick={() => setTriggeredId(null)}
-              className="flex h-4 w-4 items-center justify-center rounded-full text-[hsl(var(--primary))]/70 transition-colors hover:bg-[hsl(var(--primary))]/15 hover:text-[hsl(var(--primary))]"
-              title="Dismiss"
+              className="flex h-4 w-4 items-center justify-center rounded-full text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
+              title={t('common.dismiss')}
+              aria-label={t('common.dismiss')}
             >
               <X size={10} strokeWidth={2.75} />
             </button>
@@ -438,7 +464,7 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
         {mode === 'edit' && (
           <Button variant="outline" size="sm" onClick={handleRun} disabled={triggerMutation.isPending || isSaving}>
             {triggerMutation.isPending ? <Spinner className="h-4 w-4" /> : <Play size={13} />}
-            {isDirty ? 'Save & Run' : 'Run'}
+            {isDirty ? t('workflows.builder.header.save_and_run') : t('common.run')}
           </Button>
         )}
 
@@ -450,13 +476,18 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
                 closing, per FR-C5-008), with a one-click way to clear it
                 without reopening the sidebar. */}
             {selectedExecutionId && (
-              <span className="flex items-center gap-1 rounded-full bg-[hsl(var(--muted))] py-1 pl-2 pr-1 text-[11px] font-medium text-[hsl(var(--muted-foreground))]">
-                <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', overlayExecution ? statusDot[overlayExecution.status] : 'bg-[hsl(var(--muted-foreground))]/40')} />
+              <span className="workflow-builder-run-chip">
+                <span
+                  className="workflow-node-lamp"
+                  data-lamp={overlayExecution ? runChipLamp[overlayExecution.status] : 'off'}
+                  aria-hidden="true"
+                />
                 <span className="font-mono">{selectedExecutionId.slice(0, 8)}</span>
                 <button
                   onClick={() => clearOverlay(null)}
                   className="flex h-4 w-4 items-center justify-center rounded-full text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted-foreground))]/20 hover:text-[hsl(var(--foreground))]"
-                  title="Clear selected execution"
+                  title={t('workflows.builder.header.clear_run')}
+                  aria-label={t('workflows.builder.header.clear_run')}
                 >
                   <X size={10} strokeWidth={2.75} />
                 </button>
@@ -469,10 +500,10 @@ export function WorkflowBuilderPage({ mode }: WorkflowBuilderPageProps) {
           size="sm"
           onClick={handleSave}
           disabled={isSaving || isLockedProduction}
-          title={isLockedProduction ? 'This app is a linked Production environment — edit its linked Sandbox instead' : 'Save (Ctrl+S)'}
+          title={isLockedProduction ? t('workflows.builder.header.locked_production') : t('workflows.builder.header.save_hint')}
         >
           {isSaving ? <Spinner className="h-4 w-4" /> : justSaved ? <Check size={13} /> : <Save size={13} />}
-          {mode === 'new' ? 'Create' : justSaved ? 'Saved' : 'Save'}
+          {mode === 'new' ? t('common.create') : justSaved ? t('common.saved') : t('common.save')}
         </Button>
         </div>
       </header>

@@ -2,10 +2,11 @@
 /* we put the theme css at the end to override some of the default css variables and styles */
 @import url('./xy-theme.css');
 
+/* No font-family here: this sheet is unlayered, so a font set on body would
+   beat index.css's layered one app-wide once the editor had loaded. */
 html,
 body {
   margin: 0;
-  font-family: sans-serif;
   box-sizing: border-box;
 }
 

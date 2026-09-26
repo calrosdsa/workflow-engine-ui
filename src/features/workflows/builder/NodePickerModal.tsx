@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { Search, X, ChevronLeft, ChevronRight, Bell, Bot, Box, Database, FileBarChart, GitBranch, Globe, Pencil } from 'lucide-react'
-import { NODE_REGISTRY, PALETTE_NODES, fallbackCategory } from './node-registry'
+import { NODE_REGISTRY, PALETTE_NODES, fallbackCategory, leverFor } from './node-registry'
 import { useNodeTaxonomy, groupByPaletteCategory, groupBySource, type PaletteEntry } from './node-taxonomy'
 import { iconFor, iconForHint } from './icon-hints'
 import { AppPickerPanel, type PickerSelection } from './AppPickerPanel'
 import { cn } from '@/lib/utils'
-import type { NodeType } from '../types'
 import { useTranslation } from '@/features/i18n/I18nProvider'
 
 const CATEGORY_LABEL_IDS = new Set(['ai', 'core', 'data', 'flow', 'integration', 'notify', 'output', 'structure', 'utility', 'logic'])
@@ -286,9 +285,7 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
                     <span className="h-px flex-1 bg-[hsl(var(--border))]" />
                   </h3>
                   {group.entries.map((c) => {
-                    const builtin = c.kind === 'core' ? NODE_REGISTRY[c.type as NodeType] : undefined
                     const Icon = iconFor(c.type, c.iconHint)
-                    const gradient = builtin?.gradient ?? 'bg-[hsl(var(--foreground))]/70'
                     return (
                       <button
                         key={c.type}
@@ -299,10 +296,10 @@ export function NodePickerModal({ onSelect, onClose }: NodePickerModalProps) {
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1',
                         )}
                       >
-                        <div className={cn(
-                          'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white shadow-sm transition-transform group-hover:scale-105',
-                          gradient,
-                        )}>
+                        <div
+                          data-lever={leverFor(c.type, c.category)}
+                          className="wf-lever-tile flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-105"
+                        >
                           <Icon size={18} strokeWidth={2.25} />
                         </div>
                         <div className="min-w-0">

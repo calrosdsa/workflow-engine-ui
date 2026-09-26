@@ -42,7 +42,8 @@ matched to what each screen actually is:
   fixed right-rail split. RAGFlow's DNA has no canvas-editor analogue to
   draw from (it has no visual authoring tool), so this macrostructure is
   preserved as-is; only its color tokens change. Variation knob: rail width
-  (`w-96` unchanged).
+  (`w-96` unchanged). The Workflow Builder keeps this shape but carries its
+  own identity; see **Workflow Builder identity** below.
 - **Workflow node configuration workbench:** a deliberate, canvas-editor
   exception added for the node-configuration foundation. The compact inspector
   remains rail-sized; the desktop Input / Parameters / Output workbench opens
@@ -139,6 +140,81 @@ that averaging a two-stop gradient into one HSL/OKLCH value destroys it):
 - `--gradient-upsell: linear-gradient(to right, #00beb4, #43ffa4)` — commerce/upgrade CTAs only.
   App Builder has no commerce surface today; this token is reserved, unused
   until one exists. Do not repurpose it as a second general-purpose accent.
+
+## Workflow Builder identity — "Signal box"
+
+**A scoped exception, added 2026-09-26 at the requester's direction** ("new
+direction, in code" for the workflow editor). It applies to the Workflow
+Builder page only (`WorkflowBuilderPage.tsx` and what it renders). Every other
+page keeps the teal system above.
+
+**Concept.** The editor reads as a railway interlocking mimic panel. The
+workflow is a line diagram, each step is a raised station plate, the edges
+are track, and a run is a train whose route lights up on the panel. Signal
+lamps already mean what the run states mean, so the metaphor carries real
+information: **ivory = route set / selected, green = cleared (completed),
+amber = caution (completed with errors, needs setup), red = failed.**
+
+**Mechanism.** While the editor is mounted it sets `data-surface="workflow-editor"`
+on `<html>`, so portalled popovers, menus and selects match the canvas.
+`index.css` re-points the existing shadcn variables under
+`[data-surface='workflow-editor']:not(.light)` (night) and
+`[data-surface='workflow-editor'].light` (day). Both are (0,2,0), so each beats
+`:root` or `.light` without either mode losing. There is no parallel
+vocabulary: components keep reading `hsl(var(--card))` etc. Editor-only tokens
+are `--wf-tile` (panel grid), `--wf-track` / `--wf-track-bed` (edges) and
+`--wf-readout` (the readout face). All raw values stay in `index.css`.
+
+| Role | Night | Day |
+|---|---|---|
+| Enamel (`--background`) | `163 15% 14%` | `100 12% 88%` |
+| Plate (`--card`) | `163 13% 18%` | `80 20% 97%` |
+| Text (`--foreground`) | ivory `45 38% 92%` | ink `165 20% 12%` |
+| Lit route, selection, primary action (`--primary`) | ivory lamp `45 62% 86%` | ink `165 22% 14%` |
+| Green / amber / red lamps | `146 52% 52%` / `40 90% 58%` / `5 76% 62%` | `146 62% 27%` / `36 95% 29%` / `5 70% 42%` (each ≥ 4.5:1 as text on a plate) |
+
+**Lamp colours are reserved for run state.** Configuration never borrows
+them: node-body chips (trigger mode, message type, severity, HTTP method,
+variable names) are neutral `.wf-chip`s, and a condition's true/false outputs
+are told apart by fill (solid / hollow) and label, not green/red. A healthy
+idle workflow shows no green or red at all.
+
+**Lever colours = node category.** One hue per category (`--wf-lever-*`,
+global in `:root` / `.light` because the picker, palette, outline and
+execution logs show categories outside the canvas too). They appear only as
+the plate's left strip and the icon tile (`[data-lever]` + `.wf-lever-tile`,
+chosen by `leverFor()` in `node-registry.ts`), and none sits on a lamp hue.
+The trigger gets its own ivory/ink lever. This replaces the per-type Tailwind
+gradients (`bg-emerald-500` etc.) the registry used to paint icons with.
+
+**Type.** Archivo (variable, self-hosted via `@fontsource-variable/archivo`,
+no font CDN), with the width axis carrying the role: expanded (112%) for the
+workflow's name, once; normal for titles and body; condensed caps (75–80%)
+for plate labels (view tabs, node meta, inspector tabs). B612 Mono (the
+Airbus cockpit-display face, `@fontsource/b612-mono`) is only for readouts:
+step plates, run status, config chips, run id. Code, JSON and expression
+panes keep the system mono, since B612 ships only 400/700 and dense
+semibold lists turn bold in it.
+
+**Signature: route lighting.**
+- Every edge is two strokes: a bed (channel) and a core.
+- Selecting a step lights its upstream route back to the trigger in ivory:
+  the steps whose output can feed its input (`route.ts`, keyed to React
+  Flow's selection so it stays lit after the config workbench closes).
+- Selecting a run draws the route it took section by section, in real run
+  order (or the graph's step order for runs without logs), each section in
+  the lamp colour of the step it leads into. Untaken track goes dark. The
+  draw-on plays once per selected run (keyed on the run id, delay fixed at
+  mount), never on the status poll. Under reduced motion the route is lit
+  at once.
+- Precedence: run on the panel > selected step's route > selected edge
+  (dashed) > hover.
+
+**Canvas.** A square "domino tile" grid that pans with the graph (React Flow
+`Background` lines, 24px), not dots. Each view tool exists once: undo/redo and
+the command bar at the top; add, fit, tidy and minimap in the right rail;
+zoom in the corner. Dagre lays plates out at their measured size (fallback
+232×100) so the track between steps is a readable 80px.
 
 ## Runtime default theme
 
