@@ -53,7 +53,19 @@ export interface AggregateRecordsRequest {
 }
 
 export interface AggregateGroupResponse {
-  key: string
+  /** ABSENT, not "", in two cases, because the engine serializes it with
+   *  `omitempty` (api/forms/handler.go's aggregateGroupResponse):
+   *
+   *  - the request had no group_by, i.e. a stat tile's single row;
+   *  - the grouped value IS the empty string, which a text field stores
+   *    when a form is saved with that input left blank.
+   *
+   *  A record with no value at all is a different group: it arrives keyed
+   *  "(empty)". Read this through the chart's rawGroupKey/groupKeyLabel
+   *  (widgets/chart/bucket-label.ts) rather than directly. */
+  key?: string
+  /** Absent when the request had no group_by2, and under the same
+   *  empty-string rule as `key` when it did. */
   key2?: string
   values: number[]
 }

@@ -20,13 +20,11 @@
 import type { FilterCondition } from '@/features/workflows/types'
 import type { ChartDimension, ChartWidgetConfig } from './schema'
 import type { FieldDef, FieldType } from '@/features/forms/types'
+import { EMPTY_GROUP_KEY } from './bucket-label'
 
 /** formdata.BucketLabelSep. Kept in step with bucket-label.ts's own copy —
  *  that one strips the prefix for display, this one reads it. */
 const BUCKET_LABEL_SEP = '\x1f'
-
-/** formdata.emptyGroupLabel — what a NULL group key surfaces as. */
-const EMPTY_GROUP_LABEL = '(empty)'
 
 const DATE_TYPES: FieldType[] = ['date', 'datetime']
 
@@ -102,7 +100,7 @@ function conditionsForDimension(
 
   // A NULL group. Exact for every dimension shape — aggregate.go routes all
   // of them through the same derefKey sentinel.
-  if (key === EMPTY_GROUP_LABEL) return [cond(`${idPrefix}-null`, dim.field, 'is_null')]
+  if (key === EMPTY_GROUP_KEY) return [cond(`${idPrefix}-null`, dim.field, 'is_null')]
 
   if (dim.ranges && dim.ranges.length > 0) {
     if (index === undefined) return undefined
@@ -144,7 +142,10 @@ function conditionsForDimension(
     ]
   }
 
-  // Unbucketed: the key is the field's own value cast to text.
+  // Unbucketed: the key is the field's own value cast to text. That includes
+  // a BLANK group, whose key the response omits and the plot carries as ""
+  // (rawGroupKey): `eq ""` selects exactly the records saved with the field
+  // blank, and not the unset ones, which are the "(empty)" group above.
   return [cond(`${idPrefix}-eq`, dim.field, 'eq', key)]
 }
 

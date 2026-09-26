@@ -2,6 +2,7 @@ import { AlertTriangle, Copy, Settings2, Trash2 } from 'lucide-react'
 import { cn, onKeyboardActivate } from '@/lib/utils'
 import { useTranslation } from '@/features/i18n/I18nProvider'
 import { getWidget } from '../widget-registry'
+import { WidgetBody, WidgetErrorBoundary } from '../WidgetErrorBoundary'
 import { useIsVisible } from './useIsVisible'
 import { resolveLayoutKeyAction, type LayoutKeyAction } from './keyboardLayout'
 import type { WidgetInstance } from '../schema'
@@ -111,16 +112,16 @@ export function WidgetTile({ instance, clientId, appId, selected, onSelect, onDu
       <div className="min-h-0 flex-1 overflow-auto" style={{ scrollbarGutter: 'stable' }}>
         {!def ? (
           <UnavailableWidget type={instance.type} />
-        ) : !isVisible ? (
-          <TilePlaceholder def={def} instance={instance} clientId={clientId} appId={appId} />
         ) : (
-          <def.Renderer
-            config={def.parseConfig(instance.config)}
-            instance={instance}
-            clientId={clientId}
-            appId={appId}
-            mode="builder"
-          />
+          // Around the body only, so a tile whose widget failed keeps its
+          // drag handle and its Configure/Delete toolbar — the way out.
+          <WidgetErrorBoundary resetKey={JSON.stringify(instance.config)} widgetId={instance.id} widgetType={instance.type}>
+            {!isVisible ? (
+              <TilePlaceholder def={def} instance={instance} clientId={clientId} appId={appId} />
+            ) : (
+              <WidgetBody def={def} instance={instance} clientId={clientId} appId={appId} mode="builder" />
+            )}
+          </WidgetErrorBoundary>
         )}
       </div>
 

@@ -2693,6 +2693,7 @@ export const en = {
   // target: this one is shown to a RUNTIME end-user who cannot move/resize/
   // delete anything, so "your layout is preserved" would be meaningless here.
   'builder.dashboard.runtime_unavailable': 'Widget type "{{type}}" is unavailable.',
+  'builder.dashboard.widget_error': "This widget couldn't be displayed.",
   'builder.dashboard.empty_title': 'Start building your dashboard',
   'builder.dashboard.empty_hint': 'Drag a widget from the left, or add one to get started.',
   'builder.dashboard.add_widget': 'Add Widget',
@@ -2791,6 +2792,10 @@ export const en = {
   'builder.dashboard_chart.choose_form': 'Choose a form to aggregate.',
   'builder.dashboard_chart.load_error': "Couldn't load chart data.",
   'builder.dashboard_chart.no_data': 'No data yet.',
+  // The two "no value" groups a chart can plot: unset, and saved blank.
+  // Two labels, not one — see bucket-label.ts's groupKeyLabel.
+  'builder.dashboard_chart.group_empty': '(empty)',
+  'builder.dashboard_chart.group_blank': '(blank)',
 
   // widgets/{image,paragraph,quick-links,richtext,spacer,table}/
   // {ConfigPanel,Renderer}.tsx — this batch also promoted the generic
