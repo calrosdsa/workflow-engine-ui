@@ -1717,6 +1717,12 @@ export const en = {
   'localization.add_second_language_menus': 'Add a second supported language above to translate menu names.',
   'localization.menu_authored': 'Menu (as authored)',
 
+  'agents.knowledge.title': 'Knowledge bases',
+  'agents.knowledge.description': 'The agent can search the knowledge bases checked here and answer from their documents. Searching needs no approval.',
+  'agents.knowledge.loading': 'Loading knowledge bases...',
+  'agents.knowledge.empty': 'This app has no knowledge bases yet.',
+  'agents.knowledge.no_permission': 'Attaching knowledge bases requires permission to view knowledge bases.',
+  'agents.knowledge.unavailable': '{{count}} attached knowledge base(s) are no longer available to this app. Changing this list removes them.',
   'agents.skills.title': 'Skills',
   'agents.skills.description': 'Named instructions that guide the Agent for specific tasks. Leave Allowed Tools empty to allow every registered tool.',
   'agents.skills.add': 'Add skill',

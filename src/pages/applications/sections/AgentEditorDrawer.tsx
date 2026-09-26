@@ -21,6 +21,7 @@ import { MCPToolsSubsection } from '@/features/agent-mcp/MCPToolsSubsection'
 import { WorkflowToolsSubsection } from '@/features/agent-mcp/WorkflowToolsSubsection'
 import { SkillsSubsection } from '@/features/agents/SkillsSubsection'
 import { ToolBindingsSubsection } from '@/features/agents/ToolBindingsSubsection'
+import { KnowledgeBasesSubsection } from '@/features/agents/KnowledgeBasesSubsection'
 import { useTranslation } from '@/features/i18n/I18nProvider'
 import type { Agent, ToolBinding } from '@/features/agents/types'
 
@@ -39,6 +40,11 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
   const [enabled, setEnabled] = useState(agent.enabled)
   const [skills, setSkills] = useState(agent.skills)
   const [tools, setTools] = useState<ToolBinding[]>(agent.tools ?? [])
+  // Sent only once changed: an attached knowledge base the app can no longer
+  // read would otherwise make every save of this drawer fail on the server's
+  // check, even one that only renamed the Agent.
+  const [knowledgeBaseIds, setKnowledgeBaseIds] = useState<string[]>(agent.knowledge_base_ids ?? [])
+  const [knowledgeBasesChanged, setKnowledgeBasesChanged] = useState(false)
   // Text, not number, state — an empty string is how the field represents
   // "use the platform default" (session_ttl_days: null) without a spurious
   // 0 flashing while the user is mid-edit; parsed back to number|null only
@@ -63,6 +69,7 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
         tools,
         enabled,
         session_ttl_days: trimmedTTLInput === '' ? null : Number(trimmedTTLInput),
+        knowledge_base_ids: knowledgeBasesChanged ? knowledgeBaseIds : undefined,
       })
       toast.success(`"${name.trim()}" saved`)
       onClose()
@@ -153,6 +160,17 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
 
           <div className="border-t border-[hsl(var(--border))] pt-4">
             <ToolBindingsSubsection agentId={agent.id} bindings={tools} onChange={setTools} canWrite={canWrite} />
+          </div>
+
+          <div className="border-t border-[hsl(var(--border))] pt-4">
+            <KnowledgeBasesSubsection
+              selected={knowledgeBaseIds}
+              onChange={(ids) => {
+                setKnowledgeBaseIds(ids)
+                setKnowledgeBasesChanged(true)
+              }}
+              canWrite={canWrite}
+            />
           </div>
 
           <div className="border-t border-[hsl(var(--border))] pt-4">

@@ -1046,6 +1046,12 @@ export const es = {
   'localization.add_second_language_menus': 'Agrega un segundo idioma disponible arriba para traducir los nombres de los menús.',
   'localization.menu_authored': 'Menú (como fue escrito)',
 
+  'agents.knowledge.title': 'Bases de conocimiento',
+  'agents.knowledge.description': 'El agente puede buscar en las bases de conocimiento marcadas aquí y responder a partir de sus documentos. Buscar no requiere aprobación.',
+  'agents.knowledge.loading': 'Cargando bases de conocimiento...',
+  'agents.knowledge.empty': 'Esta app todavía no tiene bases de conocimiento.',
+  'agents.knowledge.no_permission': 'Asociar bases de conocimiento requiere permiso para ver bases de conocimiento.',
+  'agents.knowledge.unavailable': '{{count}} base(s) de conocimiento asociadas ya no están disponibles para esta app. Al cambiar esta lista se quitan.',
   'agents.skills.title': 'Habilidades',
   'agents.skills.description': 'Instrucciones con nombre que guían al agente en tareas específicas. Deja Herramientas permitidas vacío para permitir todas las herramientas registradas.',
   'agents.skills.add': 'Agregar habilidad',
