@@ -213,6 +213,156 @@
     --warning-foreground: 0 0% 100%;
   }
 
+  /* Builder shell theme, 2026-09-26 (DESIGN.md § Theme): the product
+     landing page's palette (app-builder-landing/styles.css, OKLCH,
+     converted exactly to HSL triplets). Violet-tinted near-black paper, a
+     raised surface, near-white ink, the electric-violet accent and the
+     landing green.
+
+     Scoped to the BUILDER document only: index.html carries
+     data-app="builder", runtime.html does not. The published-app runtime
+     imports this same file and reads :root's values for the tokens its
+     per-app ThemeProvider never sets (destructive, success, warning,
+     sidebar), so :root above is deliberately left as it was. Two
+     selectors, (0,2,0) each, so dark beats :root and light beats .light
+     without either mode silently losing. */
+  [data-app='builder']:not(.light) {
+    --background: 241 26% 6%;             /* landing --paper, oklch(16% .018 285) */
+    --foreground: 245 69% 98%;            /* landing --ink */
+    --card: 241 23% 10%;                  /* landing --paper-raised */
+    --card-foreground: 245 69% 98%;
+    --popover: 241 23% 10%;
+    --popover-foreground: 245 69% 98%;
+    --primary: 270 100% 71%;              /* landing --accent */
+    --primary-foreground: 241 26% 6%;
+    --secondary: 0 0% 100% / 5%;
+    --secondary-foreground: 245 69% 98%;
+    --muted: 0 0% 100% / 5%;              /* landing --surface-hover */
+    --muted-foreground: 245 8% 70%;       /* landing --muted */
+    --accent: 0 0% 100% / 5%;
+    --accent-foreground: 245 69% 98%;
+    --destructive: 5 78% 68%;
+    --destructive-foreground: 241 26% 6%;
+    --success: 154 69% 45%;               /* landing --success */
+    --success-foreground: 241 26% 6%;
+    --warning: 40 90% 58%;
+    --warning-foreground: 241 26% 6%;
+    --border: 0 0% 100% / 10%;            /* landing --border */
+    --input: 0 0% 100% / 10%;
+    --ring: 270 100% 71%;
+    --sidebar: 241 31% 5%;
+    --sidebar-foreground: 245 69% 98%;
+    --gradient-brand: linear-gradient(120deg, #bd98ff, #417dff); /* landing --brand-gradient */
+  }
+
+  /* Light: the landing page has no light theme, so this is the same
+     system inverted: violet-tinted white paper, ink text, and a deeper
+     violet that holds contrast on white. Every status colour and the
+     violet hold at least 4.78:1 as text on the paper, a card and the
+     sidebar, including on their own 10-15% tint (status badges). */
+  [data-app='builder'].light {
+    --background: 238 33% 96%;
+    --foreground: 241 23% 8%;
+    --card: 238 100% 100%;
+    --card-foreground: 241 23% 8%;
+    --popover: 238 100% 100%;
+    --popover-foreground: 241 23% 8%;
+    --primary: 271 62% 45%;
+    --primary-foreground: 245 69% 98%;
+    --secondary: 241 23% 8% / 5%;
+    --secondary-foreground: 241 23% 8%;
+    --muted: 241 23% 8% / 5%;
+    --muted-foreground: 246 7% 36%;
+    --accent: 241 23% 8% / 5%;
+    --accent-foreground: 241 23% 8%;
+    --destructive: 5 72% 38%;
+    --destructive-foreground: 245 69% 98%;
+    --success: 154 70% 23%;
+    --success-foreground: 245 69% 98%;
+    --warning: 36 95% 25%;
+    --warning-foreground: 245 69% 98%;
+    --border: 241 23% 8% / 12%;
+    --input: 241 23% 8% / 12%;
+    --ring: 271 62% 45%;
+    --sidebar: 238 25% 94%;
+    --sidebar-foreground: 241 23% 8%;
+    --gradient-brand: linear-gradient(120deg, #7d2fc8, #2f5fd6);
+  }
+
+  /* Workflow Builder identity (DESIGN.md § Workflow Builder identity). The
+     editor uses the shell theme above; these are the few tokens only the
+     editor has: the canvas grid, the track, and the readout face. Lamp
+     roles: violet = route set / selected, green / amber / red = run state.
+
+     Lever colours: one hue per node category, on the category plate strip
+     and icon tile only. They are global (not editor-scoped) because the
+     execution logs, node picker and outline outside the canvas show the
+     same categories. None of them sits on the violet accent or a lamp hue
+     (green / amber / red): those mean selection and run state. */
+  :root {
+    --wf-lever-trigger: 245 69% 98%;
+    --wf-lever-structure: 220 10% 62%;
+    --wf-lever-data: 212 70% 68%;
+    --wf-lever-logic: 40 22% 70%;
+    --wf-lever-integration: 186 50% 56%;
+    --wf-lever-ai: 330 55% 74%;
+    --wf-lever-notify: 200 30% 75%;
+    --wf-lever-output: 92 22% 62%;
+    --wf-lever-utility: 222 14% 68%;
+  }
+
+  .light {
+    --wf-lever-trigger: 241 23% 8%;
+    --wf-lever-structure: 220 10% 38%;
+    --wf-lever-data: 212 62% 38%;
+    --wf-lever-logic: 40 30% 34%;
+    --wf-lever-integration: 186 64% 28%;
+    --wf-lever-ai: 330 45% 40%;
+    --wf-lever-notify: 200 40% 34%;
+    --wf-lever-output: 92 30% 30%;
+    --wf-lever-utility: 222 16% 40%;
+  }
+
+  /* The editor marks <html> with data-surface while it is mounted
+     (WorkflowBuilderPage), so its tokens also reach portalled popovers. */
+  [data-surface='workflow-editor']:not(.light) {
+    --wf-tile: 0 0% 100% / 5%;            /* the canvas grid, as on the landing hero */
+    --wf-track: 246 11% 33%;              /* idle track */
+    --wf-track-bed: 241 36% 3%;
+    --wf-readout: 'B612 Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  [data-surface='workflow-editor'].light {
+    --wf-tile: 241 23% 8% / 6%;
+    --wf-track: 245 8% 67%;
+    --wf-track-bed: 239 15% 88%;
+    --wf-readout: 'B612 Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  [data-surface='workflow-editor'] body {
+    font-family: 'Archivo Variable', ui-sans-serif, system-ui, sans-serif;
+    font-stretch: 100%;
+  }
+
+  /* Category plate colour for any element carrying data-lever. An id the
+     server adds later falls back to the structure lever. */
+  [data-lever] { --lever: var(--wf-lever-structure); }
+  [data-lever='trigger'] { --lever: var(--wf-lever-trigger); }
+  [data-lever='data'] { --lever: var(--wf-lever-data); }
+  [data-lever='logic'] { --lever: var(--wf-lever-logic); }
+  [data-lever='integration'] { --lever: var(--wf-lever-integration); }
+  [data-lever='ai'] { --lever: var(--wf-lever-ai); }
+  [data-lever='notify'] { --lever: var(--wf-lever-notify); }
+  [data-lever='output'] { --lever: var(--wf-lever-output); }
+  [data-lever='utility'] { --lever: var(--wf-lever-utility); }
+
+  /* Icon tile tinted with its lever colour (picker, palette, outline, logs). */
+  .wf-lever-tile {
+    border: 1px solid hsl(var(--lever) / 0.34);
+    background: hsl(var(--lever) / 0.14);
+    color: hsl(var(--lever));
+  }
+
   /* Static class-based dark-mode fallback (next-themes/shadcn convention:
      toggle a `.dark` class on the scope element). This is the one
      from-scratch dark-mode CSS this codebase needed — ThemeProvider's

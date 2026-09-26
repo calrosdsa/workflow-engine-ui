@@ -28,8 +28,11 @@ import { BaseNode } from "@/features/workflows/builder/nodes/BaseNode";
 import {
   useBuilderStore,
   type FlowNode,
+  NODE_WIDTH,
+  NODE_HEIGHT,
 } from "@/features/workflows/builder/store";
 import { NODE_REGISTRY } from "@/features/workflows/builder/node-registry";
+import { useLeverOf } from "@/features/workflows/builder/lever";
 import { useNodeTaxonomy } from "@/features/workflows/builder/node-taxonomy";
 import type { NodeType } from "@/features/workflows/types";
 import { NodePickerModal } from "@/features/workflows/builder/NodePickerModal";
@@ -115,6 +118,7 @@ const Flow = () => {
   // call out that a nodeTypes/edgeTypes object recreated every render causes
   // unnecessary internal remounting.
   const { data: taxonomy } = useNodeTaxonomy();
+  const leverOf = useLeverOf();
   const nodeTypes = useMemo(() => {
     const packageTypes = (taxonomy?.nodes ?? []).filter((n) => n.kind === "package");
     if (packageTypes.length === 0) return builtInNodeTypes;
@@ -259,12 +263,12 @@ const Flow = () => {
   const centerOnNode = useCallback((nodeId: string) => {
     const node = useBuilderStore.getState().nodes.find((n) => n.id === nodeId);
     if (node && rfInstanceRef.current) {
-      // Falls back to store.ts's own dagre layout dimensions (180x80) when
-      // React Flow hasn't measured the node yet — close enough for a
-      // centering nudge, not pixel-exact.
+      // Falls back to store.ts's own dagre layout dimensions when React
+      // Flow hasn't measured the node yet — close enough for a centering
+      // nudge, not pixel-exact.
       rfInstanceRef.current.setCenter(
-        node.position.x + (node.width ?? 180) / 2,
-        node.position.y + (node.height ?? 80) / 2,
+        node.position.x + (node.measured?.width ?? NODE_WIDTH) / 2,
+        node.position.y + (node.measured?.height ?? NODE_HEIGHT) / 2,
         { zoom: 1, duration: 300 },
       );
     }
@@ -365,30 +369,18 @@ const Flow = () => {
       onDrop={onDrop}
       onDragOver={onDragOver}
     >
-      {/* Canvas toolbar — undo/redo + view helpers */}
-      <div className="workflow-builder-canvas-toolbar absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-0.5 border border-[hsl(var(--border))] p-1 shadow-lg shadow-black/20">
-        <ToolbarButton onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)">
+      {/* Edit history and the command bar. View tools (fit, tidy, minimap)
+          live once, in the rail on the right; zoom lives in the corner. */}
+      <div className="workflow-builder-canvas-toolbar absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-0.5 p-1">
+        <ToolbarButton onClick={undo} disabled={!canUndo} title={t('workflows.canvas.undo')}>
           <Undo2 size={15} />
         </ToolbarButton>
-        <ToolbarButton onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)">
+        <ToolbarButton onClick={redo} disabled={!canRedo} title={t('workflows.canvas.redo')}>
           <Redo2 size={15} />
         </ToolbarButton>
         <div className="mx-0.5 h-4 w-px bg-[hsl(var(--border))]" />
-        <ToolbarButton onClick={tidyLayout} title="Tidy up layout">
-          <Wand2 size={15} />
-        </ToolbarButton>
-        <ToolbarButton onClick={() => setCommandOpen(true)} title="Command bar (Ctrl+K)">
+        <ToolbarButton onClick={() => setCommandOpen(true)} title={t('workflows.canvas.command_bar')}>
           <CommandIcon size={15} />
-        </ToolbarButton>
-        <ToolbarButton onClick={fitView} title="Fit to view">
-          <Maximize size={15} />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={() => setShowMiniMap((v) => !v)}
-          title={showMiniMap ? "Hide minimap" : "Show minimap"}
-          active={showMiniMap}
-        >
-          <MapIcon size={15} />
         </ToolbarButton>
       </div>
 
@@ -402,22 +394,22 @@ const Flow = () => {
         </div>
       )}
 
-      <div className="workflow-builder-tool-rail" aria-label="Canvas tools">
-        <ToolbarButton onClick={addStepToFlow} title="Add a workflow step" tone="primary">
+      <div className="workflow-builder-tool-rail" role="toolbar" aria-label={t('workflows.canvas.tools')}>
+        <ToolbarButton onClick={addStepToFlow} title={t('workflows.canvas.add_step')} tone="primary">
           <Plus size={16} strokeWidth={2.5} />
         </ToolbarButton>
-        <ToolbarButton onClick={fitView} title="Fit workflow to view">
+        <ToolbarButton onClick={fitView} title={t('workflows.canvas.fit_view')}>
           <Maximize size={15} />
+        </ToolbarButton>
+        <ToolbarButton onClick={tidyLayout} title={t('workflows.canvas.tidy')}>
+          <Wand2 size={15} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => setShowMiniMap((v) => !v)}
-          title={showMiniMap ? "Hide minimap" : "Show minimap"}
+          title={showMiniMap ? t('workflows.canvas.hide_minimap') : t('workflows.canvas.show_minimap')}
           active={showMiniMap}
         >
           <MapIcon size={15} />
-        </ToolbarButton>
-        <ToolbarButton onClick={tidyLayout} title="Tidy workflow layout">
-          <Wand2 size={15} />
         </ToolbarButton>
       </div>
 
@@ -430,7 +422,6 @@ const Flow = () => {
         defaultEdgeOptions={{
           animated: false,
           type: "default",
-          style: { strokeWidth: 2, stroke: "hsl(var(--muted-foreground))" },
         }}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
@@ -461,25 +452,30 @@ const Flow = () => {
         deleteKeyCode={null}
         proOptions={{ hideAttribution: true }}
       >
+        {/* The panel's domino tiles: a square grid that pans with the graph. */}
         <Background
-          variant={BackgroundVariant.Dots}
-          gap={20}
-          size={1.5}
-          color="hsl(var(--border))"
+          variant={BackgroundVariant.Lines}
+          gap={24}
+          lineWidth={1}
+          color="hsl(var(--wf-tile))"
         />
         <Controls
           showInteractive={false}
-          className="!rounded-xl !border !border-[hsl(var(--border))] !bg-[hsl(var(--card))] !shadow-lg overflow-hidden [&>button]:!border-[hsl(var(--border))] [&>button]:!text-[hsl(var(--muted-foreground))] [&>button:hover]:!bg-[hsl(var(--muted))]"
+          showFitView={false}
+          className="workflow-builder-zoom"
         />
         {showMiniMap && (
           <MiniMap
             pannable
             zoomable
-            className="!rounded-xl !border !border-[hsl(var(--border))] !bg-[hsl(var(--card))] !shadow-lg"
+            className="workflow-builder-minimap"
             maskColor="hsl(var(--background) / 0.7)"
-            nodeColor={(n) => NODE_REGISTRY[(n.data as FlowNode["data"]).type]?.accent ?? "hsl(var(--muted-foreground))"}
+            nodeColor={(n) => {
+              const lever = leverOf((n.data as FlowNode["data"]).type);
+              return `hsl(var(--wf-lever-${lever}, var(--wf-lever-structure)))`;
+            }}
             nodeStrokeWidth={0}
-            nodeBorderRadius={4}
+            nodeBorderRadius={3}
           />
         )}
       </ReactFlow>

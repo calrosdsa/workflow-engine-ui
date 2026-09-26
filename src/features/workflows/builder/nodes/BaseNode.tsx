@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react'
 import { Handle, Position, type NodeProps, useStore } from '@xyflow/react'
 import { Plus, GripVertical, ArrowLeftRight, Trash2, GitBranchPlus, Copy, Check, AlertTriangle, AlertCircle, CheckCircle2, XCircle, MinusCircle, Loader2, MessageCircle, Bug, PanelRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { NODE_REGISTRY, fallbackCategory } from '../node-registry'
+import { NODE_REGISTRY, fallbackCategory, leverFor } from '../node-registry'
+import { useSelectedRoute, useStepOrder } from '../route'
 import { useNodeTaxonomy, findPackageNode, findTriggerPreset } from '../node-taxonomy'
 import { iconFor, iconForHint } from '../icon-hints'
 import { useBuilderStore, DUPLICABLE_NODE_TYPES, type FlowNode, type DropPosition } from '../store'
-import { computeExecutionOrder } from '../executionOrder'
 import { nodeSetupIssue } from '../node-validation'
 import { useExecutionOverlayStore } from '../execution-overlay-store'
 import { formatDuration } from '@/features/executions/duration'
@@ -115,7 +115,12 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
     ?? builtInReg?.category
     ?? fallbackCategory(data.type as keyof typeof NODE_REGISTRY)
   const usesDefaultLabel = data.label.trim().toLocaleLowerCase() === headerLabel.trim().toLocaleLowerCase()
-  const nodeMeta = usesDefaultLabel ? nodeCategoryLabel(nodeCategory, t) : headerLabel
+  const lever = leverFor(data.type, nodeCategory)
+  // The trigger has no palette category of its own (it would read "Logic"),
+  // and carries its own lever, so its plate says what it does instead.
+  const nodeMeta = !usesDefaultLabel ? headerLabel
+    : lever === 'trigger' ? t('workflows.node.meta.trigger')
+    : nodeCategoryLabel(nodeCategory, t)
   const hasInputs  = data.inputs?.length  > 0
   const hasOutputs = data.outputs?.length > 0
 
@@ -173,10 +178,9 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const setupIssue   = nodeSetupIssue(data)
 
   // Execution order badge
-  const nodes    = useBuilderStore((s) => s.nodes)
-  const edges    = useBuilderStore((s) => s.edges)
-  const execInfo = useMemo(() => computeExecutionOrder(nodes, edges), [nodes, edges])
-  const info     = execInfo.get(id)
+  // Computed once per graph change for every plate and track section, not
+  // once per plate.
+  const info     = useStepOrder().get(id)
 
   // Execution overlay (FR-C5-007) — status/duration/message for this node in
   // whichever past run is selected in the Executions sidebar. undefined
@@ -205,6 +209,10 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
   const debugSnapshot                               = overlayExecution?.debug_snapshots?.[id]
   const nodeWarning                                 = overlayExecution?.node_warnings?.[id]
   const reached          = overlayActive && nodeStatus !== undefined
+  // The plate lamp: this step's outcome while a run is on the panel,
+  // otherwise lit ivory when the step is on the selected step's route.
+  const route            = useSelectedRoute()
+  const lamp             = nodeStatus ? nodeStatus.toLowerCase() : !overlayActive && route?.nodeIds.has(id) ? 'route' : 'off'
   const showStatusBadge  = reached && nodeStatus !== undefined && (showCompletedSteps || nodeStatus !== 'COMPLETED')
   const dimUnreached     = overlayActive && !reached
   const realOrderActive  = overlayActive && logOrder !== null
@@ -287,6 +295,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
     <ContextMenuTrigger asChild>
     <div
       data-node-category={nodeCategory}
+      data-lever={lever}
       data-selected={selected ? 'true' : 'false'}
       data-execution-state={nodeStatus?.toLowerCase()}
       className={cn(
@@ -592,7 +601,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
         >
           <GripVertical size={14} strokeWidth={2.25} />
         </div>
-        <div className="workflow-node-icon flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
+        <div className="workflow-node-icon wf-lever-tile flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
           <Icon size={15} strokeWidth={2.25} />
         </div>
         <div className="min-w-0 flex-1">
@@ -616,6 +625,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
               which is exactly what this mode switch must never do. Only when
               the WHOLE execution has no log data (realOrderActive false) does
               the static heuristic apply, unchanged from before this feature. */}
+          <span className="workflow-node-lamp" data-lamp={lamp} aria-hidden="true" />
           {realOrderActive ? (
             realOrderRank !== undefined && (
               <span className="workflow-node-step" title={`Execution step ${realOrderRank} (actual run order)`}>
@@ -806,7 +816,7 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
       return (
         <div className="space-y-1 text-[10px]">
           <div className="flex items-center gap-1">
-            <code className="rounded bg-[hsl(var(--success))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--success))]">
+            <code className="wf-chip">
               {cfg.mode === 'webhook' && triggerPresetLabel ? triggerPresetLabel : labels[cfg.mode]}
             </code>
             {cfg.enabled === false && <span className="rounded bg-[hsl(var(--muted))] px-1 text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.disabled')}</span>}
@@ -823,12 +833,11 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
     case 'show_message': {
       const cfg = data.configuration as ShowMessageConfig | undefined
       if (!cfg?.message) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.no_message')}</p>
-      const typeColor: Record<ShowMessageConfig['message_type'], string> = {
-        success: 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]', error: 'bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))]', info: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]',
-      }
+      // Configuration, not a run outcome: the lamp colours stay reserved for
+      // runs, so a healthy idle step never shows a red or green chip.
       return (
         <div className="space-y-1 text-[10px]">
-          <code className={cn('rounded px-1 py-0.5 font-semibold', typeColor[cfg.message_type])}>{cfg.message_type}</code>
+          <code className="wf-chip">{cfg.message_type}</code>
           <p className="truncate text-[hsl(var(--muted-foreground))]">{cfg.message}</p>
         </div>
       )
@@ -836,14 +845,10 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
     case 'notification': {
       const cfg = data.configuration as NotificationConfig | undefined
       if (!cfg?.title) return <p className="text-[11px] italic text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.no_title')}</p>
-      const severityColor: Record<NotificationConfig['severity'], string> = {
-        success: 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]', error: 'bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))]',
-        warning: 'bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]', info: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]',
-      }
       const recipient = cfg.recipient_mode === 'expression' ? cfg.recipient_expr : cfg.recipient_user_id
       return (
         <div className="space-y-1 text-[10px]">
-          <code className={cn('rounded px-1 py-0.5 font-semibold', severityColor[cfg.severity])}>{cfg.severity}</code>
+          <code className="wf-chip">{cfg.severity}</code>
           <p className="truncate text-[hsl(var(--muted-foreground))]">{cfg.title}</p>
           {recipient && <p className="truncate text-[hsl(var(--muted-foreground))]">to: {recipient}</p>}
         </div>
@@ -861,11 +866,11 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
         <div className="space-y-1">
           {assignments.slice(0, 3).map((a, i) => (
             <div key={a.id ?? i} className="flex items-center gap-1 text-[10px]">
-              <code className="shrink-0 rounded bg-[hsl(var(--primary))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--primary))]">{a.variable_name || '…'}</code>
+              <code className="wf-chip shrink-0">{a.variable_name || '…'}</code>
               <span className="text-[hsl(var(--muted-foreground))]/60">=</span>
               {a.mode === 'literal'
                 ? <code className="truncate text-[hsl(var(--muted-foreground))]">{String(a.literal_value ?? '""')}</code>
-                : <code className="truncate italic text-[hsl(var(--primary))]/80">{'{'}{'{'}…{'}'}{'}'}</code>
+                : <code className="truncate italic text-[hsl(var(--muted-foreground))]">{'{'}{'{'}…{'}'}{'}'}</code>
               }
             </div>
           ))}
@@ -900,9 +905,9 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
         <div className="space-y-1 text-[10px]">
           <div className="flex items-center gap-1">
             <span className="text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.for')}</span>
-            <code className="rounded bg-[hsl(var(--warning))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--warning))]">{itemV}</code>
+            <code className="wf-chip">{itemV}</code>
             <span className="text-[hsl(var(--muted-foreground))]/60">,</span>
-            <code className="rounded bg-[hsl(var(--warning))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--warning))]">{idxV}</code>
+            <code className="wf-chip">{idxV}</code>
             <span className="text-[hsl(var(--muted-foreground))]">{t('workflows.node.body.in')}</span>
           </div>
           <code className="block truncate rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 font-mono text-[10px] text-[hsl(var(--muted-foreground))]">{cfg.source_expr}</code>
@@ -910,7 +915,7 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
             <div className="flex gap-1 text-[hsl(var(--muted-foreground))]">
               {cfg.filter_expr && <span className="rounded bg-[hsl(var(--muted))] px-1">{t('workflows.node.body.filter')}</span>}
               {cfg.stop_expr && <span className="rounded bg-[hsl(var(--muted))] px-1">{t('workflows.node.body.stop')}</span>}
-              {cfg.continue_on_error && <span className="rounded bg-[hsl(var(--warning))]/10 px-1 text-[hsl(var(--warning))]">{t('workflows.node.body.continue_on_error')}</span>}
+              {cfg.continue_on_error && <span className="rounded bg-[hsl(var(--muted))] px-1">{t('workflows.node.body.continue_on_error')}</span>}
             </div>
           )}
         </div>
@@ -923,14 +928,14 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
       return (
         <div className="space-y-1 text-[10px]">
           <div className="flex items-center gap-1">
-            <code className="rounded bg-[hsl(var(--destructive))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--destructive))]">{cfg.mode === 'one' ? t('workflows.node.body.single') : t('workflows.node.body.multiple')}</code>
+            <code className="wf-chip">{cfg.mode === 'one' ? t('workflows.node.body.single') : t('workflows.node.body.multiple')}</code>
             {conds > 0 && <span className="text-[hsl(var(--muted-foreground))]">· {conds > 1 ? t('workflows.node.body.filter_count', { count: conds }) : t('workflows.node.body.filter_count_one', { count: conds })}</span>}
             {cfg.limit ? <span className="text-[hsl(var(--muted-foreground))]">· {t('workflows.node.body.top', { count: cfg.limit })}</span> : null}
           </div>
           {cfg.output_var && (
             <div className="flex items-center gap-1">
               <span className="text-[hsl(var(--muted-foreground))]/60">→</span>
-              <code className="truncate font-semibold text-[hsl(var(--primary))]">{cfg.output_var}</code>
+              <code className="truncate font-semibold text-[hsl(var(--foreground))]">{cfg.output_var}</code>
             </div>
           )}
         </div>
@@ -943,7 +948,7 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
       return (
         <div className="space-y-1 text-[10px]">
           <div className="flex items-center gap-1.5">
-            <code className="shrink-0 rounded bg-[hsl(var(--primary))]/10 px-1 py-0.5 font-semibold text-[hsl(var(--primary))]">{cfg?.method ?? 'GET'}</code>
+            <code className="wf-chip shrink-0">{cfg?.method ?? 'GET'}</code>
             <code className="truncate text-[hsl(var(--muted-foreground))]">{url}</code>
           </div>
           {cfg?.auth_type && cfg.auth_type !== 'none' && (
@@ -957,7 +962,7 @@ function NodeBody({ data, triggerPresetLabel }: { data: FlowNode['data']; trigge
       const watchCount = cfg?.watches?.length ?? 0
       return (
         <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-          {cfg?.label ? <span className="text-[hsl(var(--success))]">{cfg.label}</span> : t('workflows.node.body.snapshot')}
+          {cfg?.label ? <span className="text-[hsl(var(--foreground))]">{cfg.label}</span> : t('workflows.node.body.snapshot')}
           {watchCount > 0 && <span className="ml-1.5 text-[hsl(var(--muted-foreground))]">· {watchCount === 1 ? t('workflows.node.body.watch_count_one', { count: watchCount }) : t('workflows.node.body.watch_count', { count: watchCount })}</span>}
         </p>
       )
