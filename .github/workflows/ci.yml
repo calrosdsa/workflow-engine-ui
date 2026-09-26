@@ -36,3 +36,40 @@ jobs:
       - run: npx tsc -p e2e/tsconfig.json
       - run: npm test
       - run: npm run lint
+
+  # The mocked browser suite (e2e/mock): the production build against a fake
+  # backend, with screenshots in both themes. Runs in the pinned Playwright
+  # image, the same one `npm run e2e:mock:update` makes the screenshots in,
+  # because system fonts render differently everywhere else. Fake data only,
+  # so the report is uploaded even from forks.
+  browser:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+    env:
+      E2E_SNAPSHOTS: '1'
+      PLAYWRIGHT_IMAGE_VERSION: 1.63.0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: check @playwright/test matches the image
+        run: |
+          installed=$(node -p "require('@playwright/test/package.json').version")
+          if [ "$installed" != "$PLAYWRIGHT_IMAGE_VERSION" ]; then
+            echo "::error::@playwright/test is $installed but ci.yml runs the $PLAYWRIGHT_IMAGE_VERSION image. Move the image tag (and PLAYWRIGHT_IMAGE_VERSION) with the package, then run npm run e2e:mock:update."
+            exit 1
+          fi
+      - run: npm run e2e:mock
+      - name: keep the report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            playwright-report-mock/
+            test-results/mock/
+          retention-days: 14

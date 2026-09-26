@@ -12,6 +12,9 @@
     "ladle:build": "ladle build",
     "test": "vitest run",
     "e2e": "playwright test -c e2e/playwright.config.ts",
+    "e2e:mock": "playwright test -c e2e/mock/playwright.config.ts",
+    "e2e:mock:docker": "bash e2e/mock/docker.sh check",
+    "e2e:mock:update": "bash e2e/mock/docker.sh update",
     "gen:ui-catalog": "vitest run src/lib/ui-catalog.gen.test.ts --update",
     "gen:conformance": "vitest run src/features/ui-workflows/conformance/gen-kotlin.test.ts --update"
   },

@@ -32,5 +32,13 @@
     // today. Scoping it to the 12 paths instead was rejected because it would
     // leave the trap armed for the NEXT combobox someone writes.
     "jsx-a11y/role-has-required-aria-props": "off"
-  }
+  },
+  "overrides": [
+    {
+      // Playwright's fixture API passes each fixture a `use` callback, which
+      // this rule takes for React's use() hook. e2e/ holds no React code.
+      "files": ["e2e/**"],
+      "rules": { "react/rules-of-hooks": "off" }
+    }
+  ]
 }
