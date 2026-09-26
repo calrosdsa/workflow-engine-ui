@@ -2,15 +2,23 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { ReactElement } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { OutlinePanel } from './OutlinePanel'
 import { I18nProvider } from '@/features/i18n/I18nProvider'
 import { useBuilderStore } from './store'
 import type { WorkflowDefinitionGraph } from '../types'
 
 // OutlinePanel calls useTranslation, which throws outside an I18nProvider
-// ancestor — real provider, no props, same as InsertDataMenu.test.tsx.
+// ancestor — real provider, no props, same as InsertDataMenu.test.tsx. Its
+// rows read the node taxonomy for their lever colour, so a QueryClient too;
+// the taxonomy fetch falls back to an empty taxonomy when it fails.
 function renderPanel(ui: ReactElement) {
-  return render(<I18nProvider>{ui}</I18nProvider>)
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={client}>
+      <I18nProvider>{ui}</I18nProvider>
+    </QueryClientProvider>,
+  )
 }
 
 // Rendered against the REAL builder store: loadDefinition seeds the same

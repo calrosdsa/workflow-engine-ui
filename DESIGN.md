@@ -42,7 +42,8 @@ matched to what each screen actually is:
   fixed right-rail split. RAGFlow's DNA has no canvas-editor analogue to
   draw from (it has no visual authoring tool), so this macrostructure is
   preserved as-is; only its color tokens change. Variation knob: rail width
-  (`w-96` unchanged).
+  (`w-96` unchanged). The Workflow Builder keeps this shape but carries its
+  own identity; see **Workflow Builder identity** below.
 - **Workflow node configuration workbench:** a deliberate, canvas-editor
   exception added for the node-configuration foundation. The compact inspector
   remains rail-sized; the desktop Input / Parameters / Output workbench opens
@@ -74,6 +75,11 @@ matched to what each screen actually is:
   open decisions, not a visual-only redesign.
 
 ## Theme
+
+> **Amended 2026-09-26:** the builder shell no longer uses the teal values
+> below; see § Builder shell palette. They remain the `:root` values, which
+> the published-app runtime still reads as its fallback, so this section now
+> documents `:root`, not the builder shell.
 
 **Mechanism: edit the existing shadcn/ui HSL-triplet variables in
 `src/index.css`'s `:root` block in place — do not introduce a parallel
@@ -140,12 +146,114 @@ that averaging a two-stop gradient into one HSL/OKLCH value destroys it):
   App Builder has no commerce surface today; this token is reserved, unused
   until one exists. Do not repurpose it as a second general-purpose accent.
 
+## Builder shell palette (2026-09-26)
+
+**Supersedes the teal values in § Theme for the builder shell, at the
+requester's direction.** The palette is the product landing page's own,
+`app-builder-landing/styles.css` (OKLCH), converted exactly to HSL triplets.
+Dark is the landing page's system; the landing page has no light theme, so
+light is that system inverted.
+
+**Mechanism.** `index.html` carries `<html data-app="builder">` and
+`runtime.html` does not. `index.css` re-points the existing shadcn variables
+under `[data-app='builder']:not(.light)` and `[data-app='builder'].light`,
+both (0,2,0), so each beats `:root` or `.light`. **`:root` is deliberately
+left teal:** the published-app runtime imports the same `index.css`, and any
+token it does not set itself reads `:root`, so changing `:root` could leak
+into every published app. (Its `ThemeProvider` now sets the status colours
+and `runtime.css` sets `--sidebar`; see § Runtime default theme.)
+
+| Role | Dark | Light |
+|---|---|---|
+| Paper (`--background`) | `241 26% 6%` (landing `--paper`) | `238 33% 96%` |
+| Raised surface (`--card`, `--popover`) | `241 23% 10%` (landing `--paper-raised`) | `238 100% 100%` |
+| Sidebar (`--sidebar`) | `241 31% 5%` | `238 25% 94%` |
+| Text (`--foreground`) | `245 69% 98%` (landing `--ink`) | `241 23% 8%` |
+| Muted text | `245 8% 70%` (landing `--muted`) | `246 7% 36%` |
+| Accent: CTAs, focus, active, selection (`--primary`, `--ring`) | violet `270 100% 71%` (landing `--accent`) | violet `271 62% 45%` |
+| Success / warning / destructive | `154 69% 45%` (landing `--success`) / `40 90% 58%` / `5 78% 68%` | `154 70% 23%` / `36 95% 25%` / `5 72% 38%` |
+| Borders (`--border`, `--input`) | white 10% (landing `--border`) | ink 12% |
+| `--gradient-brand` | landing `--brand-gradient`, `#bd98ff → #417dff` | `#7d2fc8 → #2f5fd6` |
+
+Computed from these values: every status, accent and muted colour holds at
+least 4.78:1 as text on the paper, a card and the sidebar in both modes,
+including on its own 10-15% tint as the status badges draw it (lowest:
+light destructive badge on the sidebar, 4.78). Text on a filled violet or
+status colour is at least 6:1. The mocked browser suite's axe check caught
+a 4.38:1 light success badge on 2026-09-26; re-measure if any value moves.
+
+## Workflow Builder identity — "Signal box"
+
+**Added 2026-09-26 at the requester's direction** ("new direction, in code"
+for the workflow editor). It applies to the Workflow Builder page only
+(`WorkflowBuilderPage.tsx` and what it renders), on top of § Builder shell
+palette, which it shares with every other builder page.
+
+**Concept.** The editor reads as a railway interlocking mimic panel. The
+workflow is a line diagram, each step is a raised station plate, the edges
+are track, and a run is a train whose route lights up on the panel. Signal
+lamps already mean what the run states mean, so the metaphor carries real
+information: **violet = route set / selected, green = cleared (completed),
+amber = caution (completed with errors, needs setup), red = failed.**
+
+**Mechanism.** While the editor is mounted it sets `data-surface="workflow-editor"`
+on `<html>`, so its tokens also reach portalled popovers, menus and selects.
+`index.css` defines only the editor's own tokens there: `--wf-tile` (canvas
+grid), `--wf-track` / `--wf-track-bed` (edges) and `--wf-readout` (the readout
+face), in dark and light. Colours come from the shell palette.
+
+
+**Lamp colours are reserved for run state.** Configuration never borrows
+them: node-body chips (trigger mode, message type, severity, HTTP method,
+variable names) are neutral `.wf-chip`s, and a condition's true/false outputs
+are told apart by fill (solid / hollow) and label, not green/red. A healthy
+idle workflow shows no green or red at all.
+
+**Lever colours = node category.** One hue per category (`--wf-lever-*`,
+global in `:root` / `.light` because the picker, palette, outline and
+execution logs show categories outside the canvas too). They appear only as
+the plate's left strip and the icon tile (`[data-lever]` + `.wf-lever-tile`,
+chosen by `leverFor()` in `node-registry.ts`), and none sits on a lamp hue.
+The trigger gets its own ink lever. This replaces the per-type Tailwind
+gradients (`bg-emerald-500` etc.) the registry used to paint icons with.
+
+**Type.** Archivo (variable, self-hosted via `@fontsource-variable/archivo`,
+no font CDN), with the width axis carrying the role: expanded (112%) for the
+workflow's name, once; normal for titles and body; condensed caps (75–80%)
+for plate labels (view tabs, node meta, inspector tabs). B612 Mono (the
+Airbus cockpit-display face, `@fontsource/b612-mono`) is only for readouts:
+step plates, run status, config chips, run id. Code, JSON and expression
+panes keep the system mono, since B612 ships only 400/700 and dense
+semibold lists turn bold in it.
+
+**Signature: route lighting.**
+- Every edge is two strokes: a bed (channel) and a core.
+- Selecting a step lights its upstream route back to the trigger in the violet accent:
+  the steps whose output can feed its input (`route.ts`, keyed to React
+  Flow's selection so it stays lit after the config workbench closes).
+- Selecting a run draws the route it took section by section, in real run
+  order (or the graph's step order for runs without logs), each section in
+  the lamp colour of the step it leads into. Untaken track goes dark. The
+  draw-on plays once per selected run (keyed on the run id, delay fixed at
+  mount), never on the status poll. Under reduced motion the route is lit
+  at once.
+- Precedence: run on the panel > selected step's route > selected edge
+  (dashed) > hover.
+
+**Canvas.** A square "domino tile" grid that pans with the graph (React Flow
+`Background` lines, 24px), not dots. Each view tool exists once: undo/redo and
+the command bar at the top; add, fit, tidy and minimap in the right rail;
+zoom in the corner. Dagre lays plates out at their measured size (fallback
+232×100) so the track between steps is a readable 80px.
+
 ## Runtime default theme — "Printed form"
 
 **Replaced 2026-09-26 at the requester's direction** (scope: the published
 runtime's shell and record surfaces; a new default for apps that never
 customised their theme). This section governs the runtime bundle
 (`runtime.html`) only. The builder never loads any of it.
+The default is deliberately its own identity, never the builder shell's
+palette: a tenant's CRM should not look like App Builder's own chrome.
 
 **Concept.** Business records were printed forms before they were software:
 sheets of ruled boxes, captions printed in one spot colour, values filled in
@@ -240,6 +348,9 @@ ThemeConfig.kt`) still holds the previous indigo values. Web and mobile
 defaults now differ until that file is updated.
 
 ## Typography
+
+(The Workflow Builder is excepted: Archivo + B612 Mono. See § Workflow
+Builder identity.)
 
 - Display: InterVariable, weight 700 for H1-scale headings, style normal
 - Body:    InterVariable, weight 400
@@ -352,19 +463,25 @@ Tailwind utilities directly as this codebase already does.
   Design).
 - No page may render a raw hex/rgb/Tailwind-color-utility value (e.g.
   `bg-slate-50`, `text-indigo-600`, `#161618`) outside `index.css`'s own
-  `:root` block — every color reference goes through `hsl(var(--x))`. This
+  token blocks (`:root`, `.light`, and the Workflow Builder's
+  `[data-surface]` blocks) — every color reference goes through
+  `hsl(var(--x))`. This
   is the single most emphasized rule in this system, given the prior
   audit's own 5-critical/6-major finding count was almost entirely this
   exact violation, repeated across 6+ files.
 
 ## What pages MUST share
 
+(The Workflow Builder keeps its own type, Archivo + B612 Mono, by design. See
+§ Workflow Builder identity before "fixing" it back.)
+
 - The single InterVariable typeface, weight-driven hierarchy (unchanged —
   `index.css`'s `body { font-family: system-ui, sans-serif }` needs a real
   `InterVariable` font load added; the prior system used `system-ui`
   deliberately, this one departs from that per the DNA's own confirmed
   choice).
-- The accent color (`hsl(var(--primary))`, the teal) and its two reserved
+- The accent color (`hsl(var(--primary))`, the landing-page violet; see
+  § Builder shell palette) and its two reserved
   gradients, used only for their declared jobs (accent = focus rings/active
   states/CTAs; brand gradient = wordmark only; upsell gradient = reserved,
   unused today).

@@ -504,3 +504,11 @@ assertPaletteCategories()
 export function fallbackCategory(type: NodeType): NodeCategory {
   return NODE_REGISTRY[type]?.category ?? 'logic'
 }
+
+/** The plate colour a node carries on the canvas (index.css `[data-lever]`).
+ *  The category's, except the trigger, which gets its own: it is where every
+ *  run departs, and the trigger/entry types have no palette category. */
+export function leverFor(type: string, category: NodeCategory | undefined): string {
+  if (type === 'trigger' || type === 'entry') return 'trigger'
+  return category ?? fallbackCategory(type as NodeType)
+}
