@@ -94,6 +94,7 @@ export const States = () => {
   // The editor sets this on <html> while it is open; the story does the same
   // so the Signal box palette and type apply.
   useEffect(() => {
+    document.documentElement.dataset.app = 'builder'
     document.documentElement.dataset.surface = 'workflow-editor'
     return () => { delete document.documentElement.dataset.surface }
   }, [])

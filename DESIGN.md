@@ -76,6 +76,11 @@ matched to what each screen actually is:
 
 ## Theme
 
+> **Amended 2026-09-26:** the builder shell no longer uses the teal values
+> below; see § Builder shell palette. They remain the `:root` values, which
+> the published-app runtime still reads as its fallback, so this section now
+> documents `:root`, not the builder shell.
+
 **Mechanism: edit the existing shadcn/ui HSL-triplet variables in
 `src/index.css`'s `:root` block in place — do not introduce a parallel
 token vocabulary.** Every component in this codebase already consumes
@@ -141,12 +146,46 @@ that averaging a two-stop gradient into one HSL/OKLCH value destroys it):
   App Builder has no commerce surface today; this token is reserved, unused
   until one exists. Do not repurpose it as a second general-purpose accent.
 
+## Builder shell palette (2026-09-26)
+
+**Supersedes the teal values in § Theme for the builder shell, at the
+requester's direction.** The palette is the product landing page's own,
+`app-builder-landing/styles.css` (OKLCH), converted exactly to HSL triplets.
+Dark is the landing page's system; the landing page has no light theme, so
+light is that system inverted.
+
+**Mechanism.** `index.html` carries `<html data-app="builder">` and
+`runtime.html` does not. `index.css` re-points the existing shadcn variables
+under `[data-app='builder']:not(.light)` and `[data-app='builder'].light`,
+both (0,2,0), so each beats `:root` or `.light`. **`:root` is deliberately
+left teal:** the published-app runtime imports the same `index.css`, and its
+per-app `ThemeProvider` never sets `--destructive`, `--success`, `--warning`
+or `--sidebar`, so it reads those from `:root`. Changing `:root` would leak
+into every published app.
+
+| Role | Dark | Light |
+|---|---|---|
+| Paper (`--background`) | `241 26% 6%` (landing `--paper`) | `238 33% 96%` |
+| Raised surface (`--card`, `--popover`) | `241 23% 10%` (landing `--paper-raised`) | `238 100% 100%` |
+| Sidebar (`--sidebar`) | `241 31% 5%` | `238 25% 94%` |
+| Text (`--foreground`) | `245 69% 98%` (landing `--ink`) | `241 23% 8%` |
+| Muted text | `245 8% 70%` (landing `--muted`) | `246 7% 36%` |
+| Accent: CTAs, focus, active, selection (`--primary`, `--ring`) | violet `270 100% 71%` (landing `--accent`) | violet `271 62% 48%` |
+| Success / warning / destructive | `154 69% 45%` (landing `--success`) / `40 90% 58%` / `5 78% 68%` | `154 70% 26%` / `36 95% 27%` / `5 72% 40%` |
+| Borders (`--border`, `--input`) | white 10% (landing `--border`) | ink 12% |
+| `--gradient-brand` | landing `--brand-gradient`, `#bd98ff → #417dff` | `#7d2fc8 → #2f5fd6` |
+
+Computed from these values: every status, accent and muted colour holds at
+least 5.1:1 as text on the paper, a card and the sidebar in both modes
+(lowest: light success on the sidebar, 5.15; dark violet on a card, 5.68).
+Button text on the violet is at least 6:1. Re-measure if any value moves.
+
 ## Workflow Builder identity — "Signal box"
 
-**A scoped exception, added 2026-09-26 at the requester's direction** ("new
-direction, in code" for the workflow editor). It applies to the Workflow
-Builder page only (`WorkflowBuilderPage.tsx` and what it renders). Every other
-page keeps the teal system above.
+**Added 2026-09-26 at the requester's direction** ("new direction, in code"
+for the workflow editor). It applies to the Workflow Builder page only
+(`WorkflowBuilderPage.tsx` and what it renders), on top of § Builder shell
+palette, which it shares with every other builder page.
 
 **Concept.** The editor reads as a railway interlocking mimic panel. The
 workflow is a line diagram, each step is a raised station plate, the edges
@@ -156,34 +195,11 @@ information: **violet = route set / selected, green = cleared (completed),
 amber = caution (completed with errors, needs setup), red = failed.**
 
 **Mechanism.** While the editor is mounted it sets `data-surface="workflow-editor"`
-on `<html>`, so portalled popovers, menus and selects match the canvas.
-`index.css` re-points the existing shadcn variables under
-`[data-surface='workflow-editor']:not(.light)` (night) and
-`[data-surface='workflow-editor'].light` (day). Both are (0,2,0), so each beats
-`:root` or `.light` without either mode losing. There is no parallel
-vocabulary: components keep reading `hsl(var(--card))` etc. Editor-only tokens
-are `--wf-tile` (panel grid), `--wf-track` / `--wf-track-bed` (edges) and
-`--wf-readout` (the readout face). All raw values stay in `index.css`.
+on `<html>`, so its tokens also reach portalled popovers, menus and selects.
+`index.css` defines only the editor's own tokens there: `--wf-tile` (canvas
+grid), `--wf-track` / `--wf-track-bed` (edges) and `--wf-readout` (the readout
+face), in dark and light. Colours come from the shell palette.
 
-**Palette source (2026-09-26, at the requester's direction):** the product
-landing page, `app-builder-landing/styles.css` (OKLCH), converted exactly to
-the HSL triplets below. Night is the landing page's own system; the landing
-page has no light theme, so day is that system inverted.
-
-| Role | Night | Day |
-|---|---|---|
-| Paper (`--background`) | `241 26% 6%` (landing `--paper`) | `238 33% 96%` |
-| Plate (`--card`) | `241 23% 10%` (landing `--paper-raised`) | `238 100% 100%` |
-| Text (`--foreground`) | `245 69% 98%` (landing `--ink`) | ink `241 23% 8%` |
-| Muted text | `245 8% 70%` (landing `--muted`) | `246 7% 36%` |
-| Lit route, selection, primary action (`--primary`) | violet `270 100% 71%` (landing `--accent`) | violet `271 62% 48%` |
-| Green / amber / red lamps | `154 69% 45%` (landing `--success`) / `40 90% 58%` / `5 78% 68%` | `154 70% 26%` / `36 95% 27%` / `5 72% 40%` |
-
-Computed from these token values: every lamp, accent and muted colour holds
-at least 5.1:1 as text on the paper, a plate and the header strip in both
-modes (lowest: day green on the header, 5.15; night violet on a plate,
-5.68). Button text on the violet is at least 6:1. Re-measure if any of these
-values move.
 
 **Lamp colours are reserved for run state.** Configuration never borrows
 them: node-body chips (trigger mode, message type, severity, HTTP method,
@@ -237,7 +253,7 @@ that seeds a brand-new tenant app's theme before its owner ever opens the
 Theme tab: `src/features/theme/default-theme.ts`'s `DEFAULT_THEME` export
 (`ThemeConfig`, five color slots × light/dark, consumed by `ThemeProvider`
 via `element.style.setProperty` — see that file's own doc comment). This is
-intentionally its OWN identity, never the builder shell's teal — a real
+intentionally its OWN identity, never the builder shell's own palette — a real
 tenant's CRM/ERP/etc. should not look like App Builder's own chrome.
 
 **Why it changed:** the prior defaults were an unmodified shadcn/ui "New
@@ -396,15 +412,16 @@ Tailwind utilities directly as this codebase already does.
 
 ## What pages MUST share
 
-(Every page except the Workflow Builder, which carries its own palette and
-type by design. See § Workflow Builder identity before "fixing" it back.)
+(The Workflow Builder keeps its own type, Archivo + B612 Mono, by design. See
+§ Workflow Builder identity before "fixing" it back.)
 
 - The single InterVariable typeface, weight-driven hierarchy (unchanged —
   `index.css`'s `body { font-family: system-ui, sans-serif }` needs a real
   `InterVariable` font load added; the prior system used `system-ui`
   deliberately, this one departs from that per the DNA's own confirmed
   choice).
-- The accent color (`hsl(var(--primary))`, the teal) and its two reserved
+- The accent color (`hsl(var(--primary))`, the landing-page violet; see
+  § Builder shell palette) and its two reserved
   gradients, used only for their declared jobs (accent = focus rings/active
   states/CTAs; brand gradient = wordmark only; upsell gradient = reserved,
   unused today).
