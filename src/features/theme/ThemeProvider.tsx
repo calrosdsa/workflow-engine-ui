@@ -121,6 +121,7 @@ export function ThemeProvider({ theme, scopeElement, syncDocument, children }: T
     // it's real body text; --muted/--border/--input are low-alpha tints
     // (see deriveOverlay's doc comment for the precedent).
     const borderOverlay = deriveOverlay(foreground, 10)
+    const mutedForeground = deriveMutedForeground(colors.background, foreground)
 
     // One list, applied to every target this theme needs to reach (the
     // scope element always, <html> too when syncDocument) — a single
@@ -136,7 +137,7 @@ export function ThemeProvider({ theme, scopeElement, syncDocument, children }: T
       ['--accent-foreground', pickForeground(colors.accent)],
       ['--background', colors.background],
       ['--foreground', foreground],
-      ['--muted-foreground', deriveMutedForeground(colors.background, foreground)],
+      ['--muted-foreground', mutedForeground],
       ['--muted', deriveOverlay(foreground, 5)],
       ['--border', borderOverlay],
       ['--input', borderOverlay],
@@ -157,6 +158,11 @@ export function ThemeProvider({ theme, scopeElement, syncDocument, children }: T
       // sits on, with headroom above 4.5:1 for the 5-8% tints under hover
       // and active states.
       ['--ink', ensureContrast(colors.primary, [colors.background, colors.surface], foreground, 4.8)],
+      // The boundary a form control draws (the runtime's write-on line):
+      // WCAG 1.4.11 asks 3:1 against what it sits on. --muted-foreground is
+      // only checked against the page background, and a field sits on the
+      // surface, so this is checked against both.
+      ['--field-line', ensureContrast(mutedForeground, [colors.background, colors.surface], foreground, 3)],
       // Status colours were never part of ThemeConfig, so they used to come
       // from index.css's static blocks: :root (the builder's palette) in
       // light mode, and the legacy .dark block, which only ever reached

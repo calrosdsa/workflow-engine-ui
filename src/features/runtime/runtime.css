@@ -39,6 +39,7 @@ html[data-rt] {
   --accent-foreground: 222.2 84% 4.9%;
   --muted: 222.2 84% 4.9% / 5%;
   --muted-foreground: 200 6% 38%;
+  --field-line: 200 6% 38%;
   --border: 222.2 84% 4.9% / 10%;
   --input: 222.2 84% 4.9% / 10%;
   --ring: 172 70% 25%;
@@ -66,6 +67,7 @@ html[data-rt] {
     --accent-foreground: 210 40% 98%;
     --muted: 210 40% 98% / 5%;
     --muted-foreground: 170 6% 66%;
+    --field-line: 170 6% 66%;
     --border: 210 40% 98% / 10%;
     --input: 210 40% 98% / 10%;
     --ring: 162 38% 62%;
@@ -91,6 +93,7 @@ html[data-rt][data-rt-mode='dark'] {
   --accent-foreground: 210 40% 98%;
   --muted: 210 40% 98% / 5%;
   --muted-foreground: 170 6% 66%;
+  --field-line: 170 6% 66%;
   --border: 210 40% 98% / 10%;
   --input: 210 40% 98% / 10%;
   --ring: 162 38% 62%;
@@ -224,15 +227,15 @@ html[data-rt] body {
 }
 
 [data-rt] [data-slot='form-field-value']:not(:disabled):hover {
-  border-bottom-color: hsl(var(--muted-foreground));
+  border-bottom-color: hsl(var(--field-line));
   background: transparent;
 }
 
 /* Fill mode: the write-on line. Only for controls that are a single line or
  * box of text; checkboxes, switches, radios, file and line-items grids keep
- * their own controls inside the ruled cell. The line is --muted-foreground,
- * which ThemeProvider holds at >= 4.5:1, so the control's boundary clears
- * WCAG 1.4.11's 3:1 on any tenant surface. */
+ * their own controls inside the ruled cell. The line is --field-line, which
+ * ThemeProvider holds at >= 3:1 against both the page and the sheet, so the
+ * control's boundary clears WCAG 1.4.11 on any tenant's surfaces. */
 [data-rt] :is(
   [data-component='text'], [data-component='email'], [data-component='url'],
   [data-component='phone'], [data-component='password'], [data-component='number'],
@@ -243,7 +246,7 @@ html[data-rt] body {
   height: 2rem;
   min-height: 2rem;
   border: 0;
-  border-bottom: 1px solid hsl(var(--muted-foreground));
+  border-bottom: 1px solid hsl(var(--field-line));
   border-radius: 0;
   background: transparent;
   box-shadow: none;

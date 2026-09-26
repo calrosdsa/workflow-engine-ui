@@ -158,11 +158,13 @@ fighting it: every app's forms come out printed in its own brand colour.
 share one geometry. A section is a sheet (`--card`, rule `hsl(var(--ink) /
 0.2)`); its fields are cells ruled apart, caption top-left in `--ink` (small
 caps, 0.08em tracking), value beneath. In fill mode, text-like controls
-become write-on lines inside their cell. The line is `--muted-foreground`,
-held at 4.5:1 or better, so a control's boundary clears WCAG 1.4.11's 3:1 on
-any tenant surface. Focus thickens it in `--ink`, and an invalid field turns
-it red. Read and edit share a 2rem line, so inline editing moves nothing
-(measured: 67.2px cell, same top edge, in both states). Checkboxes,
+become write-on lines inside their cell. The line is `--field-line`, which
+`ThemeProvider` holds at 3:1 or better against both the page and the sheet,
+so a control's boundary clears WCAG 1.4.11 on any tenant's surfaces. Focus thickens it in `--ink`, and an invalid field turns
+it red. Read and edit share a 2rem line, so inline editing moves nothing.
+Measured on text, select, date and number cells: same height and top edge in
+both states. The one exception: a text value long enough to wrap when read
+takes a single line while it is being edited. Checkboxes,
 switches, radios, files and line-items grids keep their own controls inside
 the cell.
 
@@ -230,8 +232,10 @@ loads, in the viewer's stored mode (`data-rt-mode`, set by an inline script
 in `runtime.html`), so the loading screen no longer flashes the builder's
 palette.
 
-**Not covered:** dashboards, reports, HTML/custom pages (out of scope), and
-the KMP mobile runtime, whose own `DEFAULT_THEME` (`runtime-app/.../
+**Not covered:** dashboards, reports and HTML/custom pages were not
+redesigned. They do inherit the new default colours, type and status
+colours, and any table they show through the shared `DataTable` or
+`RecordsTable` takes the ledger styling. Also not covered: the KMP mobile runtime, whose own `DEFAULT_THEME` (`runtime-app/.../
 ThemeConfig.kt`) still holds the previous indigo values. Web and mobile
 defaults now differ until that file is updated.
 

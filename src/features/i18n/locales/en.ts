@@ -398,6 +398,10 @@ export const en = {
   'runtime.sidebar.back_to_home': 'Back to Home',
   'runtime.sidebar.empty': 'No pages to show yet.',
   'runtime.record.back_to_list': 'Back to list',
+  'runtime.record.back': 'Back',
+  'runtime.record.fallback_title': 'Record',
+  'runtime.form_create.title': 'New {{name}}',
+  'runtime.form_create.fallback_title': 'New record',
   'runtime.record_detail.more_actions': 'More actions',
   // RuntimeLoginPage.tsx. CardTitle/button/labels/validation/error message
   // reuse auth.sign_in/.signing_in/.email/.password/.email_required/

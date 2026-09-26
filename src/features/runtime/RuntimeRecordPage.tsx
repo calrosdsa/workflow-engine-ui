@@ -12,7 +12,7 @@ import { resolveRecordTitle } from '@/features/forms/runtime/record-title'
 import { useForm as useFormDef } from '@/features/forms/hooks'
 import { useRecordDetail } from '@/features/forms/runtime/record-detail-hooks'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
-import { localizeFormSchema } from '@/features/form-builder/localize-schema'
+import { localizeFormSchema, localizeFormName } from '@/features/form-builder/localize-schema'
 import { useI18n } from '@/features/i18n/I18nProvider'
 import type { AppSnapshot, MenuSnapshotItem } from './types'
 
@@ -138,7 +138,7 @@ export function RuntimeRecordPage({ snapshot, clientId, appId, currentMenu, form
                         record's own title. */}
                     <div className="min-w-0">
                       <p className="mb-1 flex items-baseline gap-2 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[hsl(var(--ink))]">
-                        <span className="truncate">{form.name}</span>{' '}
+                        <span className="truncate">{localizeFormName(form.id, form.name, tc)}</span>{' '}
                         <span className="shrink-0 font-normal normal-case tracking-normal [font-family:var(--rt-mono)]">#{recordId.slice(0, 8)}</span>
                       </p>
                       <h1 className="truncate text-[26px] font-bold leading-tight tracking-[-0.015em] text-[hsl(var(--foreground))]">{recordTitle || t('common.loading')}</h1>

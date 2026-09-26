@@ -2,8 +2,8 @@ import type { ThemeConfig } from './types'
 
 // The starting theme a brand-new app's runtime gets before its owner ever
 // opens the Theme tab: deliberately its OWN identity, never the builder
-// shell's violet (a customer's CRM should not look like App Builder's own
-// chrome). Replaced 2026-09-26 (DESIGN.md § Runtime default theme,
+// shell's own palette (a customer's CRM should not look like App Builder's
+// own chrome). Replaced 2026-09-26 (DESIGN.md § Runtime default theme,
 // "Printed form"): the runtime reads like a printed business form, captions
 // and rules in one spot colour, values in ink. The default spot colour is a
 // deep ledger green; the neutrals are near-grey on purpose, because

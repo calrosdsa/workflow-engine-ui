@@ -22,7 +22,7 @@ import { RoleValueLabel } from './RoleValueLabel'
 import { FileCellDisplay } from './FileCellDisplay'
 import { buildEnumLabels, resolveEnumLabel } from './enum-labels'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
-import { localizeFormSchema } from '@/features/form-builder/localize-schema'
+import { localizeFormSchema, localizeFormName } from '@/features/form-builder/localize-schema'
 import { iterElements } from '@/features/form-builder/projection'
 import { useI18n } from '@/features/i18n/I18nProvider'
 import { CardLayout } from '@/features/menus/saved-views/layouts/CardLayout'
@@ -656,7 +656,7 @@ export function RecordsTable({
                   records page keeps its plain header. */}
               {selectedRecord && (
                 <p data-slot="record-eyebrow" className="hidden">
-                  <span className="truncate">{form.name}</span>{' '}
+                  <span className="truncate">{localizeFormName(form.id, form.name, tc)}</span>{' '}
                   <span data-slot="record-number">#{String(selectedRecord.id).slice(0, 8)}</span>
                 </p>
               )}
