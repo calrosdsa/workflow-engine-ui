@@ -38,6 +38,7 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
   const [instructions, setInstructions] = useState(agent.instructions)
   const [modelId, setModelId] = useState(agent.model_id)
   const [enabled, setEnabled] = useState(agent.enabled)
+  const [episodicMemoryEnabled, setEpisodicMemoryEnabled] = useState(Boolean(agent.episodic_memory_enabled))
   const [skills, setSkills] = useState(agent.skills)
   const [tools, setTools] = useState<ToolBinding[]>(agent.tools ?? [])
   // Sent only once changed: an attached knowledge base the app can no longer
@@ -56,6 +57,7 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
 
   const trimmedTTLInput = sessionTTLDaysInput.trim()
   const ttlIsValid = trimmedTTLInput === '' || (/^\d+$/.test(trimmedTTLInput) && Number(trimmedTTLInput) > 0)
+  const episodicMemoryChanged = episodicMemoryEnabled !== Boolean(agent.episodic_memory_enabled)
   const canSave = name.trim() !== '' && ttlIsValid
 
   const handleSave = async () => {
@@ -70,6 +72,7 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
         enabled,
         session_ttl_days: trimmedTTLInput === '' ? null : Number(trimmedTTLInput),
         knowledge_base_ids: knowledgeBasesChanged ? knowledgeBaseIds : undefined,
+        episodic_memory_enabled: episodicMemoryChanged ? episodicMemoryEnabled : undefined,
       })
       toast.success(`"${name.trim()}" saved`)
       onClose()
@@ -126,10 +129,10 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
               </p>
             </div>
 
-            <label className="flex cursor-pointer items-center gap-2">
-              <Switch checked={enabled} onCheckedChange={setEnabled} disabled={!canWrite} />
-              <span className="text-xs text-[hsl(var(--muted-foreground))]">Enabled</span>
-            </label>
+            <div className="flex items-center gap-2">
+              <Switch id="agent-enabled" checked={enabled} onCheckedChange={setEnabled} disabled={!canWrite} />
+              <Label htmlFor="agent-enabled" className="cursor-pointer text-xs text-[hsl(var(--muted-foreground))]">Enabled</Label>
+            </div>
 
             <div>
               <Label className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">Session Retention (days)</Label>
@@ -149,6 +152,24 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
               )}
             </div>
           </div>
+
+          <section className="space-y-3 border-t border-[hsl(var(--border))] pt-4">
+            <div>
+              <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">{t('agents.memory.title')}</h3>
+              <p className="text-xs text-[hsl(var(--muted-foreground))]">{t('agents.memory.description')}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="agent-memory-enabled"
+                checked={episodicMemoryEnabled}
+                onCheckedChange={setEpisodicMemoryEnabled}
+                disabled={!canWrite}
+              />
+              <Label htmlFor="agent-memory-enabled" className="cursor-pointer text-xs text-[hsl(var(--muted-foreground))]">
+                {t('agents.memory.toggle')}
+              </Label>
+            </div>
+          </section>
 
           <div className="border-t border-[hsl(var(--border))] pt-4">
             <MCPToolsSubsection agentId={agent.id} canWrite={canWrite} />

@@ -33,6 +33,7 @@ export interface Agent {
   tools: ToolBinding[]
   // The knowledge bases this Agent can search; [] when none.
   knowledge_base_ids: string[]
+  episodic_memory_enabled: boolean
   enabled: boolean
   // session_ttl_days overrides the platform-wide default retention window
   // (FR-F6-003) — null means "use the platform default," not "retain
@@ -58,4 +59,6 @@ export interface UpdateAgentPayload {
   session_ttl_days?: number | null
   // Omitted leaves the Agent's knowledge bases unchanged; [] clears them.
   knowledge_base_ids?: string[]
+  // Omitted leaves the Agent's episodic memory setting unchanged.
+  episodic_memory_enabled?: boolean
 }

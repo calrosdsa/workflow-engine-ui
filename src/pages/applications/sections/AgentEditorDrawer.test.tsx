@@ -3,7 +3,8 @@
 // knowledge_base_ids goes into the save only once the list was changed. An
 // attached knowledge base the app can no longer read (deleted, or no longer
 // shared) would otherwise make every save fail on the server's check, even a
-// save that only renamed the Agent.
+// save that only renamed the Agent. The same omission keeps saves compatible
+// with engines that predate episodic memory.
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { I18nProvider } from '@/features/i18n/I18nProvider'
@@ -35,13 +36,17 @@ afterEach(() => {
 const agent: Agent = {
   id: 'agent-1', app_id: 'app-1', name: 'Support', description: '', instructions: '',
   provider_id: 'p-1', model_id: 'm-1', skills: [], tools: [], enabled: true, session_ttl_days: null,
-  knowledge_base_ids: ['kb-deleted'], created_at: '', updated_at: '',
+  knowledge_base_ids: ['kb-deleted'], episodic_memory_enabled: false, created_at: '', updated_at: '',
 }
 
-function renderDrawer() {
+function renderDrawer(memoryEnabled = agent.episodic_memory_enabled, canWrite = true) {
   render(
     <I18nProvider>
-      <AgentEditorDrawer agent={agent} canWrite onClose={() => {}} />
+      <AgentEditorDrawer
+        agent={{ ...agent, episodic_memory_enabled: memoryEnabled }}
+        canWrite={canWrite}
+        onClose={() => {}}
+      />
     </I18nProvider>,
   )
 }
@@ -53,6 +58,7 @@ describe('AgentEditorDrawer knowledge bases', () => {
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1))
     // What goes on the wire: ky sends the payload through JSON.stringify.
     expect(JSON.stringify(mutateAsync.mock.calls[0][0])).not.toContain('knowledge_base_ids')
+    expect(JSON.stringify(mutateAsync.mock.calls[0][0])).not.toContain('episodic_memory_enabled')
   })
 
   it('sends the new list once it was changed', async () => {
@@ -61,5 +67,27 @@ describe('AgentEditorDrawer knowledge bases', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1))
     expect(mutateAsync.mock.calls[0][0].knowledge_base_ids).toEqual(['kb-policies'])
+  })
+})
+
+describe('AgentEditorDrawer memory', () => {
+  it('renders the agent’s current memory setting', () => {
+    renderDrawer(true)
+    expect(screen.getByRole('switch', { name: 'Remember notes about users' }).getAttribute('aria-checked')).toBe('true')
+  })
+
+  it('sends the new setting after it is toggled', async () => {
+    renderDrawer()
+    const memorySwitch = screen.getByRole('switch', { name: 'Remember notes about users' })
+    expect(memorySwitch.getAttribute('aria-checked')).toBe('false')
+    fireEvent.click(memorySwitch)
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1))
+    expect(mutateAsync.mock.calls[0][0].episodic_memory_enabled).toBe(true)
+  })
+
+  it('disables the switch without write access', () => {
+    renderDrawer(false, false)
+    expect(screen.getByRole('switch', { name: 'Remember notes about users' }).hasAttribute('disabled')).toBe(true)
   })
 })
