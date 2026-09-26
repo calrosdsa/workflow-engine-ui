@@ -190,6 +190,10 @@ export function ThemeProvider({ theme, scopeElement, syncDocument, children }: T
       // syncDocument above for the full story.
       const root = document.documentElement
       root.style.setProperty('color-scheme', resolvedMode)
+      // runtime.html sets this from the stored choice before first paint;
+      // kept in step here so the few tokens this provider never writes
+      // (runtime.css's --sidebar) follow a mode change too.
+      root.setAttribute('data-rt-mode', resolvedMode)
       for (const [prop, value] of vars) root.style.setProperty(prop, value)
       if (theme.typography.fontFamily) root.style.setProperty('font-family', theme.typography.fontFamily)
       if (theme.typography.baseSize) root.style.fontSize = theme.typography.baseSize

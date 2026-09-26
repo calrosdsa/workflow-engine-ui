@@ -47,8 +47,10 @@ html[data-rt] {
   --sidebar-foreground: 222.2 84% 4.9%;
 }
 
+/* Dark: the OS preference, unless the viewer chose light in this app, or the
+   viewer chose dark (runtime.html marks the stored choice before first paint). */
 @media (prefers-color-scheme: dark) {
-  html[data-rt] {
+  html[data-rt]:not([data-rt-mode='light']) {
     color-scheme: dark;
     --background: 170 10% 7%;
     --foreground: 210 40% 98%;
@@ -71,6 +73,30 @@ html[data-rt] {
     --sidebar: 170 10% 7%;
     --sidebar-foreground: 210 40% 98%;
   }
+}
+
+html[data-rt][data-rt-mode='dark'] {
+  color-scheme: dark;
+  --background: 170 10% 7%;
+  --foreground: 210 40% 98%;
+  --card: 168 8% 10.5%;
+  --card-foreground: 210 40% 98%;
+  --popover: 168 8% 10.5%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 162 38% 62%;
+  --primary-foreground: 222.2 84% 4.9%;
+  --secondary: 165 8% 16%;
+  --secondary-foreground: 210 40% 98%;
+  --accent: 165 8% 16%;
+  --accent-foreground: 210 40% 98%;
+  --muted: 210 40% 98% / 5%;
+  --muted-foreground: 170 6% 66%;
+  --border: 210 40% 98% / 10%;
+  --input: 210 40% 98% / 10%;
+  --ring: 162 38% 62%;
+  --ink: 162 38% 62%;
+  --sidebar: 170 10% 7%;
+  --sidebar-foreground: 210 40% 98%;
 }
 
 /* index.css sets body's font explicitly, so portalled content (menus,
