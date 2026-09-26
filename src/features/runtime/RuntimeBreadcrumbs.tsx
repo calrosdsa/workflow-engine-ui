@@ -44,7 +44,7 @@ export function RuntimeBreadcrumbs({ appName, ancestors, current, clientId, appI
       ))}
       <span className="flex min-w-0 flex-1 items-center gap-1.5">
         <ChevronRight size={11} className="shrink-0 opacity-60" />
-        <span aria-current="page" className="min-w-0 truncate font-medium" style={{ color: 'hsl(var(--foreground))' }}>{current.name}</span>
+        <span aria-current="page" className="min-w-0 truncate font-semibold text-[hsl(var(--foreground))]">{current.name}</span>
       </span>
     </nav>
   )

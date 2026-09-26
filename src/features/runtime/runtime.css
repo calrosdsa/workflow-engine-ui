@@ -1,0 +1,480 @@
+/* Runtime design layer — "Printed form" (DESIGN.md § Runtime default theme).
+ *
+ * The published-app runtime reads like a printed business form: sheets of
+ * ruled cells, captions and rules printed in one spot colour (--ink, the
+ * tenant's primary made legible as text by ThemeProvider), values written in
+ * ink (--foreground). Tenant theming produces the look instead of fighting
+ * it: every app's forms come out "printed" in its own brand colour.
+ *
+ * Loaded by runtime-main.tsx only. Every rule is scoped to [data-rt], which
+ * runtime.html puts on <html>, so it also reaches portalled popovers and
+ * dialogs, and a builder surface can opt into the runtime look by carrying
+ * the same attribute. This sheet is unlayered on purpose: it has to beat
+ * Tailwind's layered utilities on components the builder shares (records
+ * table, record detail, form renderer), which it reaches through data-slot
+ * hooks rather than by editing their class names.
+ */
+
+/* --- Before the app's theme arrives ----------------------------------------
+ * The runtime imports index.css, whose :root is the BUILDER's palette. Until
+ * ThemeProvider writes the app's own values inline (after the snapshot
+ * loads), the loading screen and the not-found page painted in builder
+ * colours. These are DEFAULT_THEME's values; inline styles win once the
+ * provider mounts. They also cover the tokens ThemeProvider never sets
+ * (--sidebar), which otherwise leaked from the builder's :root. */
+html[data-rt] {
+  color-scheme: light;
+  font-family: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
+  --background: 160 8% 95.5%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 150 12% 99.5%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 150 12% 99.5%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 172 70% 25%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 160 8% 92.5%;
+  --secondary-foreground: 222.2 84% 4.9%;
+  --accent: 160 8% 92.5%;
+  --accent-foreground: 222.2 84% 4.9%;
+  --muted: 222.2 84% 4.9% / 5%;
+  --muted-foreground: 200 6% 38%;
+  --field-line: 200 6% 38%;
+  --border: 222.2 84% 4.9% / 10%;
+  --input: 222.2 84% 4.9% / 10%;
+  --ring: 172 70% 25%;
+  --ink: 172 70% 25%;
+  --sidebar: 160 8% 95.5%;
+  --sidebar-foreground: 222.2 84% 4.9%;
+}
+
+/* Dark: the OS preference, unless the viewer chose light in this app, or the
+   viewer chose dark (runtime.html marks the stored choice before first paint). */
+@media (prefers-color-scheme: dark) {
+  html[data-rt]:not([data-rt-mode='light']) {
+    color-scheme: dark;
+    --background: 170 10% 7%;
+    --foreground: 210 40% 98%;
+    --card: 168 8% 10.5%;
+    --card-foreground: 210 40% 98%;
+    --popover: 168 8% 10.5%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 162 38% 62%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 165 8% 16%;
+    --secondary-foreground: 210 40% 98%;
+    --accent: 165 8% 16%;
+    --accent-foreground: 210 40% 98%;
+    --muted: 210 40% 98% / 5%;
+    --muted-foreground: 170 6% 66%;
+    --field-line: 170 6% 66%;
+    --border: 210 40% 98% / 10%;
+    --input: 210 40% 98% / 10%;
+    --ring: 162 38% 62%;
+    --ink: 162 38% 62%;
+    --sidebar: 170 10% 7%;
+    --sidebar-foreground: 210 40% 98%;
+  }
+}
+
+html[data-rt][data-rt-mode='dark'] {
+  color-scheme: dark;
+  --background: 170 10% 7%;
+  --foreground: 210 40% 98%;
+  --card: 168 8% 10.5%;
+  --card-foreground: 210 40% 98%;
+  --popover: 168 8% 10.5%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 162 38% 62%;
+  --primary-foreground: 222.2 84% 4.9%;
+  --secondary: 165 8% 16%;
+  --secondary-foreground: 210 40% 98%;
+  --accent: 165 8% 16%;
+  --accent-foreground: 210 40% 98%;
+  --muted: 210 40% 98% / 5%;
+  --muted-foreground: 170 6% 66%;
+  --field-line: 170 6% 66%;
+  --border: 210 40% 98% / 10%;
+  --input: 210 40% 98% / 10%;
+  --ring: 162 38% 62%;
+  --ink: 162 38% 62%;
+  --sidebar: 170 10% 7%;
+  --sidebar-foreground: 210 40% 98%;
+}
+
+/* index.css sets body's font explicitly, so portalled content (menus,
+   dialogs, toasts under <body>) never inherited the app's font from <html>,
+   where ThemeProvider writes it. */
+html[data-rt] body {
+  font-family: inherit;
+}
+
+/* Record ids, codes and numeric table cells: a monospace from the same
+   family, so an id reads as an id and figures line up in columns. */
+[data-rt] {
+  --rt-mono: 'Atkinson Hyperlegible Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* --- The ruled form sheet --------------------------------------------------
+ * A form section is a sheet; its fields are cells ruled apart in --ink at a
+ * low alpha, and captions print in --ink. Record details and fill forms
+ * share this geometry, so a record reads the same whether you are looking
+ * at it or filling it in. */
+[data-rt] [data-slot='form-section'] {
+  --rt-rule: hsl(var(--ink) / 0.2);
+}
+
+[data-rt] [data-slot='form-section'][data-chrome='true'],
+[data-rt] [data-slot='form-section'][data-chrome='false'] [data-slot='form-columns'] {
+  overflow: hidden;
+  border: 1px solid var(--rt-rule);
+  border-radius: var(--radius);
+  background: hsl(var(--card));
+  box-shadow: 0 1px 2px hsl(var(--foreground) / 0.04);
+}
+
+/* The printed header band of a sheet. */
+[data-rt] [data-slot='form-section-header'] {
+  border-bottom: 1px solid var(--rt-rule);
+  background: hsl(var(--ink) / 0.045);
+  padding: 0.625rem 1rem 0.5625rem;
+}
+
+[data-rt] [data-slot='form-section-title'] {
+  color: hsl(var(--ink));
+  font-size: 0.71875rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+[data-rt] [data-slot='form-section'][data-chrome='false'] > [data-slot='form-section-title'] {
+  margin-bottom: 0.5rem;
+}
+
+[data-rt] [data-slot='form-section-description'] {
+  margin-top: 0.25rem;
+}
+
+[data-rt] [data-slot='form-section-body'] {
+  padding: 0;
+}
+
+/* Columns and cells meet on shared rules instead of floating in gaps. */
+[data-rt] [data-slot='form-columns'] {
+  gap: 0;
+}
+
+[data-rt] [data-slot='form-column'] > * {
+  margin-block: 0;
+}
+
+[data-rt] [data-slot='form-column'] + [data-slot='form-column'] {
+  border-top: 1px solid var(--rt-rule);
+}
+
+@media (min-width: 768px) {
+  [data-rt] [data-slot='form-column'] + [data-slot='form-column'] {
+    border-top: 0;
+    border-left: 1px solid var(--rt-rule);
+  }
+}
+
+[data-rt] [data-slot='form-field'] {
+  position: relative;
+  padding: 0.5625rem 1rem 0.625rem;
+  font-size: 0.90625rem;
+  transition: background-color 150ms ease-out;
+}
+
+[data-rt] [data-slot='form-column'] > [data-slot='form-field'] + [data-slot='form-field'] {
+  border-top: 1px solid var(--rt-rule);
+}
+
+/* The caption: printed in the spot colour, small caps, above the value. */
+[data-rt] [data-slot='form-field-label'] {
+  display: block;
+  margin-bottom: 0.125rem;
+  color: hsl(var(--ink));
+  font-size: 0.65625rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+[data-rt] [data-slot='form-field-help'],
+[data-rt] [data-slot='form-field-error'] {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+}
+
+[data-rt] [data-slot='form-field-error'] {
+  font-weight: 600;
+}
+
+/* Read mode. The value sits on the same 2rem line a filled-in control
+ * occupies, with a transparent rule where the control's rule would be, so
+ * switching a cell to edit changes the rule's colour and nothing moves. */
+[data-rt] [data-slot='form-field-value'] {
+  min-height: 2rem;
+  margin: 0;
+  align-items: center;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  padding: 0.3125rem 0;
+}
+
+[data-rt] [data-slot='form-field-value']:not(:disabled):hover {
+  border-bottom-color: hsl(var(--field-line));
+  background: transparent;
+}
+
+/* Fill mode: the write-on line. Only for controls that are a single line or
+ * box of text; checkboxes, switches, radios, file and line-items grids keep
+ * their own controls inside the ruled cell. The line is --field-line, which
+ * ThemeProvider holds at >= 3:1 against both the page and the sheet, so the
+ * control's boundary clears WCAG 1.4.11 on any tenant's surfaces. */
+[data-rt] :is(
+  [data-component='text'], [data-component='email'], [data-component='url'],
+  [data-component='phone'], [data-component='password'], [data-component='number'],
+  [data-component='autocomplete'], [data-component='select'],
+  [data-component='date'], [data-component='time'], [data-component='datetime']
+)[data-slot='form-field'] :is(input, select, button[aria-haspopup='dialog']),
+[data-rt] :is([data-component='textarea'], [data-component='richtext'])[data-slot='form-field'] textarea {
+  height: 2rem;
+  min-height: 2rem;
+  border: 0;
+  border-bottom: 1px solid hsl(var(--field-line));
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0.3125rem 0;
+  font-size: 0.90625rem;
+}
+
+[data-rt] :is([data-component='textarea'], [data-component='richtext'])[data-slot='form-field'] textarea {
+  height: auto;
+  min-height: 4.5rem;
+}
+
+[data-rt] [data-slot='form-field'] :is(button[aria-haspopup='dialog']) {
+  justify-content: flex-start;
+  font-weight: 400;
+}
+
+/* Focus: the line thickens in the spot colour (a 1px inset on top of the
+ * 1px border, so nothing shifts) and the cell takes a faint wash. */
+[data-rt] [data-slot='form-field'] :is(input, select, textarea, button[aria-haspopup='dialog']):focus-visible {
+  outline: none;
+  border-bottom-color: hsl(var(--ink));
+  box-shadow: inset 0 -1px 0 hsl(var(--ink));
+}
+
+[data-rt] [data-slot='form-field']:focus-within {
+  background: hsl(var(--ink) / 0.05);
+}
+
+[data-rt] [data-slot='form-field'] :is(input, select, textarea)[aria-invalid='true'],
+[data-rt] [data-slot='form-field'][data-invalid='true'] :is(input, select, textarea, button[aria-haspopup='dialog']) {
+  border-bottom-color: hsl(var(--destructive));
+  box-shadow: inset 0 -1px 0 hsl(var(--destructive));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-rt] [data-slot='form-field'] {
+    transition: none;
+  }
+}
+
+/* A value that isn't editable here (a reference, a read-only field) renders
+ * as plain text rather than the edit button; it sits on the same line so
+ * every cell in a sheet keeps one rhythm. */
+[data-rt] [data-slot='form-field'][data-mode='read'] > [data-slot='form-field-label'] + div:not([data-slot]) {
+  display: flex;
+  min-height: 2rem;
+  align-items: center;
+  border-bottom: 1px solid transparent;
+  padding: 0.3125rem 0;
+}
+
+/* --- The ledger -------------------------------------------------------------
+ * A records list reads like a ledger page: column heads printed in the spot
+ * colour, rows ruled in it at a whisper, the identifying first column set a
+ * little heavier, and figures right-aligned in the monospace so they line up
+ * down the page. */
+[data-rt] [data-slot='records-frame'] {
+  border-color: hsl(var(--ink) / 0.2);
+  background: hsl(var(--card));
+  box-shadow: 0 1px 2px hsl(var(--foreground) / 0.04);
+}
+
+[data-rt] [data-slot='records-frame']:is([data-layout='kanban'], [data-layout='calendar']) {
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-rt] [data-slot='data-table-head-row'] {
+  border-bottom-color: hsl(var(--ink) / 0.35);
+  background: hsl(var(--ink) / 0.045);
+}
+
+[data-rt] [data-slot='data-table-head'] {
+  padding-block: 0.625rem;
+  color: hsl(var(--ink));
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* A sortable head is a button, and the base stylesheet resets a button's
+   case and tracking; the caption has to carry through it. */
+[data-rt] [data-slot='data-table-head'] button {
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+[data-rt] [data-slot='data-table-row'] {
+  border-bottom-color: hsl(var(--ink) / 0.12);
+}
+
+[data-rt] [data-slot='data-table-row']:last-child {
+  border-bottom-width: 0;
+}
+
+[data-rt] [data-slot='data-table-row'][tabindex]:hover {
+  background: hsl(var(--ink) / 0.05);
+}
+
+[data-rt] [data-slot='data-table-cell'] {
+  padding-block: 0.6875rem;
+}
+
+[data-rt] [data-slot='data-table-cell']:first-child {
+  font-weight: 600;
+}
+
+[data-rt] :is([data-slot='data-table-head'], [data-slot='data-table-cell']):is([data-type='decimal'], [data-type='integer']) {
+  text-align: right;
+}
+
+[data-rt] [data-slot='data-table-head']:is([data-type='decimal'], [data-type='integer']) > div {
+  justify-content: flex-end;
+}
+
+[data-rt] [data-slot='data-table-cell']:is([data-type='decimal'], [data-type='integer']) {
+  font-family: var(--rt-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-rt] [data-slot='kanban-card-value']:is([data-type='decimal'], [data-type='integer']) {
+  font-family: var(--rt-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- The board --------------------------------------------------------------
+ * Kanban columns are trays with printed heads; each card is a small form: a
+ * title, then caption / value pairs. */
+[data-rt] [data-slot='kanban-column']:not([data-over]) {
+  border-color: hsl(var(--ink) / 0.14);
+  background: hsl(var(--ink) / 0.035);
+}
+
+[data-rt] [data-slot='kanban-column'][data-over] {
+  border-color: hsl(var(--ink));
+  background: hsl(var(--ink) / 0.08);
+}
+
+[data-rt] [data-slot='kanban-column-title'] {
+  color: hsl(var(--ink));
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+[data-rt] [data-slot='kanban-count'] {
+  border: 1px solid hsl(var(--ink) / 0.25);
+  background: transparent;
+  color: hsl(var(--ink));
+  font-family: var(--rt-mono);
+}
+
+[data-rt] [data-slot='kanban-card'] {
+  gap: 0.5rem;
+  border-color: hsl(var(--ink) / 0.18);
+  padding: 0.625rem 0.75rem;
+  box-shadow: 0 1px 2px hsl(var(--foreground) / 0.05);
+}
+
+[data-rt] [data-slot='kanban-card']:hover {
+  border-color: hsl(var(--ink) / 0.45);
+  background: hsl(var(--card));
+}
+
+[data-rt] [data-slot='kanban-card']:focus-visible {
+  outline: 2px solid hsl(var(--ink));
+  outline-offset: 1px;
+}
+
+[data-rt] [data-slot='kanban-card-title'] {
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+[data-rt] [data-slot='kanban-card-fields'] {
+  border-top-color: hsl(var(--ink) / 0.15);
+}
+
+[data-rt] [data-slot='kanban-card-label'] {
+  color: hsl(var(--ink));
+  font-size: 0.625rem;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+/* --- Titles and the record masthead ------------------------------------------ */
+[data-rt] [data-slot='page-title'] {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+[data-rt] [data-slot='record-masthead'] {
+  align-items: flex-end;
+}
+
+/* Hidden by default in the markup, so the builder's records page keeps its
+   plain drawer header; the runtime prints which form and which record. */
+[data-rt] [data-slot='record-eyebrow'] {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+  color: hsl(var(--ink));
+  font-size: 0.65625rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+[data-rt] [data-slot='record-number'] {
+  flex-shrink: 0;
+  font-family: var(--rt-mono);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+[data-rt] [data-slot='record-title'] {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}

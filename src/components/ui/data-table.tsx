@@ -18,6 +18,11 @@ export interface DataTableColumn {
   render?: (row: Record<string, unknown>) => React.ReactNode
   /** Right-aligns the header + cells — used for an Actions column. */
   align?: 'left' | 'right'
+  /** What the column holds (a form field type such as 'decimal' or
+   *  'date'), exposed as data-type on its header and cells. A styling hook
+   *  only: the published runtime right-aligns and sets figures in a
+   *  monospace for numeric columns (features/runtime/runtime.css). */
+  type?: string
 }
 
 export interface DataTableProps {
@@ -82,7 +87,7 @@ export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortC
   }
 
   const headerRow = (
-    <tr className="border-b" style={{ borderColor: 'hsl(var(--border))' }}>
+    <tr data-slot="data-table-head-row" className="border-b border-[hsl(var(--border))]">
       {columns.map((col) => (
         <DataTableHeaderCell key={col.key} col={col} sortField={sortField} sortDir={sortDir} onSortChange={onSortChange} draggable={!!onColumnsReorder} />
       ))}
@@ -90,7 +95,7 @@ export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortC
   )
 
   const table = (
-    <table className="w-full border-collapse text-sm">
+    <table data-slot="data-table" className="w-full border-collapse text-sm">
       <thead>
         {onColumnsReorder ? (
           <SortableContext items={columns.map((c) => c.key)} strategy={horizontalListSortingStrategy}>
@@ -125,19 +130,19 @@ export function DataTable({ columns, rows, getRowId, sortField, sortDir, onSortC
               return (
                 <tr
                   key={getRowId(row)}
+                  data-slot="data-table-row"
                   onClick={() => onRowClick?.(row)}
                   onDoubleClick={() => onRowDoubleClick?.(row)}
                   tabIndex={activatable ? 0 : undefined}
                   onKeyDown={activatable ? onKeyboardActivate(() => (onRowClick ?? onRowDoubleClick)?.(row)) : undefined}
                   className={cn(
-                    'border-b transition-colors',
+                    'border-b border-[hsl(var(--border))] transition-colors',
                     activatable &&
                       'cursor-pointer hover:bg-[hsl(var(--accent))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[hsl(var(--ring))]',
                   )}
-                  style={{ borderColor: 'hsl(var(--border))' }}
                 >
                   {columns.map((col) => (
-                    <td key={col.key} className={cn('px-3 py-2', col.align === 'right' && 'text-right')}>
+                    <td key={col.key} data-slot="data-table-cell" data-type={col.type} className={cn('px-3 py-2', col.align === 'right' && 'text-right')}>
                       {col.render ? col.render(row) : formatCell(row[col.key])}
                     </td>
                   ))}
@@ -194,8 +199,10 @@ function DataTableHeaderCell({ col, sortField, sortDir, onSortChange, draggable 
   return (
     <th
       ref={draggable ? setNodeRef : undefined}
-      style={{ color: 'hsl(var(--muted-foreground))', ...style }}
-      className={cn('px-3 py-2 font-medium', col.align === 'right' ? 'text-right' : 'text-left')}
+      data-slot="data-table-head"
+      data-type={col.type}
+      style={style}
+      className={cn('px-3 py-2 font-medium text-[hsl(var(--muted-foreground))]', col.align === 'right' ? 'text-right' : 'text-left')}
     >
       <div className={cn('flex items-center gap-1', col.align === 'right' && 'justify-end')}>
         {draggable && (

@@ -392,7 +392,16 @@ export const en = {
   'menus.section.detail.save_error': 'Could not save — slug may already exist.',
   'menus.section.detail.delete_error': 'Could not delete — remove or reparent child menus first.',
   'runtime.home.drilldown_back': 'Back',
+  'runtime.home.all_pages': 'All {{count}} pages',
+  'runtime.home.all_pages_in': 'All {{count}} pages in {{name}}',
+  'runtime.home.sections_count': '{{count}} sections',
   'runtime.sidebar.back_to_home': 'Back to Home',
+  'runtime.sidebar.empty': 'No pages to show yet.',
+  'runtime.record.back_to_list': 'Back to list',
+  'runtime.record.back': 'Back',
+  'runtime.record.fallback_title': 'Record',
+  'runtime.form_create.title': 'New {{name}}',
+  'runtime.form_create.fallback_title': 'New record',
   'runtime.record_detail.more_actions': 'More actions',
   // RuntimeLoginPage.tsx. CardTitle/button/labels/validation/error message
   // reuse auth.sign_in/.signing_in/.email/.password/.email_required/
@@ -402,6 +411,7 @@ export const en = {
   // rather than auth.sign_in_description's "your workflow engine account")
   // needed a fresh key.
   'runtime.login.description': 'Sign in to continue to this application',
+  'runtime.login.eyebrow': 'Sign in to',
   'runtime.permission_denied.sign_in_heading': 'Sign in to continue',
   'runtime.permission_denied.sign_in_body': 'This section requires an account with access. Sign in to view it.',
   'runtime.permission_denied.denied_heading': "You don't have access to this section",
@@ -2105,6 +2115,7 @@ export const en = {
   'app_config.light_colors': 'Light mode colors',
   'app_config.dark_colors': 'Dark mode overrides',
   'app_config.font_family': 'Font family',
+  'app_config.font_atkinson_hyperlegible_next': 'Atkinson Hyperlegible Next',
   'app_config.font_system_ui': 'System UI',
   'app_config.font_inter': 'Inter',
   'app_config.font_roboto': 'Roboto',
@@ -2127,6 +2138,8 @@ export const en = {
   'app_config.primary': 'Primary',
   'app_config.secondary': 'Secondary',
   'app_config.themed_input': 'Themed input',
+  'app_config.sample_caption': 'Customer',
+  'app_config.sample_value': 'Acme Corp',
   'app_config.marketplace': 'Marketplace',
 
   'workflows.execution_inspector.title': 'Execution inspector',

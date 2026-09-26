@@ -1,10 +1,15 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-rt>
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Loading…</title>
+    <!-- The light/dark choice a viewer made in this app (ThemeProvider stores it)
+         is applied before first paint, so the loading screen does not flash the
+         other mode. Inline on purpose: it must run before any stylesheet loads.
+         If a Content-Security-Policy is ever added, allow it by hash. -->
+    <script>try{var m=localStorage.getItem('app-theme-mode');if(m==='light'||m==='dark')document.documentElement.setAttribute('data-rt-mode',m)}catch(e){}</script>
   </head>
   <body>
     <div id="runtime-root"></div>

@@ -22,7 +22,7 @@ import { RoleValueLabel } from './RoleValueLabel'
 import { FileCellDisplay } from './FileCellDisplay'
 import { buildEnumLabels, resolveEnumLabel } from './enum-labels'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
-import { localizeFormSchema } from '@/features/form-builder/localize-schema'
+import { localizeFormSchema, localizeFormName } from '@/features/form-builder/localize-schema'
 import { iterElements } from '@/features/form-builder/projection'
 import { useI18n } from '@/features/i18n/I18nProvider'
 import { CardLayout } from '@/features/menus/saved-views/layouts/CardLayout'
@@ -378,6 +378,7 @@ export function RecordsTable({
       key,
       label: labelByKey.get(key) ?? field?.label ?? key,
       sortable: true,
+      type: field?.type,
       render: isReference
         ? (row: FormRecord) => <RecordReferenceLink formId={field.reference_table} recordId={row[key]} displayField={field.display_field} />
         : isRoleField
@@ -476,7 +477,7 @@ export function RecordsTable({
     <div>
       {(title || allowFilter || canSearch || headerActions) && (
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          {title ? <h1 className="text-lg font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{title}</h1> : <div />}
+          {title ? <h1 data-slot="page-title" className="text-lg font-semibold text-[hsl(var(--foreground))]">{title}</h1> : <div />}
           {/* flex-wrap: at narrow (mobile) widths, Search + Filter +
              ViewSwitcher + Create together routinely exceed the viewport —
              wrapping onto a second line beats a horizontal scrollbar or
@@ -561,7 +562,7 @@ export function RecordsTable({
         </p>
       )}
 
-      <div ref={scrollRef} className="overflow-x-auto overflow-y-hidden rounded-lg border" style={{ borderColor: 'hsl(var(--border))' }}>
+      <div ref={scrollRef} data-slot="records-frame" data-layout={effectiveLayout} className="overflow-x-auto overflow-y-hidden rounded-lg border border-[hsl(var(--border))]">
         {effectiveLayout === 'card' && (
           <CardLayout records={results?.records ?? []} fields={fieldsWithSystem} columns={visibleColumns} roleField={form.create_user_role_field} enumLabels={enumLabels} onOpenRecord={openRecord} loading={isLoading} />
         )}
@@ -648,10 +649,21 @@ export function RecordsTable({
 
       <Drawer open={!!selectedRecord} onOpenChange={(o) => !o && closeRecord()}>
         <DrawerContent size="lg" container={document.getElementById('runtime-root')}>
-          <DrawerHeader className="flex flex-row items-center justify-between gap-2 pr-10">
-            <DrawerTitle className="truncate">
-              {(selectedRecord && resolveRecordTitle(form.fields, selectedRecordLive ?? selectedRecord)) || 'Record details'}
-            </DrawerTitle>
+          <DrawerHeader data-slot="record-masthead" className="flex flex-row items-center justify-between gap-2 pr-10">
+            <div className="min-w-0">
+              {/* Which form and which record, printed above the title. Only
+                  the published runtime shows it (runtime.css); the builder's
+                  records page keeps its plain header. */}
+              {selectedRecord && (
+                <p data-slot="record-eyebrow" className="hidden">
+                  <span className="truncate">{localizeFormName(form.id, form.name, tc)}</span>{' '}
+                  <span data-slot="record-number">#{String(selectedRecord.id).slice(0, 8)}</span>
+                </p>
+              )}
+              <DrawerTitle data-slot="record-title" className="truncate">
+                {(selectedRecord && resolveRecordTitle(form.fields, selectedRecordLive ?? selectedRecord)) || 'Record details'}
+              </DrawerTitle>
+            </div>
             <div className="flex shrink-0 items-center gap-1.5">
               {selectedRecord && onExpandRecord && (
                 <Button

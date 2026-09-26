@@ -52,7 +52,7 @@ export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recor
   const { data: form } = useFormDef(formId)
   const { data: record } = useRecordDetail(formId, recordId)
   const recordTitle = resolveRecordTitle(form?.fields, record)
-  const { tc } = useI18n()
+  const { t, tc } = useI18n()
   const schema = form ? localizeFormSchema(resolveFormSchema(form), form.id, tc) : undefined
 
   return (
@@ -96,10 +96,10 @@ export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recor
         )}
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <header className="flex h-12 shrink-0 items-center gap-3 border-b px-4 md:hidden" style={{ borderColor: 'hsl(var(--border))' }}>
+          <header className="flex h-12 shrink-0 items-center gap-3 border-b border-[hsl(var(--ink)/0.12)] px-4 md:hidden">
             <button
               onClick={() => setMobileNavOpen((o) => !o)}
-              aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+              aria-label={mobileNavOpen ? t('common.close_navigation') : t('common.open_navigation')}
               aria-expanded={mobileNavOpen}
               className="-ml-1.5 rounded-md p-1.5 transition-colors hover:bg-[hsl(var(--accent))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
             >
@@ -108,16 +108,16 @@ export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recor
             <span className="truncate text-sm font-semibold">{snapshot.app.name}</span>
           </header>
 
-          <div className="flex items-center justify-between gap-3 border-b px-4 py-2" style={{ borderColor: 'hsl(var(--border))' }}>
-            <span className="truncate text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
-              {form ? localizeFormName(form.id, form.name, tc) : 'Record'}
+          <div className="flex items-center justify-between gap-3 border-b border-[hsl(var(--ink)/0.12)] px-4 py-2">
+            <span className="truncate text-xs font-medium text-[hsl(var(--muted-foreground))]">
+              {form ? localizeFormName(form.id, form.name, tc) : t('runtime.record.fallback_title')}
             </span>
             <button
               onClick={() => runtimeRouter.history.back()}
               className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
               style={{ color: 'hsl(var(--muted-foreground))' }}
             >
-              <ArrowLeft size={12} />Back
+              <ArrowLeft size={12} />{t('runtime.record.back')}
             </button>
           </div>
 
@@ -137,8 +137,16 @@ export function RuntimeFormRecordPage({ snapshot, clientId, appId, formId, recor
                       and gating the whole block on it used to hide
                       RecordDetailToolbar's Edit/Delete controls during that
                       window too, not just the heading. */}
-                  <div className="flex items-center justify-between gap-3 border-b px-6 py-4" style={{ borderColor: 'hsl(var(--border))' }}>
-                    <h1 className="truncate text-lg font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{recordTitle || 'Loading…'}</h1>
+                  <div className="flex items-end justify-between gap-3 px-6 pb-4 pt-6">
+                    {/* The record's masthead, as on RuntimeRecordPage: which form
+                        and which record, printed small in the spot colour. */}
+                    <div className="min-w-0">
+                      <p className="mb-1 flex items-baseline gap-2 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[hsl(var(--ink))]">
+                        <span className="truncate">{localizeFormName(form.id, form.name, tc)}</span>{' '}
+                        <span className="shrink-0 font-normal normal-case tracking-normal [font-family:var(--rt-mono)]">#{recordId.slice(0, 8)}</span>
+                      </p>
+                      <h1 className="truncate text-[26px] font-bold leading-tight tracking-[-0.015em] text-[hsl(var(--foreground))]">{recordTitle || t('common.loading')}</h1>
+                    </div>
                     <RecordDetailToolbar
                       formId={formId}
                       recordId={recordId}

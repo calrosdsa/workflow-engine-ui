@@ -254,7 +254,7 @@ export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitti
   const chromeSections = shouldChromeSections(schema.sections.length)
 
   return (
-    <form onSubmit={handleSubmit((values) => onSubmit(values))} className={chromeSections ? 'space-y-4' : 'space-y-6'}>
+    <form data-slot="form" onSubmit={handleSubmit((values) => onSubmit(values))} className={chromeSections ? 'space-y-4' : 'space-y-6'}>
       {schema.sections.map((section) => (
         <FormSectionShell
           key={section.id}
@@ -275,13 +275,14 @@ export function FormRenderer({ schema, formId, defaultValues, onSubmit, submitti
            *  ratio is set per-render, so it can't be a static Tailwind
            *  class — this is the one way to still gate an inline value by
            *  breakpoint). */}
-          <div className="flex flex-col gap-4 md:flex-row">
+          <div data-slot="form-columns" className="flex flex-col gap-4 md:flex-row">
             {section.columns.map((column) => {
               const ratios = COLUMN_LAYOUTS[section.layout]?.ratios ?? [1]
               const idx = section.columns.indexOf(column)
               return (
                 <div
                   key={column.id}
+                  data-slot="form-column"
                   className="min-w-0 flex-1 space-y-4 md:flex-[var(--col-ratio)]"
                   style={{ '--col-ratio': ratios[idx] ?? 1 } as React.CSSProperties}
                 >

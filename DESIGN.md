@@ -158,10 +158,10 @@ light is that system inverted.
 `runtime.html` does not. `index.css` re-points the existing shadcn variables
 under `[data-app='builder']:not(.light)` and `[data-app='builder'].light`,
 both (0,2,0), so each beats `:root` or `.light`. **`:root` is deliberately
-left teal:** the published-app runtime imports the same `index.css`, and its
-per-app `ThemeProvider` never sets `--destructive`, `--success`, `--warning`
-or `--sidebar`, so it reads those from `:root`. Changing `:root` would leak
-into every published app.
+left teal:** the published-app runtime imports the same `index.css`, and any
+token it does not set itself reads `:root`, so changing `:root` could leak
+into every published app. (Its `ThemeProvider` now sets the status colours
+and `runtime.css` sets `--sidebar`; see § Runtime default theme.)
 
 | Role | Dark | Light |
 |---|---|---|
@@ -246,48 +246,106 @@ the command bar at the top; add, fit, tidy and minimap in the right rail;
 zoom in the corner. Dagre lays plates out at their measured size (fallback
 232×100) so the track between steps is a readable 80px.
 
-## Runtime default theme
+## Runtime default theme — "Printed form"
 
-**Amends the boundary set above.** The Theme section's own "untouched by
-this redesign" note (Dark-only for this pass) still holds for `index.css`'s
-`.dark` block — this section is a separate decision, about the ONE file
-that seeds a brand-new tenant app's theme before its owner ever opens the
-Theme tab: `src/features/theme/default-theme.ts`'s `DEFAULT_THEME` export
-(`ThemeConfig`, five color slots × light/dark, consumed by `ThemeProvider`
-via `element.style.setProperty` — see that file's own doc comment). This is
-intentionally its OWN identity, never the builder shell's own palette — a real
-tenant's CRM/ERP/etc. should not look like App Builder's own chrome.
+**Replaced 2026-09-26 at the requester's direction** (scope: the published
+runtime's shell and record surfaces; a new default for apps that never
+customised their theme). This section governs the runtime bundle
+(`runtime.html`) only. The builder never loads any of it.
+The default is deliberately its own identity, never the builder shell's
+palette: a tenant's CRM should not look like App Builder's own chrome.
 
-**Why it changed:** the prior defaults were an unmodified shadcn/ui "New
-York" starter — `221.2 83.2% 53.3%` primary (Tailwind's own stock blue-600),
-hue-210 cool-slate neutrals, pure `0 0% 100%`/near-black surfaces. Every
-un-customized shadcn scaffold ships these exact numbers; a tenant who never
-opens the Theme tab shipped a visibly-unstyled default. Replaced with a
-modern indigo-violet identity a real app can credibly ship as-is, following
-this repo's own `color.md` Hallmark reference (tint the neutrals toward the
-accent hue; no pure `#fff`/`#000`; dark-mode surfaces read *lighter* than
-background, not flat/identical, per its elevation recipe).
+**Concept.** Business records were printed forms before they were software:
+sheets of ruled boxes, captions printed in one spot colour, values filled in
+by hand. The runtime reads the same way. **The tenant's primary colour is
+the spot ink** that prints captions, rules and the active page; values are
+always body ink (`--foreground`). Tenant theming produces the look instead of
+fighting it: every app's forms come out printed in its own brand colour.
 
-**Values (`DEFAULT_THEME`, HSL triplets — same format as the rest of this
-system, chosen directly rather than derived from OKLCH since this codebase's
-theme editor round-trips hex⇄HSL, not OKLCH; see `color-utils.ts`):**
+**Signature: the ruled form sheet.** Record details and create/edit forms
+share one geometry. A section is a sheet (`--card`, rule `hsl(var(--ink) /
+0.2)`); its fields are cells ruled apart, caption top-left in `--ink` (small
+caps, 0.08em tracking), value beneath. In fill mode, text-like controls
+become write-on lines inside their cell. The line is `--field-line`, which
+`ThemeProvider` holds at 3:1 or better against both the page and the sheet,
+so a control's boundary clears WCAG 1.4.11 on any tenant's surfaces. Focus thickens it in `--ink`, and an invalid field turns
+it red. Read and edit share a 2rem line, so inline editing moves nothing.
+Measured on text, select, date and number cells: same height and top edge in
+both states. The one exception: a text value long enough to wrap when read
+takes a single line while it is being edited. Checkboxes,
+switches, radios, files and line-items grids keep their own controls inside
+the cell.
+
+**Derived tokens (`ThemeProvider`, per resolved mode).**
+- `--ink`: the primary blended toward the foreground until it clears 4.8:1
+  on both background and surface (`ensureContrast`, unit-tested on pale
+  yellow, near-white, near-black and saturated red primaries). The headroom
+  covers 5–8% tints under hover and active states.
+- `--success` / `--warning` / `--destructive` and their `-foreground`s,
+  checked against the app's own surfaces including a 15% wash of themselves
+  (status badges). These used to leak from the builder's `:root` in light
+  mode and never reached portalled content in dark mode.
+
+**Default theme (`DEFAULT_THEME`; only apps with no saved theme change).**
+The Theme tab saves the full config, so an app that ever saved keeps its
+colours. The neutrals are near-grey on purpose: `mergeTheme` merges colour by
+colour, so an app that saved only a primary still gets these neutrals beside
+its own brand.
 
 | Slot | Light | Dark |
 |---|---|---|
-| `primary` | `243 82% 61%` | `239 91% 74%` |
-| `secondary` / `accent` | `240 25% 96%` | `240 20% 18%` |
-| `background` | `240 25% 99%` | `240 22% 7%` |
-| `surface` | `240 25% 99%` (= background) | `240 18% 11%` (lighter than background — elevation) |
+| `primary` (spot ink) | `172 70% 25%` ledger green | `162 38% 62%` sage |
+| `secondary` / `accent` | `160 8% 92.5%` | `165 8% 16%` |
+| `background` (the desk) | `160 8% 95.5%` | `170 10% 7%` |
+| `surface` (the sheet) | `150 12% 99.5%` | `168 8% 10.5%` |
+| `typography.fontFamily` | Atkinson Hyperlegible Next | same |
 
-All four `*-foreground` variables (`primary-foreground`, `secondary-foreground`,
-`accent-foreground`, `foreground`, `card-foreground`) are NOT hand-picked —
-`ThemeProvider` derives them per-color via `pickForeground()`'s real WCAG
-contrast check against two fixed candidates, already exact for whatever
-background/accent values this table sets. No change needed to that
-mechanism for this palette swap.
+**Type.** Atkinson Hyperlegible Next (Braille Institute; designed so I/l/1
+and O/0 can't be confused, which is most of what a records app asks of its
+type: ids, emails, codes, amounts) for UI and values. Atkinson Hyperlegible
+Mono for record numbers and figures (numeric table cells right-aligned). Both
+are self-hosted via `@fontsource-variable` and loaded by `runtime-main.tsx`
+only. Captions are 10.5–11px caps at 650–700 weight; page titles 24px/700;
+record titles 22–26px/700.
 
-**Scope note:** `radius` (`0.5rem`) and `shadow` (`sm`) were left unchanged —
-this decision is about color only, per the request that prompted it.
+**Surfaces.**
+- **Sidebar:** on the desk, not a sheet. The active page is printed in
+  `--ink` with a bar in the margin and a faint wash. The module scope is a
+  caption.
+- **Top bar:** ruled in `--ink`, with the current breadcrumb bold.
+- **Record masthead:** "FORM NAME #shortid" in `--ink` above the title (the
+  drawer's is a hidden element that `runtime.css` reveals).
+- **Ledger:** `--ink` caps heads on a tinted band, whisper row rules, a
+  heavier first column, and mono figures right-aligned.
+- **Kanban:** trays with printed heads and mono counts; cards as small forms.
+- **Sign-in:** "Sign in to" above the app's name, with the fields on a ruled
+  sheet.
+- **Modules home:** a directory. Each section's first six pages are listed,
+  looking through groups, from the permission-filtered tree only, followed by
+  "All N pages". Sections with sub-modules keep their drill-down.
+
+**Mechanism.** `runtime.html` carries `<html data-rt>`. `src/features/
+runtime/runtime.css` (imported by `runtime-main.tsx` only) scopes every rule
+to `[data-rt]`, so it also reaches portalled content, and a builder surface
+could opt in by carrying the attribute. It is unlayered on purpose, so that
+it beats Tailwind utilities on the components the builder shares
+(`FormSectionShell`, `FormRenderer`, `FieldRenderer`, `RecordDetailPanel`,
+`InlineFieldEditor`, `DataTable`, `RecordsTable`, `KanbanLayout`). Those
+components carry `data-slot` hooks only, and inline colours on hooked
+elements moved into equivalent classes. Proof the builder is untouched: the
+mocked builder suite passes 32/32 in compare mode. Runtime-only components
+(sidebar, shell, record page, home, sign-in) are styled in their own JSX.
+`runtime.css` also paints the default theme on `<html>` before the snapshot
+loads, in the viewer's stored mode (`data-rt-mode`, set by an inline script
+in `runtime.html`), so the loading screen no longer flashes the builder's
+palette.
+
+**Not covered:** dashboards, reports and HTML/custom pages were not
+redesigned. They do inherit the new default colours, type and status
+colours, and any table they show through the shared `DataTable` or
+`RecordsTable` takes the ledger styling. Also not covered: the KMP mobile runtime, whose own `DEFAULT_THEME` (`runtime-app/.../
+ThemeConfig.kt`) still holds the previous indigo values. Web and mobile
+defaults now differ until that file is updated.
 
 ## Typography
 

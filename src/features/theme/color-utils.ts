@@ -108,6 +108,69 @@ export function deriveMutedForeground(bgHslTriplet: string, fgHslTriplet: string
   return fgHslTriplet
 }
 
+/** Returns `color`, or the least-changed blend of it toward `towards`, that
+ *  clears `target` contrast against EVERY one of `backgrounds`.
+ *
+ *  Drives the runtime's --ink (a tenant primary used as caption/label text)
+ *  and its status colours: a tenant can pick any primary — pale yellow,
+ *  near-white, a saturated red — so the colour itself can't be trusted as
+ *  text. Blending toward the picked foreground keeps its hue recognisable
+ *  while raising contrast, the same move deriveMutedForeground makes from
+ *  the other direction.
+ *
+ *  `tintAlpha` also requires the result to clear `target` on its own wash
+ *  (the colour at that alpha over each background), which is how a status
+ *  badge draws its text: green on a 15% green wash measures lower than green
+ *  on the bare background, and the mocked suite's axe check once caught
+ *  exactly that at 4.38:1.
+ *
+ *  Falls back to `towards` for malformed input or when no blend clears the
+ *  target (only possible for an unreachable target on a mid-grey page). */
+export function ensureContrast(
+  color: string,
+  backgrounds: string[],
+  towards: string,
+  target: number,
+  options: { tintAlpha?: number } = {},
+): string {
+  const c = parseHslTriplet(color)
+  const to = parseHslTriplet(towards)
+  const bgs = backgrounds.map(parseHslTriplet)
+  if (!c || !to || bgs.some((b) => !b)) return towards
+
+  const cRgb = hslToRgbTriplet(c.h, c.s, c.l)
+  const toRgb = hslToRgbTriplet(to.h, to.s, to.l)
+  const bgRgbs = (bgs as { h: number; s: number; l: number }[]).map((b) => hslToRgbTriplet(b.h, b.s, b.l))
+
+  const clears = (candidate: [number, number, number]) => {
+    const candidateLuminance = relativeLuminance(candidate)
+    return bgRgbs.every((bg) => {
+      if (contrastRatio(candidateLuminance, relativeLuminance(bg)) < target) return false
+      if (options.tintAlpha === undefined) return true
+      const a = options.tintAlpha
+      const wash: [number, number, number] = [
+        candidate[0] * a + bg[0] * (1 - a),
+        candidate[1] * a + bg[1] * (1 - a),
+        candidate[2] * a + bg[2] * (1 - a),
+      ]
+      return contrastRatio(candidateLuminance, relativeLuminance(wash)) >= target
+    })
+  }
+
+  if (clears(cRgb)) return color
+  const STEPS = 40
+  for (let i = 1; i <= STEPS; i++) {
+    const t = i / STEPS
+    const blended: [number, number, number] = [
+      cRgb[0] + (toRgb[0] - cRgb[0]) * t,
+      cRgb[1] + (toRgb[1] - cRgb[1]) * t,
+      cRgb[2] + (toRgb[2] - cRgb[2]) * t,
+    ]
+    if (clears(blended)) return rgbToHslTriplet(blended)
+  }
+  return towards
+}
+
 function hslToRgbTriplet(h: number, s: number, l: number): [number, number, number] {
   const sNorm = s / 100
   const lNorm = l / 100

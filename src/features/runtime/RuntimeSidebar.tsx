@@ -27,9 +27,12 @@ interface RuntimeSidebarProps {
 export function RuntimeSidebar({ appName, navTree, scopedRoot, clientId, appId, activeMenuId, onNavigate }: RuntimeSidebarProps) {
   const t = useTranslation()
   return (
-    <aside className="flex h-screen w-60 flex-col border-r" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--card))' }}>
-      <div className="flex h-14 shrink-0 items-center border-b px-4" style={{ borderColor: 'hsl(var(--border))' }}>
-        <span className="truncate text-sm font-semibold" style={{ color: 'hsl(var(--card-foreground))' }}>{appName}</span>
+    // The index of the app: it sits on the desk (--background) rather than on
+    // a sheet, so the records and forms (--card) are the only raised things
+    // on the page. The active entry is printed in the app's spot colour.
+    <aside className="flex h-screen w-60 flex-col border-r border-[hsl(var(--ink)/0.14)] bg-[hsl(var(--background))]">
+      <div className="flex h-14 shrink-0 items-center px-4">
+        <span className="truncate text-[15px] font-bold tracking-[-0.01em] text-[hsl(var(--foreground))]">{appName}</span>
       </div>
       {scopedRoot && (
         // Always targets home, never scopedRoot's own landing route — the
@@ -40,21 +43,20 @@ export function RuntimeSidebar({ appName, navTree, scopedRoot, clientId, appId, 
           to={`/${clientId}/${appId}`}
           onClick={onNavigate}
           aria-label={t('runtime.sidebar.back_to_home')}
-          className="flex h-11 shrink-0 items-center gap-2 border-b px-4 text-[13px] font-medium transition-colors hover:bg-[hsl(var(--accent))]"
-          style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--card-foreground))' }}
+          className="mx-3 mb-1 flex h-9 shrink-0 items-center gap-2 rounded-md px-2 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[hsl(var(--ink))] transition-colors hover:bg-[hsl(var(--ink)/0.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
         >
           <ArrowLeft size={13} className="shrink-0" />
-          <MenuIcon icon={scopedRoot.icon} fallback={getMenuType(scopedRoot.menu_type)?.icon ?? HelpCircle} size={14} />
+          <MenuIcon icon={scopedRoot.icon} fallback={getMenuType(scopedRoot.menu_type)?.icon ?? HelpCircle} size={13} />
           <span className="truncate">{scopedRoot.name}</span>
         </RuntimeLink>
       )}
-      <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 pb-3">
         {navTree.map((node) => (
           <NavItem key={node.id} node={node} clientId={clientId} appId={appId} activeMenuId={activeMenuId} onNavigate={onNavigate} depth={0} />
         ))}
         {navTree.length === 0 && (
           <div className="flex flex-col items-center gap-1 px-2 py-8 text-center">
-            <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Nothing to show yet.</p>
+            <p className="text-xs text-[hsl(var(--muted-foreground))]">{t('runtime.sidebar.empty')}</p>
           </div>
         )}
       </nav>
@@ -105,11 +107,15 @@ function NavItem({ node, clientId, appId, activeMenuId, onNavigate, depth }: {
           onClick={onNavigate}
           aria-current={isActive ? 'page' : undefined}
           className={cn(
-            'flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]',
+            'relative flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-[13.5px] transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]',
             !hasChildren && 'ml-5',
-            !isActive && 'hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))]',
+            depth === 0 && hasChildren && 'font-semibold',
+            isActive
+              // A bar in the margin and the entry printed in the spot
+              // colour: the active page reads without flooding the row.
+              ? 'bg-[hsl(var(--ink)/0.08)] font-semibold text-[hsl(var(--ink))] before:absolute before:inset-y-1.5 before:-left-3 before:w-[3px] before:rounded-r-full before:bg-[hsl(var(--ink))]'
+              : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--ink)/0.05)]',
           )}
-          style={isActive ? { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' } : { color: 'hsl(var(--card-foreground))' }}
         >
           <MenuIcon icon={node.icon} fallback={entry?.icon ?? HelpCircle} size={14} />
           <span className="truncate">{node.name}</span>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { pickForeground, deriveMutedForeground, deriveOverlay } from './color-utils'
+import { pickForeground, deriveMutedForeground, deriveOverlay, ensureContrast } from './color-utils'
 
 // WCAG relative luminance / contrast ratio, computed independently of
 // color-utils' own (identical, but that's the point) implementation — a
@@ -84,5 +84,76 @@ describe('deriveOverlay', () => {
     // hand-picked :root (white/10%) vs .light (black/10%) precedent.
     expect(lightBorder.startsWith('222.2 84% 4.9%')).toBe(true)
     expect(darkBorder.startsWith('210 40% 98%')).toBe(true)
+  })
+})
+
+// Channels (0-1) of an HSL triplet, for blending two colours the way a
+// translucent tint over a background renders.
+function rgbOf(hslTriplet: string): [number, number, number] {
+  const match = hslTriplet.trim().match(/^(-?[\d.]+)\s+(-?[\d.]+)%\s+(-?[\d.]+)%$/)!
+  const [h, s, l] = [Number(match[1]), Number(match[2]) / 100, Number(match[3]) / 100]
+  const k = (n: number) => (n + h / 30) % 12
+  const a = s * Math.min(l, 1 - l)
+  const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)))
+  return [f(0), f(8), f(4)]
+}
+
+function luminanceOfRgb([r, g, b]: [number, number, number]): number {
+  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+}
+
+// Contrast of a colour against its own tint (alpha over bg), as a status
+// badge draws it: text in the colour on a 15% wash of the same colour.
+function contrastOnOwnTint(color: string, bg: string, alpha: number): number {
+  const c = rgbOf(color)
+  const b = rgbOf(bg)
+  const tint = c.map((v, i) => v * alpha + b[i] * (1 - alpha)) as [number, number, number]
+  const [l1, l2] = [luminanceOfRgb(c), luminanceOfRgb(tint)]
+  const [hi, lo] = l1 > l2 ? [l1, l2] : [l2, l1]
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+describe('ensureContrast', () => {
+  // Tenant primaries chosen to break a naive "use the primary as text"
+  // rule: too pale, too close to white, too close to black, and a
+  // saturated red whose perceived luminance the L channel misreports.
+  const HOSTILE_PRIMARIES = {
+    paleYellow: '54 96% 72%',
+    nearWhite: '60 20% 96%',
+    nearBlack: '220 30% 6%',
+    saturatedRed: '0 100% 50%',
+    runtimeDefault: '172 70% 25%',
+  }
+  const MODES = {
+    light: { background: '160 8% 95.5%', surface: '150 12% 99.5%' },
+    dark: { background: '170 10% 7%', surface: '168 8% 10.5%' },
+  }
+
+  for (const [mode, { background, surface }] of Object.entries(MODES)) {
+    const foreground = pickForeground(background)
+    for (const [name, primary] of Object.entries(HOSTILE_PRIMARIES)) {
+      it(`clears the target on both surfaces for ${name} in ${mode} mode`, () => {
+        const ink = ensureContrast(primary, [background, surface], foreground, 4.8)
+        expect(contrast(ink, background)).toBeGreaterThanOrEqual(4.8)
+        expect(contrast(ink, surface)).toBeGreaterThanOrEqual(4.8)
+      })
+    }
+  }
+
+  it('returns the colour unchanged when it already clears the target', () => {
+    expect(ensureContrast('172 70% 25%', ['150 12% 99.5%'], '222.2 84% 4.9%', 4.5)).toBe('172 70% 25%')
+  })
+
+  it('also clears the target on its own tint when asked, as a status badge draws it', () => {
+    const bg = '160 8% 95.5%'
+    // A green that passes on the plain background but not on its own 15% wash.
+    const green = ensureContrast('154 70% 26%', [bg], pickForeground(bg), 4.5, { tintAlpha: 0.15 })
+    expect(contrast(green, bg)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastOnOwnTint(green, bg, 0.15)).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('falls back to the target colour for malformed input', () => {
+    expect(ensureContrast('not a colour', ['0 0% 100%'], '222.2 84% 4.9%', 4.5)).toBe('222.2 84% 4.9%')
   })
 })

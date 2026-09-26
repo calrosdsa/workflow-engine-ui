@@ -1,35 +1,37 @@
 import type { ThemeConfig } from './types'
 
 // The starting theme a brand-new app's runtime gets before its owner ever
-// opens the Theme tab — deliberately its OWN identity, separate from the
-// builder shell's dark/teal RAGFlow palette (index.css's :root, a different
-// system entirely; see design.md's Theme section). Updated 2026-08-31 off a
-// flat, unmodified shadcn/ui "New York" starter blue (the exact values every
-// un-customized shadcn project ships with — hue 221 primary, hue-210 cool-
-// slate neutrals, pure #fff/near-black surfaces) to a modern indigo-violet
-// identity a real tenant app can credibly ship as-is. See design.md's
-// "Runtime default theme" section for the palette's reasoning.
+// opens the Theme tab: deliberately its OWN identity, never the builder
+// shell's own palette (a customer's CRM should not look like App Builder's
+// own chrome). Replaced 2026-09-26 (DESIGN.md § Runtime default theme,
+// "Printed form"): the runtime reads like a printed business form, captions
+// and rules in one spot colour, values in ink. The default spot colour is a
+// deep ledger green; the neutrals are near-grey on purpose, because
+// mergeTheme merges colour by colour and an app that saved only its own
+// primary still gets these neutrals beside its brand colour.
 export const DEFAULT_THEME: ThemeConfig = {
   colors: {
-    primary: '243 82% 61%',
-    secondary: '240 25% 96%',
-    accent: '240 25% 96%',
-    background: '240 25% 99%',
-    surface: '240 25% 99%',
+    primary: '172 70% 25%',
+    secondary: '160 8% 92.5%',
+    accent: '160 8% 92.5%',
+    // The desk; forms and cards (surface) sit on it as sheets of paper.
+    background: '160 8% 95.5%',
+    surface: '150 12% 99.5%',
   },
   darkColors: {
-    primary: '239 91% 74%',
-    secondary: '240 20% 18%',
-    accent: '240 20% 18%',
-    background: '240 22% 7%',
-    // Lighter than --background per Hallmark's dark-mode elevation recipe
-    // (higher surfaces read lighter, not darker) — cards/popovers now sit
-    // visibly above the page instead of the prior defaults' flat, identical
-    // background/surface pairing.
-    surface: '240 18% 11%',
+    // Sage, not a neon green on black.
+    primary: '162 38% 62%',
+    secondary: '165 8% 16%',
+    accent: '165 8% 16%',
+    background: '170 10% 7%',
+    // Lighter than the page so a sheet reads as raised in dark mode too.
+    surface: '168 8% 10.5%',
   },
   typography: {
-    fontFamily: 'system-ui, sans-serif',
+    // Atkinson Hyperlegible Next: designed for character distinction
+    // (I/l/1, O/0), which is most of what a records app asks of its type:
+    // ids, emails, codes and amounts. Self-hosted by runtime-main.tsx.
+    fontFamily: "'Atkinson Hyperlegible Next Variable', system-ui, sans-serif",
     baseSize: '16px',
   },
   radius: '0.5rem',

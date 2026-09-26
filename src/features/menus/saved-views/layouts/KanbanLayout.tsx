@@ -34,6 +34,7 @@ import { SortableContext, horizontalListSortingStrategy, verticalListSortingStra
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Loader2 } from 'lucide-react'
 import { useQueryClient, type InfiniteData } from '@tanstack/react-query'
+import { cn } from '@/lib/utils'
 import { resolveRecordTitle } from '@/features/forms/runtime/record-title'
 import { useTranslation } from '@/features/i18n/I18nProvider'
 import { formatFieldValue, formatSystemDatetime } from '@/features/forms/runtime/format-value'
@@ -410,12 +411,13 @@ function KanbanColumn({ formId, groupFieldName, columnKey, label, filter, sort, 
   return (
     <div
       ref={setNodeRef}
-      className="flex w-72 shrink-0 flex-col gap-2 rounded-lg border p-2 transition-colors"
-      style={{
-        borderColor: isOver ? 'hsl(var(--primary))' : 'hsl(var(--border))',
-        backgroundColor: isOver ? 'hsl(var(--accent))' : 'hsl(var(--muted))',
-        ...style,
-      }}
+      data-slot="kanban-column"
+      data-over={isOver ? 'true' : undefined}
+      className={cn(
+        'flex w-72 shrink-0 flex-col gap-2 rounded-lg border p-2 transition-colors',
+        isOver ? 'border-[hsl(var(--primary))] bg-[hsl(var(--accent))]' : 'border-[hsl(var(--border))] bg-[hsl(var(--muted))]',
+      )}
+      style={style}
     >
       <div className="flex items-center justify-between gap-1 px-1">
         <div className="flex min-w-0 items-center gap-1">
@@ -429,9 +431,9 @@ function KanbanColumn({ formId, groupFieldName, columnKey, label, filter, sort, 
               <GripVertical size={12} />
             </span>
           )}
-          <span className="truncate text-xs font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{label}</span>
+          <span data-slot="kanban-column-title" className="truncate text-xs font-semibold text-[hsl(var(--foreground))]">{label}</span>
         </div>
-        <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px]" style={{ color: 'hsl(var(--muted-foreground))', backgroundColor: 'hsl(var(--background))' }}>{total}</span>
+        <span data-slot="kanban-count" className="shrink-0 rounded-full bg-[hsl(var(--background))] px-1.5 py-0.5 text-[10px] text-[hsl(var(--muted-foreground))]">{total}</span>
       </div>
       <div ref={listRef} className="flex max-h-[70vh] flex-col gap-1.5 overflow-y-auto">
         <SortableContext items={records.map((r) => r.id as string)} strategy={verticalListSortingStrategy}>
@@ -528,24 +530,23 @@ function KanbanCard({ record, fields, bodyFields, roleField, enumLabels, onClick
       ref={dragRef}
       type="button"
       onClick={onClick}
-      className="flex w-full cursor-grab flex-col gap-1.5 rounded-md border p-2 text-left text-xs transition-colors hover:bg-[hsl(var(--accent))] active:cursor-grabbing"
+      data-slot="kanban-card"
+      className="flex w-full cursor-grab flex-col gap-1.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-2 text-left text-xs transition-colors hover:bg-[hsl(var(--accent))] active:cursor-grabbing"
       style={{
         ...dragStyle,
-        borderColor: 'hsl(var(--border))',
-        backgroundColor: 'hsl(var(--card))',
         boxShadow: overlay ? '0 8px 24px -8px rgb(0 0 0 / 0.35)' : undefined,
         cursor: overlay ? 'grabbing' : undefined,
       }}
       {...dragAttributes}
       {...dragListeners}
     >
-      <span className="truncate font-medium" style={{ color: 'hsl(var(--foreground))' }}>{title}</span>
+      <span data-slot="kanban-card-title" className="truncate font-medium text-[hsl(var(--foreground))]">{title}</span>
       {bodyFields.length > 0 && (
-        <div className="flex flex-col gap-1 border-t pt-1.5" style={{ borderColor: 'hsl(var(--border))' }}>
+        <div data-slot="kanban-card-fields" className="flex flex-col gap-1 border-t border-[hsl(var(--border))] pt-1.5">
           {bodyFields.map((f) => (
             <div key={f.name} className="flex items-center justify-between gap-2 text-[11px]">
-              <span className="shrink-0" style={{ color: 'hsl(var(--muted-foreground))' }}>{f.label}</span>
-              <span className="truncate text-right" style={{ color: 'hsl(var(--foreground))' }}>
+              <span data-slot="kanban-card-label" className="shrink-0 text-[hsl(var(--muted-foreground))]">{f.label}</span>
+              <span data-slot="kanban-card-value" data-type={f.type} className="truncate text-right text-[hsl(var(--foreground))]">
                 {f.name === 'created_at' || f.name === 'updated_at'
                   ? formatSystemDatetime(record[f.name])
                   : f.name === roleField

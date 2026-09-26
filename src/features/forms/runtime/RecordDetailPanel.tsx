@@ -164,7 +164,7 @@ export function DetailsTab({
            *  own section row does: a 2/3/4-column layout has no room to sit
            *  side by side on a phone, and a bare flex row squeezed every column
            *  into a sliver rather than wrapping. */}
-          <div className="flex flex-col gap-4 md:flex-row">
+          <div data-slot="form-columns" className="flex flex-col gap-4 md:flex-row">
             {section.columns.map((column) => {
               const ratios = COLUMN_LAYOUTS[section.layout]?.ratios ?? [1]
               const idx = section.columns.indexOf(column)
@@ -193,10 +193,10 @@ export function DetailsTab({
                 .map((el) => ({ el, effects: resolveAdvancedSettings(el.advancedSettings, viewer, record) }))
                 .filter(({ effects }) => !effects.hidden)
               return (
-                <div key={column.id} className="space-y-3" style={{ flex: ratios[idx] ?? 1 }}>
+                <div key={column.id} data-slot="form-column" className="space-y-3" style={{ flex: ratios[idx] ?? 1 }}>
                   {visibleElements.map(({ el, effects }) => (
-                    <div key={el.id} className="text-sm">
-                      <div className="mb-1 text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                    <div key={el.id} data-slot="form-field" data-component={el.component} data-mode="read" className="text-sm">
+                      <div data-slot="form-field-label" className="mb-1 text-xs font-medium text-[hsl(var(--muted-foreground))]">
                         {el.label}
                       </div>
                       <InlineFieldEditor

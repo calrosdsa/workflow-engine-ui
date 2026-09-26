@@ -73,6 +73,9 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId, fromM
   const { data: form } = useFormDef(formId)
   const createRecord = useCreateRecord(formId)
   const { t, tc } = useI18n()
+  const newTitle = form?.name
+    ? t('runtime.form_create.title', { name: localizeFormName(form.id, form.name, tc) })
+    : t('runtime.form_create.fallback_title')
 
   // The form's own after-submit steps. Undefined-tolerant on both counts: the
   // definition may still be loading, and most forms configure none at all.
@@ -159,10 +162,10 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId, fromM
         )}
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <header className="flex h-12 shrink-0 items-center gap-3 border-b px-4 md:hidden" style={{ borderColor: 'hsl(var(--border))' }}>
+          <header className="flex h-12 shrink-0 items-center gap-3 border-b border-[hsl(var(--ink)/0.12)] px-4 md:hidden">
             <button
               onClick={() => setMobileNavOpen((o) => !o)}
-              aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+              aria-label={mobileNavOpen ? t('common.close_navigation') : t('common.open_navigation')}
               aria-expanded={mobileNavOpen}
               className="-ml-1.5 rounded-md p-1.5 transition-colors hover:bg-[hsl(var(--accent))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
             >
@@ -171,9 +174,9 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId, fromM
             <span className="truncate text-sm font-semibold">{snapshot.app.name}</span>
           </header>
 
-          <div className="flex items-center justify-between gap-3 border-b px-4 py-2" style={{ borderColor: 'hsl(var(--border))' }}>
-            <span className="truncate text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
-              {form?.name ? `New ${localizeFormName(form.id, form.name, tc)}` : 'New Record'}
+          <div className="flex items-center justify-between gap-3 border-b border-[hsl(var(--ink)/0.12)] px-4 py-2">
+            <span className="truncate text-xs font-medium text-[hsl(var(--muted-foreground))]">
+              {newTitle}
             </span>
             <div className="flex shrink-0 items-center gap-2">
               {session && (
@@ -187,7 +190,7 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId, fromM
                 className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
                 style={{ color: 'hsl(var(--muted-foreground))' }}
               >
-                <ArrowLeft size={12} />Back
+                <ArrowLeft size={12} />{t('runtime.record.back')}
               </button>
             </div>
           </div>
@@ -197,6 +200,7 @@ export function RuntimeFormCreatePage({ snapshot, clientId, appId, formId, fromM
               <PermissionDeniedPage />
             ) : !form ? null : (
               <div className="mx-auto max-w-xl space-y-4 p-6">
+                <h1 data-slot="page-title" className="text-lg font-semibold text-[hsl(var(--foreground))]">{newTitle}</h1>
                 {result === 'error' && (
                   <div className="flex items-center gap-2 rounded-md border border-[hsl(var(--destructive))]/30 bg-[hsl(var(--destructive))]/10 p-3 text-sm text-[hsl(var(--destructive))]">
                     <AlertCircle size={16} />

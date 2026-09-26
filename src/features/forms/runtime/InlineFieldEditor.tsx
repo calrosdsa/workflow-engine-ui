@@ -112,6 +112,7 @@ export function InlineFieldEditor({ el, record, formId, recordId, advancedReadOn
         disabled={locked}
         title={locked ? t('inline_field_editor.finish_editing_other_field') : undefined}
         onClick={() => { setValue(record[el.key]); setError(null); onStartEdit() }}
+        data-slot="form-field-value"
         className="group/field flex w-full items-start gap-1.5 rounded px-1 py-0.5 -mx-1 -my-0.5 text-left transition-colors hover:bg-[hsl(var(--accent))] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
       >
         <span className="min-w-0 flex-1">
@@ -150,7 +151,7 @@ export function InlineFieldEditor({ el, record, formId, recordId, advancedReadOn
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div data-slot="form-field-editor" className="flex flex-col gap-1">
       <div className="flex items-start gap-1.5">
         <div className="min-w-0 flex-1">
           <FieldInput
