@@ -31,6 +31,9 @@ export interface Agent {
   model_id: string
   skills: Skill[]
   tools: ToolBinding[]
+  // Optional until the API distinguishes an unconfigured list from an
+  // explicitly empty allowlist.
+  tools_configured?: boolean
   // The knowledge bases this Agent can search; [] when none.
   knowledge_base_ids: string[]
   episodic_memory_enabled: boolean

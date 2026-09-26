@@ -583,6 +583,8 @@ export interface ToolParameter {
 // section (FR-C8-004).
 export interface ExposedTool {
   definition_id: string
+  binding_id: string
+  tool_name_normalized: string
   workflow_name: string
   tool_name: string
   description: string

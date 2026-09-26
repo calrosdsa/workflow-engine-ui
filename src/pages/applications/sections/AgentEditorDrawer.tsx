@@ -58,6 +58,10 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
   const trimmedTTLInput = sessionTTLDaysInput.trim()
   const ttlIsValid = trimmedTTLInput === '' || (/^\d+$/.test(trimmedTTLInput) && Number(trimmedTTLInput) > 0)
   const episodicMemoryChanged = episodicMemoryEnabled !== Boolean(agent.episodic_memory_enabled)
+  const toolsChanged = !sameToolBindings(tools, agent.tools ?? [])
+  // What the next save leaves stored: any binding makes an allowlist, and a
+  // changed list that is now empty is saved as an explicitly empty one.
+  const toolsConfigured = tools.length > 0 || toolsChanged || agent.tools_configured === true
   const canSave = name.trim() !== '' && ttlIsValid
 
   const handleSave = async () => {
@@ -68,7 +72,7 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
         instructions,
         model_id: modelId,
         skills,
-        tools,
+        ...(toolsChanged ? { tools } : {}),
         enabled,
         session_ttl_days: trimmedTTLInput === '' ? null : Number(trimmedTTLInput),
         knowledge_base_ids: knowledgeBasesChanged ? knowledgeBaseIds : undefined,
@@ -195,7 +199,14 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
           </div>
 
           <div className="border-t border-[hsl(var(--border))] pt-4">
-            <SkillsSubsection agentId={agent.id} skills={skills} onChange={setSkills} canWrite={canWrite} />
+            <SkillsSubsection
+              agentId={agent.id}
+              skills={skills}
+              bindings={tools}
+              toolsConfigured={toolsConfigured}
+              onChange={setSkills}
+              canWrite={canWrite}
+            />
           </div>
         </div>
 
@@ -211,4 +222,17 @@ export function AgentEditorDrawer({ agent, canWrite, onClose }: AgentEditorDrawe
       </DrawerContent>
     </Drawer>
   )
+}
+
+function sameToolBindings(left: ToolBinding[], right: ToolBinding[]): boolean {
+  if (left.length !== right.length) return false
+  const key = (binding: ToolBinding) => JSON.stringify([
+    binding.id,
+    binding.name,
+    binding.enabled,
+    binding.policy,
+  ])
+  const leftKeys = left.map(key).sort()
+  const rightKeys = right.map(key).sort()
+  return leftKeys.every((value, index) => value === rightKeys[index])
 }

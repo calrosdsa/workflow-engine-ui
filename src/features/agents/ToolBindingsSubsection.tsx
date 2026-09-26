@@ -1,8 +1,7 @@
-import { useMemo } from 'react'
-import { ShieldCheck, Workflow } from 'lucide-react'
+import { AlertTriangle, ShieldCheck, Trash2, Workflow } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { SelectMenu, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select-menu'
-import { useMCPServers } from '@/features/agent-mcp/hooks'
-import { useExposedTools } from '@/features/workflows/hooks'
+import { useAgentToolCatalog } from './tool-catalog'
 import type { ToolBinding, ToolPolicy } from './types'
 import { useTranslation } from '@/features/i18n/I18nProvider'
 
@@ -13,52 +12,25 @@ interface ToolBindingsSubsectionProps {
   canWrite: boolean
 }
 
-type AvailableTool = {
-  id: string
-  name: string
-  description: string
-  source: 'MCP' | 'Workflow'
-}
-
-function workflowToolName(name: string): string {
-  const sanitized = name.trim().replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^[_-]+|[_-]+$/g, '')
-  return sanitized || 'tool'
-}
-
 export function ToolBindingsSubsection({ agentId, bindings, onChange, canWrite }: ToolBindingsSubsectionProps) {
   const t = useTranslation()
-  const { data: servers, isLoading: mcpLoading } = useMCPServers(agentId)
-  const { data: workflows, isLoading: workflowLoading } = useExposedTools()
-
-  const available = useMemo<AvailableTool[]>(() => {
-    const mcp = (servers ?? []).flatMap((server) =>
-      server.tools.filter((tool) => tool.enabled).map((tool) => ({
-        id: `mcp:${server.id}:${tool.name}`,
-        name: tool.name,
-        description: `${tool.description || 'MCP tool'} · ${server.name}`,
-        source: 'MCP' as const,
-      })),
-    )
-    const workflow = (workflows ?? []).map((tool) => ({
-      id: `workflow:${tool.definition_id}:${workflowToolName(tool.tool_name)}`,
-      name: workflowToolName(tool.tool_name),
-      description: `${tool.description || 'Workflow tool'} · ${tool.workflow_name}`,
-      source: 'Workflow' as const,
-    }))
-    return [...mcp, ...workflow]
-  }, [servers, workflows])
-
+  const catalog = useAgentToolCatalog(agentId)
   const bindingByID = new Map(bindings.map((binding) => [binding.id, binding]))
-  const isLoading = mcpLoading || workflowLoading
+  const availableIds = new Set(catalog.tools.map((tool) => tool.bindingId))
+  const staleBindings = catalog.ready ? bindings.filter((binding) => !availableIds.has(binding.id)) : []
 
-  const setPolicy = (tool: AvailableTool, value: string) => {
+  const setPolicy = (tool: typeof catalog.tools[number], value: string) => {
     if (value === '__unbound__') {
-      onChange(bindings.filter((binding) => binding.id !== tool.id))
+      onChange(bindings.filter((binding) => binding.id !== tool.bindingId))
       return
     }
     const policy = value as ToolPolicy
-    const next = bindings.filter((binding) => binding.id !== tool.id)
-    onChange([...next, { id: tool.id, name: tool.name, enabled: true, policy }])
+    const next = bindings.filter((binding) => binding.id !== tool.bindingId)
+    onChange([...next, { id: tool.bindingId, name: tool.modelFacingName, enabled: true, policy }])
+  }
+
+  const removeStaleBinding = (bindingId: string) => {
+    onChange(bindings.filter((binding) => binding.id !== bindingId))
   }
 
   return (
@@ -70,24 +42,29 @@ export function ToolBindingsSubsection({ agentId, bindings, onChange, canWrite }
         </p>
       </div>
 
-      {isLoading ? (
+      {catalog.error ? (
+        <p className="text-xs text-[hsl(var(--destructive))]">{t('agents.tools_load_error')}</p>
+      ) : catalog.loading ? (
         <p className="text-xs text-[hsl(var(--muted-foreground))]">{t('agents.loading_tools')}</p>
-      ) : available.length === 0 ? (
+      ) : catalog.tools.length === 0 && staleBindings.length === 0 ? (
         <p className="rounded-lg border border-dashed border-[hsl(var(--border))] p-4 text-center text-xs text-[hsl(var(--muted-foreground))]">
           {t('agents.enable_tool_first')}
         </p>
       ) : (
         <div className="space-y-2">
-          {available.map((tool) => {
-            const binding = bindingByID.get(tool.id)
+          {catalog.tools.map((tool) => {
+            const binding = bindingByID.get(tool.bindingId)
+            const sourceLabel = t(tool.source === 'MCP' ? 'agents.tool_source_mcp' : 'agents.tool_source_workflow')
             return (
-              <div key={tool.id} className="flex items-center gap-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3">
+              <div key={tool.bindingId} className="flex items-center gap-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]">
                   {tool.source === 'MCP' ? <ShieldCheck size={14} /> : <Workflow size={14} />}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-mono text-xs text-[hsl(var(--foreground))]">{tool.name}</p>
-                  <p className="truncate text-[11px] text-[hsl(var(--muted-foreground))]">{tool.description}</p>
+                  <p className="truncate font-mono text-xs text-[hsl(var(--foreground))]">{tool.modelFacingName}</p>
+                  <p className="truncate text-[11px] text-[hsl(var(--muted-foreground))]">
+                    {[sourceLabel, tool.origin, tool.description].filter(Boolean).join(' · ')}
+                  </p>
                 </div>
                 <SelectMenu
                   value={binding?.policy ?? '__unbound__'}
@@ -102,6 +79,31 @@ export function ToolBindingsSubsection({ agentId, bindings, onChange, canWrite }
                     ))}
                   </SelectContent>
                 </SelectMenu>
+              </div>
+            )
+          })}
+          {staleBindings.map((binding, index) => {
+            const name = binding.name || binding.id
+            return (
+              <div key={`${binding.id}-${index}`} className="flex items-center gap-3 rounded-lg border border-[hsl(var(--destructive))] bg-[hsl(var(--destructive))]/5 p-3">
+                <AlertTriangle size={16} aria-hidden="true" className="shrink-0 text-[hsl(var(--destructive))]" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-mono text-xs text-[hsl(var(--foreground))]">{name}</p>
+                  <p className="text-[11px] text-[hsl(var(--destructive))]">
+                    {t('agents.stale_tool_binding', { name })}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  disabled={!canWrite}
+                  onClick={() => removeStaleBinding(binding.id)}
+                  aria-label={t('agents.remove_stale_tool_binding', { name })}
+                  title={t('agents.remove_stale_tool_binding', { name })}
+                >
+                  <Trash2 size={14} />
+                </Button>
               </div>
             )
           })}
