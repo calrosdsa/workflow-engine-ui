@@ -17,8 +17,8 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
 import { iconFor } from '@/features/workflows/builder/icon-hints'
-import { NODE_REGISTRY, defaultLabel, leverFor } from '@/features/workflows/builder/node-registry'
-import type { NodeType } from '@/features/workflows/types'
+import { defaultLabel } from '@/features/workflows/builder/node-registry'
+import { useLeverOf } from '@/features/workflows/builder/lever'
 import { detectPayloadShape } from './payload-shape'
 import { useExecutionLogs } from './hooks'
 import { formatDuration } from './duration'
@@ -228,9 +228,9 @@ function stepPayloads(log: ExecutionNodeLog): { input: unknown; output: unknown 
 // loop_chunk has no node type of its own (it's a synthesized
 // chunk-of-the-iterator summary row, not a distinct graph node), so it keeps
 // its own Repeat icon in the iterator's accent.
-function stepIcon(log: ExecutionNodeLog) {
-  if (log.kind === 'loop_chunk') return { Icon: Repeat, lever: leverFor('iterator', NODE_REGISTRY.iterator.category) }
-  return { Icon: iconFor(log.node_type), lever: leverFor(log.node_type, NODE_REGISTRY[log.node_type as NodeType]?.category) }
+function stepIcon(log: ExecutionNodeLog, leverOf: (type: string) => string) {
+  if (log.kind === 'loop_chunk') return { Icon: Repeat, lever: leverOf('iterator') }
+  return { Icon: iconFor(log.node_type), lever: leverOf(log.node_type) }
 }
 
 function StepStatusIcon({ status }: { status: ExecutionLogStatus }) {
@@ -250,7 +250,7 @@ function StepStatusIcon({ status }: { status: ExecutionLogStatus }) {
 }
 
 function LogRow({ log, label, selected, onClick }: { log: ExecutionNodeLog; label: string; selected: boolean; onClick: () => void }) {
-  const { Icon, lever } = stepIcon(log)
+  const { Icon, lever } = stepIcon(log, useLeverOf())
   return (
     <button
       type="button"
@@ -309,7 +309,7 @@ function LogDetail({ log, label, view, onViewChange, display, onDisplayChange, r
   reserveHeaderEnd: boolean
 }) {
   const t = useTranslation()
-  const { Icon, lever } = stepIcon(log)
+  const { Icon, lever } = stepIcon(log, useLeverOf())
   const { input, output } = stepPayloads(log)
 
   return (

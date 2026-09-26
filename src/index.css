@@ -268,7 +268,7 @@
     --muted-foreground: 155 9% 67%;
     --accent: 45 40% 92% / 6%;
     --accent-foreground: 45 38% 92%;
-    --destructive: 5 76% 62%;             /* red lamp */
+    --destructive: 5 78% 68%;             /* red lamp */
     --destructive-foreground: 163 20% 10%;
     --success: 146 52% 52%;               /* green lamp */
     --success-foreground: 163 20% 10%;
@@ -300,11 +300,11 @@
     --muted-foreground: 160 8% 34%;
     --accent: 165 20% 15% / 6%;
     --accent-foreground: 165 20% 12%;
-    --destructive: 5 70% 42%;             /* every lamp colour holds 4.5:1 as text on a plate */
+    --destructive: 5 72% 40%;             /* every lamp colour holds 4.5:1 as text on enamel, plate and header */
     --destructive-foreground: 45 40% 96%;
-    --success: 146 62% 27%;
+    --success: 146 62% 25%;
     --success-foreground: 45 40% 96%;
-    --warning: 36 95% 29%;
+    --warning: 36 95% 27%;
     --warning-foreground: 45 40% 96%;
     --border: 165 20% 15% / 16%;
     --input: 165 20% 15% / 16%;

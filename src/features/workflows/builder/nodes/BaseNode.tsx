@@ -115,7 +115,12 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
     ?? builtInReg?.category
     ?? fallbackCategory(data.type as keyof typeof NODE_REGISTRY)
   const usesDefaultLabel = data.label.trim().toLocaleLowerCase() === headerLabel.trim().toLocaleLowerCase()
-  const nodeMeta = usesDefaultLabel ? nodeCategoryLabel(nodeCategory, t) : headerLabel
+  const lever = leverFor(data.type, nodeCategory)
+  // The trigger has no palette category of its own (it would read "Logic"),
+  // and carries its own lever, so its plate says what it does instead.
+  const nodeMeta = !usesDefaultLabel ? headerLabel
+    : lever === 'trigger' ? t('workflows.node.meta.trigger')
+    : nodeCategoryLabel(nodeCategory, t)
   const hasInputs  = data.inputs?.length  > 0
   const hasOutputs = data.outputs?.length > 0
 
@@ -290,7 +295,7 @@ export function BaseNode({ id, data, selected }: NodeProps<FlowNode>) {
     <ContextMenuTrigger asChild>
     <div
       data-node-category={nodeCategory}
-      data-lever={leverFor(data.type, nodeCategory)}
+      data-lever={lever}
       data-selected={selected ? 'true' : 'false'}
       data-execution-state={nodeStatus?.toLowerCase()}
       className={cn(

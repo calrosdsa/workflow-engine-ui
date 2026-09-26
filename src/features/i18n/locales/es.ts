@@ -1803,6 +1803,7 @@ export const es = {
   'workflows.node.body.filter_count': '{{count}} filtros',
   'workflows.node.body.filter_count_one': '{{count}} filtro',
   'workflows.node.body.top': 'máximo {{count}}',
+  'workflows.node.meta.trigger': 'Inicia cada ejecución',
   'workflows.canvas.undo': 'Deshacer (Ctrl+Z)',
   'workflows.canvas.redo': 'Rehacer (Ctrl+Shift+Z)',
   'workflows.canvas.command_bar': 'Barra de comandos (Ctrl+K)',

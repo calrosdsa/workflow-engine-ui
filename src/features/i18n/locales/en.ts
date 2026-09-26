@@ -1105,6 +1105,7 @@ export const en = {
   'workflows.onboarding.on_app_event.description': 'Run when something happens in an app, like WhatsApp or Slack.',
   'workflows.onboarding.close': 'Close',
   'workflows.canvas.first_step_hint': 'Click + in the toolbar to add your first step',
+  'workflows.node.meta.trigger': 'Starts every run',
   'workflows.canvas.undo': 'Undo (Ctrl+Z)',
   'workflows.canvas.redo': 'Redo (Ctrl+Shift+Z)',
   'workflows.canvas.command_bar': 'Command bar (Ctrl+K)',

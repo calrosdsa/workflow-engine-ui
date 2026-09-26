@@ -31,7 +31,8 @@ import {
   NODE_WIDTH,
   NODE_HEIGHT,
 } from "@/features/workflows/builder/store";
-import { NODE_REGISTRY, leverFor } from "@/features/workflows/builder/node-registry";
+import { NODE_REGISTRY } from "@/features/workflows/builder/node-registry";
+import { useLeverOf } from "@/features/workflows/builder/lever";
 import { useNodeTaxonomy } from "@/features/workflows/builder/node-taxonomy";
 import type { NodeType } from "@/features/workflows/types";
 import { NodePickerModal } from "@/features/workflows/builder/NodePickerModal";
@@ -117,6 +118,7 @@ const Flow = () => {
   // call out that a nodeTypes/edgeTypes object recreated every render causes
   // unnecessary internal remounting.
   const { data: taxonomy } = useNodeTaxonomy();
+  const leverOf = useLeverOf();
   const nodeTypes = useMemo(() => {
     const packageTypes = (taxonomy?.nodes ?? []).filter((n) => n.kind === "package");
     if (packageTypes.length === 0) return builtInNodeTypes;
@@ -469,8 +471,7 @@ const Flow = () => {
             className="workflow-builder-minimap"
             maskColor="hsl(var(--background) / 0.7)"
             nodeColor={(n) => {
-              const data = n.data as FlowNode["data"];
-              const lever = leverFor(data.type, NODE_REGISTRY[data.type]?.category);
+              const lever = leverOf((n.data as FlowNode["data"]).type);
               return `hsl(var(--wf-lever-${lever}, var(--wf-lever-structure)))`;
             }}
             nodeStrokeWidth={0}

@@ -2,7 +2,8 @@ import { useMemo } from 'react'
 import { ListTree, X, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBuilderStore } from './store'
-import { NODE_REGISTRY, leverFor } from './node-registry'
+import { NODE_REGISTRY } from './node-registry'
+import { useLeverOf } from './lever'
 import { deriveOutline, type OutlineRow } from './outline'
 import type { NodeType } from '../types'
 import { useTranslation } from '@/features/i18n/I18nProvider'
@@ -102,6 +103,7 @@ export function OutlinePanel({ open, onToggle }: OutlinePanelProps) {
 function OutlineStepRow({ row, selected, onSelect }: { row: OutlineRow; selected: boolean; onSelect: () => void }) {
   const t = useTranslation()
   const entry = NODE_REGISTRY[row.type as NodeType]
+  const leverOf = useLeverOf()
   const Icon = entry?.icon ?? Zap
   return (
     <button
@@ -116,7 +118,7 @@ function OutlineStepRow({ row, selected, onSelect }: { row: OutlineRow; selected
       title={row.label}
     >
       <span
-        data-lever={leverFor(row.type ?? '', entry?.category)}
+        data-lever={leverOf(row.type ?? '')}
         className="wf-lever-tile flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
       >
         <Icon size={11} />

@@ -171,7 +171,12 @@ are `--wf-tile` (panel grid), `--wf-track` / `--wf-track-bed` (edges) and
 | Plate (`--card`) | `163 13% 18%` | `80 20% 97%` |
 | Text (`--foreground`) | ivory `45 38% 92%` | ink `165 20% 12%` |
 | Lit route, selection, primary action (`--primary`) | ivory lamp `45 62% 86%` | ink `165 22% 14%` |
-| Green / amber / red lamps | `146 52% 52%` / `40 90% 58%` / `5 76% 62%` | `146 62% 27%` / `36 95% 29%` / `5 70% 42%` (each ≥ 4.5:1 as text on a plate) |
+| Green / amber / red lamps | `146 52% 52%` / `40 90% 58%` / `5 78% 68%` | `146 62% 25%` / `36 95% 27%` / `5 72% 40%` |
+
+Measured 2026-09-26 against the resolved values: every lamp colour holds at
+least 4.5:1 as text on the enamel, a plate and the header strip in both modes
+(lowest: night red on a plate, 4.63; day amber on the header, 4.71). Muted
+text is at least 4.9:1 everywhere. Re-measure if any of these values move.
 
 **Lamp colours are reserved for run state.** Configuration never borrows
 them: node-body chips (trigger mode, message type, severity, HTTP method,
