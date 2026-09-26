@@ -77,11 +77,13 @@ export function FieldRenderer({ element: el, control, formId, runtimeState, erro
   )
 
   return (
-    <div>
+    // data-slot / data-component / data-invalid: runtime.css styling hooks
+    // (the cell of a ruled form sheet); inert in the builder.
+    <div data-slot="form-field" data-component={el.component} data-invalid={error ? 'true' : undefined} data-readonly={runtimeState.readOnly ? 'true' : undefined}>
       {asGroup ? (
-        <span id={labelId} className="mb-1 block text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>{labelContent}</span>
+        <span id={labelId} data-slot="form-field-label" className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">{labelContent}</span>
       ) : (
-        <label id={labelId} htmlFor={controlId} className="mb-1 block text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
+        <label id={labelId} htmlFor={controlId} data-slot="form-field-label" className="mb-1 block text-xs font-medium text-[hsl(var(--muted-foreground))]">
           {labelContent}
         </label>
       )}
@@ -103,10 +105,10 @@ export function FieldRenderer({ element: el, control, formId, runtimeState, erro
           />
         )}
       />
-      {el.helpText && <p id={helpId} className="mt-1 text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>{el.helpText}</p>}
+      {el.helpText && <p id={helpId} data-slot="form-field-help" className="mt-1 text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>{el.helpText}</p>}
       {/* role="alert" so a validation failure is announced when it appears,
        *  not only when the field is next focused. */}
-      {error && <p id={errorId} role="alert" className="mt-1 text-[11px]" style={{ color: 'hsl(var(--destructive))' }}>{error}</p>}
+      {error && <p id={errorId} role="alert" data-slot="form-field-error" className="mt-1 text-[11px]" style={{ color: 'hsl(var(--destructive))' }}>{error}</p>}
     </div>
   )
 }

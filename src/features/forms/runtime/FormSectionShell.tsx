@@ -25,6 +25,9 @@ import type { ReactNode } from 'react'
  *  likewise reserved for focus rings, active states and CTAs, so there is no
  *  accent rule or coloured bar on a section head. Border-only is the system's
  *  own answer, not a compromise. */
+// data-slot / data-chrome are styling hooks for the published runtime
+// (features/runtime/runtime.css draws sections there as ruled form sheets).
+// The builder never loads that sheet, so they change nothing in it.
 export function FormSectionShell({ id, title, description, chrome, children }: {
   /** Section id — used to tie the heading to the region for screen readers. */
   id: string
@@ -40,14 +43,14 @@ export function FormSectionShell({ id, title, description, chrome, children }: {
 
   if (!chrome) {
     return (
-      <section aria-labelledby={title ? headingId : undefined}>
+      <section aria-labelledby={title ? headingId : undefined} data-slot="form-section" data-chrome="false">
         {title && (
-          <h3 id={headingId} className="mb-3 text-sm font-semibold" style={{ color: 'hsl(var(--foreground))' }}>
+          <h3 id={headingId} data-slot="form-section-title" className="mb-3 text-sm font-semibold text-[hsl(var(--foreground))]">
             {title}
           </h3>
         )}
         {description && (
-          <p className="mb-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{description}</p>
+          <p data-slot="form-section-description" className="mb-3 text-xs text-[hsl(var(--muted-foreground))]">{description}</p>
         )}
         {children}
       </section>
@@ -57,22 +60,23 @@ export function FormSectionShell({ id, title, description, chrome, children }: {
   return (
     <section
       aria-labelledby={title ? headingId : undefined}
-      className="overflow-hidden rounded-lg border"
-      style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--card))' }}
+      data-slot="form-section"
+      data-chrome="true"
+      className="overflow-hidden rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))]"
     >
       {hasHeader && (
-        <header className="border-b px-4 py-3" style={{ borderColor: 'hsl(var(--border))' }}>
+        <header data-slot="form-section-header" className="border-b border-[hsl(var(--border))] px-4 py-3">
           {title && (
-            <h3 id={headingId} className="text-sm font-semibold leading-none tracking-tight" style={{ color: 'hsl(var(--foreground))' }}>
+            <h3 id={headingId} data-slot="form-section-title" className="text-sm font-semibold leading-none tracking-tight text-[hsl(var(--foreground))]">
               {title}
             </h3>
           )}
           {description && (
-            <p className="mt-1.5 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{description}</p>
+            <p data-slot="form-section-description" className="mt-1.5 text-xs text-[hsl(var(--muted-foreground))]">{description}</p>
           )}
         </header>
       )}
-      <div className="p-4">{children}</div>
+      <div data-slot="form-section-body" className="p-4">{children}</div>
     </section>
   )
 }

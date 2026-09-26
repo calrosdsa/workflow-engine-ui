@@ -85,3 +85,187 @@ html[data-rt] body {
 [data-rt] {
   --rt-mono: 'Atkinson Hyperlegible Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+
+/* --- The ruled form sheet --------------------------------------------------
+ * A form section is a sheet; its fields are cells ruled apart in --ink at a
+ * low alpha, and captions print in --ink. Record details and fill forms
+ * share this geometry, so a record reads the same whether you are looking
+ * at it or filling it in. */
+[data-rt] [data-slot='form-section'] {
+  --rt-rule: hsl(var(--ink) / 0.2);
+}
+
+[data-rt] [data-slot='form-section'][data-chrome='true'],
+[data-rt] [data-slot='form-section'][data-chrome='false'] [data-slot='form-columns'] {
+  overflow: hidden;
+  border: 1px solid var(--rt-rule);
+  border-radius: var(--radius);
+  background: hsl(var(--card));
+  box-shadow: 0 1px 2px hsl(var(--foreground) / 0.04);
+}
+
+/* The printed header band of a sheet. */
+[data-rt] [data-slot='form-section-header'] {
+  border-bottom: 1px solid var(--rt-rule);
+  background: hsl(var(--ink) / 0.045);
+  padding: 0.625rem 1rem 0.5625rem;
+}
+
+[data-rt] [data-slot='form-section-title'] {
+  color: hsl(var(--ink));
+  font-size: 0.71875rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+[data-rt] [data-slot='form-section'][data-chrome='false'] > [data-slot='form-section-title'] {
+  margin-bottom: 0.5rem;
+}
+
+[data-rt] [data-slot='form-section-description'] {
+  margin-top: 0.25rem;
+}
+
+[data-rt] [data-slot='form-section-body'] {
+  padding: 0;
+}
+
+/* Columns and cells meet on shared rules instead of floating in gaps. */
+[data-rt] [data-slot='form-columns'] {
+  gap: 0;
+}
+
+[data-rt] [data-slot='form-column'] > * {
+  margin-block: 0;
+}
+
+[data-rt] [data-slot='form-column'] + [data-slot='form-column'] {
+  border-top: 1px solid var(--rt-rule);
+}
+
+@media (min-width: 768px) {
+  [data-rt] [data-slot='form-column'] + [data-slot='form-column'] {
+    border-top: 0;
+    border-left: 1px solid var(--rt-rule);
+  }
+}
+
+[data-rt] [data-slot='form-field'] {
+  position: relative;
+  padding: 0.5625rem 1rem 0.625rem;
+  font-size: 0.90625rem;
+  transition: background-color 150ms ease-out;
+}
+
+[data-rt] [data-slot='form-column'] > [data-slot='form-field'] + [data-slot='form-field'] {
+  border-top: 1px solid var(--rt-rule);
+}
+
+/* The caption: printed in the spot colour, small caps, above the value. */
+[data-rt] [data-slot='form-field-label'] {
+  display: block;
+  margin-bottom: 0.125rem;
+  color: hsl(var(--ink));
+  font-size: 0.65625rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+[data-rt] [data-slot='form-field-help'],
+[data-rt] [data-slot='form-field-error'] {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+}
+
+[data-rt] [data-slot='form-field-error'] {
+  font-weight: 600;
+}
+
+/* Read mode. The value sits on the same 2rem line a filled-in control
+ * occupies, with a transparent rule where the control's rule would be, so
+ * switching a cell to edit changes the rule's colour and nothing moves. */
+[data-rt] [data-slot='form-field-value'] {
+  min-height: 2rem;
+  margin: 0;
+  align-items: center;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  padding: 0.3125rem 0;
+}
+
+[data-rt] [data-slot='form-field-value']:not(:disabled):hover {
+  border-bottom-color: hsl(var(--muted-foreground));
+  background: transparent;
+}
+
+/* Fill mode: the write-on line. Only for controls that are a single line or
+ * box of text; checkboxes, switches, radios, file and line-items grids keep
+ * their own controls inside the ruled cell. The line is --muted-foreground,
+ * which ThemeProvider holds at >= 4.5:1, so the control's boundary clears
+ * WCAG 1.4.11's 3:1 on any tenant surface. */
+[data-rt] :is(
+  [data-component='text'], [data-component='email'], [data-component='url'],
+  [data-component='phone'], [data-component='password'], [data-component='number'],
+  [data-component='autocomplete'], [data-component='select'],
+  [data-component='date'], [data-component='time'], [data-component='datetime']
+)[data-slot='form-field'] :is(input, select, button[aria-haspopup='dialog']),
+[data-rt] :is([data-component='textarea'], [data-component='richtext'])[data-slot='form-field'] textarea {
+  height: 2rem;
+  min-height: 2rem;
+  border: 0;
+  border-bottom: 1px solid hsl(var(--muted-foreground));
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0.3125rem 0;
+  font-size: 0.90625rem;
+}
+
+[data-rt] :is([data-component='textarea'], [data-component='richtext'])[data-slot='form-field'] textarea {
+  height: auto;
+  min-height: 4.5rem;
+}
+
+[data-rt] [data-slot='form-field'] :is(button[aria-haspopup='dialog']) {
+  justify-content: flex-start;
+  font-weight: 400;
+}
+
+/* Focus: the line thickens in the spot colour (a 1px inset on top of the
+ * 1px border, so nothing shifts) and the cell takes a faint wash. */
+[data-rt] [data-slot='form-field'] :is(input, select, textarea, button[aria-haspopup='dialog']):focus-visible {
+  outline: none;
+  border-bottom-color: hsl(var(--ink));
+  box-shadow: inset 0 -1px 0 hsl(var(--ink));
+}
+
+[data-rt] [data-slot='form-field']:focus-within {
+  background: hsl(var(--ink) / 0.05);
+}
+
+[data-rt] [data-slot='form-field'] :is(input, select, textarea)[aria-invalid='true'],
+[data-rt] [data-slot='form-field'][data-invalid='true'] :is(input, select, textarea, button[aria-haspopup='dialog']) {
+  border-bottom-color: hsl(var(--destructive));
+  box-shadow: inset 0 -1px 0 hsl(var(--destructive));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-rt] [data-slot='form-field'] {
+    transition: none;
+  }
+}
+
+/* A value that isn't editable here (a reference, a read-only field) renders
+ * as plain text rather than the edit button; it sits on the same line so
+ * every cell in a sheet keeps one rhythm. */
+[data-rt] [data-slot='form-field'][data-mode='read'] > [data-slot='form-field-label'] + div:not([data-slot]) {
+  display: flex;
+  min-height: 2rem;
+  align-items: center;
+  border-bottom: 1px solid transparent;
+  padding: 0.3125rem 0;
+}
