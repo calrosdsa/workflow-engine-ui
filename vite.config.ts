@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, type Connect, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
@@ -28,7 +28,7 @@ const BUILDER_ROUTE_PREFIXES = [
 // and rewrites any 2-3 segment path that ISN'T a known builder route to
 // serve runtime.html instead. Production hosting needs the equivalent rule
 // at the web-server/CDN layer (route /{clientId}/{appId}/* to runtime.html,
-// everything else to index.html) — this only covers `npm run dev`.
+// everything else to index.html) — this covers `npm run dev` and `vite preview`.
 //
 // 4-5 segments deep, with a literal "forms" third segment, is ALSO a
 // runtime URL: /{clientId}/{appId}/forms/{formId}/{recordId}
@@ -42,28 +42,36 @@ const BUILDER_ROUTE_PREFIXES = [
 // (the BUILDER_ROUTE_PREFIXES check) can't distinguish those from a runtime
 // URL the way this shape-specific check can, since a runtime URL's first
 // segment is a client/app UUID, never one of BUILDER_ROUTE_PREFIXES.
+const serveRuntimeHtml: Connect.NextHandleFunction = (req, _res, next) => {
+  const url = req.url?.split('?')[0] ?? ''
+  const segments = url.split('/').filter(Boolean)
+  const isExcluded =
+    url.startsWith('/api') ||
+    url.startsWith('/@') ||
+    url.startsWith('/node_modules') ||
+    url.includes('.') ||
+    BUILDER_ROUTE_PREFIXES.includes(segments[0])
+  const looksLikeRuntimePath =
+    !isExcluded &&
+    ((segments.length === 2 || segments.length === 3) ||
+      (segments.length === 5 && segments[2] === 'forms'))
+  if (looksLikeRuntimePath) {
+    req.url = '/runtime.html'
+  }
+  next()
+}
+
+// Also on `vite preview`, which the mocked browser suite (e2e/mock) serves
+// the production build with, so a direct load of a runtime URL works there
+// the same way.
 function runtimeDevFallback(): Plugin {
   return {
     name: 'runtime-dev-fallback',
     configureServer(server) {
-      server.middlewares.use((req, _res, next) => {
-        const url = req.url?.split('?')[0] ?? ''
-        const segments = url.split('/').filter(Boolean)
-        const isExcluded =
-          url.startsWith('/api') ||
-          url.startsWith('/@') ||
-          url.startsWith('/node_modules') ||
-          url.includes('.') ||
-          BUILDER_ROUTE_PREFIXES.includes(segments[0])
-        const looksLikeRuntimePath =
-          !isExcluded &&
-          ((segments.length === 2 || segments.length === 3) ||
-            (segments.length === 5 && segments[2] === 'forms'))
-        if (looksLikeRuntimePath) {
-          req.url = '/runtime.html'
-        }
-        next()
-      })
+      server.middlewares.use(serveRuntimeHtml)
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(serveRuntimeHtml)
     },
   }
 }
