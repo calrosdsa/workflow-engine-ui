@@ -213,38 +213,40 @@
     --warning-foreground: 0 0% 100%;
   }
 
-  /* Workflow Builder identity: "Signal box" (DESIGN.md § Workflow Builder
-     identity). The editor reads as a railway interlocking mimic panel: a
-     tinted enamel surface, raised station plates, and lamps whose colours
-     are the run states. Everything below is a scoped exception to the teal
-     shell, declared here because DESIGN.md keeps every raw colour in this
-     file.
+  /* Workflow Builder identity (DESIGN.md § Workflow Builder identity).
+     Palette taken from the product landing page (app-builder-landing/
+     styles.css, OKLCH, converted exactly to HSL triplets): violet-tinted
+     near-black paper, a raised surface, near-white ink, the electric-violet
+     accent and the landing green. Plates, track and lamps keep their roles:
+     violet = route set / selected, green / amber / red = run state.
+     Everything below is a scoped exception to the teal shell, declared here
+     because DESIGN.md keeps every raw colour in this file.
 
      Lever colours: one hue per node category, on the category plate strip
      and icon tile only. They are global (not editor-scoped) because the
      execution logs, node picker and outline outside the canvas show the
-     same categories. None of them sits on a lamp hue (green / amber / red):
-     those are reserved for run state. */
+     same categories. None of them sits on the violet accent or a lamp hue
+     (green / amber / red): those mean selection and run state. */
   :root {
-    --wf-lever-trigger: 45 38% 92%;
-    --wf-lever-structure: 200 8% 62%;
-    --wf-lever-data: 212 62% 66%;
-    --wf-lever-logic: 262 42% 74%;
-    --wf-lever-integration: 186 46% 56%;
-    --wf-lever-ai: 300 32% 72%;
-    --wf-lever-notify: 330 34% 72%;
+    --wf-lever-trigger: 245 69% 98%;
+    --wf-lever-structure: 220 10% 62%;
+    --wf-lever-data: 212 70% 68%;
+    --wf-lever-logic: 40 22% 70%;
+    --wf-lever-integration: 186 50% 56%;
+    --wf-lever-ai: 330 55% 74%;
+    --wf-lever-notify: 200 30% 75%;
     --wf-lever-output: 92 22% 62%;
     --wf-lever-utility: 222 14% 68%;
   }
 
   .light {
-    --wf-lever-trigger: 165 20% 14%;
-    --wf-lever-structure: 200 10% 38%;
+    --wf-lever-trigger: 241 23% 8%;
+    --wf-lever-structure: 220 10% 38%;
     --wf-lever-data: 212 62% 38%;
-    --wf-lever-logic: 262 38% 46%;
+    --wf-lever-logic: 40 30% 34%;
     --wf-lever-integration: 186 64% 28%;
-    --wf-lever-ai: 300 30% 40%;
-    --wf-lever-notify: 330 38% 42%;
+    --wf-lever-ai: 330 45% 40%;
+    --wf-lever-notify: 200 40% 34%;
     --wf-lever-output: 92 30% 30%;
     --wf-lever-utility: 222 16% 40%;
   }
@@ -254,66 +256,69 @@
      the same palette as the canvas. Two selectors, (0,2,0) each, so night
      beats :root and day beats .light without either mode silently losing. */
   [data-surface='workflow-editor']:not(.light) {
-    --background: 163 15% 14%;            /* enamel, night */
-    --foreground: 45 38% 92%;             /* ivory */
-    --card: 163 13% 18%;                  /* plate: raised above the enamel */
-    --card-foreground: 45 38% 92%;
-    --popover: 163 13% 18%;
-    --popover-foreground: 45 38% 92%;
-    --primary: 45 62% 86%;                /* ivory lamp: route set, selection, primary action */
-    --primary-foreground: 163 20% 10%;
-    --secondary: 45 40% 92% / 6%;
-    --secondary-foreground: 45 38% 92%;
-    --muted: 45 40% 92% / 6%;
-    --muted-foreground: 155 9% 67%;
-    --accent: 45 40% 92% / 6%;
-    --accent-foreground: 45 38% 92%;
+    --background: 241 26% 6%;             /* landing --paper, oklch(16% .018 285) */
+    --foreground: 245 69% 98%;            /* landing --ink */
+    --card: 241 23% 10%;                  /* landing --paper-raised: plates sit above the paper */
+    --card-foreground: 245 69% 98%;
+    --popover: 241 23% 10%;
+    --popover-foreground: 245 69% 98%;
+    --primary: 270 100% 71%;              /* landing --accent: route set, selection, primary action */
+    --primary-foreground: 241 26% 6%;
+    --secondary: 0 0% 100% / 5%;
+    --secondary-foreground: 245 69% 98%;
+    --muted: 0 0% 100% / 5%;              /* landing --surface-hover */
+    --muted-foreground: 245 8% 70%;       /* landing --muted */
+    --accent: 0 0% 100% / 5%;
+    --accent-foreground: 245 69% 98%;
     --destructive: 5 78% 68%;             /* red lamp */
-    --destructive-foreground: 163 20% 10%;
-    --success: 146 52% 52%;               /* green lamp */
-    --success-foreground: 163 20% 10%;
+    --destructive-foreground: 241 26% 6%;
+    --success: 154 69% 45%;               /* landing --success, the green lamp */
+    --success-foreground: 241 26% 6%;
     --warning: 40 90% 58%;                /* amber lamp */
-    --warning-foreground: 163 20% 10%;
-    --border: 150 22% 86% / 12%;
-    --input: 150 22% 86% / 12%;
-    --ring: 45 62% 86%;
-    --sidebar: 163 15% 12%;
-    --sidebar-foreground: 45 38% 92%;
-    --wf-tile: 150 22% 86% / 5%;          /* the panel's domino-tile grid */
-    --wf-track: 158 9% 44%;               /* idle track */
-    --wf-track-bed: 163 20% 8%;
+    --warning-foreground: 241 26% 6%;
+    --border: 0 0% 100% / 10%;            /* landing --border */
+    --input: 0 0% 100% / 10%;
+    --ring: 270 100% 71%;
+    --sidebar: 241 31% 5%;
+    --sidebar-foreground: 245 69% 98%;
+    --wf-tile: 0 0% 100% / 5%;            /* the canvas grid, as on the landing hero */
+    --wf-track: 246 11% 33%;              /* idle track */
+    --wf-track-bed: 241 36% 3%;
     --wf-readout: 'B612 Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   }
 
+  /* Day: the landing page has no light theme, so this is the same system
+     inverted: violet-tinted white paper, ink text, a deeper violet that
+     holds contrast on white. */
   [data-surface='workflow-editor'].light {
-    --background: 100 12% 88%;            /* enamel, day: putty sage */
-    --foreground: 165 20% 12%;            /* ink */
-    --card: 80 20% 97%;
-    --card-foreground: 165 20% 12%;
-    --popover: 80 20% 97%;
-    --popover-foreground: 165 20% 12%;
-    --primary: 165 22% 14%;               /* by day the lit route is ink, not a lamp */
-    --primary-foreground: 45 40% 94%;
-    --secondary: 165 20% 15% / 6%;
-    --secondary-foreground: 165 20% 12%;
-    --muted: 165 20% 15% / 6%;
-    --muted-foreground: 160 8% 34%;
-    --accent: 165 20% 15% / 6%;
-    --accent-foreground: 165 20% 12%;
-    --destructive: 5 72% 40%;             /* every lamp colour holds 4.5:1 as text on enamel, plate and header */
-    --destructive-foreground: 45 40% 96%;
-    --success: 146 62% 25%;
-    --success-foreground: 45 40% 96%;
+    --background: 238 33% 96%;
+    --foreground: 241 23% 8%;
+    --card: 238 100% 100%;
+    --card-foreground: 241 23% 8%;
+    --popover: 238 100% 100%;
+    --popover-foreground: 241 23% 8%;
+    --primary: 271 62% 48%;
+    --primary-foreground: 245 69% 98%;
+    --secondary: 241 23% 8% / 5%;
+    --secondary-foreground: 241 23% 8%;
+    --muted: 241 23% 8% / 5%;
+    --muted-foreground: 246 7% 36%;
+    --accent: 241 23% 8% / 5%;
+    --accent-foreground: 241 23% 8%;
+    --destructive: 5 72% 40%;             /* every lamp colour holds 4.5:1 as text on paper, plate and header */
+    --destructive-foreground: 245 69% 98%;
+    --success: 154 70% 26%;
+    --success-foreground: 245 69% 98%;
     --warning: 36 95% 27%;
-    --warning-foreground: 45 40% 96%;
-    --border: 165 20% 15% / 16%;
-    --input: 165 20% 15% / 16%;
-    --ring: 165 22% 14%;
-    --sidebar: 100 12% 85%;
-    --sidebar-foreground: 165 20% 12%;
-    --wf-tile: 165 20% 15% / 6%;
-    --wf-track: 160 8% 58%;
-    --wf-track-bed: 100 12% 80%;
+    --warning-foreground: 245 69% 98%;
+    --border: 241 23% 8% / 12%;
+    --input: 241 23% 8% / 12%;
+    --ring: 271 62% 48%;
+    --sidebar: 238 25% 94%;
+    --sidebar-foreground: 241 23% 8%;
+    --wf-tile: 241 23% 8% / 6%;
+    --wf-track: 245 8% 67%;
+    --wf-track-bed: 239 15% 88%;
     --wf-readout: 'B612 Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   }
 

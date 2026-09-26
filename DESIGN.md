@@ -152,7 +152,7 @@ page keeps the teal system above.
 workflow is a line diagram, each step is a raised station plate, the edges
 are track, and a run is a train whose route lights up on the panel. Signal
 lamps already mean what the run states mean, so the metaphor carries real
-information: **ivory = route set / selected, green = cleared (completed),
+information: **violet = route set / selected, green = cleared (completed),
 amber = caution (completed with errors, needs setup), red = failed.**
 
 **Mechanism.** While the editor is mounted it sets `data-surface="workflow-editor"`
@@ -165,18 +165,25 @@ vocabulary: components keep reading `hsl(var(--card))` etc. Editor-only tokens
 are `--wf-tile` (panel grid), `--wf-track` / `--wf-track-bed` (edges) and
 `--wf-readout` (the readout face). All raw values stay in `index.css`.
 
+**Palette source (2026-09-26, at the requester's direction):** the product
+landing page, `app-builder-landing/styles.css` (OKLCH), converted exactly to
+the HSL triplets below. Night is the landing page's own system; the landing
+page has no light theme, so day is that system inverted.
+
 | Role | Night | Day |
 |---|---|---|
-| Enamel (`--background`) | `163 15% 14%` | `100 12% 88%` |
-| Plate (`--card`) | `163 13% 18%` | `80 20% 97%` |
-| Text (`--foreground`) | ivory `45 38% 92%` | ink `165 20% 12%` |
-| Lit route, selection, primary action (`--primary`) | ivory lamp `45 62% 86%` | ink `165 22% 14%` |
-| Green / amber / red lamps | `146 52% 52%` / `40 90% 58%` / `5 78% 68%` | `146 62% 25%` / `36 95% 27%` / `5 72% 40%` |
+| Paper (`--background`) | `241 26% 6%` (landing `--paper`) | `238 33% 96%` |
+| Plate (`--card`) | `241 23% 10%` (landing `--paper-raised`) | `238 100% 100%` |
+| Text (`--foreground`) | `245 69% 98%` (landing `--ink`) | ink `241 23% 8%` |
+| Muted text | `245 8% 70%` (landing `--muted`) | `246 7% 36%` |
+| Lit route, selection, primary action (`--primary`) | violet `270 100% 71%` (landing `--accent`) | violet `271 62% 48%` |
+| Green / amber / red lamps | `154 69% 45%` (landing `--success`) / `40 90% 58%` / `5 78% 68%` | `154 70% 26%` / `36 95% 27%` / `5 72% 40%` |
 
-Measured 2026-09-26 against the resolved values: every lamp colour holds at
-least 4.5:1 as text on the enamel, a plate and the header strip in both modes
-(lowest: night red on a plate, 4.63; day amber on the header, 4.71). Muted
-text is at least 4.9:1 everywhere. Re-measure if any of these values move.
+Computed from these token values: every lamp, accent and muted colour holds
+at least 5.1:1 as text on the paper, a plate and the header strip in both
+modes (lowest: day green on the header, 5.15; night violet on a plate,
+5.68). Button text on the violet is at least 6:1. Re-measure if any of these
+values move.
 
 **Lamp colours are reserved for run state.** Configuration never borrows
 them: node-body chips (trigger mode, message type, severity, HTTP method,
@@ -189,7 +196,7 @@ global in `:root` / `.light` because the picker, palette, outline and
 execution logs show categories outside the canvas too). They appear only as
 the plate's left strip and the icon tile (`[data-lever]` + `.wf-lever-tile`,
 chosen by `leverFor()` in `node-registry.ts`), and none sits on a lamp hue.
-The trigger gets its own ivory/ink lever. This replaces the per-type Tailwind
+The trigger gets its own ink lever. This replaces the per-type Tailwind
 gradients (`bg-emerald-500` etc.) the registry used to paint icons with.
 
 **Type.** Archivo (variable, self-hosted via `@fontsource-variable/archivo`,
@@ -203,7 +210,7 @@ semibold lists turn bold in it.
 
 **Signature: route lighting.**
 - Every edge is two strokes: a bed (channel) and a core.
-- Selecting a step lights its upstream route back to the trigger in ivory:
+- Selecting a step lights its upstream route back to the trigger in the violet accent:
   the steps whose output can feed its input (`route.ts`, keyed to React
   Flow's selection so it stays lit after the config workbench closes).
 - Selecting a run draws the route it took section by section, in real run

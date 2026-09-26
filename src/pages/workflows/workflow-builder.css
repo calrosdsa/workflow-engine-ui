@@ -1,9 +1,9 @@
 /* Workflow Builder — "Signal box" (DESIGN.md § Workflow Builder identity).
  *
- * The editor is an interlocking mimic panel: a tinted enamel surface with a
+ * The editor is an interlocking mimic panel: a violet-tinted paper surface (the landing-page palette) with a
  * domino-tile grid, workflow steps as raised station plates, edges as track,
  * and lamps whose colours are run states and nothing else:
- *   ivory = route set / selected, green = cleared, amber = caution, red = failed.
+ *   violet = route set / selected, green = cleared, amber = caution, red = failed.
  * Palette and type are set on <html>[data-surface='workflow-editor'] in
  * index.css; this file only consumes tokens.
  *
@@ -279,7 +279,7 @@ body {
 
 /* Track ----------------------------------------------------------------------
    Every edge is two strokes: a bed (the channel the line sits in) and a core.
-   A selected step lights its upstream route ivory; a run on the panel draws
+   A selected step lights its upstream route violet; a run on the panel draws
    the route it actually took, section by section, in its lamp colour. */
 
 .wf-track-bed {
@@ -479,7 +479,7 @@ body {
   font-weight: 700;
 }
 
-/* The lamp: off, ivory on the selected route, or the run's outcome. */
+/* The lamp: off, violet on the selected route, or the run's outcome. */
 .workflow-node-lamp {
   display: inline-block;
   flex-shrink: 0;
