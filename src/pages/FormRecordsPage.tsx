@@ -4,27 +4,26 @@ import { Plus, Trash2 } from 'lucide-react'
 import { useForm, useFormRecords, useCreateRecord, useDeleteRecord } from '@/features/forms/hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Spinner } from '@/components/ui/spinner'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
+import { HTTPError } from 'ky'
 import { useI18n } from '@/features/i18n/I18nProvider'
+import { extractApiError } from '@/lib/api'
 
-async function extractError(err: unknown): Promise<string> {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const res = (err as { response: Response }).response
-    try {
-      const body = await res.json() as Record<string, unknown>
-      if (typeof body.error === 'string') return body.error
-      if (body.fields && typeof body.fields === 'object') {
-        return 'Validation failed: ' + Object.entries(body.fields as Record<string, string>)
-          .map(([k, v]) => `${k} ${v}`).join(', ')
-      }
-      return JSON.stringify(body)
-    } catch {
-      return await res.text().catch(() => res.statusText)
+// ky has already read an error response's body into HTTPError.data, so the
+// response itself can't be read again (doing so fell back to the bare status
+// text, "Forbidden" or "Internal Server Error", losing the server's message
+// and a 5xx's request id).
+function extractError(err: unknown, validationFailed: string): string {
+  if (err instanceof HTTPError) {
+    const data = err.data as { error?: string; fields?: Record<string, string> } | undefined
+    if (!data?.error && data?.fields && typeof data.fields === 'object') {
+      return validationFailed + Object.entries(data.fields).map(([k, v]) => `${k} ${v}`).join(', ')
     }
   }
-  return err instanceof Error ? err.message : String(err)
+  return extractApiError(err)
 }
 
 export function FormRecordsPage() {
@@ -34,6 +33,8 @@ export function FormRecordsPage() {
   const { data: records, isLoading: loadingRecords } = useFormRecords(formId)
   const createMutation = useCreateRecord(formId)
   const deleteMutation = useDeleteRecord(formId)
+  // The row whose delete button was pressed, waiting for confirmation.
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
 
@@ -69,9 +70,7 @@ export function FormRecordsPage() {
                 setCreateError(null)
                 createMutation.mutate(data, {
                   onSuccess: () => { setShowCreate(false); setCreateError(null) },
-                  onError: (err) => {
-                    extractError(err).then(setCreateError)
-                  },
+                  onError: (err) => setCreateError(extractError(err, t('records.validation_failed'))),
                 })
               }}
               submitting={createMutation.isPending}
@@ -114,7 +113,7 @@ export function FormRecordsPage() {
                         variant="ghost"
                         size="icon"
                         className="text-[hsl(var(--destructive))] hover:text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 h-7 w-7"
-                        onClick={() => deleteMutation.mutate(String(rec.id))}
+                        onClick={() => setPendingDelete(String(rec.id))}
                         aria-label={t('records.delete')}
                         title={t('records.delete')}
                       >
@@ -128,6 +127,20 @@ export function FormRecordsPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => { if (!open) setPendingDelete(null) }}
+        title={t('records.delete_title')}
+        description={t('records.delete_description')}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        destructive
+        loading={deleteMutation.isPending}
+        onConfirm={() => {
+          if (!pendingDelete) return
+          deleteMutation.mutate(pendingDelete, { onSettled: () => setPendingDelete(null) })
+        }}
+      />
     </div>
   )
 }

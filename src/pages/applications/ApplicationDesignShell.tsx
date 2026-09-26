@@ -1,3 +1,5 @@
+import { HTTPError } from 'ky'
+import { extractApiError } from '@/lib/api'
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Bot, Workflow, FileText, Palette, SlidersHorizontal, Rocket, Loader2, AlertCircle, ListTree, Eye, LogOut, Sun, Moon, BookOpen, Lock, ChevronsUpDown, LayoutGrid, Check, ShieldCheck } from 'lucide-react'
@@ -507,14 +509,13 @@ function PublishDialog({
   )
 }
 
+// The issues come from HTTPError.data: ky has already read the response
+// body, so reading the response again threw and the issue list was lost.
 async function extractPublishError(e: unknown): Promise<{ issues: ValidationIssue[] | null; message: string | null }> {
-  const err = e as { response?: Response; message?: string }
-  if (!err.response) return { issues: null, message: err.message ?? null }
-  try {
-    const body = await err.response.json() as { issues?: ValidationIssue[]; error?: string }
-    if (body.issues && body.issues.length > 0) return { issues: body.issues, message: null }
-    return { issues: null, message: body.error ?? null }
-  } catch {
-    return { issues: null, message: err.message ?? null }
+  if (e instanceof HTTPError) {
+    const data = e.data as { issues?: ValidationIssue[] } | undefined
+    if (data?.issues && data.issues.length > 0) return { issues: data.issues, message: null }
+    return { issues: null, message: extractApiError(e) }
   }
+  return { issues: null, message: e instanceof Error ? e.message : null }
 }

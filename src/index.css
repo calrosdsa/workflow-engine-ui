@@ -176,7 +176,8 @@
      foregrounds, and the nav-pill's fill-swap target). Brand/accent/status
      tokens (--primary, --destructive, --success, --warning, --ring, both
      gradients) are confirmed theme-invariant in the DNA and are deliberately
-     NOT redeclared here — they fall through from :root unchanged. */
+     NOT redeclared here — they fall through from :root unchanged, except
+     --success/--warning, see the end of this block. */
   .light {
     color-scheme: light;
     --background: 0 0% 100%;              /* #ffffff */
@@ -201,6 +202,15 @@
        inverted-in-place) per the DNA's sticky-table-header note. */
     --sidebar: 240 2% 97%;
     --sidebar-foreground: 240 5% 9%;
+    /* The one exception to "status tokens fall through unchanged": :root's
+       green and amber are tuned for a dark surface, and as text on white
+       they measure 3.3:1 and 2.1:1 (WCAG AA wants 4.5:1). Darker shades of
+       the same hues: 5.7:1 and 6.1:1 on white, 4.6:1 and 4.9:1 on their own
+       15% tint (the status badges). Filled amber then needs light text
+       (6.1:1; the dark text would drop to 3.1:1). */
+    --success: 142 64% 28%;
+    --warning: 32 95% 30%;
+    --warning-foreground: 0 0% 100%;
   }
 
   /* Static class-based dark-mode fallback (next-themes/shadcn convention:

@@ -1,4 +1,13 @@
-# End-to-end suite
+# End-to-end suites
+
+Two Playwright suites live here:
+
+- **Staging** (`e2e/*.e2e.ts`, below): the real builder and runtime against a
+  deployed environment, after each staging deploy.
+- **Mocked** (`e2e/mock/`, at the end): the production build against a fake
+  backend, with screenshots in both themes, on every pull request.
+
+## Staging suite
 
 Playwright tests that drive the real builder and runtime in a browser, against
 a deployed environment. They sign in as three QA accounts in one QA app:
@@ -15,7 +24,7 @@ record through a published Search menu, being refused a menu whose form the
 role can't view, and running a workflow to completion. Every page a test
 visits must have no serious or critical accessibility violations (axe).
 
-## In CI
+### In CI
 
 `.github/workflows/e2e.yml` runs after the `staging` job of both deploy
 pipelines: this repository's, and `calrosdsa/workflow-engine`'s (which calls it
@@ -49,7 +58,7 @@ console log. Passwords never reach the report: sign-in types them through
 `fillSecret`, never `fill()`, whose step title records the value. Every run
 signs its sessions out at the end.
 
-## Locally
+### Locally
 
 Against any running builder (a local stack, or staging):
 
@@ -64,7 +73,7 @@ QA_RUNTIME_EMAIL=... QA_RUNTIME_PASSWORD=... npm run e2e
 `ALLOW_HEADER_TENANT=false`, or header-only requests act as a Super Admin and
 the refusal tests prove nothing.
 
-## Writing tests
+### Writing tests
 
 - Select by role and label (`getByRole`, `getByLabel`) in the platform's
   English strings; the app has no `data-testid`s. The locale is pinned to `en`.
@@ -84,3 +93,40 @@ the refusal tests prove nothing.
   deleted form, so one killed run would otherwise break every later one).
 - Two runs that change the same QA role at once can race (read, then replace
   the list); a test that fails only then shows up as flaky, not failed.
+
+## Mocked suite (pull requests)
+
+`e2e/mock/` runs the production build (`vite build` + `vite preview`) with every
+`/api` call answered by `fake-backend.ts` from the fixed data in `world.ts`.
+The data is typed with the UI's own types, so a change to what the UI expects
+fails `tsc` rather than drifting. `ci.yml`'s `browser` job runs it on every pull
+request, and it needs no secrets.
+
+- **Screens** (`screens.mock.ts`): eight key screens must render their data,
+  pass the accessibility check, and match their screenshot. Each test runs in
+  the `dark` and `light` projects, so each screen has two images in
+  `mock/__screenshots__/`.
+- **Failures** (`failures.mock.ts`): what the UI does when the server says no,
+  which a real backend won't do on demand. That covers a wrong password, the
+  two-step challenge, a session expiring mid-use, a role without design
+  access, a 5xx's request id, rejected publish issues, and an empty app.
+- A request with no fake answers 501 and fails the test, as does an uncaught
+  exception in the page. Add a handler in `world.ts` for anything new the UI
+  calls, or override one in a test with `backend.on(...)` and `reply(...)`.
+
+Screenshots are only compared inside the Playwright image
+(`mcr.microsoft.com/playwright:v<version>-noble`): the UI uses system fonts,
+which render differently on every OS. Elsewhere the suite still runs, minus
+the pixel comparison.
+
+```sh
+npm run e2e:mock          # any machine; no screenshot comparison
+npm run e2e:mock:docker   # in the image, comparing, as CI does (needs Docker)
+npm run e2e:mock:update   # in the image, rewriting changed screenshots
+```
+
+After an intentional visual change, run `npm run e2e:mock:update`, look at the
+new images, and commit them with the change. When `@playwright/test` is
+upgraded, move the image tag and `PLAYWRIGHT_IMAGE_VERSION` in `ci.yml` with it
+(the job refuses a mismatch) and regenerate the screenshots.
+
