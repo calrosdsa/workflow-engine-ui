@@ -269,3 +269,143 @@ html[data-rt] body {
   border-bottom: 1px solid transparent;
   padding: 0.3125rem 0;
 }
+
+/* --- The ledger -------------------------------------------------------------
+ * A records list reads like a ledger page: column heads printed in the spot
+ * colour, rows ruled in it at a whisper, the identifying first column set a
+ * little heavier, and figures right-aligned in the monospace so they line up
+ * down the page. */
+[data-rt] [data-slot='records-frame'] {
+  border-color: hsl(var(--ink) / 0.2);
+  background: hsl(var(--card));
+  box-shadow: 0 1px 2px hsl(var(--foreground) / 0.04);
+}
+
+[data-rt] [data-slot='records-frame']:is([data-layout='kanban'], [data-layout='calendar']) {
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-rt] [data-slot='data-table-head-row'] {
+  border-bottom-color: hsl(var(--ink) / 0.35);
+  background: hsl(var(--ink) / 0.045);
+}
+
+[data-rt] [data-slot='data-table-head'] {
+  padding-block: 0.625rem;
+  color: hsl(var(--ink));
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* A sortable head is a button, and the base stylesheet resets a button's
+   case and tracking; the caption has to carry through it. */
+[data-rt] [data-slot='data-table-head'] button {
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+[data-rt] [data-slot='data-table-row'] {
+  border-bottom-color: hsl(var(--ink) / 0.12);
+}
+
+[data-rt] [data-slot='data-table-row']:last-child {
+  border-bottom-width: 0;
+}
+
+[data-rt] [data-slot='data-table-row'][tabindex]:hover {
+  background: hsl(var(--ink) / 0.05);
+}
+
+[data-rt] [data-slot='data-table-cell'] {
+  padding-block: 0.6875rem;
+}
+
+[data-rt] [data-slot='data-table-cell']:first-child {
+  font-weight: 600;
+}
+
+[data-rt] :is([data-slot='data-table-head'], [data-slot='data-table-cell']):is([data-type='decimal'], [data-type='integer']) {
+  text-align: right;
+}
+
+[data-rt] [data-slot='data-table-head']:is([data-type='decimal'], [data-type='integer']) > div {
+  justify-content: flex-end;
+}
+
+[data-rt] [data-slot='data-table-cell']:is([data-type='decimal'], [data-type='integer']) {
+  font-family: var(--rt-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-rt] [data-slot='kanban-card-value']:is([data-type='decimal'], [data-type='integer']) {
+  font-family: var(--rt-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- The board --------------------------------------------------------------
+ * Kanban columns are trays with printed heads; each card is a small form: a
+ * title, then caption / value pairs. */
+[data-rt] [data-slot='kanban-column']:not([data-over]) {
+  border-color: hsl(var(--ink) / 0.14);
+  background: hsl(var(--ink) / 0.035);
+}
+
+[data-rt] [data-slot='kanban-column'][data-over] {
+  border-color: hsl(var(--ink));
+  background: hsl(var(--ink) / 0.08);
+}
+
+[data-rt] [data-slot='kanban-column-title'] {
+  color: hsl(var(--ink));
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+[data-rt] [data-slot='kanban-count'] {
+  border: 1px solid hsl(var(--ink) / 0.25);
+  background: transparent;
+  color: hsl(var(--ink));
+  font-family: var(--rt-mono);
+}
+
+[data-rt] [data-slot='kanban-card'] {
+  gap: 0.5rem;
+  border-color: hsl(var(--ink) / 0.18);
+  padding: 0.625rem 0.75rem;
+  box-shadow: 0 1px 2px hsl(var(--foreground) / 0.05);
+}
+
+[data-rt] [data-slot='kanban-card']:hover {
+  border-color: hsl(var(--ink) / 0.45);
+  background: hsl(var(--card));
+}
+
+[data-rt] [data-slot='kanban-card']:focus-visible {
+  outline: 2px solid hsl(var(--ink));
+  outline-offset: 1px;
+}
+
+[data-rt] [data-slot='kanban-card-title'] {
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+[data-rt] [data-slot='kanban-card-fields'] {
+  border-top-color: hsl(var(--ink) / 0.15);
+}
+
+[data-rt] [data-slot='kanban-card-label'] {
+  color: hsl(var(--ink));
+  font-size: 0.625rem;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}

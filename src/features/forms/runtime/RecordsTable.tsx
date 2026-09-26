@@ -378,6 +378,7 @@ export function RecordsTable({
       key,
       label: labelByKey.get(key) ?? field?.label ?? key,
       sortable: true,
+      type: field?.type,
       render: isReference
         ? (row: FormRecord) => <RecordReferenceLink formId={field.reference_table} recordId={row[key]} displayField={field.display_field} />
         : isRoleField
@@ -561,7 +562,7 @@ export function RecordsTable({
         </p>
       )}
 
-      <div ref={scrollRef} className="overflow-x-auto overflow-y-hidden rounded-lg border" style={{ borderColor: 'hsl(var(--border))' }}>
+      <div ref={scrollRef} data-slot="records-frame" data-layout={effectiveLayout} className="overflow-x-auto overflow-y-hidden rounded-lg border border-[hsl(var(--border))]">
         {effectiveLayout === 'card' && (
           <CardLayout records={results?.records ?? []} fields={fieldsWithSystem} columns={visibleColumns} roleField={form.create_user_role_field} enumLabels={enumLabels} onOpenRecord={openRecord} loading={isLoading} />
         )}
