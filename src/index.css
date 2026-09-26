@@ -257,8 +257,9 @@
 
   /* Light: the landing page has no light theme, so this is the same
      system inverted: violet-tinted white paper, ink text, and a deeper
-     violet that holds contrast on white. Every status colour holds at
-     least 5.1:1 as text on the paper, a card and the sidebar. */
+     violet that holds contrast on white. Every status colour and the
+     violet hold at least 4.78:1 as text on the paper, a card and the
+     sidebar, including on their own 10-15% tint (status badges). */
   [data-app='builder'].light {
     --background: 238 33% 96%;
     --foreground: 241 23% 8%;
@@ -266,7 +267,7 @@
     --card-foreground: 241 23% 8%;
     --popover: 238 100% 100%;
     --popover-foreground: 241 23% 8%;
-    --primary: 271 62% 48%;
+    --primary: 271 62% 45%;
     --primary-foreground: 245 69% 98%;
     --secondary: 241 23% 8% / 5%;
     --secondary-foreground: 241 23% 8%;
@@ -274,15 +275,15 @@
     --muted-foreground: 246 7% 36%;
     --accent: 241 23% 8% / 5%;
     --accent-foreground: 241 23% 8%;
-    --destructive: 5 72% 40%;
+    --destructive: 5 72% 38%;
     --destructive-foreground: 245 69% 98%;
-    --success: 154 70% 26%;
+    --success: 154 70% 23%;
     --success-foreground: 245 69% 98%;
-    --warning: 36 95% 27%;
+    --warning: 36 95% 25%;
     --warning-foreground: 245 69% 98%;
     --border: 241 23% 8% / 12%;
     --input: 241 23% 8% / 12%;
-    --ring: 271 62% 48%;
+    --ring: 271 62% 45%;
     --sidebar: 238 25% 94%;
     --sidebar-foreground: 241 23% 8%;
     --gradient-brand: linear-gradient(120deg, #7d2fc8, #2f5fd6);

@@ -170,15 +170,17 @@ into every published app.
 | Sidebar (`--sidebar`) | `241 31% 5%` | `238 25% 94%` |
 | Text (`--foreground`) | `245 69% 98%` (landing `--ink`) | `241 23% 8%` |
 | Muted text | `245 8% 70%` (landing `--muted`) | `246 7% 36%` |
-| Accent: CTAs, focus, active, selection (`--primary`, `--ring`) | violet `270 100% 71%` (landing `--accent`) | violet `271 62% 48%` |
-| Success / warning / destructive | `154 69% 45%` (landing `--success`) / `40 90% 58%` / `5 78% 68%` | `154 70% 26%` / `36 95% 27%` / `5 72% 40%` |
+| Accent: CTAs, focus, active, selection (`--primary`, `--ring`) | violet `270 100% 71%` (landing `--accent`) | violet `271 62% 45%` |
+| Success / warning / destructive | `154 69% 45%` (landing `--success`) / `40 90% 58%` / `5 78% 68%` | `154 70% 23%` / `36 95% 25%` / `5 72% 38%` |
 | Borders (`--border`, `--input`) | white 10% (landing `--border`) | ink 12% |
 | `--gradient-brand` | landing `--brand-gradient`, `#bd98ff → #417dff` | `#7d2fc8 → #2f5fd6` |
 
 Computed from these values: every status, accent and muted colour holds at
-least 5.1:1 as text on the paper, a card and the sidebar in both modes
-(lowest: light success on the sidebar, 5.15; dark violet on a card, 5.68).
-Button text on the violet is at least 6:1. Re-measure if any value moves.
+least 4.78:1 as text on the paper, a card and the sidebar in both modes,
+including on its own 10-15% tint as the status badges draw it (lowest:
+light destructive badge on the sidebar, 4.78). Text on a filled violet or
+status colour is at least 6:1. The mocked browser suite's axe check caught
+a 4.38:1 light success badge on 2026-09-26; re-measure if any value moves.
 
 ## Workflow Builder identity — "Signal box"
 

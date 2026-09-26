@@ -159,4 +159,8 @@ export function installWorld(backend: FakeBackend, who: Me = me) {
     .on('GET', '/workflows', () => [workflow])
     .on('GET', '/executions/:id/logs', () => executionLogs)
     .on('GET', '/executions/:id', ({ params }) => (params.id === EXECUTION_ID ? execution : reply(404, { error: 'execution not found' })))
+    // The execution logs read node categories for their icon colours. Empty is
+    // what the app falls back to when this request fails, so each step takes
+    // its category from the built-in registry and the screenshot stays stable.
+    .on('GET', '/meta/node-taxonomy', () => ({ categories: [], kinds: [], nodes: [], trigger_presets: [], apps: [] }))
 }
