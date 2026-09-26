@@ -9,6 +9,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { isRuntimePath } from './lib/runtime-paths'
 
 const read = (relative: string) => readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8')
 
@@ -60,5 +61,76 @@ describe('builder routes and the runtime fallback', () => {
 
   it('keeps the dev server and nginx lists identical', () => {
     expect([...nginxPrefixes()].sort()).toEqual([...devServerPrefixes()].sort())
+  })
+})
+
+// Runtime pages hit directly: a record opened from a menu lives at
+// /{client}/{app}/{menu}/{record}, which both hosts once sent to the builder,
+// so a reload of it showed the builder's 404. Each runtime route below is
+// turned into a sample URL and must reach runtime.html in both places, and
+// builder routes must not.
+
+// Every route under the runtime app, as a full path ('/$clientId/$appId/...').
+function runtimeRoutePaths(): string[] {
+  const routes = read('./runtime-router.tsx').split('createRoute(').slice(1)
+  const appPath = routes
+    .find((r) => /getParentRoute:\s*\(\)\s*=>\s*runtimeRootRoute\b/.test(r) && /\bpath:\s*'\/\$clientId/.test(r))
+    ?.match(/\bpath:\s*'([^']+)'/)?.[1]
+  if (!appPath) return []
+  return routes.flatMap((route) => {
+    if (!/getParentRoute:\s*\(\)\s*=>\s*runtimeAppRoute\b/.test(route)) return []
+    const path = route.match(/\bpath:\s*'([^']+)'/)?.[1]
+    return path ? [path === '/' ? appPath : appPath + path] : []
+  })
+}
+
+// '/$clientId/$appId/$menuSlug' -> '/clientId-1/appId-1/menuSlug-1'
+const sampleOf = (path: string) => path.replace(/\$([A-Za-z]+)/g, (_, name: string) => `${name}-1`)
+
+type Served = 'runtime' | 'builder'
+
+// nginx's choice for a path: regex locations in file order, first match wins,
+// then the `location /` fallback (index.html). The exact `location =` blocks
+// only name the two HTML files themselves, which no sample is.
+function nginxServes(path: string): Served {
+  for (const [, regex, body] of read('../nginx.conf').matchAll(/location ~ (\S+) \{([^}]*)\}/g)) {
+    if (new RegExp(regex).test(path)) return /\/runtime\.html;/.test(body) ? 'runtime' : 'builder'
+  }
+  return 'builder'
+}
+
+const viteServes = (path: string): Served => (isRuntimePath(path, devServerPrefixes()) ? 'runtime' : 'builder')
+
+describe('direct loads reach the right app', () => {
+  const runtime = runtimeRoutePaths().map(sampleOf)
+
+  it('keeps nginx location patterns loadable', () => {
+    // An unquoted { in a location regex ({0,2}) is read as a block opener:
+    // nginx refuses the whole file and the container never starts.
+    for (const [, regex] of read('../nginx.conf').matchAll(/location ~ (\S+) \{/g)) {
+      expect(regex, 'quote the pattern or drop the {m,n} quantifier').not.toMatch(/[{}]/)
+    }
+  })
+
+  it('finds the runtime routes', () => {
+    expect(runtime).toContain('/clientId-1/appId-1/menuSlug-1/recordId-1')
+    expect(runtime).toContain('/clientId-1/appId-1/forms/formId-1/recordId-1')
+    expect(runtime.length).toBeGreaterThanOrEqual(6)
+  })
+
+  it.each(runtimeRoutePaths().map(sampleOf))('%s is served by the runtime', (path) => {
+    expect(nginxServes(path), 'nginx.conf').toBe('runtime')
+    expect(viteServes(path), 'vite (src/lib/runtime-paths.ts)').toBe('runtime')
+  })
+
+  const builder = [
+    ...topLevelRoutePaths().map(sampleOf),
+    '/applications/appId-1/forms/formId-1',
+    '/applications/appId-1/forms/formId-1/records',
+    '/applications/appId-1/workflows/workflowId-1/evaluations/datasetId-1',
+  ]
+  it.each(builder)('%s is served by the builder', (path) => {
+    expect(nginxServes(path), 'nginx.conf').toBe('builder')
+    expect(viteServes(path), 'vite (src/lib/runtime-paths.ts)').toBe('builder')
   })
 })
