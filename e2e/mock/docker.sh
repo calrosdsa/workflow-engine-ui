@@ -24,7 +24,7 @@ image="mcr.microsoft.com/playwright:v${version}-noble"
 
 # Everything the build and the suite read, without node_modules or old results.
 git ls-files -z --cached --others --exclude-standard | tar --null -T - -cf - |
-  MSYS_NO_PATHCONV=1 docker run --rm -i \
+  MSYS_NO_PATHCONV=1 docker run --rm -i --ipc=host \
     -v e2e-mock-npm-cache:/root/.npm \
     -e CI=1 -e E2E_SNAPSHOTS=1 \
     "$image" bash -c '

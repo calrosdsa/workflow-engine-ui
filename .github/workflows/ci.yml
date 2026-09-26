@@ -46,6 +46,8 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
+      # Chromium in a container runs out of the default 64 MB /dev/shm.
+      options: --ipc=host
     env:
       E2E_SNAPSHOTS: '1'
       PLAYWRIGHT_IMAGE_VERSION: 1.63.0

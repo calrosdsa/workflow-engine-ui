@@ -123,11 +123,14 @@ class. A future toggle is a separate feature request — see
 **Status colors in light mode (2026-09-26):** the DNA keeps `--success` and
 `--warning` theme-invariant, but those shades are tuned for the dark surface:
 as text on white they measure 3.3:1 and 2.1:1, under WCAG AA's 4.5:1, and ~150
-places use them as text. The light theme (`.light` in `src/index.css`)
-therefore redeclares them as darker shades of the same hues, `142 64% 28%`
-and `32 95% 30%` (5.7:1 and 6.1:1 on white, at least 4.6:1 on their own 15%
-tint), with white text on filled amber. The dark theme is unchanged. The
-mocked browser suite's axe checks (`e2e/mock`) catch a regression.
+places use them as text. The builder's light theme (`.light` in
+`src/index.css`, set by its own theme switch) therefore redeclares them as
+darker shades of the same hues, `142 64% 28%` and `32 95% 30%` (5.7:1 and
+6.1:1 on white, at least 4.6:1 on their own 15% tint), with white text on
+filled amber. The dark theme is unchanged. The mocked browser suite's axe
+checks (`e2e/mock`) catch a regression. **Not yet the runtime:** a published
+app's light mode never gets `.light` (its `ThemeProvider` sets per-tenant
+variables instead), so it still inherits `:root`'s shades.
 
 **Two gradient tokens, new — added as their own CSS custom properties,
 kept as gradients, never flattened** (per the DNA's own explicit warning
