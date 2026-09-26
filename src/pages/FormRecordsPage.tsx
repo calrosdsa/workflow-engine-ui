@@ -4,6 +4,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { useForm, useFormRecords, useCreateRecord, useDeleteRecord } from '@/features/forms/hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Spinner } from '@/components/ui/spinner'
 import { FormRenderer } from '@/features/forms/runtime/FormRenderer'
 import { resolveFormSchema } from '@/features/form-builder/serialize'
@@ -32,6 +33,8 @@ export function FormRecordsPage() {
   const { data: records, isLoading: loadingRecords } = useFormRecords(formId)
   const createMutation = useCreateRecord(formId)
   const deleteMutation = useDeleteRecord(formId)
+  // The row whose delete button was pressed, waiting for confirmation.
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
 
@@ -110,7 +113,7 @@ export function FormRecordsPage() {
                         variant="ghost"
                         size="icon"
                         className="text-[hsl(var(--destructive))] hover:text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 h-7 w-7"
-                        onClick={() => deleteMutation.mutate(String(rec.id))}
+                        onClick={() => setPendingDelete(String(rec.id))}
                         aria-label={t('records.delete')}
                         title={t('records.delete')}
                       >
@@ -124,6 +127,20 @@ export function FormRecordsPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => { if (!open) setPendingDelete(null) }}
+        title={t('records.delete_title')}
+        description={t('records.delete_description')}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        destructive
+        loading={deleteMutation.isPending}
+        onConfirm={() => {
+          if (!pendingDelete) return
+          deleteMutation.mutate(pendingDelete, { onSettled: () => setPendingDelete(null) })
+        }}
+      />
     </div>
   )
 }

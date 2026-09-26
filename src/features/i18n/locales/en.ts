@@ -1668,6 +1668,8 @@ export const en = {
   'records.new': 'New Record',
   'records.save': 'Save Record',
   'records.delete': 'Delete record',
+  'records.delete_title': 'Delete this record?',
+  'records.delete_description': 'It will be removed from this form.',
   'records.no_records': 'No records yet.',
   'records.validation_failed': 'Validation failed: ',
 

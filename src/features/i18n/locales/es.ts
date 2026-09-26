@@ -749,6 +749,7 @@ export const es = {
   'common.back': 'Atrás',
   'common.close': 'Cerrar',
   'common.delete': 'Eliminar',
+  'common.cancel': 'Cancelar',
   'common.edit': 'Editar',
   'common.loading': 'Cargando…',
   'common.search': 'Buscar',
@@ -996,6 +997,8 @@ export const es = {
   'records.new': 'Nuevo registro',
   'records.save': 'Guardar registro',
   'records.delete': 'Eliminar registro',
+  'records.delete_title': '¿Eliminar este registro?',
+  'records.delete_description': 'Se quitará de este formulario.',
   'records.no_records': 'Aún no hay registros.',
   'records.validation_failed': 'La validación falló: ',
 

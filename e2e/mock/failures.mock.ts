@@ -78,3 +78,27 @@ test.describe('signed in', () => {
     await expectAccessible(page, 'the empty forms list')
   })
 })
+
+test.describe('records page', () => {
+  test.beforeEach(({ backend }) => installWorld(backend))
+
+  test('asks before deleting a record, and Cancel keeps it', async ({ page, backend }) => {
+    backend.on('DELETE', '/forms/:id/records/:rid', () => reply(204))
+    const deletes = () => backend.requests.filter((r) => r.method === 'DELETE')
+    await page.goto(`/applications/${APP_ID}/forms/${FORM_ID}/records`)
+    await expect(page.getByRole('cell', { name: 'Printer jammed on floor 2' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Delete record' }).first().click()
+    const dialog = page.getByRole('dialog', { name: 'Delete this record?' })
+    await expect(dialog).toBeVisible()
+    await expectAccessible(page, 'the delete confirmation')
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(dialog).toBeHidden()
+    expect(deletes()).toEqual([])
+
+    await page.getByRole('button', { name: 'Delete record' }).first().click()
+    await dialog.getByRole('button', { name: 'Delete', exact: true }).click()
+    await expect(dialog).toBeHidden()
+    expect(deletes().map((r) => r.path)).toEqual([`/forms/${FORM_ID}/records/a1b2c3d4-0000-4000-8000-000000000001`])
+  })
+})
